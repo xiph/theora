@@ -59,6 +59,8 @@
 
 \begin{document}
 
+\frontmatter
+
 \begin{titlepage}
 \maketitle
 \end{titlepage}
@@ -80,13 +82,11 @@
 \cleardoublepage
 
 
-                                                                                
+\mainmatter
 
 \pagenumbering{arabic}
 \setcounter{page}{1}
                                                                                 
-
-
 \chapter{Introduction and Description}
 
 This section provides a high level description of the Theora codec's
@@ -3541,11 +3541,11 @@ Otherwise, assign $\bitvar{MBMODE}[\locvar{\mbi}]$ the value 0 (INTER\_NOMV).
 \end{enumerate}
 \end{enumerate}
 
+\clearpage
 
-
+%\backmatter
 \appendix
 
-\clearpage
 \chapter{Ogg Bitstream Encapsulation}
 \label{app:oggencapsulation}
 
@@ -3726,6 +3726,8 @@ Ogg, Theora, Vorbis, Xiph.org Foundation and their logos are trademarks
  (\texttrademark) of the \href{http://www.xiph.org}{Xiph.org Foundation}.
 
 This document is set in \LaTeX.
+
+
 
 \clearpage
 \bibliography{spec}
