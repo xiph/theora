@@ -618,8 +618,11 @@ int main(int argc,char *argv[]){
   /* scale the frame size up to the nearest /16 and calculate offsets */
   video_x=((frame_x + 15) >>4)<<4;
   video_y=((frame_y + 15) >>4)<<4;
-  frame_x_offset=(video_x-frame_x)/2;
-  frame_y_offset=(video_y-frame_y)/2;
+  /* We force the offset to be even.
+     This ensures that the chroma samples align properly with the luma
+      samples. */
+  frame_x_offset=((video_x-frame_x)/2)&~1;
+  frame_y_offset=((video_y-frame_y)/2)&~1;
 
   theora_info_init(&ti);
   ti.width=video_x;
