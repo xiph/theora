@@ -15,6 +15,7 @@ dist-hook:
 	rm -rf `find $(distdir)/win32 -name CVS`
 	rm -rf `find $(distdir)/macos -name .svn`
 	rm -rf `find $(distdir)/win32 -name .svn`
+	rm -rf `find $(distdir)/doc -name .svn`
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@"
