@@ -113,6 +113,10 @@ SOURCE=..\lib\encode.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\lib\encoder_toplevel.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\lib\frarray.c
 # End Source File
 # Begin Source File
