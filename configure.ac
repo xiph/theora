@@ -33,9 +33,6 @@ AC_PROG_CC
 AC_PROG_CPP
 CFLAGS="$cflags_save"
 
-dnl no shared linking for us
-AM_DISABLE_SHARED
-AM_ENABLE_STATIC
 AM_PROG_LIBTOOL
 
 dnl --------------------------------------------------
