@@ -4,7 +4,8 @@ AUTOMAKE_OPTIONS = foreign 1.6 dist-zip
 
 SUBDIRS = lib include doc examples debian
 
-EXTRA_DIST = COPYING autogen.sh win32 libtheora.spec libtheora.spec.in
+EXTRA_DIST = COPYING autogen.sh win32 libtheora.spec libtheora.spec.in \
+	theora-uninstalled.pc.in
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = theora.pc

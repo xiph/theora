@@ -206,4 +206,5 @@ AC_OUTPUT([
   debian/Makefile
   libtheora.spec
   theora.pc
+  theora-uninstalled.pc
 ])
