@@ -41,7 +41,8 @@
 #include "vorbis/vorbisenc.h"
 
 #ifdef _WIN32
-/*supply missing headers and functions to Win32. going to hell, I know*/
+/* supply missing headers and functions to Win32 */
+
 #include <fcntl.h>
 
 static double rint(double x)
@@ -199,7 +200,7 @@ static void id_file(char *f){
             exit(1);
           }
 
-           /* read past extra header bytes */
+          /* read past extra header bytes */
           while(extra_hdr_bytes){
             int read_size = (extra_hdr_bytes > sizeof(buffer)) ?
              sizeof(buffer) : extra_hdr_bytes;
@@ -270,7 +271,7 @@ static void id_file(char *f){
         exit(1);
       }
 
-      /*update fps and aspect ratio globals if not specified in the command line*/
+      /* update fps and aspect ratio globals if not specified in the command line */
       if (video_hzn==-1) video_hzn = tmp_video_hzn;
       if (video_hzd==-1) video_hzd = tmp_video_hzd;
       if (video_an==-1) video_an = tmp_video_an;
@@ -622,8 +623,15 @@ int main(int argc,char *argv[]){
 
   /* yayness.  Set up Ogg output stream */
   srand(time(NULL));
-  ogg_stream_init(&vo,rand());
-  ogg_stream_init(&to,rand()); /* oops, add one ot the above */
+  {
+    /* need two inequal serial numbers */
+    int serial1, serial2;
+    serial1 = rand();
+    serial2 = rand();
+    if (serial1 == serial2) serial2++;
+    ogg_stream_init(&to,serial1);
+    ogg_stream_init(&vo,serial2);
+  }
 
   /* Set up Theora encoder */
   if(!video){
