@@ -20,11 +20,12 @@ int main(int argc, const char **argv)
     int olength;
     int length;
     avi_t *avifile;
+    int chucksize;    
     int frame;
     int frames;
     int keyframegap = 0;
     int maxkeyframegap = 0;
-    
+
     DWORD initialticks;
     
     int framew = 0;
@@ -37,7 +38,12 @@ int main(int argc, const char **argv)
     framew = AVI_video_width(avifile);
     frameh = AVI_video_height(avifile);
     framerate = AVI_frame_rate(avifile);
-    buffer = malloc(AVI_max_video_chunk(avifile));
+    chunksize = AVI_max_video_chunk(avifile);
+    /* avilib only reports the max video chunk size if the file has an
+       idx table. We fall back to an arbitrary limit otherwise. Better
+       would be just to handle the chunks dynamically */
+    if (chunksize <= 0) chunksize = 131072;
+    buffer = malloc(chunksize);
     printf("Frames(%d) Video(%dx%d) %3.2f fps\n",frames,framew, frameh,framerate);
     printf("Video Compressor: %s", AVI_video_compressor(avifile));
     fps_denominator = 1000000.0F;
