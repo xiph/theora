@@ -1444,7 +1444,7 @@ The samples in the different planes are all at co-located sites.
 \label{fig:pixel444}
 \end{figure}
 
-%TODO: Figure.
+% Figure.
 %YRB         YRB
 %
 %
@@ -1480,7 +1480,7 @@ A horizontal phase shift may be required to produce signals which use different
 \label{fig:pixel422}
 \end{figure}
 
-%TODO: Figure.
+% Figure.
 %Y     RB    Y           Y     RB    Y
 %
 %
@@ -1521,7 +1521,7 @@ A horizontal or vertical phase shift may be required to produce signals which
 \label{fig:pixel420}
 \end{figure}
 
-%TODO: Figure.
+% Figure.
 %Y           Y           Y           Y
 %
 %      RB                      RB
@@ -1560,24 +1560,25 @@ When using the 4:2:2 and 4:2:0 formats, the locations of chroma samples
  relative to the luma samples depends on whether or not the X offset of the
  picture region is odd.
 If the offset is even, each column of chroma samples corresponds to two columns
- of luma samples.
+ of luma samples (see Figure~\ref{fig:pic_even} for an example).
 The only exception is if the width is odd, in which case the last column
- corresponds to only one column of luma samples.
+ corresponds to only one column of luma samples (see Figure~\ref{fig:pic_even_odd}).
 If the offset is odd, then the first column of chroma samples corresponds to
  only one column of luma samples, while the remaining columns each correspond
- to two.
+ to two (see Figure~\ref{fig:pic_odd}).
 In this case, if the width is even, the last column again corresponds to only
- one column of luma samples.
+ one column of luma samples (see Figure~\ref{fig:pic_odd_even}).
 
 A similar process is followed with the rows of a picture region of odd height
  encoded in the 4:2:0 format.
 If the Y offset is even, each row of chroma samples corresponds to two rows of
- luma samples, except with an odd height, where the last row which corresponds
- to one.
+ luma samples (see Figure~\ref{fig:pic_even}), except with an odd height, where
+ the last row corresponds to one row of chroma luna samples only (see 
+ Figure~\ref{fig:pic_even_odd}).
 If the offset is odd, then it is the first row of chroma samples which
  corresponds to only one row of luma samples, while the remaining rows each
- correspond to two, except with an even height, where the last row also
- corresponds to one.
+ correspond to two (Figure~\ref{fig:pic_odd}), except with an even height, 
+ where the last row also corresponds to one (Figure~\ref{fig:pic_odd_even}).
 
 Encoders should be aware of these differences in the subsampling when using an
  even or odd offset.
@@ -1585,7 +1586,38 @@ In the typical case, with an even width and height, where one expects two rows
  or columns of luma samples for every row or column of chroma samples, the
  encoder must take care to ensure that the offsets used are both even.
 
-%TODO: Figures!
+\begin{figure}[htbp]
+\begin{center}
+\include{pic_even}
+\end{center}
+\caption{Pixel correspondance between color planes with even picture offset and even picture size}
+\label{fig:pic_even}
+\end{figure}
+
+\begin{figure}[htbp]
+\begin{center}
+\include{pic_even_odd}
+\end{center}
+\caption{Pixel correspondance with even picture offset and odd picture size}
+\label{fig:pic_even_odd}
+\end{figure}
+
+\begin{figure}[htbp]
+\begin{center}
+\include{pic_odd}
+\end{center}
+\caption{Pixel correspondance with odd picture offset and odd picture size}
+\label{fig:pic_odd}
+\end{figure}
+
+\begin{figure}[htbp]
+\begin{center}
+\include{pic_odd_even}
+\end{center}
+\caption{Pixel correspondance with odd picture offset and even picture size}
+\label{fig:pic_odd_even}
+\end{figure}
+
 
 \chapter{Bitpacking Convention}
 \label{sec:bitpacking}
