@@ -2111,8 +2111,10 @@ Together with \bitvar{PARN}, these specify the aspect ratio of the pixels
  within a frame, defined as the ratio of the physical width of a pixel to its
  physical height.
 This is given by the ratio $\bitvar{PARN}:\bitvar{PARD}$.
-Either of these fields MAY be zero, in which case the pixel aspect ratio
- defaults to $1:1$.
+If either of these fields are zero, this indicates that pixel aspect ratio
+ information was not available to the encoder.
+In this case it MAY be specified by the application via an external means, or
+ a default value of $1:1$ MAY be used.
 \item
 Read an 8-bit unsigned integer as \bitvar{CS}.
 This is a value from an enumerated list of the available color spaces, given in
