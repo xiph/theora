@@ -2028,7 +2028,7 @@ static void AnalysePlane( PP_INSTANCE *ppi,
   /* Initialise the SGc lookup table */
   for ( i = -255; i <= 255; i++ ){
     if ( i <= ppi->NegLevelThresh )
-      ppi->SgcThreshTable[i+255] = -1;
+      ppi->SgcThreshTable[i+255] = (unsigned char) -1;
     else if ( i >= ppi->LevelThresh )
       ppi->SgcThreshTable[i+255] = 1;
     else
