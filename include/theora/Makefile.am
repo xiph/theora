@@ -2,5 +2,5 @@
 
 theoraincludedir = $(includedir)/theora
 
-include_HEADERS = theora.h
+theorainclude_HEADERS = theora.h
 
