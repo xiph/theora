@@ -54,7 +54,7 @@ ogg_buffer_state *ogg_buffer_create(void);
  * configurations. For theora the width and height of the largest plane
  * must be a multiple of 16. The actual meaningful picture size and 
  * offset are stored in the theora_info structure; frames returned by
- * the decoder my been to be cropped for display. 
+ * the decoder may need to be cropped for display. 
  * All samples are 8 bits.
  */
 typedef struct {
