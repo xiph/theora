@@ -1,4 +1,4 @@
-\documentclass[11pt,letterpaper]{article}
+\documentclass[11pt,letterpaper]{book}
 
 \usepackage{latexsym}
 \usepackage{amssymb}
@@ -43,9 +43,9 @@
 \newcommand{\ilog}{\ensuremath{\mathop{\mathrm{ilog}}\nolimits}}
 
 %Section-based table, figure, and equation numbering.
-\numberwithin{equation}{section}
-\numberwithin{figure}{section}
-\numberwithin{table}{section}
+\numberwithin{equation}{chapter}
+\numberwithin{figure}{chapter}
+\numberwithin{table}{chapter}
 
 \keepXColumns
 
@@ -59,11 +59,35 @@
 
 \begin{document}
 
+\begin{titlepage}
 \maketitle
-\tableofcontents
-\newpage
+\end{titlepage}
+\thispagestyle{empty}
+\cleardoublepage
 
-\section{Introduction and Description}
+\pagenumbering{roman}
+
+\thispagestyle{plain}
+\tableofcontents
+\cleardoublepage
+ 
+\thispagestyle{plain}
+\listoffigures
+\cleardoublepage
+                                                                                
+\thispagestyle{plain}
+\listoftables
+\cleardoublepage
+
+
+                                                                                
+
+\pagenumbering{arabic}
+\setcounter{page}{1}
+                                                                                
+
+
+\chapter{Introduction and Description}
 
 This section provides a high level description of the Theora codec's
  construction.
@@ -71,7 +95,7 @@ A bit-by-bit specification appears beginning in Section~\ref{sec:bitpacking}.
 The later sections assume a high-level understanding of the Theora decode
  process, which is provided below.
 
-\subsection{Overview}
+\section{Overview}
 
 Theora is a general purpose, lossy video codec.
 It is based on the VP3 video codec produced by On2 Technologies
@@ -84,7 +108,7 @@ No formal specification exists for the VP3 format beyond this source code,
  however Mike Melanson maintains a detailed description \cite{Mel04}.
 Portions of this specification were adopted from that text with permission.
 
-\subsubsection{VP3 and Theora}
+\subsection{VP3 and Theora}
 
 Theora contains a superset of the features that were available in the original
  VP3 codec.
@@ -96,7 +120,7 @@ If a feature is not available in the original VP3 format, this is mentioned
  when that feature is defined.
 A complete list of these features appears in Appendix~REF.
 
-\subsubsection{Video Formats}
+\subsection{Video Formats}
 
 Theora I currently supports progressive video data of arbitrary dimensions at a
  constant frame rate in one of several $Y'C_bC_r$ color spaces.
@@ -118,7 +142,7 @@ Note that infrequently changing frame rates---as when film and video sequences
  several Theora streams together.
 Support for increased bit depths or additional color spaces is not planned.
 
-\subsubsection{Classification}
+\subsection{Classification}
 
 Theora I is a block-based lossy transform codec that utilizes an
  $8\times 8$ Type-II Discrete Cosine Transform and block-based motion
@@ -131,7 +155,7 @@ Theora supports only intra frames (I frames in MPEG) and inter frames (P frames
 There is no equivalent to the bi-predictive frames (B frames) found in MPEG
  codecs.
 
-\subsubsection{Assumptions}
+\subsection{Assumptions}
 
 The Theora codec design assumes a complex, psychovisually-aware encoder and a
  simple, low-complexity decoder.
@@ -156,7 +180,7 @@ For the purposes of a few examples in this document, we will assume that Theora
 The specification for embedding Theora into an Ogg transport stream is given in
  Appendix~\ref{app:oggencapsulation}.
 
-\subsubsection{Codec Setup and Probability Model}
+\subsection{Codec Setup and Probability Model}
 
 Theora's heritage is the proprietary commerical codec VP3, and it retains a
  fair amount of inflexibility when compared to Vorbis \cite{vorbis}, the first
@@ -197,7 +221,7 @@ Our own design work indicates that the primary liability of the required header
 However, we find that it does not fundamentally limit Theora's suitable
  application space.
 
-\subsubsection{Format Specification}
+\subsection{Format Specification}
 
 The Theora format is well-defined by its decode specification; any encoder that
  produces packets that are correctly decoded by an implementation following
@@ -213,15 +237,15 @@ Where appropriate, a non-normative description of encoder processes is
 These sections will be marked as such, and a proper Theora encoder is not
  bound to follow them.
 
-%TODO: \subsubsection{Hardware Profile}
+%TODO: \subsection{Hardware Profile}
 
-\subsection{Coded Video Structure}
+\section{Coded Video Structure}
 
 Theora is based on $8\times 8$ blocks of pixels.
 This sections describes how a video frame is laid out, divided into blocks, and
  how those blocks are organized.
 
-\subsubsection{Frame Layout}
+\subsection{Frame Layout}
 
 A video frame in Theora is a two-dimensional array of pixels.
 Theora, like VP3, uses a right-handed coordinate system, with the origin in the
@@ -259,7 +283,7 @@ This means that the width or height of the chroma planes may be half that of
  the total frame width and height.
 The luma plane is never subsampled.
 
-\subsubsection{Picture Region}
+\subsection{Picture Region}
 
 An encoded video frame in Theora is required to have a width and height that
  are multiples of sixteen, making an integral number of blocks even when the
@@ -285,7 +309,7 @@ The picture region plays no other role in the decode process, which operates on
 \label{fig:pic-frame}
 \end{figure}
 
-\subsubsection{Blocks and Super Blocks}
+\subsection{Blocks and Super Blocks}
 \label{sec:blocks-and-sbs}
 
 Each color plane is subdivided into $8\times 8$ \term{blocks}.
@@ -363,7 +387,7 @@ They do not reset to zero at the start of each plane.
 The implication is that the blocks from all planes are treated as a unit during
  the various processing steps.
 
-\subsubsection{Macro Blocks}
+\subsection{Macro Blocks}
 \label{sec:mbs}
 
 A macro block contains a $2\times 2$ array of blocks in the luma plane
@@ -422,7 +446,7 @@ They are assigned the following indices:
 \end{center}
 \vspace{\baselineskip}
 
-\subsubsection{Coding Modes and Prediction}
+\subsection{Coding Modes and Prediction}
 
 Each block is coded using one of a small, fixed set of \term{coding modes} that
  define how the block is predicted from previous frames.
@@ -445,7 +469,7 @@ The INTER\_NOMV coding mode uses the co-located contents of the block in the
  previous frame as the predictor.
 This is the default coding mode.
 
-\subsubsection{DCT Coefficients}
+\subsection{DCT Coefficients}
 
 To each block's predictor, a \term{residual} is added to form the final
  contents of the block.
@@ -502,14 +526,14 @@ Due to the right-handed coordinate system used for pixel locations in Theora,
 DCT coefficient $(0,0)$ is called the \term{DC coefficient}.
 All the other coefficients are called \term{AC coefficients}.
 
-\subsection{Decoder Configuration}
+\section{Decoder Configuration}
 
 Decoder setup consists of configuration of the quantization matrices and the
  Huffman codebooks for the DCT coefficients, and a table of limit values for
  the deblocking filter.
 The remainder of the decoding pipeline is not configurable.
 
-\subsubsection{Global Configuration}
+\subsection{Global Configuration}
 
 The global codec configuration consists of a few video related fields, such as
  frame rate, frame size, picture size and offset, aspect ratio, color space,
@@ -522,7 +546,7 @@ For the format defined in this specification, these are `3', `2', and
  `0', respectively, in reference to Theora's origin as a successor to the VP3.1
  format.
 
-\subsubsection{Quantization Matrices}
+\subsection{Quantization Matrices}
 
 Theora allows up to 384 different quantization matrices to be defined, one for
  each \term{quantization type}, \term{color plane} ($Y'$, $C_b$, or $C_r$), and
@@ -582,7 +606,7 @@ Finally, because the in-loop deblocking filter strength depends on the strength
 The precise specification of how all of this information is decoded appears in
  Section~REF.
 
-\subsubsection{Huffman Codebooks}
+\subsection{Huffman Codebooks}
 
 Theora uses 80 configurable binary Huffman codes to represent the 32 tokens
  used to encode DCT coefficients.
@@ -604,9 +628,9 @@ The second pair selects which codebooks to use from {\em all four} of the AC
 The precise specification of how the codebooks are decoded appears in
  Section~REF.
 
-\subsection{High-Level Decode Process}
+\section{High-Level Decode Process}
 
-\subsubsection{Decoder Setup}
+\subsection{Decoder Setup}
 
 Before decoding can begin, a decoder MUST be initialized using the bitstream
  headers corresponding to the stream to be decoded.
@@ -647,7 +671,7 @@ The setup header includes extensive codec setup information, including the
 A complete description of the setup header appears in
  Section~\ref{sec:setupheader}.
 
-\subsubsection{Decode Procedure}
+\subsection{Decode Procedure}
 
 The decoding and synthesis procedure for all video packets is fundamentally the
  same, with some steps omitted for intra frames.
@@ -845,7 +869,7 @@ The DCT coefficients are dequantized, an inverse DCT transform is applied, and
 To complete the reconstructed frame, an ``in-loop" deblocking filter is applied to
  the edges of all coded blocks.
 
-\section{Notation and Conventions}
+\chapter{Notation and Conventions}
 
 All parameters either passed in or out of a decoding procedure are given in
  \bitvar{bold\ face}.
@@ -950,7 +974,7 @@ The maximum of two numbers $a$ and $b$.
 
 \end{description}
 
-\subsection{Key words}
+\section{Key words}
 
 %We can't rewrite this, because this is text required by RFC 2119, so we use
 % some emergency stretching to get it typeset properly.
@@ -982,7 +1006,7 @@ These are used as place holders for future bitstream features with which the
 Such features will not increment the bitstream version number, and can only be
  recognized by checking the value of these reserved bits.
 
-\section{Video Formats}
+\chapter{Video Formats}
 
 This section gives a precise description of the video formats that Theora is
  capable of storing.
@@ -1006,7 +1030,7 @@ The first describes how color is represented and how to transform that color
 The second describes the various schemes for sampling the color values in time
  and space.
 
-\subsection{Color Space Conventions}
+\section{Color Space Conventions}
 
 There are a large number of different color standards used in digital video.
 Since Theora is a lossy codec, it restricts itself to only a few of them to
@@ -1031,7 +1055,7 @@ This merely selects one of the color spaces available from an enumerated list.
 Currently, only two color spaces are defined, with a third possibility that
  indicates the color space is ``unknown".
 
-\subsection{Color Space Conversions and Parameters}
+\section{Color Space Conversions and Parameters}
 \label{sec:color-xforms}
 
 The parameters which describe the conversions between each color space are
@@ -1193,7 +1217,7 @@ Parameters: $x_r,x_g,x_b,x_w, y_r,y_g,y_b,y_w$.
 
 \end{description}
 
-\subsection{Available Color Spaces}
+\section{Available Color Spaces}
 \label{sec:colorspaces}
 
 These are the color spaces currently defined for use by Theora video.
@@ -1204,7 +1228,7 @@ Some standards do not specify all the parameters necessary.
 For these unspecified parameters, this document serves as the definition of
  what should be used when encoding or decoding Theora video.
 
-\subsubsection{Rec.~470M (Rec.~ITU-R~BT.470-6 System M/NTSC with
+\subsection{Rec.~470M (Rec.~ITU-R~BT.470-6 System M/NTSC with
  Rec.~ITU-R~BT.601-5)}
 \label{sec:470m}
 
@@ -1253,7 +1277,7 @@ x_b,y_b                        & = 0.14, 0.08      \\
 \label{tab:470m}
 \end{table}
 
-\subsubsection{Rec.~470BG (Rec.~ITU-R~BT.470-6 Systems B and G with
+\subsection{Rec.~470BG (Rec.~ITU-R~BT.470-6 Systems B and G with
  Rec.~ITU-R~BT.601-5)}
 \label{sec:470bg}
 
@@ -1317,13 +1341,13 @@ x_b,y_b                        & = 0.15, 0.06      \\
 \label{tab:470bg}
 \end{table}
 
-\subsection{Pixel Formats}
+\section{Pixel Formats}
 \label{sec:pixfmts}
 
 Theora supports several different pixel formats, each of which uses different
  subsampling for the chroma planes relative to the luma plane.
 
-\subsubsection{4:4:4 Subsampling}
+\subsection{4:4:4 Subsampling}
 \label{sec:444}
 
 All three color planes are stored at full resolution.
@@ -1340,7 +1364,7 @@ The samples in the different planes are all at co-located sites.
 %
 
 
-\subsubsection{4:2:2 Subsampling}
+\subsection{4:2:2 Subsampling}
 \label{sec:422}
 
 The $C_b$ and $C_r$ planes are stored with half the horizontal resolution of
@@ -1367,7 +1391,7 @@ A horizontal phase shift may be required to produce signals which use different
 %
 %
 
-\subsubsection{4:2:0 Subsampling}
+\subsection{4:2:0 Subsampling}
 \label{sec:420}
 
 The $C_b$ and $C_r$ planes are stored with half the horizontal and half the
@@ -1408,7 +1432,7 @@ A horizontal or vertical phase shift may be required to produce signals which
 %
 %
 
-\subsubsection{Subsampling and the Picture Region}
+\subsection{Subsampling and the Picture Region}
 
 Although the frame size must be an integral number of macro blocks, and thus
  both the number of pixels and the number of blocks in each direction must be
@@ -1444,10 +1468,10 @@ If the offset is odd, then it is the first row of chroma samples which
 
 %TODO: Figures!
 
-\section{Bitpacking Convention}
+\chapter{Bitpacking Convention}
 \label{sec:bitpacking}
 
-\subsection{Overview}
+\section{Overview}
 
 The Theora codec uses relatively unstructured raw packets containing
  binary integer fields of arbitrary width.
@@ -1459,7 +1483,7 @@ Most current binary storage arrangements group bits into a native storage unit
 The Theora bitpacking convention specifies the correct mapping of the logical
  packet bitstream into an actual representation in fixed-width units.
 
-\subsubsection{Octets and Bytes}
+\subsection{Octets and Bytes}
 
 In most contemporary architectures, a `byte' is synonymous with an `octect',
  that is, eight bits.
@@ -1473,7 +1497,7 @@ Note, however, that the Theora bitpacking convention is still well defined for
  given storage system.
 This document assumes that a byte is one octet for purposes of example only.
 
-\subsubsection{Words and Byte Order}
+\subsection{Words and Byte Order}
 
 A `word' is an integer size that is a grouped multiple of the byte size.
 Most architectures consider a word to be a group of two, four, or eight bytes.
@@ -1499,7 +1523,7 @@ Thus host word ordering is of a concern only during optimization, when writing
 Logically, bytes are always encoded and decoded in order from byte zero through
  byte $n$.
 
-\subsubsection{Bit Order}
+\subsection{Bit Order}
 
 A byte has a well-defined `least significant' bit (LSb), which is the only bit
  set when the byte is storing the two's complement integer value $+1$.
@@ -1507,7 +1531,7 @@ A byte's `most significant' bit (MSb) is at the opposite end.
 Bits in a byte are numbered from zero at the LSb to $n$ for the MSb, where
  $n=7$ in an octet.
 
-\subsection{Coding Bits into Bytes}
+\section{Coding Bits into Bytes}
 
 The Theora codec needs to encode arbitrary bit-width integers from zero to 32
  bits wide into packets.
@@ -1530,7 +1554,7 @@ When all the bits of the current source byte are read, decoding continues with
 Any unfilled bits in the last byte of the packet MUST be cleared to zero by the
  encoder.
 
-\subsubsection{Signedness}
+\subsection{Signedness}
 
 The binary integers decoded by the above process may be either signed or
  unsigned.
@@ -1540,7 +1564,7 @@ That is, depending on context, the three bit binary pattern \bin{111} can be
  taken to represent either `$7$' as an unsigned integer or `$-1$' as a signed,
  two's complement integer.
 
-\subsubsection{Encoding Example}
+\subsection{Encoding Example}
 
 The following example shows the state of an (8-bit) byte stream after several
  binary integers are encoded, including the location of the put pointer for the
@@ -1615,7 +1639,7 @@ byte stream length: 4 bytes
 \end{tabular}
 \vspace{\baselineskip}
 
-\subsubsection{Decoding Example}
+\subsection{Decoding Example}
 
 The following example shows the state of the (8-bit) byte stream encoded in the
  previous example after several binary integers are decoded, including the
@@ -1666,7 +1690,7 @@ Had the context stated we were reading a signed integer, the returned value
  would have been the integer `$-1$'.
 \end{itemize}
 
-\subsubsection{End-of-Packet Alignment}
+\subsection{End-of-Packet Alignment}
 
 The typical use of bitpacking is to produce many independent byte-aligned
  packets which are embedded into a larger byte-aligned container structure,
@@ -1696,7 +1720,7 @@ Therefore if a decoder encounters the `end-of-packet' condition during normal
  decoding, it may attempt to use the bits that were read to recover as much of
  encoded data as possible, signal a warning or error, or both.
 
-\subsubsection{Reading Zero Bit Integers}
+\subsection{Reading Zero Bit Integers}
 
 Reading a zero bit integer returns the value `$0$' and does not increment
  the stream pointer.
@@ -1707,7 +1731,7 @@ Reading to the end of the packet, but not past the end, so that an
 Reading a zero bit integer after a previous read sets the `end-of-packet'
  condition shall fail, also returning `end-of-packet'.
 
-\section{Bitstream Headers}
+\chapter{Bitstream Headers}
 \label{sec:headers}
 
 A Theora bitstream begins with three header packets.
@@ -1727,7 +1751,7 @@ As such, several parameters available in these headers are not available to VP3
  streams.
 These are indicated as they appear in the sections below.
 
-\subsection{Common Header Decode}
+\section{Common Header Decode}
 \label{sub:common-header}
 
 \paragraph{Input parameters:} None.
@@ -1782,7 +1806,7 @@ This distinguishes them from video data packets in which the first bit
 Packets with other header types (\hex{83}--\hex{FF}) are reserved and MUST be
  ignored.
 
-\subsection{Identification Header Decode}
+\section{Identification Header Decode}
 \label{sec:idheader}
 
 \paragraph{Input parameters:} None.
@@ -2033,7 +2057,7 @@ Thus, \bitvar{PICW} and \bitvar{PICH} should be set to the frame width and
 VP3 headers do not specify a color space.
 VP3 only supports the 4:2:0 pixel format.
 
-\subsection{Comment Header}
+\section{Comment Header}
 \label{sec:commentheader}
 
 The Theora comment header is the second of three header packets that begin a
@@ -2061,7 +2085,7 @@ In addition to the vector list, there is a single vector for a vendor name,
  also eight-bit clean with a length encoded in 32 bits.
 %TODO: The 1.0 release of libtheora sets the vendor string to ...
 
-\subsubsection{Comment Length Decode}
+\subsection{Comment Length Decode}
 \label{sub:comment-len}
 
 \paragraph{Input parameters:} None.
@@ -2111,7 +2135,7 @@ This construction is used so that on platforms with 8-bit bytes, the memory
  conventions.
 \end{enumerate}
 
-\subsubsection{Comment Header Decode}
+\subsection{Comment Header Decode}
 
 \paragraph{Input parameters:} None.
 
@@ -2185,7 +2209,7 @@ The comment header packet is not optional; it must be present in the stream
 
 %TODO: \paragraph{VP3 Compatibility}
 
-\subsubsection{User Comment Format}
+\subsection{User Comment Format}
 
 The user comment vectors are structured similarly to a UNIX environment
  variable.
@@ -2250,7 +2274,7 @@ No field names are mandatory; a comment header may contain one or more, all, or
 %TODO: Complete list
 \end{description}
 
-\subsection{Setup Header}
+\section{Setup Header}
 \label{sec:setupheader}
 
 The Theora setup header contains the limit values used to drive the loop
@@ -2259,7 +2283,7 @@ The Theora setup header contains the limit values used to drive the loop
 Because the contents of this header are specific to Theora, no concessions have
  been made to keep the fields octet-aligned for easy parsing.
 
-\subsubsection{Loop Filter Limit Table Decode}
+\subsection{Loop Filter Limit Table Decode}
 \label{sub:loop-filter-limits}
 
 \paragraph{Input parameters:} None.
@@ -2309,7 +2333,7 @@ Read an \locvar{NBITS}-bit unsigned integer as $\bitvar{LFLIMS}[\locvar{\qi}]$.
 The loop filter limit values are hardcoded in VP3.
 The values used are given in Appendix~REF.
 
-\subsubsection{Quantization Parameters Decode}
+\subsection{Quantization Parameters Decode}
 \label{sub:quant-params}
 
 \paragraph{Input parameters:} None.
@@ -2526,7 +2550,7 @@ Assign $\bitvar{NQRS}[\locvar{\qti}][\locvar{\pli}]$ the value \locvar{\qri}.
 The quantization parameters are hardcoded in VP3.
 The values used are given in Appendix~REF.
 
-\subsubsection{Computing a Quantization Matrix}
+\subsection{Computing a Quantization Matrix}
 \label{sub:quant-mat}
 
 \paragraph{Input parameters:}\hfill\\*
@@ -2687,7 +2711,7 @@ Assign $\bitvar{QMAT}[\locvar{\ci}]$ the value
 \end{enumerate}
 \end{enumerate}
 
-\subsubsection{DCT Token Huffman Tables}
+\subsection{DCT Token Huffman Tables}
 \label{sub:huffman-tables}
 
 \paragraph{Input parameters:} None.
@@ -2792,7 +2816,7 @@ Remove the `1' from the end of \locvar{HBITS}.
 The DCT token Huffman tables are hardcoded in VP3.
 The values used are given in Appendix~REF.
 
-\subsubsection{Setup Header Decode}
+\subsection{Setup Header Decode}
 
 \paragraph{Input parameters:} None.
 
@@ -2857,7 +2881,7 @@ Decode the DCT token Huffman tables using the procedure given in
  Section~\ref{sub:huffman-tables} into \bitvar{HTS}.
 \end{enumerate}
 
-\section{Frame Decode}
+\chapter{Frame Decode}
 
 This section describes the complete procedure necessary to decode a single
  frame.
@@ -2865,7 +2889,7 @@ This begins with the frame header, followed by coded block flags, macro block
  modes, motion vectors, block-level \qi\ values, and finally the DCT residual
  tokens, which are used to reconstruct the frame.
 
-\subsection{Frame Header Decode}
+\section{Frame Header Decode}
 \label{sub:frame-header}
 
 \paragraph{Input parameters:} None.
@@ -2968,14 +2992,14 @@ The original VP3 frame header also can contain only a single \qi\ value,
  because VP3 does not support block-level \qi\ values and uses the same
  \qi\ value for all the coefficients in a frame.
 
-\subsection{Run-Length Encoded Bit Strings}
+\section{Run-Length Encoded Bit Strings}
 
 Two variations of run-length encoding are used to store sequences of bits for
  the block coded flags and the block-level \qi\ values.
 The procedures to decode these bit sequences are specified in the following two
  sections.
 
-\subsubsection{Long-Run Bit String Decode}
+\subsection{Long-Run Bit String Decode}
 \label{sub:long-run}
 
 \paragraph{Input parameters:}\hfill\\*
@@ -3105,7 +3129,7 @@ For reasonable video sizes of $1920\times 1080$ or less in 4:2:0 format---the
  only format VP3 supports---this does not pose any problems because runs this
  long are not needed.
 
-\subsubsection{Short-Run Bit String Decode}
+\subsection{Short-Run Bit String Decode}
 \label{sub:short-run}
 
 \paragraph{Input parameters:}\hfill\\*
@@ -3209,7 +3233,7 @@ Assign \locvar{BIT} the value $(1-\locvar{BIT})$.
 Continue decoding runs from step~\ref{step:short-run-loop}.
 \end{enumerate}
 
-\subsection{Coded Block Flags Decode}
+\section{Coded Block Flags Decode}
 \label{sub:coded-blocks}
 
 \paragraph{Input parameters:}\hfill\\*
@@ -3366,7 +3390,7 @@ If \locvar{\bi} is in the luma plane, assign \bitvar{NLBCODED} the value
 \end{enumerate}
 \end{enumerate}
 
-\subsection{Macro Block Coding Modes}
+\section{Macro Block Coding Modes}
 
 \paragraph{Input parameters:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
@@ -3522,10 +3546,10 @@ Otherwise, assign $\bitvar{MBMODE}[\locvar{\mbi}]$ the value 0 (INTER\_NOMV).
 \appendix
 
 \clearpage
-\section{Ogg Bitstream Encapsulation}
+\chapter{Ogg Bitstream Encapsulation}
 \label{app:oggencapsulation}
 
-\subsection{Overview}
+\section{Overview}
 
 This document specifies the embedding or encapsulation of Theora packets
  in an Ogg transport stream.
@@ -3545,13 +3569,13 @@ While Theora packets can be embedded in a wide variety of media
  recommends Ogg as the native format for Theora video in file-oriented
  storage and transmission contexts.
 
-\subsubsection{MIME type}
+\subsection{MIME type}
 
 The correct MIME type of any Ogg file is {\tt application/ogg}.
 Outside of an encapsulation, the mime type {\tt video/x-theora} may
  be used to refer specifically to the Theora compressed video stream.
 
-\subsection{Embedding in a logical bitstream}
+\section{Embedding in a logical bitstream}
 
 Ogg separates a {\em logical bitstream} consisting of the framing of
  a particular sequence of packets and complete within itself from
@@ -3563,7 +3587,7 @@ This section specifies the embedding of Theora packets in a logical Ogg
 The mapping of Ogg Theora logical bitstreams into a multiplexed physical Ogg
  stream is described in the next section.
 
-\subsubsection{Headers}
+\subsection{Headers}
 
 The initial info header packet appears by itself in a single Ogg page.
 This page defines the start of the logical stream and MUST have
@@ -3584,7 +3608,7 @@ All header pages MUST have their granule position field set to zero.
 %TODO: or -1?
 %TBT: What are we doing now?
 
-\subsubsection{Frame data}
+\subsection{Frame data}
 
 The first frame data packet in a logical bitstream MUST begin a fresh page.
 All other data packets are placed one at a time into Ogg pages
@@ -3605,9 +3629,9 @@ This simplifies seeking and mux, but is different from the published
  definition of the Ogg granule field.
 This document will be updated when the issue is settled.
 
-%TODO: \subsubsection{Granule position}
+%TODO: \subsection{Granule position}
 
-\subsection{Multiplexed stream mapping}
+\section{Multiplexed stream mapping}
 
 Applications supporting Ogg Theora I must support Theora bitstreams
  multiplexed with compressed audio data in the Vorbis I and Speex
@@ -3623,7 +3647,7 @@ Some conventions based on included metadata aide interoperability
 %TODO: describe multiple vs. alternate streams, language mapping
 % and reference metadata descriptions.
 
-\subsubsection{Chained streams}
+\subsection{Chained streams}
 
 Ogg Theora decoders and playback applications MUST support both grouped
  streams (multiplexed concurrent logical streams) and chained streams
@@ -3637,7 +3661,7 @@ A playback application MUST be prepared to handle such changes and
 The specification of grouped streams below applies independently to each
  segment of a chained bitstream.
 
-\subsubsection{Grouped streams}
+\subsection{Grouped streams}
 
 At the beginning of a multiplexed stream, the `beginning of stream'
  pages for each logical bitstream will be grouped together.
@@ -3673,7 +3697,7 @@ This facilitates seeking while limiting the buffering requirements of the
 %TODO: The language should be changed to match.
 
 \clearpage
-\section{Colophon}
+\chapter{Colophon}
 
 Ogg is a \href{http://www.xiph.org}{Xiph.org Foundation} effort to protect
  essential tenets of Internet multimedia from corporate hostage-taking; Open
