@@ -911,9 +911,9 @@ ogg_uint32_t GetFOURMVExhaustiveSearch (CP_INSTANCE *cpi,
                                         MOTION_VECTOR *MV ) {
   ogg_uint32_t  InterMVError;
 
-  /* For the moment the 4MV mode is only deemd to be valid if all four
-     Y blocks are to be updated */
-  /* This May be adapted later. */
+  /* For the moment the 4MV mode is only deemed to be valid 
+     if all four Y blocks are to be updated */
+  /* This may be adapted later. */
   if ( cpi->pb.display_fragments[FragIndex] &&
        cpi->pb.display_fragments[FragIndex + 1] &&
        cpi->pb.display_fragments[FragIndex + cpi->pb.HFragments] &&
