@@ -204,5 +204,6 @@ AC_OUTPUT([
   examples/Makefile
   doc/Makefile doc/Doxyfile doc/python/Makefile
   debian/Makefile
+  libtheora.spec
   theora.pc
 ])
