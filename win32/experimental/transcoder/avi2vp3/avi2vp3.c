@@ -20,7 +20,7 @@ int main(int argc, const char **argv)
     int olength;
     int length;
     avi_t *avifile;
-    int chucksize;    
+    int chunksize;    
     int frame;
     int frames;
     int keyframegap = 0;
