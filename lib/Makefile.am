@@ -3,15 +3,15 @@ INCLUDES = -I$(top_srcdir)/include
 lib_LTLIBRARIES = libtheora.la
 
 if THEORA_SUPPORT_ENCODE
-encoder_sources = encoder_toplevel.c
+encoder_sources = dct_encode.c encode.c encoder_toplevel.c
 else
 encoder_sources = encoder_disabled.c
 endif
 
-libtheora_la_SOURCES = encode.c hufftables.h quant_lookup.h \
+libtheora_la_SOURCES = hufftables.h quant_lookup.h \
 	encoder_internal.h idct.c reconstruct.c block_inline.h \
 	encoder_lookup.h mcomp.c scan.c blockmap.c misc_common.c \
-	dct.c frarray.c pb.c dct_decode.c frinit.c pp.c dct_encode.c \
+	dct.c frarray.c pb.c dct_decode.c frinit.c pp.c \
 	huffman.c pp.h toplevel.c decode.c huffman.h quant.c \
 	comment.c toplevel_lookup.h mcomp.h $(encoder_sources)
 
