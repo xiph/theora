@@ -1125,10 +1125,10 @@ int theora_encode_comment(theora_comment *tc, ogg_packet *op)
   oggpack_buffer *opb;
 
 #ifndef LIBOGG2
-  opb = malloc(sizeof(oggpack_buffer));
+  opb = _ogg_malloc(sizeof(oggpack_buffer));
   oggpackB_writeinit(opb);
 #else
-  opb = malloc(oggpack_buffersize());
+  opb = _ogg_malloc(oggpack_buffersize());
   oggpackB_writeinit(opb, ogg_buffer_create());
 #endif 
   oggpackB_write(opb, 0x81, 8);
@@ -1364,10 +1364,10 @@ int theora_decode_header(theora_info *ci, theora_comment *cc, ogg_packet *op){
   if(!op)return OC_BADHEADER;
   
 #ifndef LIBOGG2
-  opb = malloc(sizeof(oggpack_buffer));
+  opb = _ogg_malloc(sizeof(oggpack_buffer));
   oggpackB_readinit(opb,op->packet,op->bytes);
 #else
-  opb = malloc(oggpack_buffersize());
+  opb = _ogg_malloc(oggpack_buffersize());
   oggpackB_readinit(opb,op->packet);
 #endif
   {
