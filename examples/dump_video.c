@@ -190,6 +190,20 @@ int main(int argc,char *argv[]){
     }
   }
 
+
+  /*
+     Ok, Ogg parsing. The idea here is we have a bitstream
+     that is made up of Ogg pages. The libogg sync layer will
+     find them for us. There may be pages from several logical
+     streams interleaved; we find the first theora stream and
+     ignore any others.
+
+     Then we pass the pages for our stream to the libogg stream
+     layer which assembles our original set of packets out of
+     them. It's the packets that libtheora actually knows how
+     to handle.
+  */
+
   /* start up Ogg stream synchronization layer */
   ogg_sync_init(&oy);
 
@@ -198,7 +212,12 @@ int main(int argc,char *argv[]){
   theora_info_init(&ti);
 
   /* Ogg file open; parse the headers */
-  /* Only interested in Vorbis/Theora streams */
+
+  /* Vorbis and Theora both depend on some initial header packets
+     for decoder setup and initialization. We retrieve these first
+     before entering the main decode loop. */
+
+  /* Only interested in Theora streams */
   while(!stateflag){
     int ret=buffer_data(infile,&oy);
     if(ret==0)break;
@@ -219,7 +238,7 @@ int main(int argc,char *argv[]){
 
       /* identify the codec: try theora */
       if(!theora_p && theora_decode_header(&ti,&tc,&op)>=0){
-        /* it is theora */
+        /* it is theora -- save this stream state */
         memcpy(&to,&test,sizeof(test));
         theora_p=1;
       }else{
@@ -227,7 +246,7 @@ int main(int argc,char *argv[]){
         ogg_stream_clear(&test);
       }
     }
-    /* fall through to non-bos page parsing */
+    /* fall through to non-initial page parsing */
   }
 
   /* we're expecting more header packets. */
@@ -263,7 +282,7 @@ int main(int argc,char *argv[]){
     }
   }
 
-  /* and now we have it all. initialize decoder */
+  /* Now we have all the required headers. initialize the decoder. */
   if(theora_p){
     theora_decode_init(&td,&ti);
     fprintf(stderr,"Ogg logical stream %x is Theora %dx%d %.02f fps video\nEncoded frame content is %dx%d with %dx%d offset\n",
@@ -281,7 +300,26 @@ int main(int argc,char *argv[]){
   /* install signal handler */
   signal (SIGINT, sigint_handler);
 
-  /* on to the main decode loop.*/
+  /* Finally the main decode loop. 
+
+     It's one Theora packet per frame, so this is pretty 
+     straightforward if we're not trying to maintain sync
+     with other multiplexed streams.
+
+     the videobuf_ready flag is used to maintain the input
+     buffer in the libogg stream state. If there's no output
+     frame available at the end of the decode step, we must
+     need more input data. We could simplify this by just 
+     using the return code on ogg_page_packetout(), but the
+     flag system extends easily to the case were you care
+     about more than one multiplexed stream (like with audio
+     playback). In that case, just maintain a flag for each
+     decoder you care about, and pull data when any one of
+     them stalls.
+
+     videobuf_time holds the presentation time of the currently
+     buffered video frame. We ignore this value.
+  */
 
   stateflag=0; /* playback has not begun */
   /* queue any remaining pages from data we buffered but that did not
@@ -304,9 +342,9 @@ int main(int argc,char *argv[]){
         break;
     }
 
-    if(!videobuf_ready  && feof(infile))break;
+    if(!videobuf_ready && feof(infile))break;
 
-    if(!videobuf_ready ){
+    if(!videobuf_ready){
       /* no data yet for somebody.  Grab another page */
       int ret=buffer_data(infile,&oy);
       while(ogg_sync_pageout(&oy,&og)>0){
@@ -319,7 +357,7 @@ int main(int argc,char *argv[]){
     videobuf_ready=0;
   }
 
-  /* close everything */
+  /* end of decoder loop -- close everything */
 
   if(theora_p){
     ogg_stream_clear(&to);
