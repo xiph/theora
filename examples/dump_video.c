@@ -99,9 +99,9 @@ static void video_write(void){
   for(i=0;i<yuv.y_height;i++)
     fwrite(yuv.y+yuv.y_stride*i, 1, yuv.y_width, outfile);
   for(i=0;i<yuv.uv_height;i++)
-    fwrite(yuv.v+yuv.uv_stride*i, 1, yuv.uv_width, outfile);
-  for(i=0;i<yuv.uv_height;i++)
     fwrite(yuv.u+yuv.uv_stride*i, 1, yuv.uv_width, outfile);
+  for(i=0;i<yuv.uv_height;i++)
+    fwrite(yuv.v+yuv.uv_stride*i, 1, yuv.uv_width, outfile);
 
 }
 /* dump the theora (or vorbis) comment header */
