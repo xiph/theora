@@ -41,4 +41,17 @@
 
 #define THEORA_SUPPORT_FLOAT 0
 
+#ifdef __WINS__
+
+/* Disable some warnings */
+
+#pragma warning(disable: 4100) /* unreferenced formal parameter */
+//#pragma warning(disable: 4121) /* alignment of a member was sensitive to packing */
+#pragma warning(disable: 4244) /* conversion from '...' to '...', possible loss of data */
+#pragma warning(disable: 4505) /* unreferenced local function has been removed */
+#pragma warning(disable: 4701) /* local variable may be be used without having been initialized */
+#pragma warning(disable: 4761) /* integral size mismatch in argument: conversion supplied */
+
+#endif
+
 #endif /* ! CONFIG_H */
