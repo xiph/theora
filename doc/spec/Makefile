@@ -8,7 +8,7 @@ RM = rm -f
 
 SPEC_SRCS = spec.tex spec.bib
 
-FIG_SRCS = pic-frame.fig hilbert-mb.fig hilbert-block.fig
+FIG_SRCS = pic-frame.fig hilbert-mb.fig hilbert-block.fig xifish.fig
 
 FIG_OBJS = $(FIG_SRCS:.fig=.tex)
 
