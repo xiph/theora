@@ -12,6 +12,7 @@ AC_CANONICAL_TARGET
 AM_CONFIG_HEADER([config.h])
 AC_CONFIG_SRCDIR([lib/dct.c])
 AM_INIT_AUTOMAKE
+AM_MAINTAINER_MODE
 
 dnl Library versioning
 
