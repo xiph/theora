@@ -128,6 +128,7 @@ typedef struct theora_comment{
 
 #define OC_FAULT       -1
 #define OC_EINVAL      -10
+#define OC_DISABLED    -11
 #define OC_BADHEADER   -20
 #define OC_NOTFORMAT   -21
 #define OC_VERSION     -22
