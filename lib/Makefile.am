@@ -34,7 +34,6 @@ noinst_HEADERS = \
 	encoder_lookup.h \
 	huffman.h \
 	hufftables.h \
-	mcomp.h \
 	pp.h \
 	quant_lookup.h \
 	toplevel.h \
