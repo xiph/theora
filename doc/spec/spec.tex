@@ -72,11 +72,11 @@
 \thispagestyle{plain}
 \tableofcontents
 \cleardoublepage
- 
+
 \thispagestyle{plain}
 \listoffigures
 \cleardoublepage
-                                                                                
+
 \thispagestyle{plain}
 \listoftables
 \cleardoublepage
@@ -233,17 +233,8 @@ Such features will not increment the bitstream version number, and can only be
 
 \pagenumbering{arabic}
 \setcounter{page}{1}
-                                                                                
-\chapter{Introduction}
 
-%[silvia: COMMENTED OUT, should move somewhere else]
-%This section provides a high level description of the Theora codec's
-% construction.
-%A bit-by-bit specification appears beginning in Section~\ref{sec:bitpacking}.
-%The later sections assume a high-level understanding of the Theora decode
-% process, which is provided below.
-%
-%\section{Overview}
+\chapter{Introduction}
 
 Theora is a general purpose, lossy video codec.
 It is based on the VP3 video codec produced by On2 Technologies
@@ -268,7 +259,7 @@ If a feature is not available in the original VP3 format, this is mentioned
  when that feature is defined.
 A complete list of these features appears in Appendix~REF.
 %TODO: VP3 - theora comparison in appendix
-                                                                                  
+
 
 \section{Video Formats}
 
@@ -288,9 +279,9 @@ Black and white content can be efficiently encoded, however, because the
  uniform chroma planes compress well.
 Support for interlaced material is planned for a future version.
 \begin{verse}
-{\bf Note:} Infrequently changing frame rates---as when film and video sequences
- are cut together---can be supported in the Ogg container format by chaining
- several Theora streams together.
+{\bf Note:} Infrequently changing frame rates---as when film and video
+ sequences are cut together---can be supported in the Ogg container format by
+ chaining several Theora streams together.
 \end{verse}
 Support for increased bit depths or additional color spaces is not planned.
 
@@ -397,9 +388,10 @@ These sections will be marked as such, and a proper Theora encoder is not
 
 \chapter{Coded Video Structure}
 
-Theora's encoding and decoding process is based on $8\times 8$ blocks of pixels.
-This sections describes how a video frame is laid out, divided into such
-blocks, and how those blocks are organized.
+Theora's encoding and decoding process is based on $8\times 8$ blocks of
+ pixels.
+This sections describes how a video frame is laid out, divided into
+ blocks, and how those blocks are organized.
 
 \section{Frame Layout}
 
@@ -470,37 +462,39 @@ The picture region plays no other role in the decode process, which operates on
 
 Each color plane is subdivided into \term{blocks} of $8\times 8$ pixels.
 Blocks are grouped into $4\times 4$ arrays called \term{super blocks} as
-shown in Figure~\ref{fig:superblock}.
+ shown in Figure~\ref{fig:superblock}.
 Each color plane has its own set of blocks and super blocks.
+If the chroma planes are subsampled, they are still divided into $8\times 8$
+ blocks of pixels; there are just fewer blocks than in the luma plane.
 The boundaries of blocks and super blocks in the luma plane do not necessarily
  coincide with those of the chroma planes, if the chroma planes have been
  subsampled.
 
 \begin{figure}[htb]
- \begin{center}
- \include{superblock}
- \end{center}
- \caption{Subdivision of a frame into blocks and super blocks}
- \label{fig:superblock}
+\begin{center}
+\include{superblock}
+\end{center}
+\caption{Subdivision of a frame into blocks and super blocks}
+\label{fig:superblock}
 \end{figure}
 
 Blocks are accessed in two different orders in the various decoder processes.
 The first is \term{raster order}, illustrated in Figure~\ref{fig:raster-block}.
-This indexes each block in row-major order, starting in the lower left and
- proceeding along the bottom row, followed by the next row up starting on the
- left, etc.
+This indexes each block in row-major order, starting in the lower left of the
+ frame and continuing along the bottom row of the entire frame, followed by the
+ next row up, starting on the left edge of the frame, etc.
 
 \begin{figure}[htb]
 \begin{center}
 \include{raster-block}
 \end{center}
-\caption{Raster ordering of nxm blocks}
+\caption{Raster ordering of $n\times m$ blocks}
 \label{fig:raster-block}
 \end{figure}
 
 The second is \term{coded order}.
 In coded order, blocks are accessed by super block.
-Within each frame, super blocks are traversed in raster order, 
+Within each frame, super blocks are traversed in raster order,
  similar to raster order for blocks.
 Within each super block, however, blocks are accessed in a Hilbert curve
  pattern, illustrated in Figure~\ref{fig:hilbert-block}.
@@ -526,7 +520,7 @@ When accessed in raster order, each block in the luma plane is assigned the
 
 \vspace{\baselineskip}
 \begin{center}
-\begin{tabular}{|cccc|c|cc|}\hline
+\begin{tabular}{|ccccccc|}\hline
 150 & 151 & 152 & 153 & $\ldots$ & 178 & 179 \\
 120 & 121 & 122 & 123 & $\ldots$ & 148 & 149 \\\hline
  90 &  91 &  92 &  93 & $\ldots$ & 118 & 119 \\
@@ -565,11 +559,12 @@ The implication is that the blocks from all planes are treated as a unit during
 \label{sec:mbs}
 
 A macro block contains a $2\times 2$ array of blocks in the luma plane
- {\em and} the co-located blocks in the chroma planes, as shown in Figure~\ref{fig:macroblock}.
+ {\em and} the co-located blocks in the chroma planes, as shown in
+ Figure~\ref{fig:macroblock}.
 Thus macro blocks can represent anywhere from six to twelve blocks, depending
  on how the chroma planes are subsampled.
-This is in contrast to super blocks, which only contain macro blocks from a
- single color plane.
+This is in contrast to super blocks, which only contain blocks from a single
+ color plane.
 % the whole super vs. macro blocks thing is a little confusing, and it can be
 % hard to remember which is what initially. A figure would/will help here,
 % but I tried to add some text emphasizing the difference in terms of
@@ -613,7 +608,7 @@ Unlike blocks, macro blocks need never be accessed in a pure raster order.
 
 Using the same frame size as the example above, there are 15 macro blocks in
  each row and 3 rows of macro blocks.
-They are assigned the following indices:
+The macro blocks are assigned the following indices:
 
 \vspace{\baselineskip}
 \begin{center}
@@ -706,7 +701,13 @@ DCT coefficient $(0,0)$ is called the \term{DC coefficient}.
 All the other coefficients are called \term{AC coefficients}.
 
 
-\chapter{Decoding}
+\chapter{Decoding Overview}
+
+This section provides a high level description of the Theora codec's
+ construction.
+A bit-by-bit specification appears beginning in Section~\ref{sec:bitpacking}.
+The later sections assume a high-level understanding of the Theora decode
+ process, which is provided below.
 
 \section{Decoder Configuration}
 
@@ -1048,7 +1049,8 @@ The DCT coefficients are dequantized, an inverse DCT transform is applied, and
 
 \paragraph{Loop Filtering}
 
-To complete the reconstructed frame, an ``in-loop'' deblocking filter is applied to the edges of all coded blocks.
+To complete the reconstructed frame, an ``in-loop'' deblocking filter is
+ applied to the edges of all coded blocks.
 
 
 \chapter{Video Formats}
@@ -2462,9 +2464,8 @@ Every set except the first one can be copied from the immediately preceding
 Similarly, if the quantization type is not $0$, the set can be copied from the
  set defined for the same color plane for the preceding quantization type.
 This formulation allows compact representation of, for example, the same 
- set of quant ranges to be used for both chroma channels, as was done in 
- the original VP3, or the same set of quant ranges to be used for INTRA 
- and INTER modes.
+ set of quant ranges in both chroma channels, as is done in the original VP3,
+ or the same set of quant ranges in INTRA and INTER modes.
 
 Each quant range is defined by a size and two base matrix indices, one for each
  end of the range.
@@ -3479,10 +3480,16 @@ If \locvar{\bi} is in the luma plane, assign \bitvar{NLBCODED} the value
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
-\locvar{\mbi}     & Integer & 32 & No & The index of the current macro
+\locvar{MSCHEME}   & Integer &  3 & No & The mode coding scheme. \\
+\locvar{MALPHABET} & \multicolumn{1}{p{40pt}}{Integer array}
+                             &  3 & No & The list of modes corresponding to each
+ Huffman code. \\
+\locvar{\mbi}      & Integer & 32 & No & The index of the current macro
  block. \\
-\locvar{\bi}      & Integer & 32 & No & The index of the current block in coded
+\locvar{\bi}       & Integer & 32 & No & The index of the current block in coded
  order. \\
+\locvar{\mi}       & Integer & 32 & No & The index of a Huffman code from
+ Table~\ref{tab:mode-codes}, starting from $0$. \\
 \bottomrule\end{tabularx}
 \medskip
 
@@ -3582,11 +3589,12 @@ If a block \locvar{\bi} in the luma plane of macro block \locvar{\mbi} exists
 \item
 If \locvar{MSCHEME} is not 7, read one bit at a time until one of the Huffman
  codes in Table~\ref{tab:mode-codes} is recognized, and assign
- $\bitvar{MBMODE}[\locvar{\mbi}]$ the value $\locvar{MALPHABET}[\locvar{\mi}]$,
- where \locvar{\mi} is the index of the Huffman code decoded.
+ $\bitvar{MBMODES}[\locvar{\mbi}]$ the value
+ $\locvar{MALPHABET}[\locvar{\mi}]$, where \locvar{\mi} is the index of the
+ Huffman code decoded.
 \item
 Otherwise, if no luma-plane blocks in the macro block are coded, read a 3-bit
- unsigned integer as $\bitvar{MBMODE}[\locvar{\mbi}]$.
+ unsigned integer as $\bitvar{MBMODES}[\locvar{\mbi}]$.
 \end{enumerate}
 \item
 Otherwise, assign $\bitvar{MBMODE}[\locvar{\mbi}]$ the value 0 (INTER\_NOMV).
