@@ -35,6 +35,6 @@
 
 /* Do not build encoding support */
 
-#define HAVE_ENCODER 0
+#define THEORA_SUPPORT_ENCODE 0
 
 #endif /* ! CONFIG_H */

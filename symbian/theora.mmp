@@ -36,6 +36,6 @@ UID           0
 MACRO         HAVE_CONFIG_H
 SOURCEPATH    ..\lib
 SOURCE        blockmap.c comment.c dct.c dct_decode.c decode.c frarray.c frinit.c huffman.c
-SOURCE        idct.c mcomp.c misc_common.c pb.c pp.c quant.c reconstruct.c scan.c toplevel.c
+SOURCE        idct.c mcomp.c misc_common.c pb.c pp.c quant.c reconstruct.c scan.c toplevel.c encoder_disabled.c
 USERINCLUDE   .
 SYSTEMINCLUDE \epoc32\include \epoc32\include\libc ..\include ..\..\ogg\include ..\..\ogg\symbian
