@@ -311,7 +311,7 @@ extern double theora_granule_time(theora_state *th,ogg_int64_t granulepos);
  * \returns The frame number corresponding to \a granulepos.
  * \retval -1 The given granulepos is invalid (ie. negative)
  */
-extern double theora_granule_frame(theora_state *th,ogg_int64_t granulepos);
+extern ogg_int64_t theora_granule_frame(theora_state *th,ogg_int64_t granulepos);
 
 /**
  * Initialize a theora_info structure. All values within the given theora_info

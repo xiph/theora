@@ -420,7 +420,7 @@ double theora_granule_time(theora_state *th,ogg_int64_t granulepos){
 }
 
 /* returns frame number of current packet in given logical stream */
-double theora_granule_frame(theora_state *th,ogg_int64_t granulepos){
+ogg_int64_t theora_granule_frame(theora_state *th,ogg_int64_t granulepos){
   CP_INSTANCE *cpi=(CP_INSTANCE *)(th->internal_encode);
   PB_INSTANCE *pbi=(PB_INSTANCE *)(th->internal_decode);
 
