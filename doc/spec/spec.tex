@@ -588,7 +588,7 @@ This is in contrast to super blocks, which only contain blocks from a single
 %TBT:  blocks, this is essentially true.
 %TBT: So lets restrict the differences we emphasize to those of data
 %TBT:  organization, which the sentence I just added above does.
-Macro bocks contain information about coding mode and motion vectors for the
+Macro blocks contain information about coding mode and motion vectors for the
  corresponding blocks in all color planes.
 
 \begin{figure}[htb]
@@ -706,7 +706,8 @@ They are also often indexed in \term{zig-zag order}, as shown in
 \label{tab:zig-zag}
 \end{figure}
 
-Note that the row and column indices refer to {\em frequency number} and not
+\begin{verse}
+{\bf Note:} the row and column indices refer to {\em frequency number} and not
  pixel locations.
 The frequency numbers are defined independently of the memory organization of
  the pixels.
@@ -719,6 +720,7 @@ That is, they return DCT coefficients in the same memory buffer that the
 Due to the right-handed coordinate system used for pixel locations in Theora,
  one must note carefully how both pixel values and DCT coefficients are
  organized in memory in such a system.
+\end{verse}
 
 DCT coefficient $(0,0)$ is called the \term{DC coefficient}.
 All the other coefficients are called \term{AC coefficients}.
@@ -910,7 +912,8 @@ Decode 63rd AC coefficient for each coded block.
 \item Perform loop filtering.
 \end{itemize}
 
-Note that clever rearrangement of the steps in this process is possible.
+\begin{verse}
+{\bf Note:} clever rearrangement of the steps in this process is possible.
 As an example, in a memory-constrained environment, one can make multiple
  passes through the DCT coefficients to avoid buffering them all in memory.
 On the first pass, the starting location of each coefficient is identified, and
@@ -920,6 +923,7 @@ This operation produces entirely equivalent output and is naturally perfectly
  legal.
 It may even be a benefit in non-memory-constrained environments due to a
  reduced cache footprint.
+\end{verse}
 
 Theora makes equivalence easy to check by defining all decoding operations in
  terms of exact integer operations.
@@ -1356,7 +1360,8 @@ This color space is used by the PAL and SECAM systems in much of the rest of
 This can be used directly by systems (B, B1, D, D1, G, H, I, K, N)/PAL and (B,
  D, G, H, K, K1, L)/SECAM\@.
 
-Note that the Rec.~470BG chromaticity values are different from those
+\begin{verse}
+{\bf Note:} the Rec.~470BG chromaticity values are different from those
  specified in Rec.~470M\@.
 When PAL and SECAM systems were first designed, they were based upon the same
  primaries as NTSC\@.
@@ -1366,6 +1371,7 @@ The U.S. recommends using correction circuitry to approximate the existing,
  standard NTSC primaries.
 Current PAL and SECAM systems have standardized on primaries in accord with
  more recent technology.
+\end{verse}
 
 Rec.~470 provisionally permits the use of the NTSC chromaticity values (given
  in Section~\ref{sec:470m}) with legacy PAL and SECAM equipment.
@@ -1420,8 +1426,16 @@ Theora supports several different pixel formats, each of which uses different
 \subsection{4:4:4 Subsampling}
 \label{sec:444}
 
-All three color planes are stored at full resolution.
+All three color planes are stored at full resolution - each pixel has a $Y'$, a $C_b$ and a $C_r$ value (see Figure~\ref{fig:pixel444}).
 The samples in the different planes are all at co-located sites.
+
+\begin{figure}[htb]
+\begin{center}
+\include{pixel444}
+\end{center}
+\caption{Pixels encoded 4:4:4}
+\label{fig:pixel444}
+\end{figure}
 
 %TODO: Figure.
 %YRB         YRB
@@ -1440,7 +1454,7 @@ The samples in the different planes are all at co-located sites.
 The $C_b$ and $C_r$ planes are stored with half the horizontal resolution of
  the $Y'$ plane.
 Thus, each of these planes has half the number of horizontal blocks as the luma
- plane.
+ plane (see Figure~\ref{fig:pixel422}).
 Similarly, they have half the number of horizontal super blocks, rounded up.
 Macro blocks are defined across color planes, and so their number does not
  change, but each macro block contains half as many chroma blocks.
@@ -1450,6 +1464,14 @@ The chroma samples are vertically aligned with the luma samples, but
 Thus, each luma sample has a unique closest chroma sample.
 A horizontal phase shift may be required to produce signals which use different
  horizontal chroma sampling locations for compatibility with different systems.
+
+\begin{figure}[htb]
+\begin{center}
+\include{pixel422}
+\end{center}
+\caption{Pixels encoded 4:2:2}
+\label{fig:pixel422}
+\end{figure}
 
 %TODO: Figure.
 %Y     RB    Y           Y     RB    Y
@@ -1468,7 +1490,7 @@ The $C_b$ and $C_r$ planes are stored with half the horizontal and half the
  vertical resolution of the $Y'$ plane.
 Thus, each of these planes has half the number of horizontal blocks and half
  the number of vertical blocks as the luma plane, for a total of one quarter
- the number of blocks.
+ the number of blocks (see Figure~\ref{fig:pixel420}).
 Similarly, they have half the number of horizontal super blocks and half the
  number of vertical super blocks, rounded up.
 Macro blocks are defined across color planes, and so their number does not
@@ -1483,6 +1505,14 @@ This is the same sub-sampling pattern used with JPEG, MJPEG, and MPEG-1, and
 A horizontal or vertical phase shift may be required to produce signals which
  use different chroma sampling locations for compatibility with different
  systems.
+
+\begin{figure}[htb]
+\begin{center}
+\include{pixel420}
+\end{center}
+\caption{Pixels encoded 4:2:0}
+\label{fig:pixel420}
+\end{figure}
 
 %TODO: Figure.
 %Y           Y           Y           Y
