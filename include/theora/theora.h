@@ -57,9 +57,9 @@ typedef struct {
     int   uv_width;
     int   uv_height;
     int   uv_stride;
-    char *y;
-    char *u;
-    char *v;
+    unsigned char *y;
+    unsigned char *u;
+    unsigned char *v;
 
 } yuv_buffer;
 
