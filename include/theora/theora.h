@@ -58,16 +58,16 @@ ogg_buffer_state *ogg_buffer_create(void);
  * All samples are 8 bits.
  */
 typedef struct {
-    int   y_width;	/* width of the Y' luminance plane */
-    int   y_height;	/* height of the luminance plane */
-    int   y_stride;	/* offset in bytes between successive rows */
+    int   y_width;	/**< width of the Y' luminance plane */
+    int   y_height;	/**< height of the luminance plane */
+    int   y_stride;	/**< offset in bytes between successive rows */
 
-    int   uv_width;	/* height of the Cb and Cr chroma planes */
-    int   uv_height;	/* width of the chroma planes */
-    int   uv_stride;	/* offset between successive chroma rows */
-    unsigned char *y;	/* pointer to start of luminance data */
-    unsigned char *u;	/* pointer to start of Cb data */
-    unsigned char *v;	/* pointer to start of Cr data */
+    int   uv_width;	/**< height of the Cb and Cr chroma planes */
+    int   uv_height;	/**< width of the chroma planes */
+    int   uv_stride;	/**< offset between successive chroma rows */
+    unsigned char *y;	/**< pointer to start of luminance data */
+    unsigned char *u;	/**< pointer to start of Cb data */
+    unsigned char *v;	/**< pointer to start of Cr data */
 
 } yuv_buffer;
 
@@ -84,6 +84,21 @@ typedef enum {
  * Theora bitstream info.
  * Contains the basic playback parameters for a stream,
  * corresponds to the initial 'info' header packet.
+ * 
+ * Encoded theora frames must be a multiple of 16 is size;
+ * this is what the width and height members represent. To
+ * handle other sizes, a crop rectangle is specified in 
+ * frame_height and frame_width, offset_x and offset_y. The
+ * offset and size should still be a power of 2 to avoid
+ * chroma sampling shifts.
+ *
+ * Frame rate, in frames per second is stored as a rational
+ * fraction. So is the aspect ratio. Note that this refers
+ * to the aspect ratio of the frame pixels, not of the
+ * overall frame itself.
+ * 
+ * see the example code for use of the other parameters and
+ * good default settings for the encoder parameters.
  */
 typedef struct {
   ogg_uint32_t  width;
@@ -98,7 +113,7 @@ typedef struct {
   ogg_uint32_t  aspect_denominator;
   theora_colorspace colorspace;
   int           target_bitrate;
-  int           quality;
+  int           quality;  /**< nominal quality setting, 0-63 */
   int           quick_p;  /**< quick encode/decode */
 
   /* decode only */
@@ -160,15 +175,15 @@ typedef struct theora_comment{
 
 } theora_comment;
 
-#define OC_FAULT       -1
-#define OC_EINVAL      -10
-#define OC_DISABLED    -11
-#define OC_BADHEADER   -20
-#define OC_NOTFORMAT   -21
-#define OC_VERSION     -22
-#define OC_IMPL        -23
-#define OC_BADPACKET   -24
-#define OC_NEWPACKET   -25
+#define OC_FAULT       -1	/**< general failure */
+#define OC_EINVAL      -10	/**< library encountered invalid internal data */
+#define OC_DISABLED    -11	/**< requested action is disabled */
+#define OC_BADHEADER   -20	/**< header packet was corrupt/invalid */
+#define OC_NOTFORMAT   -21	/**< packet is not a theora packet */
+#define OC_VERSION     -22	/**< bitstream version is not handled */
+#define OC_IMPL        -23	/**< feature or action not implemented */
+#define OC_BADPACKET   -24	/**< packet is corrupt */
+#define OC_NEWPACKET   -25	/**< packet is an (ignorable) unhandled extension */
 
 /** 
  * Retrieve a human-readable string to identify the encoder vendor and version.
@@ -388,12 +403,42 @@ extern void theora_info_clear(theora_info *c);
  */
 extern void theora_clear(theora_state *t);
 
+/** Initialize an allocated theora_comment structure */
 extern void theora_comment_init(theora_comment *tc);
+/** Add a comment to an initialized theora_comment structure
+    \param comment must be a null-terminated string encoding
+      the comment in "TAG=the value" form */
 extern void theora_comment_add(theora_comment *tc, char *comment);
+/** Add a comment to an initialized theora_comment structure
+    \param tag a null-terminated string containing the tag 
+      associated with the comment.
+    \param value the corresponding value as a null-terminated string
+    Neither theora_comment_add() nor theora_comment_add_tag() support
+    comments containing null values, although the bitstream format
+    supports this. To add such comments you will need to manipulate
+    the theora_comment structure directly */
 extern void theora_comment_add_tag(theora_comment *tc,
                                        char *tag, char *value);
+/** look up a comment value by tag
+    \param tc an initialized theora_comment structure
+    \param tag the tag to look up
+    \param count the instance of the tag. The same tag can appear 
+      multiple times, each with a distinct and ordered value, so
+      an index is required to retrieve them all.
+    Use theora_comment_query_count() to get the legal range for the
+    count parameter
+    \returns a pointer to the queried tag's value
+    \retval NULL if no matching tag is found */
 extern char *theora_comment_query(theora_comment *tc, char *tag, int count);
+/** look up the number of instances of a tag
+    \param tc an initialized theora_comment structure
+    \param tag the tag to look up
+    \returns the number on instances of a particular tag.
+    Call this first when querying for a specific tag and then interate
+    over the number of instances with separate calls to 
+    theora_comment_query() to retrieve all instances in order. */
 extern int   theora_comment_query_count(theora_comment *tc, char *tag);
+/** clears an allocated theora_comment struct so that it can be freed. */
 extern void  theora_comment_clear(theora_comment *tc);
 
 #ifdef __cplusplus

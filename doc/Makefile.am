@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = python
+SUBDIRS = #python
 
 docdir = $(datadir)/doc/$(PACKAGE)-$(VERSION)
 

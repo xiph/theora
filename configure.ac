@@ -4,7 +4,7 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT(libtheora,[unreleased])
+AC_INIT(libtheora,[1.0alpha4])
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
@@ -42,6 +42,10 @@ AM_CONDITIONAL(HAVE_DOXYGEN,$HAVE_DOXYGEN)
 if test $HAVE_DOXYGEN = "false"; then
         AC_MSG_WARN([*** doxygen not found, API documentation will not be built])
 fi
+
+dnl Check for python
+AC_CHECK_PROG(HAVE_PYTHON, python, true, false)
+AM_CONDITIONAL(HAVE_PYTHON,$HAVE_PYTHON)
 
 dnl --------------------------------------------------
 dnl Set build flags based on environment

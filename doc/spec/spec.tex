@@ -491,7 +491,7 @@ The picture region plays no other role in the decode process, which operates on
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pic-frame}
+\includegraphics{pic-frame}
 \end{center}
 \caption{Location of frame and picture regions}
 \label{fig:pic-frame}
@@ -512,7 +512,7 @@ The boundaries of blocks and super blocks in the luma plane do not necessarily
 
 \begin{figure}[htbp]
 \begin{center}
-\include{superblock}
+\includegraphics{superblock}
 \end{center}
 \caption{Subdivision of a frame into blocks and super blocks}
 \label{fig:superblock}
@@ -526,7 +526,7 @@ This accesses each block in row-major order, starting in the lower left of the
 
 \begin{figure}[htbp]
 \begin{center}
-\include{raster-block}
+\includegraphics{raster-block}
 \end{center}
 \caption{Raster ordering of $n\times m$ blocks}
 \label{fig:raster-block}
@@ -544,7 +544,7 @@ If a color plane does not contain a complete super block on the top or right
 
 \begin{figure}[htbp]
 \begin{center}
-\include{hilbert-block}
+\includegraphics{hilbert-block}
 \end{center}
 \caption{Hilbert curve ordering of blocks within a super block}
 \label{fig:hilbert-block}
@@ -624,7 +624,7 @@ Macro blocks contain information about coding mode and motion vectors for the
 
 \begin{figure}[htbp]
  \begin{center}
- \include{macroblock}
+ \includegraphics{macroblock}
  \end{center}
  \caption{Subdivision of a frame into macro blocks}
  \label{fig:macroblock}
@@ -644,7 +644,7 @@ Unlike blocks, macro blocks need never be accessed in a pure raster order.
 
 \begin{figure}[htbp]
 \begin{center}
-\include{hilbert-mb}
+\includegraphics{hilbert-mb}
 \end{center}
 \caption{Hilbert curve ordering of macro blocks within a super block}
 \label{fig:hilbert-mb}
@@ -683,7 +683,7 @@ See Figure~\ref{fig:reference-frames} for an illustration of the reference
 
 \begin{figure}[htbp]
 \begin{center}
-\include{reference-frames}
+\includegraphics{reference-frames}
 \end{center}
 \caption{Example of reference frames for an inter frame}
 \label{fig:reference-frames}
@@ -1463,7 +1463,7 @@ The samples in the different planes are all at co-located sites.
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pixel444}
+\includegraphics{pixel444}
 \end{center}
 \caption{Pixels encoded 4:4:4}
 \label{fig:pixel444}
@@ -1499,7 +1499,7 @@ A horizontal phase shift may be required to produce signals which use different
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pixel422}
+\includegraphics{pixel422}
 \end{center}
 \caption{Pixels encoded 4:2:2}
 \label{fig:pixel422}
@@ -1540,7 +1540,7 @@ A horizontal or vertical phase shift may be required to produce signals which
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pixel420}
+\includegraphics{pixel420}
 \end{center}
 \caption{Pixels encoded 4:2:0}
 \label{fig:pixel420}
@@ -1613,34 +1613,37 @@ In the typical case, with an even width and height, where one expects two rows
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pic_even}
+\includegraphics[width=\textwidth]{pic_even}
 \end{center}
-\caption{Pixel correspondance between color planes with even picture offset and
- even picture size}
+\caption{Pixel correspondence between color planes with even picture 
+ offset and even picture size}
 \label{fig:pic_even}
 \end{figure}
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pic_even_odd}
+\includegraphics[width=\textwidth]{pic_even_odd}
 \end{center}
-\caption{Pixel correspondance with even picture offset and odd picture size}
+\caption{Pixel correspondence with even picture offset and 
+ odd picture size}
 \label{fig:pic_even_odd}
 \end{figure}
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pic_odd}
+\includegraphics[width=\textwidth]{pic_odd}
 \end{center}
-\caption{Pixel correspondance with odd picture offset and odd picture size}
+\caption{Pixel correspondence with odd picture offset and 
+ odd picture size}
 \label{fig:pic_odd}
 \end{figure}
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pic_odd_even}
+\includegraphics[width=\textwidth]{pic_odd_even}
 \end{center}
-\caption{Pixel correspondance with odd picture offset and even picture size}
+\caption{Pixel correspondence with odd picture offset and 
+ even picture size}
 \label{fig:pic_odd_even}
 \end{figure}
 
@@ -2727,7 +2730,7 @@ Assign $\bitvar{NQRS}[\locvar{\qti}][\locvar{\pli}]$ the value \locvar{\qri}.
 \paragraph{VP3 Compatibility}
 
 The quantization parameters are hardcoded in VP3.
-The values used are given in Appendix~REF.
+The values used are given in Appendix~\ref{app:vp3-quant-params}.
 
 \subsection{Computing a Quantization Matrix}
 \label{sub:quant-mat}
@@ -3930,7 +3933,14 @@ In INTER\_MV\_FOUR mode, all four blocks in the luma plane are assigned their
  own motion vector, and motion vectors for blocks in the chroma planes are
  computed from these, using averaging appropriate to the pixel format.
 
-Only of a few of the macro block coding modes require decoding motion vectors
+For INTER\_MV and INTER\_GOLDEN\_MV modes, a single motion vector is decoded
+ and applied to each block.
+For INTER\_MV\_FOUR macro blocks, a motion vector is decoded for each coded
+ luma block.
+Uncoded luma blocks receive the default $(0,0)$ vector for the purposes of
+ computing the chroma motion vectors.
+
+None of the remaining macro block coding modes require decoding motion vectors
  from the stream.
 INTRA mode does not use a motion-compensated predictor, and so requires no
  motion vector, and INTER\_NOMV and INTER\_GOLDEN\_NOMV modes use the default
@@ -3941,18 +3951,13 @@ This also includes all macro blocks with no coded luma blocks, as they are
 The modes INTER\_MV\_LAST and INTER\_MV\_LAST2 use the motion vector from the
  last macro block (in coded order) and the second to last macro block,
  respectively, that contained a motion vector pointing to the previous frame.
+Thus no explicit motion vector needs to be decoded for these modes.
 Macro blocks coded in INTRA mode or one of the GOLDEN modes are not considered
  in this process.
+If an insufficient number of macro blocks have been coded in one of the INTER
+ modes, then the $(0,0)$ vector is used instead.
 For macro blocks coded in INTER\_MV\_FOUR mode, the vector from the upper-right
  luma block is used, even if the upper-right block is not coded.
-Thus no explicit motion vector needs to be decoded for these modes.
-
-For INTER\_MV and INTER\_GOLDEN\_MV modes, a single motion vector is decoded
- and applied to each block.
-For INTER\_MV\_FOUR macro blocks, a motion vector is decoded for each coded
- luma block.
-Uncoded luma blocks receive the default $(0,0)$ vector for the purposes of
- computing the chroma motion vectors.
 
 The motion vectors are decoded from the stream as follows:
 
@@ -4537,8 +4542,9 @@ Care should be taken in a decoder to check for this, as otherwise it may permit
  buffer overflows from invalidly formed packets.
 \begin{verse}
 {\bf Note:} One way to achieve this efficiently is to combine the inverse
- zig-zag mapping (described later in Section~REF) with coefficient decode, and
- use a table look-up to map zig-zag indices greater than 63 to a safe location.
+ zig-zag mapping (described later in Section~\ref{sub:dequant}) with
+ coefficient decode, and use a table look-up to map zig-zag indices greater
+ than 63 to a safe location.
 \end{verse}
 
 \begin{enumerate}
@@ -5422,13 +5428,13 @@ Assign the array \locvar{W} and the variable \locvar{PDIV} the values from the
 \begin{center}
 \begin{tabular}{ccccrrrrr}\toprule
 \multicolumn{1}{p{25pt}}{\centering$\locvar{P}[0]$ (L)} &
-\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[1]$ (UL)} &
-\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[2]$ (U)} &
-\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[3]$ (R)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[1]$ (DL)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[2]$ (D)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[3]$ (DR)} &
 \multicolumn{1}{p{25pt}}{\centering$\locvar{W}[3]$ (L)} &
-\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[1]$ (UL)} &
-\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[2]$ (U)} &
-\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[3]$ (R)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[1]$ (DL)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[2]$ (D)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[3]$ (DR)} &
 \locvar{PDIV} \\\midrule
 $1$ & $0$ & $0$ & $0$ &  $1$ &   $0$ &  $0$ &  $0$ &   $1$ \\
 $0$ & $1$ & $0$ & $0$ &  $0$ &   $1$ &  $0$ &  $0$ &   $1$ \\
@@ -6104,7 +6110,7 @@ It requires 16 multiplications and 26 additions and subtractions.
 
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[height=\textwidth,angle=270]{idct}
+\includegraphics[width=\textwidth]{idct}
 \end{center}
 \caption{Signal Flow Graph for the 1D Inverse DCT}
 \label{fig:idct}
@@ -6430,7 +6436,7 @@ Like the inverse DCT, it is first applied to each row, and then applied to each
 
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[height=\textwidth,angle=270]{fdct}
+\includegraphics[width=\textwidth]{fdct}
 \end{center}
 \caption{Signal Flow Graph for the 1D Forward DCT}
 \label{fig:fdct}
@@ -7225,13 +7231,13 @@ If $\bitvar{BCODED}[\locvar{\bi}]$ is non-zero:
 Assign \locvar{\pli} the index of the color plane block \locvar{\bi} belongs
  to.
 \item
-Assign \locvar{REC}, \locvar{RPW}, and \locvar{RPH} the values given in
+Assign \locvar{RECP}, \locvar{RPW}, and \locvar{RPH} the values given in
  Table~\ref{tab:recp} corresponding to the value of \locvar{\pli}.
 
 \begin{table}[htbp]
 \begin{center}
 \begin{tabular}{clll}\toprule
-\locvar{\pli} & \locvar{REFP}  & \locvar{RPW}  & \locvar{RPH}  \\\midrule
+\locvar{\pli} & \locvar{RECP}  & \locvar{RPW}  & \locvar{RPH}  \\\midrule
 $0$           & \bitvar{RECY}  & \bitvar{RPYW} & \bitvar{RPYH} \\
 $1$           & \bitvar{RECCB} & \bitvar{RPCW} & \bitvar{RPCH} \\
 $2$           & \bitvar{RECCR} & \bitvar{RPCW} & \bitvar{RPCH} \\
@@ -7933,7 +7939,7 @@ This does not restrict third parties from distributing independent
  implementations of Theora software under other licenses.
 
 \begin{wrapfigure}{l}{0pt}
-\includegraphics{xifish}
+\includegraphics[width=2.5cm]{xifish}
 \end{wrapfigure}
 
 These pages are copyright \textcopyright{} 2004 Xiph.org Foundation.

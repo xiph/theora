@@ -553,7 +553,7 @@ int main(int argc,char *argv[]){
   if(theora_p){
     theora_decode_init(&td,&ti);
     printf("Ogg logical stream %x is Theora %dx%d %.02f fps video\n",
-           to.serialno,ti.width,ti.height, 
+           (unsigned int)to.serialno,ti.width,ti.height, 
            (double)ti.fps_numerator/ti.fps_denominator);
     if(ti.width!=ti.frame_width || ti.height!=ti.frame_height)
       printf("  Frame content is %dx%d with offset (%d,%d).\n",
@@ -569,7 +569,7 @@ int main(int argc,char *argv[]){
     vorbis_synthesis_init(&vd,&vi);
     vorbis_block_init(&vd,&vb);
     fprintf(stderr,"Ogg logical stream %x is Vorbis %d channel %d Hz audio.\n",
-            vo.serialno,vi.channels,vi.rate);
+            (unsigned int)vo.serialno,vi.channels,(int)vi.rate);
   }else{
     /* tear down the partial vorbis setup */
     vorbis_info_clear(&vi);
@@ -657,7 +657,7 @@ int main(int argc,char *argv[]){
 
     if(!videobuf_ready || !audiobuf_ready){
       /* no data yet for somebody.  Grab another page */
-      int ret=buffer_data(infile,&oy);
+      int bytes=buffer_data(infile,&oy);
       while(ogg_sync_pageout(&oy,&og)>0){
         queue_page(&og);
       }

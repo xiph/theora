@@ -1,4 +1,4 @@
-libtheora 1.0alpha4 (unreleased)
+libtheora 1.0alpha4 (2004 December 15)
 
  * first draft of the Theora I Format Specification
  * API documentation generated from theora.h with Doxygen

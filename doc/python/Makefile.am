@@ -1,8 +1,9 @@
 ## Process this file with automake to produce Makefile.in
-
 docdir = $(datadir)/doc/$(PACKAGE)-$(VERSION)
 
+if HAVE_PYTHON
 built_docs = spec.py spec.html
+endif
 
 static_docs = 
 #		testspec.ogg testspec.raw \
@@ -20,4 +21,3 @@ spec.py : spec.txt txt2py.py
 
 spec.html : spec.txt txt2html.py
 	python $(srcdir)/txt2html.py $(srcdir)/spec.txt spec.html
-

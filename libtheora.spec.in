@@ -1,6 +1,6 @@
 Name:		libtheora
 Version:	@VERSION@
-Release:	0.xiph.0.3.alpha3
+Release:	0.xiph.0.4.alpha4
 Summary:	The Theora Video Compression Codec.
 
 Group:		System Environment/Libraries
