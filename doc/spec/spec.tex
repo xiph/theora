@@ -485,10 +485,19 @@ The boundaries of blocks and super blocks in the luma plane do not necessarily
 \end{figure}
 
 Blocks are accessed in two different orders in the various decoder processes.
-The first is \term{raster order}.
+The first is \term{raster order}, illustrated in Figure~\ref{fig:raster-block}.
 This indexes each block in row-major order, starting in the lower left and
  proceeding along the bottom row, followed by the next row up starting on the
  left, etc.
+
+\begin{figure}[htb]
+\begin{center}
+\include{raster-block}
+\end{center}
+\caption{Raster ordering of blocks within a super block}
+\label{fig:raster-block}
+\end{figure}
+
 The second is \term{coded order}.
 In coded order, blocks are accessed by super block.
 Within each frame, super blocks are traversed in raster order, 
