@@ -400,6 +400,7 @@ int theora_decode_YUVout(theora_state *th,yuv_buffer *yuv){
 /* returns, in seconds, absolute time of current packet in given
    logical stream */
 double theora_granule_time(theora_state *th,ogg_int64_t granulepos){
+#if THEORA_SUPPORT_FLOAT
   CP_INSTANCE *cpi=(CP_INSTANCE *)(th->internal_encode);
   PB_INSTANCE *pbi=(PB_INSTANCE *)(th->internal_decode);
 
@@ -413,6 +414,7 @@ double theora_granule_time(theora_state *th,ogg_int64_t granulepos){
       ((double)pbi->info.fps_denominator/pbi->info.fps_numerator);
 
   }
+#endif
 
   return(-1);
 }

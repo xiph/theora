@@ -74,6 +74,20 @@ dnl --------------------------------------------------
 dnl Overall build configuration options
 dnl --------------------------------------------------
 
+dnl Configuration option for building of floating point code.
+
+ac_enable_float=yes
+AC_ARG_ENABLE(float,
+     [  --disable-float         disable building of floating point code ],
+     [ ac_enable_float=no ], [ ac_enable_float=yes] )
+
+if test "x${ac_enable_float}" = xyes ; then
+    AC_DEFINE(THEORA_SUPPORT_FLOAT, [1], [Build floating point code])
+else
+    AC_DEFINE(THEORA_SUPPORT_FLOAT, [0], [Do not build floating point code])
+fi
+AM_CONDITIONAL(THEORA_SUPPORT_FLOAT, [test "x${ac_enable_float}" = "xyes"])
+
 dnl Configuration option for building of encoding support.
 
 ac_enable_encode=yes
