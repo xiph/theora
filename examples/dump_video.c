@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2004                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -31,16 +31,17 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-/*#include <sys/time.h>*/
 #include <sys/types.h>
 #include <sys/stat.h>
-/*Yes, yes, we're going to hell.*/
+
 #if defined(_WIN32)
 #include <io.h>
 #endif
+
 #include <fcntl.h>
 #include <math.h>
 #include <signal.h>
+
 #include "getopt.h"
 #include "theora/theora.h"
 
@@ -86,10 +87,13 @@ static void sigint_handler (int signal) {
   got_sigint = 1;
 }
 
+/* this is a nop in the current implementation. we could
+   open a file here or something if so moved. */
 static void open_video(void){
-
+   return;
 }
 
+/* write out the planar YUV frame, uncropped */
 static void video_write(void){
   int i;
 
@@ -104,7 +108,7 @@ static void video_write(void){
     fwrite(yuv.v+yuv.uv_stride*i, 1, yuv.uv_width, outfile);
 
 }
-/* dump the theora (or vorbis) comment header */
+/* dump the theora comment header */
 static int dump_comments(theora_comment *tc){
   int i, len;
   char *value;
@@ -127,9 +131,7 @@ static int dump_comments(theora_comment *tc){
   return(0);
 }
 
-/* helper: push a page into the appropriate steam */
-/* this can be done blindly; a stream won't accept a page
-                that doesn't belong to it */
+/* helper: push a page into the steam for packetization */
 static int queue_page(ogg_page *page){
   if(theora_p)ogg_stream_pagein(&to,&og);
   return 0;
@@ -154,7 +156,7 @@ int main(int argc,char *argv[]){
   outfile = stdout;
 
 
-#ifdef _WIN32 /* We need to set stdin/stdout to binary mode. Damn windows. */
+#ifdef _WIN32 /* We need to set stdin/stdout to binary mode on windows. */
   /* Beware the evil ifdef. We avoid these where we can, but this one we
      cannot. Don't add any more, you'll probably go to hell if you do. */
   _setmode( _fileno( stdin ), _O_BINARY );
@@ -190,10 +192,6 @@ int main(int argc,char *argv[]){
 
   /* start up Ogg stream synchronization layer */
   ogg_sync_init(&oy);
-
-  /* init supporting Vorbis structures needed in header parsing */
-  /*vorbis_info_init(&vi);*/
-  /*vorbis_comment_init(&vc);*/
 
   /* init supporting Theora structures needed in header parsing */
   theora_comment_init(&tc);
@@ -255,9 +253,9 @@ int main(int argc,char *argv[]){
        care about, or the stream is not obeying spec */
 
     if(ogg_sync_pageout(&oy,&og)>0){
-      queue_page(&og); /* demux into the appropriate stream */
+      queue_page(&og); /* demux into the stream state */
     }else{
-      int ret=buffer_data(infile,&oy); /* someone needs more data */
+      int ret=buffer_data(infile,&oy); /* need more data */
       if(ret==0){
         fprintf(stderr,"End of file while searching for codec headers.\n");
         exit(1);
@@ -265,7 +263,7 @@ int main(int argc,char *argv[]){
     }
   }
 
-  /* and now we have it all.  initialize decoders */
+  /* and now we have it all. initialize decoder */
   if(theora_p){
     theora_decode_init(&td,&ti);
     fprintf(stderr,"Ogg logical stream %x is Theora %dx%d %.02f fps video\nEncoded frame content is %dx%d with %dx%d offset\n",
