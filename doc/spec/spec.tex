@@ -41,6 +41,7 @@
 \newcommand{\bin}[1]{\ensuremath{\mathtt{b#1}}}
 \newcommand{\hex}[1]{\ensuremath{\mathtt{0x#1}}}
 \newcommand{\ilog}{\ensuremath{\mathop{\mathrm{ilog}}\nolimits}}
+\newcommand{\round}{\ensuremath{\mathop{\mathrm{round}}\nolimits}}
 
 %Section-based table, figure, and equation numbering.
 \numberwithin{equation}{chapter}
@@ -157,6 +158,15 @@ Instead,
 a>>b & = \left\lfloor\frac{a}{2^b}\right\rfloor.
 \end{align*}
 
+\item[$\round(a)$]
+Rounds a number $a$ to the nearest integer, with ties rounded away from $0$.
+\begin{align*}
+\round(a) = \left\{\begin{array}{ll}
+\lceil a-\frac{1}{2}\rceil   & a \le 0 \\
+\lfloor a+\frac{1}{2}\rfloor & a > 0
+\end{array}\right.
+\end{align*}
+
 \item[$\ilog(a)$]
 The minimum number of bits required to store a positive integer $a$ in
  two's complement notation, or $0$ for a non-positive integer $a$.
@@ -217,12 +227,11 @@ An application SHOULD NOT allow such non-conformant bitstreams to overflow
  buffers and potentially execute arbitrary code, as this represents a serious
  security risk.
 
-An application MUST, however, ensure any reserved bits have the value zero, and
- refuse to decode the stream if they are not.
+An application MUST, however, ensure any bits marked as reserved have the value
+ zero, and refuse to decode the stream if they do not.
 These are used as place holders for future bitstream features with which the
  current bitstream is forward-compatible.
-%RG: shouldn't this be 'MAY not increment...the version number'?
-Such features will not increment the bitstream version number, and can only be
+Such features may not increment the bitstream version number, and can only be
  recognized by checking the value of these reserved bits.
 
 \cleardoublepage
@@ -633,9 +642,9 @@ The first available reference frame is the previous intra frame, called the
 The second available reference frame is the previous frame, whether it was an
  intra frame or an inter frame.
 If the previous frame was an intra frame, then both reference frames are the
- same. See Figure~\ref{fig:reference-frames} for an example of reference
- frames, where the current frame is an inter frame not directly
- following an intra frame.
+ same.
+See Figure~\ref{fig:reference-frames} for an illustration of the reference
+ frames used for an intra frame that does not follow an intra frame.
 
 \begin{figure}[htb]
 \begin{center}
@@ -655,8 +664,8 @@ This is the default coding mode.
 
 \section{DCT Coefficients}
 
-To each block's predictor, a \term{residual} is added to form the final
- contents of the block.
+A \term{residual} is added to the predicted contents of a block to form the
+ final reconstruction.
 %r: I reworded this next sentence to try and make it more decoder-oriented
 %TBT: Same content with 2/3 the words... sounds good to me.
 The residual is stored as a set of quantized coefficients from an integer
@@ -666,9 +675,9 @@ The DCT takes an $8\times 8$ array of pixel values as input and returns an
 The \term{natural ordering} of these coefficients is defined to be row-major
  order, from lowest to highest frequency.
 They are also often indexed in \term{zig-zag order}, as shown in
- Table~\ref{tab:zig-zag}.
+ Figure~\ref{tab:zig-zag}.
 
-\begin{table}[htb]
+\begin{figure}[htb]
 \begin{center}
 \begin{tabular}[c]{r|c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c}
 \multicolumn{1}{r}{} &0&&1&&2&&3&&4&&5&&6&&7 \\\cline{2-16}
@@ -691,7 +700,7 @@ They are also often indexed in \term{zig-zag order}, as shown in
 \end{center}
 \caption{Zig-zag order}
 \label{tab:zig-zag}
-\end{table}
+\end{figure}
 
 Note that the row and column indices refer to {\em frequency number} and not
  pixel locations.
@@ -797,7 +806,7 @@ Finally, because the in-loop deblocking filter strength depends on the strength
  filter limit values} is defined, one for each \qi\ value.
 
 The precise specification of how all of this information is decoded appears in
- Section~REF.
+ Section~\ref{sub:loop-filer-limits} and Section~\ref{sub:quant-params}.
 
 \subsection{Huffman Codebooks}
 
@@ -819,7 +828,7 @@ The second pair selects which codebooks to use from {\em all four} of the AC
  coefficients.
 
 The precise specification of how the codebooks are decoded appears in
- Section~REF.
+ Section~\ref{sub:huffman-tables}.
 
 \section{High-Level Decode Process}
 
@@ -1506,29 +1515,36 @@ Thus, when dividing the width or height of the picture region by two to obtain
 
 Furthermore, the sampling locations are defined relative to the frame,
  {\em not} the picture region.
-When the width of the picture region is odd in the 4:2:2 and 4:2:0 formats,
- then the locations of chroma samples relative to the luma samples depends on
- whether or not the X offset of the picture region is odd.
+When using the 4:2:2 and 4:2:0 formats, the locations of chroma samples
+ relative to the luma samples depends on whether or not the X offset of the
+ picture region is odd.
 If the offset is even, each column of chroma samples corresponds to two columns
- of luma samples, except the last column which corresponds to one.
-If the offset is odd, then it is the first column of chroma samples which
- corresponds to only one column of luma samples, while the remaining columns
- each correspond to two.
+ of luma samples.
+The only exception is if the width is odd, in which case the last column
+ corresponds to only one column of luma samples.
+If the offset is odd, then the first column of chroma samples corresponds to
+ only one column of luma samples, while the remaining columns each correspond
+ to two.
+In this case, if the width is even, the last column again corresponds to only
+ one column of luma samples.
 
 A similar process is followed with the rows of a picture region of odd height
  encoded in the 4:2:0 format.
 If the Y offset is even, each row of chroma samples corresponds to two rows of
- luma samples, except the last row which corresponds to one.
+ luma samples, except with an odd height, where the last row which corresponds
+ to one.
 If the offset is odd, then it is the first row of chroma samples which
  corresponds to only one row of luma samples, while the remaining rows each
- correspond to two.
+ correspond to two, except with an even height, where the last row also
+ corresponds to one.
+
+Encoders should be aware of these differences in the subsampling when using an
+ even or odd offset.
+In the typical case, with an even width and height, where one expects two rows
+ or columns of luma samples for every row or column of chroma samples, the
+ encoder must take care to ensure that the offsets used are both even.
 
 %TODO: Figures!
-
-%TODO: informational section for encoders:
-% When the chroma planes are subsampled, encoders SHOULD chose picture
-%  offsets and dimensions that are even so that the subsampling 
-%  positions are reproduced cleanly.
 
 \chapter{Bitpacking Convention}
 \label{sec:bitpacking}
@@ -1906,7 +1922,7 @@ Packets with other header types (\hex{83}--\hex{FF}) are reserved and MUST be
 \bitvar{PARN}     & Integer & 24 & No & The pixel aspect-ratio numerator. \\
 \bitvar{PARD}     & Integer & 24 & No & The pixel aspect-ratio denominator. \\
 \bitvar{CS}       & Integer &  8 & No & The color space. \\
-\bitvar{PF}       & Integer &  8 & No & The pixel format. \\
+\bitvar{PF}       & Integer &  2 & No & The pixel format. \\
 \bitvar{NOMBR}    & Integer & 24 & No & The nominal bitrate of the stream, in
  bits per second. \\
 \bitvar{QUAL}     & Integer &  6 & No & The quality hint. \\
@@ -1988,7 +2004,7 @@ No mechanism is provided to specify a non-zero offset for the initial
 \item
 Read a 24-bit unsigned integer as \bitvar{PARN}.
 \item
-Read a 24-bit unsigned integer as \bitvar{PRAD}.
+Read a 24-bit unsigned integer as \bitvar{PARD}.
 Together with \bitvar{PARN}, these specify the aspect ratio of the pixels
  within a frame, defined as the ratio of the physical width of a pixel to its
  physical height.
@@ -2069,7 +2085,7 @@ This stream is not decodable according to this specification.
 Assign \bitvar{NSBS} a value according to \bitvar{PF}, as given by
  Table~\ref{tab:nsbs-for-pf}.
 
-\begin{table}[htb]
+\begin{table}[bt]
 \begin{center}
 \begin{tabular}{cc}\toprule
 \bitvar{PF} & \bitvar{NSBS}                                     \\\midrule
@@ -2092,7 +2108,7 @@ $3$         & $3*((\bitvar{FMBW}+1)//2)*((\bitvar{FMBH}+1)//2)$ \\
 Assign \bitvar{NBS} a value according to \bitvar{PF}, as given by
  Table~\ref{tab:nbs-for-pf}.
 
-\begin{table}[htb]
+\begin{table}[tb]
 \begin{center}
 \begin{tabular}{cc}\toprule
 \bitvar{PF} & \bitvar{NBS}                     \\\midrule
@@ -2101,7 +2117,7 @@ $2$         & $8*\bitvar{FMBW}*\bitvar{FMBH}$  \\\midrule
 $3$         & $12*\bitvar{FMBW}*\bitvar{FMBH}$ \\
 \bottomrule\end{tabular}
 \end{center}
-\caption{Number of Super Blocks for each Pixel Format}
+\caption{Number of Blocks for each Pixel Format}
 \label{tab:nbs-for-pf}
 \end{table}
 
@@ -2709,9 +2725,10 @@ Assign \locvar{\qri} the index of a quant range such that
 \sum_{\qrj=0}^{\locvar{\qri}}
  \bitvar{\qi} \le \bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\qrj],
 \end{displaymath}
- where summation from $0$ to $-1$ is zero.
+ where summation from $0$ to $-1$ is defined to be zero.
 If there is more than one such value of $\locvar{\qri}$, i.e., if \bitvar{\qi}
- lies on the end point of a quant range, then which one is used is immaterial.
+ lies on the boundary between two quant ranges, then the output will be the
+ same regardless of which one is chosen.
 \item
 Assign \locvar{QISTART} the value
 \begin{displaymath}
@@ -3042,6 +3059,7 @@ Set \bitvar{NQIS} to 3.
 \end{enumerate}
 \item
 If \bitvar{FTYPE} is 0, read a 3-bit unsigned integer.
+These bits are reserved.
 If this value is not zero, stop.
 This frame is not decodable according to this specification.
 \end{enumerate}
@@ -3356,13 +3374,14 @@ Continue decoding runs from step~\ref{step:short-run-loop}.
 \medskip
 
 This procedure determines which blocks are coded in a given frame.
-In an intra frame, it marks blocks are coded.
+In an intra frame, it marks all blocks coded.
 In an inter frame, however, any or all of the blocks may remain uncoded.
 
 It is important to note that flags are still decoded for any blocks which lie
  entirely outside the picture region, even though they are not displayed.
-These blocks must be faithfully reconstructed, however, because their contents
- can be used as predictors in future frames.
+Encoders MAY choose to code such blocks.
+Decoders MUST faithfully reconstruct such blocks, because their contents can be
+ used as predictors in future frames.
 
 This procedure outputs two redundant representations of the coded blocks, for
  ease of reference elsewhere in the decoding process: a list of bit flags, one
@@ -3465,6 +3484,8 @@ If \locvar{\bi} is in the luma plane, assign \bitvar{NLBCODED} the value
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{FTYPE}    & Integer &  1 & No & The frame type. \\
 \bitvar{NMBS}     & Integer & 32 & No & The total number of macro blocks in a
+ frame. \\
+\bitvar{NBS}      & Integer & 32 & No & The total number of blocks in a
  frame. \\
 \bitvar{BCODED}   & \multicolumn{1}{p{40pt}}{Integer Array} &
                               1 & No & An \bitvar{NBS}-element array of flags
@@ -3612,7 +3633,425 @@ Otherwise, assign $\bitvar{MBMODE}[\locvar{\mbi}]$ the value 0 (INTER\_NOMV).
 \end{enumerate}
 \end{enumerate}
 
-\clearpage
+\section{Motion Vectors}
+
+In an intra frame, no motion vectors are used, and so motion vector decoding is
+ skipped.
+In an inter frame, however, many of the inter coding modes require a motion
+ vector in order to specify an offset into the reference frame from which to
+ predict a block.
+These procedures assigns such a motion vector to every block.
+
+\subsection{Motion Vector Decode}
+\label{sub:mv-decode}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{MVMODE}   & Integer &  1 & No & The motion vector decoding method. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{MVX}      & Integer &  6 & Yes & The X component of the motion
+ vector. \\
+\bitvar{MVY}      & Integer &  6 & Yes & The Y component of the motion
+ vector. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{MVSIGN}   & Integer &  1 & No & The sign of the motion vector component
+ just decoded. \\
+\bottomrule\end{tabularx}
+\medskip
+
+The individual components of a motion vector can be coded using one of two
+ methods.
+The first uses a variable length Huffman code, given in
+ Table~\ref{tab:mv-huff-codes}.
+The second encodes the magnitude of the component directly in 5 bits, and the
+ sign in one bit.
+Note that in this case there are two representations for the value zero.
+For compatibility with VP3, a sign bit is read even if the magnitude read is
+ zero.
+One scheme is chosen and used for the entire frame.
+
+Each component can take on integer values from $-31\ldots 31$, inclusive, at
+ half-pixel resolution, i.e. $-15.5\ldots 15.5$ pixels in the luma plane.
+For each subsampled axis in the chroma planes, the corresponding motion vector
+ component is interpreted as being at quarter-pixel resolution, i.e.
+ $-7.75\ldots 7.75$ pixels.
+The precise details of how these vectors are used to compute predictors for
+ each block are described in Section~REF.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{lrlr}\toprule
+Huffman Code   & Value & Huffman Codee  & Value \\\midrule
+\bin{000}      & $0$   \\
+\bin{001}      & $1$   & \bin{010}      & $-1$  \\
+\bin{0110}     & $2$   & \bin{0111}     & $-2$  \\
+\bin{1000}     & $3$   & \bin{1001}     & $-3$  \\
+\bin{101000}   & $4$   & \bin{101001}   & $-4$  \\
+\bin{101010}   & $5$   & \bin{101011}   & $-5$  \\
+\bin{101100}   & $6$   & \bin{101101}   & $-6$  \\
+\bin{101110}   & $7$   & \bin{101111}   & $-7$  \\
+\bin{1100000}  & $8$   & \bin{1100001}  & $-8$  \\
+\bin{1100010}  & $9$   & \bin{1100011}  & $-9$  \\
+\bin{1100100}  & $10$  & \bin{1100101}  & $-10$ \\
+\bin{1100110}  & $11$  & \bin{1100111}  & $-11$ \\
+\bin{1101000}  & $12$  & \bin{1101001}  & $-12$ \\
+\bin{1101010}  & $13$  & \bin{1101011}  & $-13$ \\
+\bin{1101100}  & $14$  & \bin{1101101}  & $-14$ \\
+\bin{1101110}  & $15$  & \bin{1101111}  & $-15$ \\
+\bin{11100000} & $16$  & \bin{11100001} & $-16$ \\
+\bin{11100010} & $17$  & \bin{11100011} & $-17$ \\
+\bin{11100100} & $18$  & \bin{11100101} & $-18$ \\
+\bin{11100110} & $19$  & \bin{11100111} & $-19$ \\
+\bin{11101000} & $20$  & \bin{11101001} & $-20$ \\
+\bin{11101010} & $21$  & \bin{11101011} & $-21$ \\
+\bin{11101100} & $22$  & \bin{11101101} & $-22$ \\
+\bin{11101110} & $23$  & \bin{11101111} & $-23$ \\
+\bin{11110000} & $24$  & \bin{11110001} & $-24$ \\
+\bin{11110010} & $25$  & \bin{11110011} & $-25$ \\
+\bin{11110100} & $26$  & \bin{11110101} & $-26$ \\
+\bin{11110110} & $27$  & \bin{11110111} & $-27$ \\
+\bin{11111000} & $28$  & \bin{11111001} & $-28$ \\
+\bin{11111010} & $29$  & \bin{11111011} & $-29$ \\
+\bin{11111100} & $30$  & \bin{11111101} & $-30$ \\
+\bin{11111110} & $31$  & \bin{11111111} & $-31$ \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Huffman Codes for Motion Vector Components}
+\label{tab:mv-huff-codes}
+\end{table}
+
+A single motion vector is decoded is follows:
+
+\begin{enumerate}
+\item
+If \bitvar{MVMODE} is 0:
+\begin{enumerate}
+\item
+Read 1 bit at a time until one of the Huffman codes in
+ Table~\ref{tab:mv-huff-codes} is recognized, and assign the value to
+ \locvar{MVX}.
+\item
+Read 1 bit at a time until one of the Huffman codes in
+ Table~\ref{tab:mv-huff-codes} is recognized, and assign the value to
+ \locvar{MVY}.
+\end{enumerate}
+\item
+Otherwise:
+\begin{enumerate}
+\item
+Read a 5-bit unsigned integer as \bitvar{MVX}.
+\item
+Read a 1-bit unsigned integer as \locvar{MVSIGN}.
+\item
+If \locvar{MVSIGN} is 1, assign \bitvar{MVX} the value $-\bitvar{MVX}$.
+\item
+Read a 5-bit unsigned integer as \bitvar{MVY}.
+\item
+Read a 1-bit unsigned integer as \locvar{MVSIGN}.
+\item
+If \locvar{MVSIGN} is 1, assign \bitvar{MVY} the value $-\bitvar{MVY}$.
+\end{enumerate}
+\end{enumerate}
+
+\subsection{Macro Block Motion Vector Decode}
+\label{sub:mb-mv-decode}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{PF}      & Integer &  2 & No & The pixel format. \\
+\bitvar{NMBS}    & Integer & 32 & No & The total number of macro blocks in a
+ frame. \\
+\bitvar{MBMODES} & \multicolumn{1}{p{40pt}}{Integer Array} &
+                              3 & No & An \bitvar{NMBS}-element array of coding
+ modes for each macro block. \\
+\bitvar{NBS}      & Integer & 32 & No & The total number of blocks in a
+ frame. \\
+\bitvar{BCODED}   & \multicolumn{1}{p{40pt}}{Integer Array} &
+                              1 & No & An \bitvar{NBS}-element array of flags
+ indicating which blocks are coded. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{MVECTS}   & \multicolumn{1}{p{50pt}}{Array of 2D Integer Vectors} &
+                               6 & Yes & An \bitvar{NBS}-element array of
+ motion vectors for each block. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{LAST1}    & \multicolumn{1}{p{50pt}}{2D Integer Vector} &
+                               6 & Yes & The last motion vector. \\
+\locvar{LAST2}    & \multicolumn{1}{p{50pt}}{2D Integer Vector} &
+                               6 & Yes & The second to last motion vector. \\
+\locvar{MVX}      & Integer &  6 & Yes & The X component of a motion vector. \\
+\locvar{MVY}      & Integer &  6 & Yes & The Y component of a motion vector. \\
+\locvar{\mbi}     & Integer & 32 &  No & The index of the current macro
+ block. \\
+\locvar{A}        & Integer & 36 &  No & The index of the lower-left luma block
+ in the macro block. \\
+\locvar{B}        & Integer & 36 &  No & The index of the lower-right luma
+ block in the macro block. \\
+\locvar{C}        & Integer & 36 &  No & The index of the upper-left luma block
+ in the macro block. \\
+\locvar{D}        & Integer & 36 &  No & The index of the upper-right luma
+ block in the macro block. \\
+\locvar{E}        & Integer & 36 &  No & The index of a chroma block in the
+ macro block, depending on the pixel format. \\
+\locvar{F}        & Integer & 36 &  No & The index of a chroma block in the
+ macro block, depending on the pixel format. \\
+\locvar{G}        & Integer & 36 &  No & The index of a chroma block in the
+ macro block, depending on the pixel format. \\
+\locvar{H}        & Integer & 36 &  No & The index of a chroma block in the
+ macro block, depending on the pixel format. \\
+\locvar{I}        & Integer & 36 &  No & The index of a chroma block in the
+ macro block, depending on the pixel format. \\
+\locvar{J}        & Integer & 36 &  No & The index of a chroma block in the
+ macro block, depending on the pixel format. \\
+\locvar{K}        & Integer & 36 &  No & The index of a chroma block in the
+ macro block, depending on the pixel format. \\
+\locvar{L}        & Integer & 36 &  No & The index of a chroma block in the
+ macro block, depending on the pixel format. \\
+\bottomrule\end{tabularx}
+\medskip
+
+Motion vectors are stored for each macro block.
+In every mode except for INTER\_MV\_FOUR, every block in all the color planes
+ are assigned the same motion vector.
+In INTER\_MV\_FOUR mode, a vector is decoded for each coded block in the luma
+ plane, while the uncoded luma blocks are assigned the default $(0,0)$ vector.
+Motion vectors are decoded only for macro blocks with at least one coded block
+ in the luma plane.
+For macro blocks with no coded luma blocks, which are by definition coded in
+ INTER\_NOMV mode, the default vector $(0,0)$ is assigned to each block.
+
+Instead of coding an explicit motion vector, modes INTER\_MV\_LAST and
+ INTER\_MV\_LAST2 use the motion vector from the last macro block (in coded
+ order) and the second to last macro block, respectively, that contained a
+ motion vector pointing to the previous frame.
+Macro blocks coded in INTRA mode or one of the GOLDEN modes are not considered.
+For blocks coded in INTER\_MV\_FOUR mode, the vector from the upper-right block
+ is used, even if the upper-right block is not coded.
+
+The motion vectors are decoded from the stream as follows:
+
+\begin{enumerate}
+\item
+Assign \locvar{LAST1} and \locvar{LAST2} both the value $(0,0)$.
+\item
+Read a 1-bit unsigned integer as \locvar{MVMODE}.
+Note that this value is read even if no macro blocks require a motion vector to
+ be decoded.
+\item
+For each consecutive macro block in coded order (see
+ Section~\ref{sec:mbs})---indexed by \locvar{\mbi}:
+\begin{enumerate}
+\item
+If $\bitvar{MBMODES}[\locvar{\mbi}]$ is 7 (INTER\_MV\_FOUR):
+\begin{enumerate}
+\item
+Let \locvar{A}, \locvar{B}, \locvar{C}, and \locvar{D} be the indices in coded
+ order \locvar{\bi} of the luma blocks in macro block \locvar{\mbi}, arranged
+ into raster order.
+Thus, \locvar{A} is the index in coded order of the block in the lower left,
+ \locvar{B} the lower right, \locvar{C} the upper left, and \locvar{D} the
+ upper right. % TODO: as shown in Figure~REF.
+\item
+If $\bitvar{BCODED}[\locvar{A}]$ is non-zero, decode a single motion vector
+ into \locvar{MVX} and \locvar{MVY} using the procedure described in
+ Section~\ref{sub:mv-decode}.
+\item
+Otherwise, assign \locvar{MVX} and \locvar{MVY} both the value zero.
+\item
+Assign $\bitvar{MVECTS}[\locvar{A}]$ the value $(\locvar{MVX},\locvar{MVY})$.
+\item
+If $\bitvar{BCODED}[\locvar{B}]$ is non-zero, decode a single motion vector
+ into \locvar{MVX} and \locvar{MVY} using the procedure described in
+ Section~\ref{sub:mv-decode}.
+\item
+Otherwise, assign \locvar{MVX} and \locvar{MVY} both the value zero.
+\item
+Assign $\bitvar{MVECTS}[\locvar{B}]$ the value $(\locvar{MVX},\locvar{MVY})$.
+\item
+If $\bitvar{BCODED}[\locvar{C}]$ is non-zero, decode a single motion vector
+ into \locvar{MVX} and \locvar{MVY} using the procedure described in
+ Section~\ref{sub:mv-decode}.
+\item
+Otherwise, assign \locvar{MVX} and \locvar{MVY} both the value zero.
+\item
+Assign $\bitvar{MVECTS}[\locvar{C}]$ the value $(\locvar{MVX},\locvar{MVY})$.
+\item
+If $\bitvar{BCODED}[\locvar{D}]$ is non-zero, decode a single motion vector
+ into \locvar{MVX} and \locvar{MVY} using the procedure described in
+ Section~\ref{sub:mv-decode}.
+\item
+Otherwise, assign \locvar{MVX} and \locvar{MVY} both the value zero.
+\item
+Assign $\bitvar{MVECTS}[\locvar{D}]$ the value $(\locvar{MVX},\locvar{MVY})$.
+Note that \locvar{MVX} and \locvar{MVY} retain this last value.
+\item
+If \bitvar{PF} is 0 (4:2:0):
+\begin{enumerate}
+\item
+Let \locvar{E} and \locvar{F} be the index in coded order of the one block in
+ the macro block from the $C_b$ and $C_r$ planes, respectively.
+\item
+Assign $\bitvar{MVECTS}[\locvar{E}]$ and $\bitvar{MVECTS}[\locvar{F}]$ the
+ value
+\begin{multline*}
+(\round\left(\frac{\begin{aligned}
+ \bitvar{MVECTS}[\locvar{A}]_x+\bitvar{MVECTS}[\locvar{B}]_x+\\
+ \bitvar{MVECTS}[\locvar{C}]_x+\bitvar{MVECTS}[\locvar{D}]_x
+ \end{aligned}}{4}\right), \\
+ \round\left(\frac{\begin{aligned}
+ \bitvar{MVECTS}[\locvar{A}]_y+\bitvar{MVECTS}[\locvar{B}]_y+\\
+ \bitvar{MVECTS}[\locvar{C}]_y+\bitvar{MVECTS}[\locvar{D}]_y
+ \end{aligned}}{4}\right))
+\end{multline*}
+\end{enumerate}
+\item
+If \bitvar{PF} is 2 (4:2:2):
+\begin{enumerate}
+\item
+Let \locvar{E} and \locvar{F} be the indices in coded order of the top and
+ bottom blocks in the macro block from the $C_b$ plane, and \locvar{G} and
+ \locvar{H} be the indices in coded order of the top and bottom blocks in the
+ $C_r$ plane. %TODO: as shown in Figure~REF.
+\item
+Assign $\bitvar{MVECTS}[\locvar{E}]$ and $\bitvar{MVECTS}[\locvar{G}]$ the
+ value
+\begin{multline*}
+(\round\left(\frac{
+ \bitvar{MVECTS}[\locvar{A}]_x+\bitvar{MVECTS}[\locvar{B}]_x}{4}\right), \\
+ \round\left(\frac{
+ \bitvar{MVECTS}[\locvar{A}]_y+\bitvar{MVECTS}[\locvar{B}]_y}{4}\right))
+\end{multline*}
+\item
+Assign $\bitvar{MVECTS}[\locvar{F}]$ and $\bitvar{MVECTS}[\locvar{H}]$ the
+ value
+\begin{multline*}
+(\round\left(\frac{
+ \bitvar{MVECTS}[\locvar{C}]_x+\bitvar{MVECTS}[\locvar{D}]_x}{4}\right), \\
+ \round\left(\frac{
+ \bitvar{MVECTS}[\locvar{C}]_y+\bitvar{MVECTS}[\locvar{D}]_y}{4}\right))
+\end{multline*}
+\end{enumerate}
+\item
+If \bitvar{PF} is 3 (4:4:4):
+\begin{enumerate}
+\item
+Let \locvar{E}, \locvar{F}, \locvar{G}, and \locvar{H} be the indices in coded
+ order \locvar{\bi} of the $C_b$ plane blocks in macro block \locvar{\mbi},
+ arranged into raster order, and \locvar{I}, \locvar{J}, \locvar{K}, and
+ \locvar{L} be the indices in coded order \locvar{\bi} of the $C_r$ plane
+ blocks in macro block \locvar{\mbi}, arranged into raster order.
+ %TODO: as shown in Figure~REF.
+\item
+Assign $\bitvar{MVECTS}[\locvar{E}]$ and $\bitvar{MVECTS}[\locvar{I}]$ the
+ value $\bitvar{MVECTS}[\locvar{A}]$.
+\item
+Assign $\bitvar{MVECTS}[\locvar{F}]$ and $\bitvar{MVECTS}[\locvar{J}]$ the
+ value $\bitvar{MVECTS}[\locvar{B}]$.
+\item
+Assign $\bitvar{MVECTS}[\locvar{G}]$ and $\bitvar{MVECTS}[\locvar{K}]$ the
+ value $\bitvar{MVECTS}[\locvar{C}]$.
+\item
+Assign $\bitvar{MVECTS}[\locvar{H}]$ and $\bitvar{MVECTS}[\locvar{L}]$ the
+ value $\bitvar{MVECTS}[\locvar{D}]$.
+\end{enumerate}
+
+
+
+\item
+Assign \locvar{LAST2} the value \locvar{LAST1}.
+\item
+Assign \locvar{LAST1} the value $(\locvar{MVX},\locvar{MVY})$.
+\end{enumerate}
+
+\item
+Otherwise, if $\bitvar{MBMODES}[\locvar{\mbi}]$ is 6 (INTER\_GOLDEN\_MV),
+ decode a single motion vector into \locvar{MVX} and \locvar{MVY} using the
+ procedure described in Section~\ref{sub:mv-decode}.
+
+\item
+Otherwise, if $\bitvar{MBMODES}[\locvar{\mbi}]$ is 4 (INTER\_MV\_LAST2):
+\begin{enumerate}
+\item
+Assign $(\locvar{MVX},\locvar{MVY}$ the value \locvar{LAST2}.
+\item
+Assign \locvar{LAST2} the value \locvar{LAST1}.
+\item
+Assign \locvar{LAST1} the value $(\locvar{MVX},\locvar{MVY})$.
+\end{enumerate}
+
+\item
+Otherwise, if $\bitvar{MBMODES}[\locvar{\mbi}]$ is 3 (INTER\_MV\_LAST), assign
+ $(\locvar{MVX},\locvar{MVY})$ the value \locvar{LAST1}.
+
+\item
+Otherwise, if $\bitvar{MBMODES}[\locvar{\mbi}]$ is 2 (INTER\_MV):
+\begin{enumerate}
+\item
+Decode a single motion vector into \locvar{MVX} and \locvar{MVY} using the
+ procedure described in Section~\ref{sub:mv-decode}.
+\item
+Assign \locvar{LAST2} the value \locvar{LAST1}.
+\item
+Assign \locvar{LAST1} the value $(\locvar{MVX},\locvar{MVY})$.
+\end{enumerate}
+
+\item
+Otherwise, assign \locvar{MVX} and \locvar{MVY} the value zero.
+
+\item
+If $\bitvar{MBMODES}[\locvar{\mbi}]$ is not 7 (INTER\_MV\_FOUR), then for
+ each coded block \locvar{\bi} in macro block \locvar{\mbi}:
+\begin{enumerate}
+\item
+Assign $\bitvar{MVECTS}[\locvar{\bi}]$ the value $(\locvar{MVX},\locvar{MVY})$.
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
+
+
+
+\cleardoublepage
 
 %\backmatter
 \appendix
@@ -3767,7 +4206,7 @@ This facilitates seeking while limiting the buffering requirements of the
 %TODO: We define a decoder-oriented specification.
 %TODO: The language should be changed to match.
 
-\clearpage
+\cleardoublepage
 \chapter{Colophon}
 
 Ogg is a \href{http://www.xiph.org}{Xiph.org Foundation} effort to protect
@@ -3800,7 +4239,7 @@ This document is set in \LaTeX.
 
 
 
-\clearpage
+\cleardoublepage
 \bibliography{spec}
 
 \end{document}
