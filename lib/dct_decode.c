@@ -161,7 +161,7 @@ static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
 
   /* Get the pixel index for the first pixel in the fragment. */
   ReconIntra( pbi, (unsigned char *)(&pbi->ThisFrameRecon[ReconPixelIndex]),
-              (ogg_uint16_t *)pbi->ReconDataBuffer, ReconPixelsPerLine );
+              (ogg_int16_t *)pbi->ReconDataBuffer, ReconPixelsPerLine );
 
 }
 
