@@ -30,6 +30,7 @@
 \newcommand{\sbi}{\idx{sbi}}
 \newcommand{\bi}{\idx{bi}}
 \newcommand{\mbi}{\idx{mbi}}
+\newcommand{\mi}{\idx{mi}}
 \newcommand{\ti}{\idx{ti}}
 %This somewhat odd construct ensures that \bitvar{\qi}, etc., will set the
 % qi in bold face, even though it is in a \mathit font, yet \bitvar{VAR} will
@@ -363,6 +364,7 @@ The implication is that the blocks from all planes are treated as a unit during
  the various processing steps.
 
 \subsubsection{Macro Blocks}
+\label{sec:mbs}
 
 A macro block contains a $2\times 2$ array of blocks in the luma plane
  {\em and} the co-located blocks in the chroma planes.
@@ -3463,7 +3465,57 @@ Huffman Code  & \multicolumn{6}{c}{Coding Mode}   \\\midrule
 \label{tab:mode-codes}
 \end{table}
 
-
+\begin{enumerate}
+\item
+If \bitvar{FTYPE} is 0 (intra frame):
+\begin{enumerate}
+\item
+For each consecutive value of \locvar{\mbi} from 0 to $(\bitvar{NMBS}-1)$,
+ inclusive, assign $\bitvar{MBMODES}[\mbi]$ the value 0 (INTRA).
+\end{enumerate}
+\item
+Otherwise (inter frame):
+\begin{enumerate}
+\item
+Read a 3-bit unsigned integer as \locvar{MSCHEME}.
+\item
+If \locvar{MSCHEME} is 0:
+\begin{enumerate}
+\item
+For each consecutive value of \locvar{MODE} from 0 to 7, inclusive:
+\begin{enumerate}
+\item
+Read a 3-bit unsigned integer as \locvar{\mi}.
+\item
+Assign $\locvar{MALPHABET}[\mi]$ the value \locvar{MODE}.
+\end{enumerate}
+\end{enumerate}
+\item
+Otherwise, if \locvar{MSCHEME} is not 7, assign the entries of
+ \locvar{MALPHABET} the values in the corresponding column of
+ Table~\ref{tab:mode-codes}.
+\item
+For each consecutive macro block in coded order (see
+ Section~\ref{sec:mbs})---indexed by \locvar{\mbi}:
+\begin{enumerate}
+\item
+If a block \locvar{\bi} in the luma plane of macro block \locvar{\mbi} exists
+ such that $\bitvar{BCODED}[\locvar{\bi}]$ is 1:
+\begin{enumerate}
+\item
+If \locvar{MSCHEME} is not 7, read one bit at a time until one of the Huffman
+ codes in Table~\ref{tab:mode-codes} is recognized, and assign
+ $\bitvar{MBMODE}[\locvar{\mbi}]$ the value $\locvar{MALPHABET}[\locvar{\mi}]$,
+ where \locvar{\mi} is the index of the Huffman code decoded.
+\item
+Otherwise, if no luma-plane blocks in the macro block are coded, read a 3-bit
+ unsigned integer as $\bitvar{MBMODE}[\locvar{\mbi}]$.
+\end{enumerate}
+\item
+Otherwise, assign $\bitvar{MBMODE}[\locvar{\mbi}]$ the value 0 (INTER\_NOMV).
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
 
 
 
