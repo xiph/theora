@@ -5425,13 +5425,13 @@ Assign the array \locvar{W} and the variable \locvar{PDIV} the values from the
 \begin{center}
 \begin{tabular}{ccccrrrrr}\toprule
 \multicolumn{1}{p{25pt}}{\centering$\locvar{P}[0]$ (L)} &
-\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[1]$ (UL)} &
-\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[2]$ (U)} &
-\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[3]$ (R)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[1]$ (DL)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[2]$ (D)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[3]$ (DR)} &
 \multicolumn{1}{p{25pt}}{\centering$\locvar{W}[3]$ (L)} &
-\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[1]$ (UL)} &
-\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[2]$ (U)} &
-\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[3]$ (R)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[1]$ (DL)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[2]$ (D)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[3]$ (DR)} &
 \locvar{PDIV} \\\midrule
 $1$ & $0$ & $0$ & $0$ &  $1$ &   $0$ &  $0$ &  $0$ &   $1$ \\
 $0$ & $1$ & $0$ & $0$ &  $0$ &   $1$ &  $0$ &  $0$ &   $1$ \\
@@ -7228,13 +7228,13 @@ If $\bitvar{BCODED}[\locvar{\bi}]$ is non-zero:
 Assign \locvar{\pli} the index of the color plane block \locvar{\bi} belongs
  to.
 \item
-Assign \locvar{REC}, \locvar{RPW}, and \locvar{RPH} the values given in
+Assign \locvar{RECP}, \locvar{RPW}, and \locvar{RPH} the values given in
  Table~\ref{tab:recp} corresponding to the value of \locvar{\pli}.
 
 \begin{table}[htbp]
 \begin{center}
 \begin{tabular}{clll}\toprule
-\locvar{\pli} & \locvar{REFP}  & \locvar{RPW}  & \locvar{RPH}  \\\midrule
+\locvar{\pli} & \locvar{RECP}  & \locvar{RPW}  & \locvar{RPH}  \\\midrule
 $0$           & \bitvar{RECY}  & \bitvar{RPYW} & \bitvar{RPYH} \\
 $1$           & \bitvar{RECCB} & \bitvar{RPCW} & \bitvar{RPCH} \\
 $2$           & \bitvar{RECCR} & \bitvar{RPCW} & \bitvar{RPCH} \\
