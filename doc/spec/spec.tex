@@ -3,10 +3,13 @@
 \usepackage{latexsym}
 \usepackage{amssymb}
 \usepackage{amsmath}
+\usepackage{bm}
 \usepackage{textcomp}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{ltablex}
 \usepackage{wrapfig}
 \usepackage[pdfpagemode=None,pdfstartview=FitH,pdfview=FitH,colorlinks=true]%
  {hyperref}
@@ -24,9 +27,14 @@
 \newcommand{\qri}{\idx{qri}}
 \newcommand{\qrj}{\idx{qrj}}
 \newcommand{\hti}{\idx{hti}}
+\newcommand{\sbi}{\idx{sbi}}
+\newcommand{\bi}{\idx{bi}}
+\newcommand{\mbi}{\idx{mbi}}
 \newcommand{\ti}{\idx{ti}}
-%\newcommand{\bitvar}[1]{\ensuremath{\left[\mathrm{#1}\right]}}
-\newcommand{\bitvar}[1]{\ensuremath{\mathbf{#1}}}
+%This somewhat odd construct ensures that \bitvar{\qi}, etc., will set the
+% qi in bold face, even though it is in a \mathit font, yet \bitvar{VAR} will
+% set VAR in a bold, roman font.
+\newcommand{\bitvar}[1]{\ensuremath{\mathbf{\bm #1}}}
 \newcommand{\locvar}[1]{\ensuremath{\mathrm{#1}}}
 \newcommand{\term}[1]{{\em #1}}
 \newcommand{\bin}[1]{\ensuremath{\mathtt{b#1}}}
@@ -38,12 +46,15 @@
 \numberwithin{figure}{section}
 \numberwithin{table}{section}
 
+\keepXColumns
+
 \pagestyle{headings}
 \bibliographystyle{alpha}
 
 \title{Theora I Specification}
 \author{Xiph.org Foundation}
 \date{\today}
+
 
 \begin{document}
 
@@ -274,12 +285,14 @@ The picture region plays no other role in the decode process, which operates on
 \end{figure}
 
 \subsubsection{Blocks and Super Blocks}
+\label{sec:blocks-and-sbs}
 
 Each color plane is subdivided into $8\times 8$ \term{blocks}.
 Blocks are grouped into $4\times 4$ arrays called \term{super blocks}.
 Each color plane has its own set of blocks and super blocks.
 The boundaries of blocks and super blocks in the luma plane do not necessarily
- coincide with those of the chroma planes, if the chroma planes have been subsampled.
+ coincide with those of the chroma planes, if the chroma planes have been
+ subsampled.
 
 Blocks are accessed in two different orders in the various decoder processes.
 The first is \term{raster order}.
@@ -518,9 +531,9 @@ There are currently two quantization types defined, which depend on the coding
 \begin{table}[htb]
 \begin{center}
 \begin{tabular}{cl}\toprule
-Quantization Type & Usage                          \\\midrule
-$0$               & INTRA-mode blocks               \\
-$1$               & Blocks in any other mode.       \\
+Quantization Type & Usage                     \\\midrule
+$0$               & INTRA-mode blocks         \\
+$1$               & Blocks in any other mode. \\
 \bottomrule\end{tabular}
 \end{center}
 \caption{Quantization Type Indices}
@@ -536,7 +549,7 @@ However, the interpretation is arbitrary, and it is possible, for example, to
  other arrangement that suits the encoder's requirements.
 
 Each quantization matrix is an $8\times 8$ matrix of 16-bit values, which is
- used to quantize the output of the $8\times 8$ DCT.
+ used to quantize the output of the $8\times 8$ DCT\@.
 Quantization matrices are specified using three components: a
  \term{base matrix} and two \term{scale values}.
 The first scale value is the \term{DC scale}, which is applied to the DC
@@ -937,9 +950,13 @@ The maximum of two numbers $a$ and $b$.
 
 \subsection{Key words}
 
+%We can't rewrite this, because this is text required by RFC 2119, so we use
+% some emergency stretching to get it typeset properly.
+\setlength{\emergencystretch}{2em}
 The key words ``MUST'', ``MUST NOT'', ``REQUIRED'', ``SHALL'', ``SHALL NOT'',
  ``SHOULD'', ``SHOULD NOT'', ``RECOMMENDED'', ``MAY'', and ``OPTIONAL'' in this
- document are to be intrepreted as described in RFC 2119 \cite{rfc2119}.
+ document are to be intrepreted as described in RFC 2119 \cite{rfc2119}.\par
+\setlength{\emergencystretch}{0em}
 
 Where such assertions are placed on the contents of a Theora bitstream itself,
  implementations should be prepared to encounter bitstreams that do not follow
@@ -950,9 +967,18 @@ An application's behavior in the presecence of such non-conforming bitstreams
 By way of example, applications MAY discard the current frame, retain the
  current output thus far, or attempt to continue on by assuming some default
  values for the erroneous bits.
+When such an error occurs in the bitstream headers, an application MAY refuse
+ to decode the entire stream.
 An application SHOULD NOT allow such non-conformant bitstreams to overflow
  buffers and potentially execute arbitrary code, as this represents a serious
  security risk.
+
+An application MUST, however, ensure any reserved bits have the value zero, and
+ refuse to decode the stream if they are not.
+These are used as place holders for future bitstream features with which the
+ current bitstream is forward-compatible.
+Such features will not increment the bitstream version number, and can only be
+ recognized by checking the value of these reserved bits.
 
 \section{Video Formats}
 
@@ -1176,8 +1202,8 @@ Some standards do not specify all the parameters necessary.
 For these unspecified parameters, this document serves as the definition of
  what should be used when encoding or decoding Theora video.
 
-\subsubsection{Rec. 470M (Rec. ITU-R BT.470-6 System M/NTSC with Rec. ITU-R
- BT.601-5)}
+\subsubsection{Rec.~470M (Rec.~ITU-R~BT.470-6 System M/NTSC with
+ Rec.~ITU-R~BT.601-5)}
 \label{sec:470m}
 
 This color space is used by broadcast television and DVDs in much of the
@@ -1193,12 +1219,12 @@ In the US, studio monitors are adjusted to a D65 white point
 In Japan, studio monitors are adjusted to a D white of 9300K
  ($x_w,y_w=0.285,0.293$).
 
-Rec. 470 does not specify a digital encoding of the color signals.
-For Theora, Rec. ITU-R BT.601-5 \cite{rec601} is used, starting from the
- $R'G'B'$ signals specified by Rec. 470.
+Rec.~470 does not specify a digital encoding of the color signals.
+For Theora, Rec.~ITU-R~BT.601-5 \cite{rec601} is used, starting from the
+ $R'G'B'$ signals specified by Rec.~470.
 
-Rec. 470 does not specify an input gamma function.
-For Theora, the Rec. 709 \cite{rec709} input function is assumed.
+Rec.~470 does not specify an input gamma function.
+For Theora, the Rec.~709 \cite{rec709} input function is assumed.
 This is the same as that specified by SMPTE 170M \cite{smpte170m}, which claims
  to reflect modern practice in the creation of NTSC signals circa 1994.
 
@@ -1219,25 +1245,25 @@ K_b                            & = 0.114           \\
 x_r,y_r                        & = 0.67, 0.33      \\
 x_g,y_g                        & = 0.21, 0.71      \\
 x_b,y_b                        & = 0.14, 0.08      \\
-\text{(Illuminant C)}x_w,y_w   & = 0.310, 0.316    \\
+\text{(Illuminant C) } x_w,y_w & = 0.310, 0.316    \\
 \end{align*}
-\caption{Rec. 470M Parameters}
+\caption{Rec.~470M Parameters}
 \label{tab:470m}
 \end{table}
 
-\subsubsection{Rec. 470BG (Rec. ITU-R BT.470-6 Systems B and G with Rec. ITU-R
- BT.601-5)}
+\subsubsection{Rec.~470BG (Rec.~ITU-R~BT.470-6 Systems B and G with
+ Rec.~ITU-R~BT.601-5)}
 \label{sec:470bg}
 
 This color space is used by the PAL and SECAM systems in much of the rest of
  the world \cite{rec470}
 This can be used directly by systems (B, B1, D, D1, G, H, I, K, N)/PAL and (B,
- D, G, H, K, K1, L)/SECAM.
+ D, G, H, K, K1, L)/SECAM\@.
 
-Note that the Rec. 470BG chromaticity values are different from those specified
- in Rec. 470M.
+Note that the Rec.~470BG chromaticity values are different from those
+ specified in Rec.~470M\@.
 When PAL and SECAM systems were first designed, they were based upon the same
- primaries as NTSC.
+ primaries as NTSC\@.
 However, as methods of making color picture tubes have changed, the primaries
  used have changed as well.
 The U.S. recommends using correction circuitry to approximate the existing,
@@ -1245,25 +1271,25 @@ The U.S. recommends using correction circuitry to approximate the existing,
 Current PAL and SECAM systems have standardized on primaries in accord with
  more recent technology.
 
-Rec. 470 provisionally permits the use of the NTSC chromaticity values (given
+Rec.~470 provisionally permits the use of the NTSC chromaticity values (given
  in Section~\ref{sec:470m}) with legacy PAL and SECAM equipment.
 In Theora, material must be decoded assuming the new PAL and SECAM primaries.
 Material intended for display on old legacy devices should be converted by the
  decoder.
 
-The official Rec. 470BG specifies a gamma value of $\gamma=2.8$.
+The official Rec.~470BG specifies a gamma value of $\gamma=2.8$.
 However, in practice this value is unrealistically high \cite{Poyn97}.
-Rec. 470BG states that the overall system gamma should be approximately
+Rec.~470BG states that the overall system gamma should be approximately
  $\gamma\beta=1.2$.
 Since most cameras pre-correct with a gamma value of $\beta=0.45$,
  this suggests an output device gamma of approximately $\gamma=2.67$.
 This is the value recommended for use with PAL systems in Theora.
 
-Rec. 470 does not specify a digital encoding of the color signals.
-For Theora, Rec. ITU-R BT.601-5 \cite{rec601} is used, starting from the
- $R'G'B'$ signals specified by Rec. 470.
+Rec.~470 does not specify a digital encoding of the color signals.
+For Theora, Rec.~ITU-R~BT.601-5 \cite{rec601} is used, starting from the
+ $R'G'B'$ signals specified by Rec.~470.
 
-Rec. 470 does not specify an input gamma function.
+Rec.~470 does not specify an input gamma function.
 For Theora, the Rec 709 \cite{rec709} input function is assumed.
 
 The parameters for all the color transformations defined in
@@ -1283,9 +1309,9 @@ K_b                            & = 0.114           \\
 x_r,y_r                        & = 0.64, 0.33      \\
 x_g,y_g                        & = 0.29, 0.60      \\
 x_b,y_b                        & = 0.15, 0.06      \\
-\text{(D65)} x_w,y_w           & = 0.313, 0.329    \\
+\text{(D65) } x_w,y_w          & = 0.313, 0.329    \\
 \end{align*}
-\caption{Rec. 470BG Parameters}
+\caption{Rec.~470BG Parameters}
 \label{tab:470bg}
 \end{table}
 
@@ -1449,19 +1475,19 @@ This document assumes that a byte is one octet for purposes of example only.
 
 A `word' is an integer size that is a grouped multiple of the byte size.
 Most architectures consider a word to be a group of two, four, or eight bytes.
-Each byte in the word can be ranked by order of `significance', e.g. the
+Each byte in the word can be ranked by order of `significance', e.g.\ the
  significance of the bits in each byte when storing a binary integer in the
  word.
 Several byte orderings are possible in a word.
 The common ones are
 \begin{itemize}
 \item{Big-endian:}
-in which the most significant byte comes first, e.g. 3-2-1-0,
+in which the most significant byte comes first, e.g.\ 3-2-1-0,
 \item{Little-endian:}
-in which the least significant byte comes first, e.g. 0-1-2-3, and
+in which the least significant byte comes first, e.g.\ 0-1-2-3, and
 \item{Mixed-endian:}
 one of the less-common orderings that cannot be put into the above two
- categories, e.g. 3-1-2-0 or 0-2-1-3.
+ categories, e.g.\ 3-1-2-0 or 0-2-1-3.
 \end{itemize}
 
 The Theora bitpacking convention specifies storage and bitstream manipulation
@@ -1691,24 +1717,32 @@ An end-of-packet condition encountered while decoding the identification or
 An end-of-packet condition encountered while decode the comment header is a
  non-fatal error condition, and MAY be ignored by a decoder.
 
+\paragraph{VP3 Compatibility}
+
+VP3 relies on the headers provided by its container, usually either AVI or
+ Quicktime.
+As such, several parameters available in these headers are not available to VP3
+ streams.
+These are indicated as they appear in the sections below.
+
 \subsection{Common Header Decode}
 \label{sub:common-header}
 
-\paragraph{Input parameters:} None
+\paragraph{Input parameters:} None.
 
-\paragraph{Output parameters:}\hfill\\*\\*
+\paragraph{Output parameters:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{HEADERTYPE} & Integer & 8 & No & The type of the header being
  decoded. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
 
-\paragraph{Variables used:} None
+\paragraph{Variables used:} None.
+\medskip
 
 Each header packet begins with the same header fields, which are decoded as
  follows:
@@ -1742,31 +1776,42 @@ This distinguishes them from video data packets in which the first bit
 % extra header packets are a feature Dan argued for way back when for 
 % backward-compatible extensions (and icc colourspace for example)
 % I think it's reasonable
+%TBT: You can always just stick more stuff in the setup header.
 Packets with other header types (\hex{83}--\hex{FF}) are reserved and MUST be
  ignored.
 
 \subsection{Identification Header Decode}
 \label{sec:idheader}
 
-\paragraph{Input parameters:} None
+\paragraph{Input parameters:} None.
 
-\paragraph{Output parameters:}\hfill\\*\\*
+\paragraph{Output parameters:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{VMAJ}     & Integer &  8 & No & The major version number. \\
 \bitvar{VMIN}     & Integer &  8 & No & The minor version number. \\
-\bitvar{VREV}     & Integer &  8 & No & The minor version revision number. \\
+\bitvar{VREV}     & Integer &  8 & No & The version revision number. \\
 \bitvar{FMBW}     & Integer & 16 & No & The width of the frame in macro
  blocks. \\
 \bitvar{FMBH}     & Integer & 16 & No & The height of the frame in macro
  blocks. \\
+\bitvar{NSBS}     & Integer & 32 & No & The total number of super blocks in a
+ frame. \\
+\bitvar{NBS}      & Integer & 32 & No & The total number of blocks in a
+ frame. \\
+\bitvar{NMBS}     & Integer & 32 & No & The total number of macro blocks in a
+ frame. \\
 \bitvar{PICW}     & Integer & 20 & No & The width of the picture region in
  pixels. \\
 \bitvar{PICH}     & Integer & 20 & No & The height of the picture region in
+ pixels. \\
+\bitvar{PICX}     & Integer &  8 & No & The X offset of the picture region in
+ pixels. \\
+\bitvar{PICY}     & Integer &  8 & No & The Y offset of the picture region in
  pixels. \\
 \bitvar{FRN}      & Integer & 32 & No & The frame-rate numerator. \\
 \bitvar{FRD}      & Integer & 32 & No & The frame-rate denominator. \\
@@ -1780,9 +1825,9 @@ Packets with other header types (\hex{83}--\hex{FF}) are reserved and MUST be
 \bitvar{KFGSHIFT} & Integer &  5 & No & The amount to shift the key frame
  number by in the granule position. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
 
-\paragraph{Variables used:} None
+\paragraph{Variables used:} None.
+\medskip
 
 The identification header is a short header with only a few fields used to
  declare the stream definitively as Theora and provide detailed information
@@ -1875,8 +1920,8 @@ If a reserved value is given, a decoder MAY refuse to decode the stream.
 \begin{tabular*}{215pt}{cl@{\extracolsep{\fill}}c}\toprule
 Value    & Color Space                               \\\midrule
 $0$      & Undefined.                                \\
-$1$      & Rec. 470M (see Section~\ref{sec:470m}).   \\
-$2$      & Rec. 470BG (see Section~\ref{sec:470bg}). \\
+$1$      & Rec.~470M (see Section~\ref{sec:470m}).   \\
+$2$      & Rec.~470BG (see Section~\ref{sec:470bg}). \\
 $3$      & Reserved.                                 \\
 $\vdots$ &                                           \\
 $255$    &                                           \\
@@ -1932,7 +1977,59 @@ Read a 3-bit unsigned integer.
 These bits are reserved.
 If this value is not zero, then stop.
 This stream is not decodable according to this specification.
+\item
+Assign \bitvar{NSBS} a value according to \bitvar{PF}, as given by
+ Table~\ref{tab:nsbs-for-pf}.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{cc}\toprule
+\bitvar{PF} & \bitvar{NSBS}                                     \\\midrule
+$0$         & $\begin{aligned}
+&((\bitvar{FMBW}+1)//2)*((\bitvar{FMBH}+1)//2)\\
+& +2*((\bitvar{FMBW}+3)//4)*((\bitvar{FMBH}+3)//4)
+\end{aligned}$                                                  \\\midrule
+$2$         & $\begin{aligned}
+&((\bitvar{FMBW}+1)//2)*((\bitvar{FMBH}+1)//2)\\
+& +2*((\bitvar{FMBW}+3)//4)*((\bitvar{FMBH}+1)//2)
+\end{aligned}$                                                  \\\midrule
+$3$         & $3*((\bitvar{FMBW}+1)//2)*((\bitvar{FMBH}+1)//2)$ \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Number of Super Blocks for each Pixel Format}
+\label{tab:nsbs-for-pf}
+\end{table}
+
+\item
+Assign \bitvar{NBS} a value according to \bitvar{PF}, as given by
+ Table~\ref{tab:nbs-for-pf}.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{cc}\toprule
+\bitvar{PF} & \bitvar{NBS}                     \\\midrule
+$0$         & $6*\bitvar{FMBW}*\bitvar{FMBH}$  \\\midrule
+$2$         & $8*\bitvar{FMBW}*\bitvar{FMBH}$  \\\midrule
+$3$         & $12*\bitvar{FMBW}*\bitvar{FMBH}$ \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Number of Super Blocks for each Pixel Format}
+\label{tab:nbs-for-pf}
+\end{table}
+
+\item
+Assign \bitvar{NMBS} the value $(\bitvar{FMBW}*\bitvar{FMBH})$.
+
 \end{enumerate}
+
+\paragraph{VP3 Compatibility}
+
+VP3 does not correctly handle frame sizes that are not a multiple of 16.
+Thus, \bitvar{PICW} and \bitvar{PICH} should be set to the frame width and
+ height in pixels, respectively, and \bitvar{PICX} and \bitvar{PICY} should be
+ set to zero.
+VP3 headers do not specify a color space.
+VP3 only supports the 4:2:0 pixel format.
 
 \subsection{Comment Header}
 \label{sec:commentheader}
@@ -1965,33 +2062,32 @@ In addition to the vector list, there is a single vector for a vendor name,
 \subsubsection{Comment Length Decode}
 \label{sub:comment-len}
 
-\paragraph{Input parameters:} None
+\paragraph{Input parameters:} None.
 
-\paragraph{Output parameters:}\hfill\\*\\*
+\paragraph{Output parameters:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
-\locvar{LEN}  & Integer & 32 & No & A single 32-bit length value. \\
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{LEN}  & Integer & 32 & No & A single 32-bit length value. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
 
-\paragraph{Variables used:}\hfill\\*\\*
+\paragraph{Variables used:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \locvar{LEN0} & Integer &  8 & No & The first octet of the string length. \\
 \locvar{LEN1} & Integer &  8 & No & The second octet of the string length. \\
 \locvar{LEN2} & Integer &  8 & No & The third octet of the string length. \\
 \locvar{LEN3} & Integer &  8 & No & The fourth octet of the string
  length. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
+\medskip
 
 A single comment vector is decoded as follows:
 
@@ -2005,7 +2101,7 @@ Read an 8-bit unsigned integer as \locvar{LEN2}.
 \item
 Read an 8-bit unsigned integer as \locvar{LEN3}.
 \item
-Assign \locvar{LEN} the value $(\locvar{LEN0}+(\locvar{LEN1}<<8)+
+Assign \bitvar{LEN} the value $(\locvar{LEN0}+(\locvar{LEN1}<<8)+
  (\locvar{LEN2}<<16)+(\locvar{LEN3}<<24))$.
 This construction is used so that on platforms with 8-bit bytes, the memory
  organization of the comment header is identical with that of Vorbis I,
@@ -2015,34 +2111,33 @@ This construction is used so that on platforms with 8-bit bytes, the memory
 
 \subsubsection{Comment Header Decode}
 
-\paragraph{Input parameters:} None
+\paragraph{Input parameters:} None.
 
-\paragraph{Output parameters:}\hfill\\*\\*
+\paragraph{Output parameters:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{VENDOR}    & \multicolumn{3}{l}{String}       & The vendor string. \\
 \bitvar{NCOMMENTS} & Integer                & 32 & No & The number of user
  comments. \\
 \bitvar{COMMENTS}  & \multicolumn{3}{l}{String Array} & A list of
  \bitvar{NCOMMENTS} user comment values. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
 
-\paragraph{Variables used:}\hfill\\*\\*
+\paragraph{Variables used:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \locvar{\ci} & Integer & 32 & No & The index of the current user
  comment. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
+\medskip
 
 The complete comment header is decoded as follows:
 
@@ -2085,6 +2180,8 @@ Unlike the first header packet, it is not generally the only packet on the
 The length of the comment header packet is (practically) unbounded.
 The comment header packet is not optional; it must be present in the stream
  even if it is logically empty.
+
+%TODO: \paragraph{VP3 Compatibility}
 
 \subsubsection{User Comment Format}
 
@@ -2163,33 +2260,32 @@ Because the contents of this header are specific to Theora, no concessions have
 \subsubsection{Loop Filter Limit Table Decode}
 \label{sub:loop-filter-limits}
 
-\paragraph{Input parameters:} None
+\paragraph{Input parameters:} None.
 
-\paragraph{Output parameters:}\hfill\\*\\*
+\paragraph{Output parameters:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{LFLIMS}    & \multicolumn{1}{p{40pt}}{Integer array} &
                               7 & No & A 64-element array of loop filter limit
  values. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
 
-\paragraph{Variables used:}\hfill\\*\\*
+\paragraph{Variables used:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \locvar{\qi}    & Integer &  6 & No & The quantization index. \\
 \locvar{NBITS}  & Integer &  3 & No & The size of values being read in the
  current table. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
+\medskip
 
 This procedure decodes the table of loop filter limit values used to drive the
  loop filter, which is described in Section~REF.
@@ -2206,18 +2302,23 @@ Read an \locvar{NBITS}-bit unsigned integer as $\bitvar{LFLIMS}[\locvar{\qi}]$.
 \end{enumerate}
 \end{enumerate}
 
+\paragraph{VP3 Compatibility}
+
+The loop filter limit values are hardcoded in VP3.
+The values used are given in Appendix~REF.
+
 \subsubsection{Quantization Parameters Decode}
 \label{sub:quant-params}
 
-\paragraph{Input parameters:} None
+\paragraph{Input parameters:} None.
 
-\paragraph{Output parameters:}\hfill\\*\\*
+\paragraph{Output parameters:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{ACSCALE} & \multicolumn{1}{p{40pt}}{Integer array} &
                              16 & No & A 64-element array of scale values for
  AC coefficients for each \qi\ value. \\
@@ -2241,15 +2342,14 @@ Only the first $\bitvar{NQRS}[\qti][\pli]$ values are used. \\
  \bmi's used for each quant range for a given \qti\ and \pli, respectively.
 Only the first $(\bitvar{NQRS}[\qti][\pli]+1)$ values are used. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
 
-\paragraph{Variables used:}\hfill\\*\\*
+\paragraph{Variables used:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \locvar{\qti}    & Integer &  1 & No & A quantization type index.
 See Table~\ref{tab:quant-types}.\\
 \locvar{\qtj}    & Integer &  1 & No & A quantization type index. \\
@@ -2266,7 +2366,7 @@ See Table~\ref{tab:color-planes}.\\
 \locvar{RPQR}    & Integer &  1 & No & Flag that indicates the quant ranges to
  copy will come from the same color plane. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
+\medskip
 
 The AC scale and DC scale values are defined in two simple tables with 64
  values each, one for each \qi\ value.
@@ -2419,16 +2519,21 @@ Assign $\bitvar{NQRS}[\locvar{\qti}][\locvar{\pli}]$ the value \locvar{\qri}.
 \end{enumerate}
 \end{enumerate}
 
+\paragraph{VP3 Compatibility}
+
+The quantization parameters are hardcoded in VP3.
+The values used are given in Appendix~REF.
+
 \subsubsection{Computing a Quantization Matrix}
 \label{sub:quant-mat}
 
-\paragraph{Input parameters:}\hfill\\*\\*
+\paragraph{Input parameters:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{ACSCALE} & \multicolumn{1}{p{40pt}}{Integer array} &
                              16 & No & A 64-element array of scale values for
  AC coefficients for each \qi\ value. \\
@@ -2456,28 +2561,26 @@ See Table~\ref{tab:quant-types}.\\
 See Table~\ref{tab:color-planes}.\\
 \bitvar{\qi}     & Integer &  6 & No & The quantization index. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
 
-\paragraph{Output parameters:}\hfill\\*\\*
+\paragraph{Output parameters:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{QMAT} & \multicolumn{1}{p{40pt}}{Integer array} &
                              16 & No & A 64-element array of quantization
  values for each DCT coefficient. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
 
-\paragraph{Variables used:}\hfill\\*\\*
+\paragraph{Variables used:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \locvar{\ci}     & Integer &  6 & No & The DCT coefficient index. \\
 \locvar{\bmi}    & Integer &  9 & No & The base matrix index. \\
 \locvar{\bmj}    & Integer &  9 & No & The base matrix index. \\
@@ -2491,7 +2594,7 @@ See Table~\ref{tab:color-planes}.\\
  for the current coefficient. \\
 \locvar{QSCALE}  & Integer & 16 & No & The current scale value. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
+\medskip
 
 The following procedure can be used to generate a single quantization matrix
  for a given quantization type, color plane, and \qi\ value, given the
@@ -2587,32 +2690,31 @@ Assign $\bitvar{QMAT}[\locvar{\ci}]$ the value
 
 \paragraph{Input parameters:} None.
 
-\paragraph{Output parameters:}\hfill\\*\\*
+\paragraph{Output parameters:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{HTS} & \multicolumn{3}{l}{Huffman table array}
                                      & An 80-element array of Huffman tables
  with up to 32 entries each. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
 
-\paragraph{Variables used:}\hfill\\*\\*
+\paragraph{Variables used:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
-\locvar{HBITS}   & Bitstring & 32 & No & A string of up to 32 bits. \\
-\locvar{TOKEN}   & Integer   &  5 & No & A single DCT token value. \\
-\locvar{ISLEAF}  & Integer   &  1 & No & Flag that indicates if the current
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{HBITS}   & Bit string & 32 & No & A string of up to 32 bits. \\
+\locvar{TOKEN}   & Integer    &  5 & No & A single DCT token value. \\
+\locvar{ISLEAF}  & Integer    &  1 & No & Flag that indicates if the current
  node of the tree being decoded is a leaf node. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
+\medskip
 
 The Huffman tables used to decode DCT tokens are stored in the setup header in
  the form of a binary tree.
@@ -2683,17 +2785,22 @@ Remove the `1' from the end of \locvar{HBITS}.
 \end{enumerate}
 \end{enumerate}
 
+\paragraph{VP3 Compatibility}
+
+The DCT token Huffman tables are hardcoded in VP3.
+The values used are given in Appendix~REF.
+
 \subsubsection{Setup Header Decode}
 
-\paragraph{Input parameters:} None
+\paragraph{Input parameters:} None.
 
-\paragraph{Output parameters:}\hfill\\*\\*
+\paragraph{Output parameters:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
 \multicolumn{1}{c}{Name} &
 \multicolumn{1}{c}{Type} &
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
-\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{LFLIMS}  & \multicolumn{1}{p{40pt}}{Integer array} &
                               7 & No & A 64-element array of loop filter limit
  values. \\
@@ -2723,9 +2830,9 @@ Only the first $(\bitvar{NQRS}[\qti][\pli]+1)$ values will be used. \\
                                      & An 80-element array of Huffman tables
  with up to 32 entries each. \\
 \bottomrule\end{tabularx}
-\vspace{\baselineskip}
 
 \paragraph{Variables used:} None.
+\medskip
 
 The complete setup header is decoded as follows:
 
@@ -2749,6 +2856,614 @@ Decode the DCT token Huffman tables using the procedure given in
 \end{enumerate}
 
 \section{Frame Decode}
+
+This section describes the complete procedure necessary to decode a single
+ frame.
+This begins with the frame header, followed by coded block flags, macro block
+ modes, motion vectors, block-level \qi\ values, and finally the DCT residual
+ tokens, which are used to reconstruct the frame.
+
+\subsection{Frame Header Decode}
+\label{sub:frame-header}
+
+\paragraph{Input parameters:} None.
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{FTYPE}   & Integer &  1 & No & The frame type. \\
+\bitvar{NQIS}    & Integer &  2 & No & The number of \qi\ values. \\
+\bitvar{QIS}     & \multicolumn{1}{p{40pt}}{Integer array} &
+                             6 & No & An \bitvar{NQIS}-element array of
+ \qi\ values. \\
+\bitvar{MOREQIS} & Integer &  1 & No & A flag indicating there are more
+ \qi\ values to be decoded. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{MOREQIS} & Integer &  1 & No & A flag indicating there are more
+ \qi\ values to be decoded. \\
+\bottomrule\end{tabularx}
+\medskip
+
+The frame header selects which type of frame is being decoded, intra or inter,
+ and contains the list of \qi\ values that will be used in this frame.
+The first \qi\ value will be used for {\em all} DC coefficients in all blocks.
+This is done to ensure that DC prediction, which is done in the quantized
+ domain, works as expected.
+The AC coefficients, however, can be dequantized using any \qi\ value on the
+ list, selected on a block-by-block basis.
+
+\begin{enumerate}
+\item
+Read a 1-bit unsigned integer.
+If the value read is not zero, stop.
+This is not a data packet.
+\item
+Read a 1-bit unsigned integer as \bitvar{FTYPE}.
+This is the type of frame being decoded, as given in
+ Table~\ref{tab:frame-type}.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{cl}\toprule
+\bitvar{FTYPE} & Frame Type  \\\midrule
+$0$            & Intra frame \\
+$1$            & Inter frame \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Frame Type Values}
+\label{tab:frame-type}
+\end{table}
+
+\item
+Read in a 6-bit unsigned integer as $\bitvar{QIS}[0]$.
+\item
+Read a 1-bit unsigned integer as \locvar{MOREQIS}.
+\item
+If \locvar{MOREQIS} is zero, set \bitvar{NQIS} to 1.
+\item
+Otherwise:
+\begin{enumerate}
+\item
+Read in a 6-bit unsigned integer as $\bitvar{QIS}[1]$.
+\item
+Read a 1-bit unsigned integer as \locvar{MOREQIS}.
+\item
+If \locvar{MOREQIS} is zero, set \bitvar{NQIS} to 2.
+\item
+Otherwise:
+\begin{enumerate}
+\item
+Read in a 6-bit unsigned integer as $\bitvar{QIS}[2]$.
+\item
+Set \bitvar{NQIS} to 3.
+\end{enumerate}
+\end{enumerate}
+\item
+If \bitvar{FTYPE} is 0, read a 3-bit unsigned integer.
+If this value is not zero, stop.
+This frame is not decodable according to this specification.
+\end{enumerate}
+
+\paragraph{VP3 Compatibility}
+
+The precise format of the frame header is substantially different in Theora
+ than in VP3.
+The original VP3 format includes a larger number of unused, reserved bits that
+ are required to be zero.
+The original VP3 frame header also can contain only a single \qi\ value,
+ because VP3 does not support block-level \qi\ values and uses the same
+ \qi\ value for all the coefficients in a frame.
+
+\subsection{Run-Length Encoded Bit Strings}
+
+Two variations of run-length encoding are used to store sequences of bits for
+ the block coded flags and the block-level \qi\ values.
+The procedures to decode these bit sequences are specified in the following two
+ sections.
+
+\subsubsection{Long-Run Bit String Decode}
+\label{sub:long-run}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{NBITS}   & Integer & 36 & No & The number of bits to decode. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{BITS}    & Bit string &    &    & The decoded bits. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{LEN}    & Integer & 36 & No & The number of bits decoded so far. \\
+\locvar{BIT}    & Integer &  1 & No & The value associated with the current
+ run. \\
+\locvar{RLEN}   & Integer & 13 & No & The length of the current run. \\
+\locvar{RBITS}  & Integer &  4 & No & The number of extra bits needed to
+ decode the run length. \\
+\locvar{RSTART} & Integer &  6 & No & The start of the possible run-length
+ values for a given Huffman code. \\
+\locvar{ROFFS}  & Integer & 12 & No & The offset from \locvar{RSTART} of the
+ run-length. \\
+\bottomrule\end{tabularx}
+\medskip
+
+There is no practical limit to the number of consecutive 0's and 1's that can
+ be decoded with this procedure.
+In reality, the run length is limited by the number of blocks in a single
+ frame, because more will never be requested.
+A separate procedure described in Section~\ref{sub:short-run} is used when
+ there is a known limit on the maximum size of the runs.
+
+For the first run, a single bit value is read, and then a Huffman-coded
+ representation of a run length is decoded, and that many copies of the bit
+ value are appended to the bit string.
+For each consecutive run, the value of the bit is toggled instead of being read
+ from the bitstream.
+
+The only exception is if the length of the previous run was 4129, the maximum
+ possible length encodable by the Huffman-coded representation.
+In this case another bit value is read from the stream, to allow for
+ consecutive runs of 0's or 1's longer than this maximum.
+
+Note that in both cases---for the first run and after a run of length 4129---if
+ no more bits are needed, then no bit value is read.
+
+The complete decoding procedure is as follows:
+
+\begin{enumerate}
+\item
+Assign \locvar{LEN} the value 0.
+\item
+Assign \bitvar{BITS} the empty string.
+\item
+If \locvar{LEN} equals \bitvar{NBITS}, return the completely decoded string
+ \bitvar{BITS}.
+\item
+Read a 1-bit unsigned integer as \locvar{BIT}.
+\item
+\label{step:long-run-loop}
+Read a bit at a time until one of the Huffman codes given in
+ Table~\ref{tab:long-run} is recognized.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{lrrl}\toprule
+Huffman Code & \locvar{RSTART} & \locvar{RBITS} & Run Lengths     \\\midrule
+\bin{0}      & $1$             & $0$            & $1$             \\
+\bin{10}     & $2$             & $1$            & $2\ldots 3$     \\
+\bin{110}    & $4$             & $1$            & $4\ldots 5$     \\
+\bin{1110}   & $6$             & $2$            & $6\ldots 9$     \\
+\bin{11110}  & $10$            & $3$            & $10\ldots 17$   \\
+\bin{111110} & $18$            & $4$            & $18\ldots 33$   \\
+\bin{111111} & $34$            & $12$           & $34\ldots 4129$ \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Huffman Codes for Long Run Lengths}
+\label{tab:long-run}
+\end{table}
+
+\item
+Assign \locvar{RSTART} and \locvar{RBITS} the values given in
+ Table~\ref{tab:long-run} according to the Huffman code read.
+\item
+Read an \locvar{RBITS}-bit unsigned integer as \locvar{ROFFS}.
+\item
+Assign \locvar{RLEN} the value $(\locvar{RSTART}+\locvar{ROFFS})$.
+\item
+Append \locvar{RLEN} copies of \locvar{BIT} to \bitvar{BITS}.
+\item
+Add \locvar{RLEN} to the value \locvar{LEN}.
+\locvar{LEN} MUST be less than or equal to \bitvar{NBITS}.
+\item
+If \locvar{LEN} equals \bitvar{NBITS}, return the completely decoded string
+ \bitvar{BITS}.
+\item
+If \locvar{RLEN} equals 4129, read a 1-bit unsigned integer as \locvar{BIT}.
+\item
+Otherwise, assign \locvar{BIT} the value $(1-\locvar{BIT})$.
+\item
+Continue decoding runs from step~\ref{step:long-run-loop}.
+\end{enumerate}
+
+\paragraph{VP3 Compatibility}
+
+VP3 does not read a new bit value after decoding a run length of 4129.
+This limits the maximum number of consecutive 0's or 1's to 4129 in
+ VP3-compatible streams.
+For reasonable video sizes of $1920\times 1080$ or less in 4:2:0 format---the
+ only format VP3 supports---this does not pose any problems because runs this
+ long are not needed.
+
+\subsubsection{Short-Run Bit String Decode}
+\label{sub:short-run}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{NBITS}   & Integer & 36 & No & The number of bits to decode. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{BITS}    & Bit string &    &    & The decoded bits. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{LEN}    & Integer & 36 & No & The number of bits decoded so far. \\
+\locvar{BIT}    & Integer &  1 & No & The value associated with the current
+ run. \\
+\locvar{RLEN}   & Integer & 13 & No & The length of the current run. \\
+\locvar{RBITS}  & Integer &  4 & No & The number of extra bits needed to
+ decode the run length. \\
+\locvar{RSTART} & Integer &  6 & No & The start of the possible run-length
+ values for a given Huffman code. \\
+\locvar{ROFFS}  & Integer & 12 & No & The offset from \locvar{RSTART} of the
+ run-length. \\
+\bottomrule\end{tabularx}
+\medskip
+
+This procedure is similar to the procedure outlined in
+ Section~\ref{sub:long-run}, except that the maximum number of consecutive 0's
+ or 1's is limited to 30.
+This is the maximum run length needed when encoding a bit for each of the 16
+ blocks in a super block when it is known that not all the bits in a super
+ block are the same.
+
+The complete decoding procedure is as follows:
+
+\begin{enumerate}
+\item
+Assign \locvar{LEN} the value 0.
+\item
+Assign \bitvar{BITS} the empty string.
+\item
+If \locvar{LEN} equals \bitvar{NBITS}, return the completely decoded string
+ \bitvar{BITS}.
+\item
+Read a 1-bit unsigned integer as \locvar{BIT}.
+\item
+\label{step:short-run-loop}
+Read a bit at a time until one of the Huffman codes given in
+ Table~\ref{tab:short-run} is recognized.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{lrrl}\toprule
+Huffman Code & \locvar{RSTART} & \locvar{RBITS} & Run Lengths   \\\midrule
+\bin{0}      & $1$             & $1$            & $1\ldots 2$   \\
+\bin{10}     & $3$             & $1$            & $3\ldots 4$   \\
+\bin{110}    & $5$             & $1$            & $5\ldots 6$   \\
+\bin{1110}   & $7$             & $2$            & $7\ldots 10$  \\
+\bin{11110}  & $11$            & $2$            & $11\ldots 14$ \\
+\bin{11111}  & $15$            & $4$            & $15\ldots 30$ \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Huffman Codes for Short Run Lengths}
+\label{tab:short-run}
+\end{table}
+
+\item
+Assign \locvar{RSTART} and \locvar{RBITS} the values given in
+ Table~\ref{tab:short-run} according to the Huffman code read.
+\item
+Read an \locvar{RBITS}-bit unsigned integer as \locvar{ROFFS}.
+\item
+Assign \locvar{RLEN} the value $(\locvar{RSTART}+\locvar{ROFFS})$.
+\item
+Append \locvar{RLEN} copies of \locvar{BIT} to \bitvar{BITS}.
+\item
+Add \locvar{RLEN} to the value \locvar{LEN}.
+\locvar{LEN} MUST be less than or equal to \bitvar{NBITS}.
+\item
+If \locvar{LEN} equals \bitvar{NBITS}, return the completely decoded string
+ \bitvar{BITS}.
+\item
+Assign \locvar{BIT} the value $(1-\locvar{BIT})$.
+\item
+Continue decoding runs from step~\ref{step:short-run-loop}.
+\end{enumerate}
+
+\subsection{Coded Block Flags Decode}
+\label{sub:coded-blocks}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{FTYPE}   & Integer &  1 & No & The frame type. \\
+\bitvar{NSBS}    & Integer & 32 & No & The total number of super blocks in a
+ frame. \\
+\bitvar{NBS}     & Integer & 36 & No & The total number of blocks in a
+ frame. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{BCODED}   & \multicolumn{1}{p{40pt}}{Integer Array} &
+                              1 & No & An \bitvar{NBS}-element array of flags
+ indicating which blocks are coded. \\
+\bitvar{NBCODED}  & Integer & 36 & No & The number of coded blocks. \\
+\bitvar{NLBCODED} & Integer & 36 & No & The number of coded blocks in the luma
+ plane. \\
+\bitvar{CODEDBS}  & \multicolumn{1}{p{40pt}}{Integer Array} &
+                              36 & No & An \bitvar{NBCODED}-element list of the
+ indices of all the coded blocks. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{NBITS}    & Integer & 36 & No & The length of a bit string to decode. \\
+\locvar{BITS}     & Bit string & &    & A decoded set of flags. \\
+\locvar{SBPCODED} & \multicolumn{1}{p{40pt}}{Integer Array} &
+                               1 & No & An \bitvar{NSBS}-element array of flags
+ indicating whether or not each super block is partially coded. \\
+\locvar{SBFCODED} & \multicolumn{1}{p{40pt}}{Integer Array} &
+                               1 & No & An \bitvar{NSBS}-element array of flags
+ indicating whether or not each non-partially coded super block is fully
+ coded. \\
+\locvar{\sbi}     & Integer & 32 & No & The index of the current super
+ block. \\
+\locvar{\bi}      & Integer & 32 & No & The index of the current block in coded
+ order. \\
+\bottomrule\end{tabularx}
+\medskip
+
+This procedure determines which blocks are coded in a given frame.
+In an intra frame, it marks blocks are coded.
+In an inter frame, however, any or all of the blocks may remain uncoded.
+
+It is important to note that flags are still decoded for any blocks which lie
+ entirely outside the picture region, even though they are not displayed.
+These blocks must be faithfully reconstructed, however, because their contents
+ can be used as predictors in future frames.
+
+This procedure outputs two redundant representations of the coded blocks, for
+ ease of reference elsewhere in the decoding process: a list of bit flags, one
+ for each block, marking it coded or not coded, and a list of the indices of
+ the coded blocks, in coded order.
+These are decoded as follows:
+
+\begin{enumerate}
+\item
+Assign \bitvar{NBCODED} the value zero.
+\item
+Assign \bitvar{NLBCODED} the value zero.
+\item
+If \bitvar{FTYPE} is zero (intra frame):
+\begin{enumerate}
+\item
+For each consecutive block in coded order (see
+ Section~\ref{sec:blocks-and-sbs})---indexed by \locvar{\bi}:
+\begin{enumerate}
+\item
+Assign $\bitvar{BCODED}[\locvar{\bi}]$ the value one.
+\item
+Assign $\bitvar{CODEDBS}[\bitvar{NBCODED}]$ the value \locvar{\bi}.
+\item
+Assign \bitvar{NBCODED} the value $(\bitvar{NBCODED}+1)$.
+\item
+If \locvar{\bi} is in the luma plane, assign \bitvar{NLBCODED} the value
+ $(\bitvar{NLBCODED}+1)$.
+\end{enumerate}
+\end{enumerate}
+\item
+Otherwise (inter frame):
+\begin{enumerate}
+\item
+Assign \locvar{NBITS} the value \bitvar{NSBS}.
+\item
+Read an \locvar{NBITS}-bit bit string into \locvar{BITS}, using the procedure
+ described in Section~\ref{sub:long-run}.
+This represents the list of partially coded super blocks.
+\item
+For each consecutive super block in raster order---indexed by
+ \locvar{\sbi}---remove the bit at the head of the string \locvar{BITS} and
+ assign it to $\locvar{SBPCODED}[\locvar{\sbi}]$.
+\item
+Assign \locvar{NBITS} the total number of super blocks such that \\
+ $\locvar{SBPCODED}[\locvar{\sbi}]$ equals zero.
+\item
+Read an \locvar{NBITS}-bit bit string into \locvar{BITS}, using the procedure
+ described in Section~\ref{sub:long-run}.
+This represents the list of fully coded super blocks.
+\item
+For each consecutive super block in raster order---indexed by
+ \locvar{\sbi}---such that $\locvar{SBPCODED}[\locvar{\sbi}]$ equals zero,
+ remove the bit at the head of the string \locvar{BITS} and assign it to
+ $\locvar{SBFCODED}[\locvar{\sbi}]$.
+\item
+Assign \locvar{NBITS} the number of blocks contained in super blocks where
+ $\locvar{SBPCODED}[\locvar{\sbi}]$ equals one.
+Note that this might {\em not} be equal to 16 times the number of partially
+ coded super blocks, since super blocks which overlap the edge of the frame
+ will have fewer than 16 blocks in them.
+\item
+Read an \locvar{NBITS}-bit bit string into \locvar{BITS}, using the procedure
+ described in Section~\ref{sub:short-run}.
+\item
+For each block in coded order---indexed by \locvar{\bi}:
+\begin{enumerate}
+\item
+Assign \locvar{\sbi} the index of the super block containing block
+ \locvar{\bi}.
+\item
+If $\locvar{SBPCODED}[\locvar{\sbi}]$ is zero, assign
+ $\bitvar{BCODED}[\locvar{\bi}]$ the value $\locvar{SBFCODED}[\locvar{\sbi}]$.
+\item
+Otherwise, remove the bit at the head of the string \locvar{BITS} and assign it
+ to $\bitvar{BCODED}[\locvar{\bi}]$.
+\item
+If $\bitvar{BCODED}[\locvar{\bi}]$ is one:
+\begin{enumerate}
+\item
+Assign $\bitvar{CODEDBS}[\bitvar{NBCODED}]$ the value $\locvar{\bi}$.
+\item
+Assign \bitvar{NBCODED} the value $(\bitvar{NBCODED}+1)$.
+\item
+If \locvar{\bi} is in the luma plane, assign \bitvar{NLBCODED} the value
+ $(\bitvar{NLBCODED}+1)$.
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
+
+\subsection{Macro Block Coding Modes}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{FTYPE}    & Integer &  1 & No & The frame type. \\
+\bitvar{NMBS}     & Integer & 32 & No & The total number of macro blocks in a
+ frame. \\
+\bitvar{BCODED}   & \multicolumn{1}{p{40pt}}{Integer Array} &
+                              1 & No & An \bitvar{NBS}-element array of flags
+ indicating which blocks are coded. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{MBMODES} & \multicolumn{1}{p{40pt}}{Integer Array} &
+                              3 & No & An \bitvar{NMBS}-element array of coding
+ modes for each macro block. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{\mbi}     & Integer & 32 & No & The index of the current macro
+ block. \\
+\locvar{\bi}      & Integer & 32 & No & The index of the current block in coded
+ order. \\
+\bottomrule\end{tabularx}
+\medskip
+
+In an intra frame, every macro block marked as coded in INTRA mode.
+In an inter frame, however, a macro block can be coded in one of eight coding
+ modes, given in Table~\ref{tab:coding-modes}.
+All of the blocks in all color planes contained in a macro block will be
+ assigned the coding mode of that macro block.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{cl}\toprule
+Index & Coding Mode \\\midrule
+$0$   & INTER\_NOMV         \\
+$1$   & INTRA               \\
+$2$   & INTER\_MV           \\
+$3$   & INTER\_MV\_LAST     \\
+$4$   & INTER\_MV\_LAST2    \\
+$5$   & INTER\_GOLDEN\_NOMV \\
+$6$   & INTER\_GOLDEN\_MV   \\
+$7$   & INTER\_MV\_FOUR     \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Coding Modes}
+\label{tab:coding-modes}
+\end{table}
+
+An important thing to note is that a coding mode is only stored in the
+ bitstream if it has at least {\em luma} block coded.
+A macro block with no coded blocks in the luma plane defaults to being coded in
+ INTER\_NOMV mode, even if it contains coded blocks in the chroma planes.
+
+Coding modes are encoded using one of eight different schemes.
+Schemes 0 through 6 use the same simple Huffman code to represent the mode
+ numbers, as given in Table~\ref{tab:mode-codes}.
+The difference in the schemes is the mode number assigned to each code.
+Scheme 0 uses an assignment specified in the bitstream, while schemes 1--6 use
+ a fixed assignment, also given in Table~\ref{tab:mode-codes}.
+Scheme 7 simply codes each mode directly in the bitstream using three bits.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{lcccccc}\toprule
+Scheme        & $1$ & $2$ & $3$ & $4$ & $5$ & $6$ \\\cmidrule{2-7}
+Huffman Code  & \multicolumn{6}{c}{Coding Mode}   \\\midrule
+\bin{0}       & $3$ & $3$ & $3$ & $3$ & $0$ & $0$ \\
+\bin{10}      & $4$ & $4$ & $2$ & $2$ & $3$ & $5$ \\
+\bin{110}     & $2$ & $0$ & $4$ & $0$ & $4$ & $3$ \\
+\bin{1110}    & $0$ & $2$ & $0$ & $4$ & $2$ & $4$ \\
+\bin{11110}   & $1$ & $1$ & $1$ & $1$ & $1$ & $2$ \\
+\bin{111110}  & $5$ & $5$ & $5$ & $5$ & $5$ & $1$ \\
+\bin{1111110} & $6$ & $6$ & $6$ & $6$ & $6$ & $6$ \\
+\bin{1111111} & $7$ & $7$ & $7$ & $7$ & $7$ & $7$ \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Coding Modes}
+\label{tab:mode-codes}
+\end{table}
+
+
 
 
 
@@ -2915,7 +3630,7 @@ See \href{http://www.xiph.org/about.html}{About the Xiph.org Foundation} for
  details.
 
 Ogg Theora is the first Ogg video codec.
-Anyone may freely use and distribute the Ogg and Theora specification, whether
+Anyone may freely use and distribute the Ogg and Theora specifications, whether
  in private, public, or corporate capacity.
 However, the Xiph.org Foundation and the Ogg project reserve the right to set
  the Ogg Theora specification and certify specification compliance.

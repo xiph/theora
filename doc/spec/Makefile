@@ -8,10 +8,10 @@ RM = rm -f
 
 SPEC_SRCS = spec.tex spec.bib
 
-FIG_SRCS = pic-frame.fig hilbert-mb.fig hilbert-block.fig xifish.fig
+FIG_SRCS = pic-frame.fig hilbert-mb.fig hilbert-block.fig
 
 FIG_TEXS = $(FIG_SRCS:.fig=.tex)
-FIG_PDFS = $(FIG_SRCS:.fig=.pdf)
+FIG_AUXS = $(FIG_SRCS:.fig=.aux)
 
 FIG_OBJS = pic-frame.tex hilbert-mb.tex hilbert-block.tex xifish.pdf
 
@@ -20,11 +20,14 @@ Theora_I_spec.pdf : spec.pdf
 
 spec.pdf : $(SPEC_SRCS) $(FIG_OBJS) spec.bbl
 	# three times is the charm with references
-	pdflatex --interaction nonstopmode spec.tex
+	# But we get one from spec.aux... so two should cut it.
+	#pdflatex --interaction nonstopmode spec.tex
 	pdflatex --interaction nonstopmode spec.tex
 	pdflatex --interaction nonstopmode spec.tex
 
 spec.aux : spec.tex
+	#Long tables require the .aux file to start from scratch
+	-rm spec.aux
 	pdflatex --interaction nonstopmode $<
 
 spec.bbl : spec.aux spec.bib
@@ -43,7 +46,8 @@ figures : $(FIG_OBJS)
 
 # clean targets
 clean:
-	#-$(RM) $(FIG_OBJS)
+	-$(RM) $(FIG_TEXS)
+	-$(RM) $(FIG_AUXS)
 	-$(RM) spec.pdf
 	-$(RM) spec.aux
 	-$(RM) spec.log
