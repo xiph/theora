@@ -739,11 +739,11 @@ static void CompressFrame( CP_INSTANCE *cpi) {
     /* Increment the frames since last key frame count */
     cpi->LastKeyFrame++;
 
+    /* Proceed with the frame update. */
+    UpdateFrame(cpi);
+    
     if ( cpi->MotionScore > 0 ){
       cpi->DropCount = 0;
-
-      /* Proceed with the frame update. */
-      UpdateFrame(cpi);
 
       /* Note the Quantizer used for each block coded. */
       for ( i = 0; i < cpi->pb.UnitFragments; i++ ){
@@ -862,8 +862,8 @@ int theora_encode_init(theora_state *th, theora_info *c){
 
   /* Set key frame data rate target; this is nominal keyframe size */
   cpi->Configuration.KeyFrameDataTarget = (c->keyframe_data_target_bitrate *
-                                           c->fps_numerator /
-                                           c->fps_denominator ) / 8;
+                                           c->fps_denominator /
+                                           c->fps_numerator ) / 8;
 
   /* Note the height and width in the pre-processor control structure. */
   cpi->ScanConfig.VideoFrameHeight = cpi->pb.info.height;
