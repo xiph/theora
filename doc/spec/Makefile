@@ -43,7 +43,7 @@ figures : $(FIG_OBJS)
 
 # clean targets
 clean:
-	-$(RM) $(FIG_OBJS)
+	#-$(RM) $(FIG_OBJS)
 	-$(RM) spec.pdf
 	-$(RM) spec.aux
 	-$(RM) spec.log
