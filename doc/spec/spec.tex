@@ -298,7 +298,7 @@ Theora content cannot, in general, be losslessly transcoded into the VP3
  format.
 If a feature is not available in the original VP3 format, this is mentioned
  when that feature is defined.
-A complete list of these features appears in Appendix~\label{app:vp3-compat}.
+A complete list of these features appears in Appendix~\ref{app:vp3-compat}.
 %TODO: VP3 - theora comparison in appendix
 
 \section{Video Formats}
@@ -843,7 +843,7 @@ Finally, because the in-loop deblocking filter strength depends on the strength
  filter limit values} is defined, one for each \qi\ value.
 
 The precise specification of how all of this information is decoded appears in
- Section~\ref{sub:loop-filer-limits} and Section~\ref{sub:quant-params}.
+ Section~\ref{sub:loop-filter-limits} and Section~\ref{sub:quant-params}.
 
 \subsection{Huffman Codebooks}
 
@@ -2491,7 +2491,7 @@ Because the contents of this header are specific to Theora, no concessions have
 \medskip
 
 This procedure decodes the table of loop filter limit values used to drive the
- loop filter, which is described in Section~\ref{app:loop-filter-limits}.
+ loop filter, which is described in Section~\ref{sub:loop-filter-limits}.
 It is decoded as follows:
 
 \begin{enumerate}
@@ -2508,7 +2508,7 @@ Read an \locvar{NBITS}-bit unsigned integer as $\bitvar{LFLIMS}[\locvar{\qi}]$.
 \paragraph{VP3 Compatibility}
 
 The loop filter limit values are hardcoded in VP3.
-The values used are given in Appendix~REF.
+The values used are given in Appendix~\ref{app:vp3-loop-filter-limits}.
 
 \subsection{Quantization Parameters Decode}
 \label{sub:quant-params}
@@ -2998,7 +2998,7 @@ Remove the `1' from the end of \locvar{HBITS}.
 \paragraph{VP3 Compatibility}
 
 The DCT token Huffman tables are hardcoded in VP3.
-The values used are given in Appendix~REF.
+The values used are given in Appendix~\ref{app:vp3-huffman-tables}.
 
 \subsection{Setup Header Decode}
 
@@ -7807,7 +7807,7 @@ Unrestricted motion vector padding and the loop filter
 \end{itemize}
 
 \section{Loop Filter Limit Values}
-\label{app:loop-filter-limits}
+\label{app:vp3-loop-filter-limits}
 
 The hard-coded loop filter limit values used in VP3 are defined as follows:
 \begin{align*}
@@ -7822,6 +7822,95 @@ The hard-coded loop filter limit values used in VP3 are defined as follows:
    &  0, &  0, &  0, &  0, &  0, &  0, &  0, &  0\;\ & \!\} \\
 \end{array}
 \end{align*}
+
+\section{Quantization Parameters}
+\label{app:vp3-quant-params}
+
+The hard-coded quantization parameters used by VP3 are defined as follows:
+
+\begin{align*}
+\bitvar{ACSCALE} = & \begin{array}[t]{r@{}rrrrrrrr@{}l}
+\{ & 500, & 450, & 400, & 370, & 340, & 310, & 285, & 265,   &      \\
+   & 245, & 225, & 210, & 195, & 185, & 180, & 170, & 160,   &      \\
+   & 150, & 145, & 135, & 130, & 125, & 115, & 110, & 107,   &      \\
+   & 100, &  96, &  93, &  89, &  85, &  82, &  75, &  74,   &      \\
+   &  70, &  68, &  64, &  60, &  57, &  56, &  52, &  50,   &      \\
+   &  49, &  45, &  44, &  43, &  40, &  38, &  37, &  35,   &      \\
+   &  33, &  32, &  30, &  29, &  28, &  25, &  24, &  22,   &      \\
+   &  21, &  19, &  18, &  17, &  15, &  13, &  12, &  10\;\ & \!\} \\
+\end{array} \\
+\bitvar{DCSCALE} = & \begin{array}[t]{r@{}rrrrrrrr@{}l}
+\{ & 220, & 200, & 190, & 180, & 170, & 170, & 160, & 160,   &      \\
+   & 150, & 150, & 140, & 140, & 130, & 130, & 120, & 120,   &      \\
+   & 110, & 110, & 100, & 100, &  90, &  90, &  90, &  80,   &      \\
+   &  80, &  80, &  70, &  70, &  70, &  60, &  60, &  60,   &      \\
+   &  60, &  50, &  50, &  50, &  50, &  40, &  40, &  40,   &      \\
+   &  40, &  40, &  30, &  30, &  30, &  30, &  30, &  30,   &      \\
+   &  30, &  20, &  20, &  20, &  20, &  20, &  20, &  20,   &      \\
+   &  20, &  10, &  10, &  10, &  10, &  10, &  10, &  10\;\ & \!\} \\
+\end{array}
+\end{align*}
+
+VP3 defines only a single quantization range for each quantization type and
+ color plane, and the base matrix used is constant throughout the range.
+There are three base matrices defined.
+The first is used for the $Y'$ channel of INTRA mode blocks, and the second for
+ both the $C_b$ and $C_r$ channels of INTRA mode blocks.
+The last is used for INTER mode blocks of all channels.
+
+\begin{align*}
+\bitvar{BMS} = \{ & \begin{array}[t]{r@{}rrrrrrrr@{}l}
+\{ & 16, & 11, & 10, & 16, &  24, &  40, &  51, &  61,   &       \\
+   & 12, & 12, & 14, & 19, &  26, &  58, &  60, &  55,   &       \\
+   & 14, & 13, & 16, & 24, &  40, &  57, &  69, &  56,   &       \\
+   & 14, & 17, & 22, & 29, &  51, &  87, &  80, &  62,   &       \\
+   & 18, & 22, & 37, & 58, &  68, & 109, & 103, &  77,   &       \\
+   & 24, & 35, & 55, & 64, &  81, & 104, & 113, &  92,   &       \\
+   & 49, & 64, & 78, & 87, & 103, & 121, & 120, & 101,   &       \\
+   & 72, & 92, & 95, & 98, & 112, & 100, & 103, &  99\;\ & \!\}, \\
+%\end{array} \\
+%& \begin{array}[t]{r@{}rrrrrrrr@{}l}
+\{ & 17, & 18, & 24, & 47, & 99, & 99, & 99, & 99,   &       \\
+   & 18, & 21, & 26, & 66, & 99, & 99, & 99, & 99,   &       \\
+   & 24, & 26, & 56, & 99, & 99, & 99, & 99, & 99,   &       \\
+   & 47, & 66, & 99, & 99, & 99, & 99, & 99, & 99,   &       \\
+   & 99, & 99, & 99, & 99, & 99, & 99, & 99, & 99,   &       \\
+   & 99, & 99, & 99, & 99, & 99, & 99, & 99, & 99,   &       \\
+   & 99, & 99, & 99, & 99, & 99, & 99, & 99, & 99,   &       \\
+   & 99, & 99, & 99, & 99, & 99, & 99, & 99, & 99\;\ & \!\}, \\
+%\end{array} \\
+%& \begin{array}[t]{r@{}rrrrrrrr@{}l}
+\{ & 16, & 16, & 16, & 20, & 24, & 28, &  32, &  40,   &            \\
+   & 16, & 16, & 20, & 24, & 28, & 32, &  40, &  48,   &            \\
+   & 16, & 20, & 24, & 28, & 32, & 40, &  48, &  64,   &            \\
+   & 20, & 24, & 28, & 32, & 40, & 48, &  64, &  64,   &            \\
+   & 24, & 28, & 32, & 40, & 48, & 64, &  64, &  64,   &            \\
+   & 28, & 32, & 40, & 48, & 64, & 64, &  64, &  96,   &            \\
+   & 32, & 40, & 48, & 64, & 64, & 64, &  96, & 128,   &            \\
+   & 40, & 48, & 64, & 64, & 64, & 96, & 128, & 128\;\ & \!\}\;\;\} \\
+\end{array}
+\end{align*}
+
+The remaining parameters simply assign these matrices to the proper quant
+ ranges.
+
+\begin{align*}
+\bitvar{NQRS}    = & \{ \{1, 1, 1\}, \{1, 1, 1\} \} \\
+\bitvar{QRSIZES} = &
+ \{ \{ \{1\}, \{1\}, \{1\} \}, \{ \{1\}, \{1\}, \{1\} \} \} \\
+\bitvar{QRBMIS}  = &
+ \{ \{ \{0, 0\}, \{1, 1\}, \{1, 1\} \}, \{ \{2, 2\}, \{2, 2\}, \{2, 2\} \} \} \\
+\end{align*}
+
+\section{Huffman Tables}
+\label{app:vp3-huffman-tables}
+
+The following tables contain the hard-coded Huffman codes used by VP3.
+There are 80 tables in all, each with a Huffman code for all 32 token values.
+The tokens are sorted by the most significant bits of their Huffman code.
+This is the same order in which they will be decoded from the setup header.
+
+\include{vp3huff}
 
 \cleardoublepage
 \chapter{Colophon}

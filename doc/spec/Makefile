@@ -24,7 +24,7 @@ FIG_OBJS = pic-frame.tex hilbert-mb.tex hilbert-block.tex xifish.pdf \
 Theora_I_spec.pdf : spec.pdf
 	$(MV) $< $@
 
-spec.pdf : $(SPEC_SRCS) $(FIG_OBJS) spec.bbl
+spec.pdf : $(SPEC_SRCS) $(FIG_OBJS) vp3huff.tex spec.bbl
 	# three times is the charm with references
 	pdflatex --interaction nonstopmode spec.tex
 	pdflatex --interaction nonstopmode spec.tex
@@ -37,6 +37,9 @@ spec.aux : spec.tex
 
 spec.bbl : spec.aux spec.bib
 	bibtex $<
+
+vp3huff.tex : vp3huff
+	vp3huff > $@
 
 figures : $(FIG_OBJS)
 
@@ -53,9 +56,13 @@ figures : $(FIG_OBJS)
 clean:
 	-$(RM) $(FIG_TEXS)
 	-$(RM) $(FIG_AUXS)
-	-$(RM) spec.pdf
+	-$(RM) vp3huff
+	-$(RM) vp3huff.tex
+	-$(RM) vp3huff.aux
 	-$(RM) spec.aux
 	-$(RM) spec.log
+	-$(RM) spec.lof
+	-$(RM) spec.lot
 	-$(RM) spec.out
 	-$(RM) spec.bbl
 	-$(RM) spec.blg
