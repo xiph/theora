@@ -43,6 +43,10 @@ if test $HAVE_DOXYGEN = "false"; then
         AC_MSG_WARN([*** doxygen not found, API documentation will not be built])
 fi
 
+dnl Check for python
+AC_CHECK_PROG(HAVE_PYTHON, python, true, false)
+AM_CONDITIONAL(HAVE_PYTHON,$HAVE_PYTHON)
+
 dnl --------------------------------------------------
 dnl Set build flags based on environment
 dnl --------------------------------------------------
