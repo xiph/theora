@@ -304,6 +304,16 @@ extern int theora_decode_YUVout(theora_state *th,yuv_buffer *yuv);
 extern double theora_granule_time(theora_state *th,ogg_int64_t granulepos);
 
 /**
+ * Convert a granulepos to an absolute frame number. The granulepos is
+ * interpreted in the context of a given theora_state handle.
+ * \param th A previously initialized theora_state handle (encode or decode)
+ * \param granulepos The granulepos to convert.
+ * \returns The frame number corresponding to \a granulepos.
+ * \retval -1 The given granulepos is invalid (ie. negative)
+ */
+extern double theora_granule_frame(theora_state *th,ogg_int64_t granulepos);
+
+/**
  * Initialize a theora_info structure. All values within the given theora_info
  * structure are initialized, and space is allocated within libtheora for
  * internal codec setup data.

@@ -418,3 +418,20 @@ double theora_granule_time(theora_state *th,ogg_int64_t granulepos){
 
   return(-1);
 }
+
+/* returns frame number of current packet in given logical stream */
+double theora_granule_frame(theora_state *th,ogg_int64_t granulepos){
+  CP_INSTANCE *cpi=(CP_INSTANCE *)(th->internal_encode);
+  PB_INSTANCE *pbi=(PB_INSTANCE *)(th->internal_decode);
+
+  if(cpi)pbi=&cpi->pb;
+
+  if(granulepos>=0){
+    ogg_int64_t iframe=granulepos>>pbi->keyframe_granule_shift;
+    ogg_int64_t pframe=granulepos-(iframe<<pbi->keyframe_granule_shift);
+
+    return (iframe+pframe);
+  }
+
+  return(-1);
+}
