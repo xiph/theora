@@ -343,6 +343,45 @@ extern int theora_decode_packetin(theora_state *th,ogg_packet *op);
 extern int theora_decode_YUVout(theora_state *th,yuv_buffer *yuv);
 
 /**
+ * Report whether a theora packet is a header or not
+ * This function does no verification beyond checking the header
+ * flag bit so it should not be used for bitstream identification;
+ * use theora_decode_header() for that.
+ *
+ * \param op An ogg_packet containing encoded theora data.
+ * \retval 1 The packet is a header packet
+ * \retval 0 The packet is not a header packet (and so contains frame data)
+ *
+ * Thus function was added in the 1.0alpha4 release.
+ */
+extern int theora_packet_isheader(ogg_packet *op);
+
+/**
+ * Report whether a theora packet is a keyframe or not
+ *
+ * \param op An ogg_packet containing encoded theora data.
+ * \retval 1 The packet contains a keyframe image
+ * \retval 0 The packet is contains an interframe delta
+ * \retval -1 the packet is not an image data packet at all
+ *
+ * Thus function was added in the 1.0alpha4 release.
+ */
+extern int theora_packet_iskeyframe(ogg_packet *op);
+
+/**
+ * Convert a granulepos to an absolute frame number. The granulepos is
+ * interpreted in the context of a given theora_state handle.
+ *
+ * \param th A previously initialized theora_state handle (encode or decode)
+ * \param granulepos The granulepos to convert.
+ * \returns The frame number corresponding to \a granulepos.
+ * \retval -1 The given granulepos is invalid (ie. negative)
+ *
+ * Thus function was added in the 1.0alpha4 release.
+ */
+extern ogg_int64_t theora_granule_frame(theora_state *th,ogg_int64_t granulepos);
+
+/**
  * Convert a granulepos to absolute time in seconds. The granulepos is
  * interpreted in the context of a given theora_state handle.
  * \param th A previously initialized theora_state handle (encode or decode)
@@ -351,39 +390,6 @@ extern int theora_decode_YUVout(theora_state *th,yuv_buffer *yuv);
  * \retval -1 The given granulepos is invalid (ie. negative)
  */
 extern double theora_granule_time(theora_state *th,ogg_int64_t granulepos);
-
-/**
- * Report whether a theora packet is a header or not
- * This function does no verification beyond checking the header
- * flag bit so it should not be used for bitstream identification;
- * use theora_decode_header() for that.
- * \param op An ogg_packet containing encoded theora data.
- * \retval 1 The packet is a header packet
- * \retval 0 The packet is not a header packet (and so contains frame data)
- * Thus function was added in the 1.0alpha4 release.
- */
-extern int theora_packet_isheader(ogg_packet *op);
-
-/**
- * Report whether a theora packet is a keyframe or not
- * \param op An ogg_packet containing encoded theora data.
- * \retval 1 The packet contains a keyframe image
- * \retval 0 The packet is contains an interframe delta
- * \retval -1 the packet is not an image data packet at all
- * Thus function was added in the 1.0alpha4 release.
- */
-extern int theora_packet_iskeyframe(ogg_packet *op);
-
-/**
- * Convert a granulepos to an absolute frame number. The granulepos is
- * interpreted in the context of a given theora_state handle.
- * \param th A previously initialized theora_state handle (encode or decode)
- * \param granulepos The granulepos to convert.
- * \returns The frame number corresponding to \a granulepos.
- * \retval -1 The given granulepos is invalid (ie. negative)
- * Thus function was added in the 1.0alpha4 release.
- */
-extern ogg_int64_t theora_granule_frame(theora_state *th,ogg_int64_t granulepos);
 
 /**
  * Initialize a theora_info structure. All values within the given theora_info
