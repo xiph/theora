@@ -491,7 +491,7 @@ The picture region plays no other role in the decode process, which operates on
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pic-frame}
+\includegraphics{pic-frame}
 \end{center}
 \caption{Location of frame and picture regions}
 \label{fig:pic-frame}
@@ -512,7 +512,7 @@ The boundaries of blocks and super blocks in the luma plane do not necessarily
 
 \begin{figure}[htbp]
 \begin{center}
-\include{superblock}
+\includegraphics{superblock}
 \end{center}
 \caption{Subdivision of a frame into blocks and super blocks}
 \label{fig:superblock}
@@ -526,7 +526,7 @@ This accesses each block in row-major order, starting in the lower left of the
 
 \begin{figure}[htbp]
 \begin{center}
-\include{raster-block}
+\includegraphics{raster-block}
 \end{center}
 \caption{Raster ordering of $n\times m$ blocks}
 \label{fig:raster-block}
@@ -544,7 +544,7 @@ If a color plane does not contain a complete super block on the top or right
 
 \begin{figure}[htbp]
 \begin{center}
-\include{hilbert-block}
+\includegraphics{hilbert-block}
 \end{center}
 \caption{Hilbert curve ordering of blocks within a super block}
 \label{fig:hilbert-block}
@@ -624,7 +624,7 @@ Macro blocks contain information about coding mode and motion vectors for the
 
 \begin{figure}[htbp]
  \begin{center}
- \include{macroblock}
+ \includegraphics{macroblock}
  \end{center}
  \caption{Subdivision of a frame into macro blocks}
  \label{fig:macroblock}
@@ -644,7 +644,7 @@ Unlike blocks, macro blocks need never be accessed in a pure raster order.
 
 \begin{figure}[htbp]
 \begin{center}
-\include{hilbert-mb}
+\includegraphics{hilbert-mb}
 \end{center}
 \caption{Hilbert curve ordering of macro blocks within a super block}
 \label{fig:hilbert-mb}
@@ -683,7 +683,7 @@ See Figure~\ref{fig:reference-frames} for an illustration of the reference
 
 \begin{figure}[htbp]
 \begin{center}
-\include{reference-frames}
+\includegraphics{reference-frames}
 \end{center}
 \caption{Example of reference frames for an inter frame}
 \label{fig:reference-frames}
@@ -1463,7 +1463,7 @@ The samples in the different planes are all at co-located sites.
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pixel444}
+\includegraphics{pixel444}
 \end{center}
 \caption{Pixels encoded 4:4:4}
 \label{fig:pixel444}
@@ -1499,7 +1499,7 @@ A horizontal phase shift may be required to produce signals which use different
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pixel422}
+\includegraphics{pixel422}
 \end{center}
 \caption{Pixels encoded 4:2:2}
 \label{fig:pixel422}
@@ -1540,7 +1540,7 @@ A horizontal or vertical phase shift may be required to produce signals which
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pixel420}
+\includegraphics{pixel420}
 \end{center}
 \caption{Pixels encoded 4:2:0}
 \label{fig:pixel420}
@@ -1613,34 +1613,37 @@ In the typical case, with an even width and height, where one expects two rows
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pic_even}
+\includegraphics[width=\textwidth]{pic_even}
 \end{center}
-\caption{Pixel correspondance between color planes with even picture offset and
- even picture size}
+\caption{Pixel correspondence between color planes with even picture 
+ offset and even picture size}
 \label{fig:pic_even}
 \end{figure}
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pic_even_odd}
+\includegraphics[width=\textwidth]{pic_even_odd}
 \end{center}
-\caption{Pixel correspondance with even picture offset and odd picture size}
+\caption{Pixel correspondence with even picture offset and 
+ odd picture size}
 \label{fig:pic_even_odd}
 \end{figure}
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pic_odd}
+\includegraphics[width=\textwidth]{pic_odd}
 \end{center}
-\caption{Pixel correspondance with odd picture offset and odd picture size}
+\caption{Pixel correspondence with odd picture offset and 
+ odd picture size}
 \label{fig:pic_odd}
 \end{figure}
 
 \begin{figure}[htbp]
 \begin{center}
-\include{pic_odd_even}
+\includegraphics[width=\textwidth]{pic_odd_even}
 \end{center}
-\caption{Pixel correspondance with odd picture offset and even picture size}
+\caption{Pixel correspondence with odd picture offset and 
+ even picture size}
 \label{fig:pic_odd_even}
 \end{figure}
 
@@ -6107,7 +6110,7 @@ It requires 16 multiplications and 26 additions and subtractions.
 
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[height=\textwidth,angle=270]{idct}
+\includegraphics[width=\textwidth]{idct}
 \end{center}
 \caption{Signal Flow Graph for the 1D Inverse DCT}
 \label{fig:idct}
@@ -6433,7 +6436,7 @@ Like the inverse DCT, it is first applied to each row, and then applied to each
 
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[height=\textwidth,angle=270]{fdct}
+\includegraphics[width=\textwidth]{fdct}
 \end{center}
 \caption{Signal Flow Graph for the 1D Forward DCT}
 \label{fig:fdct}

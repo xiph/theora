@@ -15,11 +15,13 @@ FIG_SRCS = pic-frame.fig hilbert-mb.fig hilbert-block.fig xifish.fig \
 
 FIG_TEXS = $(FIG_SRCS:.fig=.tex)
 FIG_AUXS = $(FIG_SRCS:.fig=.aux)
+FIG_OBJS = $(FIG_SRCS:.fig=.pdf)
 
-FIG_OBJS = pic-frame.tex hilbert-mb.tex hilbert-block.tex xifish.pdf \
-           superblock.tex macroblock.tex raster-block.tex reference-frames.tex \
-           pixel444.tex pixel422.tex pixel420.tex idct.pdf fdct.pdf \
-           pic_even.tex pic_even_odd.tex pic_odd.tex pic_odd_even.tex
+#FIG_OBJS = pic-frame.pdf hilbert-mb.pdf hilbert-block.pdf xifish.pdf \
+#	    superblock.pdf macroblock.odf raster-block.pdf 
+#	    reference-frames.pdf \
+#	    pixel444.pdf pixel422.pdf pixel420.pdf idct.pdf fdct.pdf \
+#	    pic_even.tex pic_even_odd.tex pic_odd.tex pic_odd_even.tex
 
 Theora_I_spec.pdf : spec.pdf
 	$(MV) $< $@
@@ -48,7 +50,7 @@ figures : $(FIG_OBJS)
 	fig2dev -L latex $< $@
 
 %.pdf : %.fig
-	fig2dev -L pdf $< $@
+	fig2dev -L pdf -p 0 $< $@
 
 .PHONY: clean distclean maintainer-clean
 
