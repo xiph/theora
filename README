@@ -1,12 +1,7 @@
--------------------------------------------------------------------------
-This README file is up to date with and covers Xiph.Org's first alpha
-release of the Theora video codec on 25 09 2002.
--------------------------------------------------------------------------
-
 *** What is Theora?
 
 Theora is Xiph.Org's first publicly released video codec, intended
-for use within the Ogg's project's Ogg multimedia streaming system.
+for use within the Foundation's Ogg multimedia streaming system.
 Theora is derived directly from On2's VP3 codec; Currently the two are
 nearly identical, varying only in encapsulating decoder tables in the 
 bitstream headers, but Theora will make use of this extra freedom 
@@ -16,27 +11,25 @@ in the future to improve over what is possible with VP3.
 
 Theora's main site is www.theora.org.  Theora and related libraries
 can be gotten from www.theora.org or the main Xiph.Org site at
-www.xiph.org.  In order to access CVS at xiph.org (the best way to get
-to the source), see http://www.xiph.org/cvs.html
+www.xiph.org.  Development source is kept in an open subversion 
+repository, see http://theora.org/svn.html for instructions.
 
 *** What is the goal of this alpha release?
 
-This alpha is a proof of concept, not a production-ready release.  Do
-not expect the Theora packet or stream format from this release to
-remain compatible with future releases.  When the format for Theora is
-officially frozen, we'll let you know.
+The Theora bitstream format was frozen after the alpha3 release. This
+means that files produced by the alpha3 encoder will always be playable
+according to the Theora I specification.
+
+Traditionally alpha mean proof of concept, not a production-ready 
+release. However the code is very robust, ready for and indeed in
+general use. WE DO INTEND TO MAKE INCOMPATIBLE API changes before
+stable beta release however, particularly on the encoding side.
 
 The purpose of this release is to provide an updated testing base for 
-those interested in theora and to dissiminate more widely the bitstream 
-changes we've made since the last alpha release.
-
-In particular, the alpha 3 release includes a more complete set of 
-decoder data tables in the third header packet. Also, the encoded image 
-has been flipped vertically from the sense used in the alpha 1 and 2 
-releases. The origin is now in the lower left to match the original VP3. 
-Except for this change, lossless transcoding from alpha 1 and alpha 2 is 
-possible. Without this change, lossless transcoding from VP3 is not 
-possible.
+those interested in theora and to dissiminate more widely the changes
+we've made since the last alpha release. These include some helper
+utility functions, and a draft format specification, located in the
+doc directory.
 
 Once more for the record: THIS RELEASE IS NOT PRODUCTION CODE.  It is
 not for ripping DVDs, or otherwise use for content you won't want to 
@@ -101,6 +94,13 @@ as the input file name.
 
 The sample player takes an Ogg file on standard in; the file may be
 audio alone, video alone or video with audio.  
+
+*** What other tools are available?
+
+If you're wanting to just use theora, consider the programs linked
+from http://www.theora.org/. There is playback support in a number
+of common free players, and Jan Gerber's ffmpeg2theora is an excellent
+encoding front end.
 
 -------------------------------------------------------------------------
 Troubleshooting the build process
