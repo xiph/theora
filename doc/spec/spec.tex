@@ -294,14 +294,12 @@ Portions of this specification were adopted from that text with permission.
 Theora contains a superset of the features that were available in the original
  VP3 codec.
 Content encoded with VP3.1 can be losslessly transcoded into the Theora format.
-%TODO: what about VP3.1 etc? source tables all say 'VP31'
 Theora content cannot, in general, be losslessly transcoded into the VP3
  format.
 If a feature is not available in the original VP3 format, this is mentioned
  when that feature is defined.
-A complete list of these features appears in Appendix~REF.
+A complete list of these features appears in Appendix~\label{app:vp3-compat}.
 %TODO: VP3 - theora comparison in appendix
-
 
 \section{Video Formats}
 
@@ -2493,7 +2491,7 @@ Because the contents of this header are specific to Theora, no concessions have
 \medskip
 
 This procedure decodes the table of loop filter limit values used to drive the
- loop filter, which is described in Section~REF.
+ loop filter, which is described in Section~\ref{app:loop-filter-limits}.
 It is decoded as follows:
 
 \begin{enumerate}
@@ -7757,6 +7755,73 @@ This facilitates seeking while limiting the buffering requirements of the
 %TODO: A lot of this language is encoder-oriented.
 %TODO: We define a decoder-oriented specification.
 %TODO: The language should be changed to match.
+
+\cleardoublepage
+\chapter{VP3}
+
+\section{VP3 Compatibility}
+\label{app:vp3-compat}
+This section lists all of the encoder and decoder issues that may affect VP3
+ compatibly.
+Each is described in more detail in the text itself.
+This list is provided merely for reference.
+
+\begin{itemize}
+\item
+Bitstream headers (Section~\ref{sec:headers}).
+\begin{itemize}
+\item
+Identification header (Section~\ref{sec:idheader}).
+\begin{itemize}
+\item
+Non-multiple of 16 picture sizes.
+\item
+Standardized color spaces.
+\item
+Support for $4:4:4$ and $4:2:2$ pixel formats.
+\end{itemize}
+\item
+Setup header
+\begin{itemize}
+\item
+Loop filter limit values (Section~\ref{sub:loop-filter-limits}).
+\item
+Quantization parameters (Section~\ref{sub:quant-params}).
+\item
+Huffman tables (Section~\ref{sub:huffman-tables}).
+\end{itemize}
+\end{itemize}
+\item
+Frame header format (Section~\ref{sub:frame-header}).
+\item
+Extended long-run bit strings (Section~\ref{sub:long-run}).
+\item
+INTER\_MV\_FOUR handling of uncoded blocks (Section~\ref{sub:mb-mv-decode}).
+\item
+Block-level \qi\ values (Section~\ref{sub:block-qis}).
+\item
+Zero-length EOB runs (Section~\ref{sub:eob-token}).
+\item
+Unrestricted motion vector padding and the loop filter
+ (Section~\ref{sub:loop-filt}).
+\end{itemize}
+
+\section{Loop Filter Limit Values}
+\label{app:loop-filter-limits}
+
+The hard-coded loop filter limit values used in VP3 are defined as follows:
+\begin{align*}
+\bitvar{LFLIMS} = & \begin{array}[t]{r@{}rrrrrrrr@{}l}
+\{ & 30, & 25, & 20, & 20, & 15, & 15, & 14, & 14,   &      \\
+   & 13, & 13, & 12, & 12, & 11, & 11, & 10, & 10,   &      \\
+   &  9, &  9, &  8, &  8, &  7, &  7, &  7, &  7,   &      \\
+   &  6, &  6, &  6, &  6, &  5, &  5, &  5, &  5,   &      \\
+   &  4, &  4, &  4, &  4, &  3, &  3, &  3, &  3,   &      \\
+   &  2, &  2, &  2, &  2, &  2, &  2, &  2, &  2,   &      \\
+   &  0, &  0, &  0, &  0, &  0, &  0, &  0, &  0,   &      \\
+   &  0, &  0, &  0, &  0, &  0, &  0, &  0, &  0\;\ & \!\} \\
+\end{array}
+\end{align*}
 
 \cleardoublepage
 \chapter{Colophon}
