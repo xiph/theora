@@ -360,6 +360,7 @@ extern double theora_granule_time(theora_state *th,ogg_int64_t granulepos);
  * \param op An ogg_packet containing encoded theora data.
  * \retval 1 The packet is a header packet
  * \retval 0 The packet is not a header packet (and so contains frame data)
+ * Thus function was added in the 1.0alpha4 release.
  */
 extern int theora_packet_isheader(ogg_packet *op);
 
@@ -369,6 +370,7 @@ extern int theora_packet_isheader(ogg_packet *op);
  * \retval 1 The packet contains a keyframe image
  * \retval 0 The packet is contains an interframe delta
  * \retval -1 the packet is not an image data packet at all
+ * Thus function was added in the 1.0alpha4 release.
  */
 extern int theora_packet_iskeyframe(ogg_packet *op);
 
@@ -379,6 +381,7 @@ extern int theora_packet_iskeyframe(ogg_packet *op);
  * \param granulepos The granulepos to convert.
  * \returns The frame number corresponding to \a granulepos.
  * \retval -1 The given granulepos is invalid (ie. negative)
+ * Thus function was added in the 1.0alpha4 release.
  */
 extern ogg_int64_t theora_granule_frame(theora_state *th,ogg_int64_t granulepos);
 
