@@ -221,6 +221,7 @@ An application MUST, however, ensure any reserved bits have the value zero, and
  refuse to decode the stream if they are not.
 These are used as place holders for future bitstream features with which the
  current bitstream is forward-compatible.
+%RG: shouldn't this be 'MAY not increment...the version number'?
 Such features will not increment the bitstream version number, and can only be
  recognized by checking the value of these reserved bits.
 
@@ -273,7 +274,7 @@ A complete list of these features appears in Appendix~REF.
 
 Theora I currently supports progressive video data of arbitrary dimensions at a
  constant frame rate in one of several $Y'C_bC_r$ color spaces.
-The precise definition the color spaces supported appears in
+The precise definition the supported color spaces appears in
  Section~\ref{sec:colorspaces}.
 Three different chroma subsampling formats are supported: 4:2:0, 4:2:2,
  and 4:4:4.
@@ -313,7 +314,8 @@ The Theora codec design assumes a complex, psychovisually-aware encoder and a
 %TODO: Talk more about implementation complexity.
 
 Theora provides none of its own framing, synchronization, or protection against
- transmission errors; it is solely a method of accepting input video frames and
+ transmission errors. 
+An encoder is solely a method of accepting input video frames and
  compressing these frames into raw, unformatted `packets'.
 The decoder then accepts these raw packets in sequence, decodes them, and
  synthesizes a fascimile of the original video frames.
@@ -489,8 +491,8 @@ This indexes each block in row-major order, starting in the lower left and
  left, etc.
 The second is \term{coded order}.
 In coded order, blocks are accessed by super block.
-Each super block is traversed in raster order, similar to raster order for
- blocks.
+Within each frame, super blocks are traversed in raster order, 
+ similar to raster order for blocks.
 Within each super block, however, blocks are accessed in a Hilbert curve
  pattern, illustrated in Figure~\ref{fig:hilbert-block}.
 If a color plane does not contain a complete super block on the top or right
@@ -683,7 +685,7 @@ The frequency numbers are defined independently of the memory organization of
  the pixels.
 They have been written from top to bottom here to follow conventional notation,
  despite the right-handed coordinate system Theora uses for pixel locations.
-
+%RG: I'd rather we were internally consistent and put dc at the lower left.
 Many implementations of the DCT operate `in-place'.
 That is, they return DCT coefficients in the same memory buffer that the
  initial pixel values were stored in.
@@ -976,7 +978,7 @@ EOB markers signify that the remainder of the block is one long zero run.
 Unlike JPEG and MPEG, there is no requirement for each block to end with 
  a special marker.
 If non-EOB tokens yield values for all 64 of the coefficients in a block, then
- no EOB marker is needed.
+ no EOB marker occurs.
 
 Each token is associated with a specific \term{token index} in a block.
 For single-coefficient tokens, this index is the zig-zag index of the token in
@@ -1407,7 +1409,7 @@ Thus, each of these planes has half the number of horizontal blocks as the luma
  plane.
 Similarly, they have half the number of horizontal super blocks, rounded up.
 Macro blocks are defined across color planes, and so their number does not
- change, but each macro block has half as many chroma blocks contained in it.
+ change, but each macro block contains half as many chroma blocks.
 
 The chroma samples are vertically aligned with the luma samples, but
  horizontally centered between two luma samples.
@@ -1436,8 +1438,8 @@ Thus, each of these planes has half the number of horizontal blocks and half
 Similarly, they have half the number of horizontal super blocks and half the
  number of vertical super blocks, rounded up.
 Macro blocks are defined across color planes, and so their number does not
- change, but each macro block has one quarter as many chroma blocks contained
- in it.
+ change, but each macro block contains within it one quarter as many 
+ chroma blocks.
 
 The chroma samples are vertically and horizontally centered between four luma
  samples.
@@ -1501,6 +1503,11 @@ If the offset is odd, then it is the first row of chroma samples which
  correspond to two.
 
 %TODO: Figures!
+
+%TODO: informational section for encoders:
+% When the chroma planes are subsampled, encoders SHOULD chose picture
+%  offsets and dimensions that are even so that the subsampling 
+%  positions are reproduced cleanly.
 
 \chapter{Bitpacking Convention}
 \label{sec:bitpacking}
@@ -1815,7 +1822,7 @@ This is not a header packet.
 \item
 Read 6 8-bit unsigned integers.
 If these do not have the values \hex{74}, \hex{68}, \hex{65}, \hex{6F},
- \hex{72}, and \hex{61}, respectively then stop.
+ \hex{72}, and \hex{61}, respectively, then stop.
 This stream is not decodable by this specification.
 These values correspond to the ASCII values of the characters `t', `h', `e',
  `o', `r', and `a'.
@@ -1955,7 +1962,7 @@ Theora is a fixed-frame rate video codec.
 Frames are sampled at the constant rate of $\frac{\bitvar{FRN}}{\bitvar{FRD}}$
  frames per second.
 The presentation time of the first frame is at zero seconds.
-There is no mechanism provided to specify a non-zero offset for the initial
+No mechanism is provided to specify a non-zero offset for the initial
  frame.
 \item
 Read a 24-bit unsigned integer as \bitvar{PARN}.
@@ -2439,15 +2446,16 @@ The purpose of the quant ranges is to specify which base matrices are used for
  which \qi\ values.
 
 A set of quant ranges is defined for each quantization type and color plane.
-To save space in the header, bit flags allow a set of quant range to be copied
+To save space in the header, bit flags allow a set of quant ranges to be copied
  from a previously defined set instead of being specified explicitly.
 Every set except the first one can be copied from the immediately preceding
  set.
 Similarly, if the quantization type is not $0$, the set can be copied from the
  set defined for the same color plane for the preceding quantization type.
-This formulation allows, for example, the same set of quant ranges to be used
- for both chroma channels, as was done in the original VP3, or the same set of
- quant ranges to be used for INTRA and INTER modes.
+This formulation allows compact representation of, for example, the same 
+ set of quant ranges to be used for both chroma channels, as was done in 
+ the original VP3, or the same set of quant ranges to be used for INTRA 
+ and INTER modes.
 
 Each quant range is defined by a size and two base matrix indices, one for each
  end of the range.
@@ -2455,6 +2463,8 @@ The base matrix for the end of one range is used as the start of the next
  range, so that for $n$ ranges, $n+1$ base matrices are specified.
 The base matrices for the \qi\ values between the two endpoints of the range
  are generated by linear interpolation.
+
+%TODO: figure
 
 The location of the endpoints of each range is encoded by their size.
 The \qi\ value for the left end-point is the sum of the sizes of all preceding
