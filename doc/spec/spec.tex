@@ -6451,14 +6451,14 @@ It is important to note that the signs on the constants in the rotations have
 The column of numbers on the left represents the unpermuted input, and the
  column on the right the permuted output DCT coefficients.
 
-An offset is also added before right-shifting the output of the
- multiplications, to effect rounding with ties rounded towards positive
- infinity.
-This increases the complexity of the transform to 16 multiplications and
- 42 additions and subtractions.
+A proper division by $2^{16}$ is done after the multiplications instead of a
+ shift in the forward transform.
+This can be implemented quickly by adding an offset of $\hex{FFFF}$ if the
+ number is negative, and then shifting as before.
+This slightly increases the computational complexity of the transform.
 Unlike the inverse DCT, 16 bit registers and a $16\times16\rightarrow32$ bit
  multiply are sufficient to avoid any overflow, so long as the input is in the
- range $-6270\ldots 6270$, which is more than sufficient.
+ range $-6270\ldots 6270$, which is larger than required.
 
 \begin{enumerate}
 \item
@@ -6493,9 +6493,9 @@ Assign $\locvar{T}[1]$ the value \locvar{R}.
 Assign \locvar{R} the value $\locvar{T}[6]-\locvar{T}[5]$.
 \item
 Assign $\locvar{T}[6]$ the value
- $(\locvar{C4}*(\locvar{T}[6]+\locvar{T}[5])+\hex{8000})>>16$.
+ $(\locvar{C4}*(\locvar{T}[6]+\locvar{T}[5]))//16$.
 \item
-Assign $\locvar{T}[5]$ the value $(\locvar{C4}*\locvar{R}+\hex{8000})>>16$.
+Assign $\locvar{T}[5]$ the value $(\locvar{C4}*\locvar{R})//16$.
 \item
 Assign \locvar{R} the value $\locvar{T}[4]+\locvar{T}[5]$.
 \item
@@ -6510,34 +6510,34 @@ Assign $\locvar{T}[6]$ the value $\locvar{T}[7]-\locvar{T}[6]$.
 Assign $\locvar{T}[7]$ the value \locvar{R}.
 \item
 Assign $\bitvar{Y}[0]$ the value
- $(\locvar{C4}*(\locvar{T}[0]+\locvar{T}[1])+\hex{8000})>>16$.
+ $(\locvar{C4}*(\locvar{T}[0]+\locvar{T}[1]))//16$.
 \item
 Assign $\bitvar{Y}[4]$ the value
- $(\locvar{C4}*(\locvar{T}[0]-\locvar{T}[1])+\hex{8000})>>16$.
+ $(\locvar{C4}*(\locvar{T}[0]-\locvar{T}[1]))//16$.
 \item
 Assign $\bitvar{Y}[2]$ the value
- $((\locvar{S6}*\locvar{T}[3]+\hex{8000})>>16)+
- ((\locvar{C6}*\locvar{T}[2]+\hex{8000})>>16)$.
+ $((\locvar{S6}*\locvar{T}[3])//16)+
+ ((\locvar{C6}*\locvar{T}[2])//16)$.
 \item
 Assign $\bitvar{Y}[6]$ the value
- $((\locvar{C6}*\locvar{T}[3]+\hex{8000})>>16)-
- ((\locvar{S6}*\locvar{T}[2]+\hex{8000})>>16)$.
+ $((\locvar{C6}*\locvar{T}[3])//16)-
+ ((\locvar{S6}*\locvar{T}[2])//16)$.
 \item
 Assign $\bitvar{Y}[1]$ the value
- $((\locvar{S7}*\locvar{T}[7]+\hex{8000})>>16)+
- ((\locvar{C7}*\locvar{T}[4]+\hex{8000})>>16)$.
+ $((\locvar{S7}*\locvar{T}[7])//16)+
+ ((\locvar{C7}*\locvar{T}[4])//16)$.
 \item
 Assign $\bitvar{Y}[5]$ the value
- $((\locvar{S3}*\locvar{T}[6]+\hex{8000})>>16)+
- ((\locvar{C3}*\locvar{T}[5]+\hex{8000})>>16)$.
+ $((\locvar{S3}*\locvar{T}[6])//16)+
+ ((\locvar{C3}*\locvar{T}[5])//16)$.
 \item
 Assign $\bitvar{Y}[3]$ the value
- $((\locvar{C3}*\locvar{T}[6]+\hex{8000})>>16)-
- ((\locvar{S3}*\locvar{T}[5]+\hex{8000})>>16)$.
+ $((\locvar{C3}*\locvar{T}[6])//16)-
+ ((\locvar{S3}*\locvar{T}[5])//16)$.
 \item
 Assign $\bitvar{Y}[7]$ the value
- $((\locvar{C7}*\locvar{T}[7]+\hex{8000})>>16)-
- ((\locvar{S7}*\locvar{T}[4]+\hex{8000})>>16)$.
+ $((\locvar{C7}*\locvar{T}[7])//16)-
+ ((\locvar{S7}*\locvar{T}[4])//16)$.
 \end{enumerate}
 
 \subsection{The Complete Reconstruction Algorithm}
