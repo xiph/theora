@@ -123,16 +123,24 @@ dnl substitue the included getopt if the system doesn't support long options
 AC_CHECK_FUNC(getopt_long, [GETOPT_OBJS=''], [GETOPT_OBJS='getopt.$(OBJEXT) getopt1.$(OBJEXT)'])
 AC_SUBST(GETOPT_OBJS)
 
+
 XIPH_PATH_OGG(, AC_MSG_ERROR([
     libogg is required to build this package!
     please see http://www.xiph.org/ for how to
     obtain a copy.
 ]))
+cflags_save=$CFLAGS
+libs_save=$LIBS
 CFLAGS="$CFLAGS $OGG_CFLAGS"
 LIBS="$LIBS $OGG_LIBS"
 AC_CHECK_FUNC(oggpackB_read, , [
   AC_MSG_ERROR([newer libogg version (>1.0) required])
 ])
+CFLAGS=$cflags_save
+LIBS=$libs_save
+
+dnl the examples use Vorbis and SDL
+XIPH_PATH_VORBIS(HAVE_VORBIS=yes, HAVE_VORBIS=no)
 
 AM_PATH_SDL(,[
 	HAVE_SDL=yes
@@ -153,9 +161,6 @@ dnl --------------------------------------------------
 dnl Do substitutions
 dnl --------------------------------------------------
 
-LIBS="$LIBS"
-
-AC_SUBST(LIBS)
 AC_SUBST(DEBUG)
 AC_SUBST(PROFILE)
 
