@@ -1,3 +1,9 @@
+libtheora (0.0.0.alpha3-1) unstable; urgency=low
+
+  * Initial upload to Debian.
+
+ -- Christopher L Cheney <ccheney@debian.org>  Tue, 29 Jun 2004 22:00:00 -0500
+
 libtheora (0.0.0-0) unstable; urgency=low
 
   * Initial Release.

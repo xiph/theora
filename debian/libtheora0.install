@@ -1,3 +1,2 @@
-debian/tmp/usr/lib/libtheora.so.*
-debian/tmp/usr/share/doc/libtheora*
-
+debian/tmp/usr/lib/libtheora.so.0
+debian/tmp/usr/lib/libtheora.so.0.0.0
