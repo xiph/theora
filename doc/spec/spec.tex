@@ -308,6 +308,10 @@ A macro block contains a $2\times 2$ array of blocks in the luma plane
  {\em and} the co-located blocks in the chroma planes.
 Thus macro blocks can represent anywhere from six to twelve blocks, depending
  on how the chroma planes are subsampled.
+% the whole super vs. macro blocks thing is a little confusing, and it can be
+% hard to remember which is what initially. A figure would/will help here,
+% but I tried to add some text emphasizing the difference in terms of
+% functionality.
 Super blocks describe an independent group of blocks within a single plane 
  while macro blocks group blocks from all the planes that cover a specific 
  area of the frame.
@@ -318,6 +322,7 @@ Macro blocks are also accessed in a \term{coded order}.
 This coded order proceeds by examining each super block in the luma plane in
  raster order, and traversing the four macro blocks inside using a smaller
  Hilbert curve, as shown in Figure~\ref{fig:hilbert-mb}.
+%r: I rearranged the wording to make a more formal idiom here
 If the luma plane does not contain a complete super block on the top or right
  sides, the same ordering is still used, with any macro blocks outside
  the frame boundary simply omitted.
@@ -371,6 +376,7 @@ The most important inter coding mode is INTER\_NOMV, which uses the co-located
 
 To each block's predictor, a \term{residual} is added to form the final
  contents of the block.
+%r: I reworded this next sentence to try and make it more decoder-oriented
 The residual is stored as a set of quantized coefficients from  an integer
  approximation of a two-dimensional Type II Discrete Cosine Transform.
 The DCT takes an an $8\times 8$ array of pixel values as input and returns an
@@ -436,6 +442,8 @@ The global codec configuration consists of a few video related fields, such as
  pixel format, and a version number.
 The version number is divided into a major version, a minor version, amd a
  minor revision number.
+%r: afaik the released vp3 codec called itself 3.1 and is compatible w/ theora
+%r: even though we received the in-progress 3.2 codebase
 For the format defined in this specification, these are `3', `2', and
  `0', respectively, in reference to Theora's origin as a successor to the VP3.1
  format.
@@ -446,6 +454,7 @@ Theora allows up to 384 different quantization matrices to be defined, one for
  each \term{quantization type} (intra or inter), \term{color plane}
  ($Y'$, $C_b$, or $C_r$), and \term{quantization index}, \qi, which ranges from
  zero to 63, inclusive.
+%r: I think 'nominally' is more specific than 'generally' here
 The quantization index nominally represents a progressive range of quality
  levels, from low quality near zero to high quality near 63.
 However, the interpretation is arbitrary, and it is possible, for example, to
@@ -467,6 +476,8 @@ They are stored in natural order.
 There is a separate set of base matrices for each quantization type and each
  color plane, with up to 64 possible base matrices in each set, one for each
  \qi value.
+%r: we will mention that the given matricies must bound the \qi range
+%r: in the detailed section. it's not important at this level.
 Typically the bitstream contains matrices for only a sparse subset of the
  possible \qi values.
 The base matrices for the remainder of the \qi values are computed using linear
@@ -653,7 +664,7 @@ All coded chroma blocks in uncoded macro blocks are assigned the INTER\_NOMV
 
 \paragraph{Motion Vectors}
 
-Intra frames are all centirely in INTRA mode, and this stage is skipped.
+Intra frames are coded entirely in INTRA mode, and this stage is skipped.
 Some inter coding modes, however, require one or more motion vectors to be
  specified for each macro block.
 These are decoded in this stage, and an appropriate motion vector is assigned
@@ -951,7 +962,7 @@ s_gG \\
 s_bB
 \end{array}\right]
 \end{eqnarray*}
-Parameters: $x_r,x_g,x_b,x_q, y_r,y_g,y_b,y_w$.
+Parameters: $x_r,x_g,x_b,x_w, y_r,y_g,y_b,y_w$.
 
 \end{description}
 
@@ -1312,6 +1323,8 @@ Externally, each bitstream encoded as a byte stream MUST begin and end on a
 Often, the encoded packet bitstream is not an integer number of bytes, and so
  there is unused space in the last byte of a packet.
 
+%r: I think the generality here is necessary to be consistent with our assertions
+%r: elsewhere about being independent of transport and byte width
 When a Theora encoder produces packets for embedding in a byte-aligned container,
  Unused space in the last byte of a packet is always zeroed during the encoding
  process.
@@ -1367,10 +1380,14 @@ Decode continues according to packet type.
 The identification header is type 0x80, the comment header is type 0x81, and
  the setup header is type 0x82.
 These packets must occur in the order: identification, comment, setup.
+%r: I clarified the initial-bit scheme here
 All header packets have the most significant bit of the type
  field, which is the initial bit in the packet, set.
 This distinguishes them from video data packets in which the first bit
  is unset.
+% extra header packets are a feature Dan argued for way back when for 
+% backward-compatible extensions (and icc colourspace for example)
+% I think it's reasonable
 Packets with other header types (0x83--0xFF) are reserved and must be
  ignored.
 
@@ -1504,6 +1521,7 @@ It is meant for short text comments, not aribtrary metadata; arbitrary metadata
  belongs in a separate logical stream that provides greater structure and
  machine parseability.
 
+%r: I tried to morph this a little more in the direction of our application space
 The comment field is meant to be used much like someone jotting a quick note on
  the label of a video.
 It should be a little information to remember the disc or tape by and explain it to
