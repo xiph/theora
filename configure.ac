@@ -16,9 +16,9 @@ AM_MAINTAINER_MODE
 
 dnl Library versioning
 
-V_LIB_CURRENT=0
+V_LIB_CURRENT=1
 V_LIB_REVISION=0
-V_LIB_AGE=0
+V_LIB_AGE=1
 AC_SUBST(V_LIB_CURRENT)
 AC_SUBST(V_LIB_REVISION)
 AC_SUBST(V_LIB_AGE)
@@ -206,7 +206,7 @@ AC_OUTPUT([
   Makefile lib/Makefile
   include/Makefile include/theora/Makefile
   examples/Makefile
-  doc/Makefile doc/Doxyfile doc/python/Makefile
+  doc/Makefile doc/Doxyfile
   debian/Makefile
   libtheora.spec
   theora.pc

@@ -5,6 +5,10 @@ libtheora 1.0alpha4 (2004 December 15)
  * fix a double-update bug in the motion analysis
  * apply the loop filter before filling motion vector border 
    in the reference frame
+ * new utility functions:
+   - theora_packet_isheader(),
+   - theora_packet_iskeyframe()
+   - theora_granule_frame()
  * optional support for building without floating point
  * optional support for building without encode support 
  * various build and packaging fixes
