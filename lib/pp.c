@@ -46,7 +46,7 @@ static const ogg_uint32_t DcQuantScaleV1[ Q_TABLE_SIZE ] = {
   2,  1,  1,  1,  1,  1,  1,  1
 };
 
-static const ogg_uint32_t *DeringModifierV1=DcQuantScaleV1;
+static const ogg_uint32_t * const DeringModifierV1=DcQuantScaleV1;
 
 static void PClearFrameInfo(PP_INSTANCE * ppi){
   int i;
