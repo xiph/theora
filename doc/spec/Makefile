@@ -18,7 +18,7 @@ FIG_AUXS = $(FIG_SRCS:.fig=.aux)
 FIG_PDFS = $(FIG_SRCS:.fig=.pdf)
 
 # add any native-pdf figures here
-FIG_OJBS = $(FIG_PDFS)
+FIG_OBJS = $(FIG_PDFS)
 
 Theora_I_spec.pdf : spec.pdf
 	$(MV) $< $@
