@@ -2727,7 +2727,7 @@ Assign $\bitvar{NQRS}[\locvar{\qti}][\locvar{\pli}]$ the value \locvar{\qri}.
 \paragraph{VP3 Compatibility}
 
 The quantization parameters are hardcoded in VP3.
-The values used are given in Appendix~REF.
+The values used are given in Appendix~\ref{app:vp3-quant-params}.
 
 \subsection{Computing a Quantization Matrix}
 \label{sub:quant-mat}
@@ -3930,7 +3930,14 @@ In INTER\_MV\_FOUR mode, all four blocks in the luma plane are assigned their
  own motion vector, and motion vectors for blocks in the chroma planes are
  computed from these, using averaging appropriate to the pixel format.
 
-Only of a few of the macro block coding modes require decoding motion vectors
+For INTER\_MV and INTER\_GOLDEN\_MV modes, a single motion vector is decoded
+ and applied to each block.
+For INTER\_MV\_FOUR macro blocks, a motion vector is decoded for each coded
+ luma block.
+Uncoded luma blocks receive the default $(0,0)$ vector for the purposes of
+ computing the chroma motion vectors.
+
+None of the remaining macro block coding modes require decoding motion vectors
  from the stream.
 INTRA mode does not use a motion-compensated predictor, and so requires no
  motion vector, and INTER\_NOMV and INTER\_GOLDEN\_NOMV modes use the default
@@ -3941,18 +3948,13 @@ This also includes all macro blocks with no coded luma blocks, as they are
 The modes INTER\_MV\_LAST and INTER\_MV\_LAST2 use the motion vector from the
  last macro block (in coded order) and the second to last macro block,
  respectively, that contained a motion vector pointing to the previous frame.
+Thus no explicit motion vector needs to be decoded for these modes.
 Macro blocks coded in INTRA mode or one of the GOLDEN modes are not considered
  in this process.
+If an insufficient number of macro blocks have been coded in one of the INTER
+ modes, then the $(0,0)$ vector is used instead.
 For macro blocks coded in INTER\_MV\_FOUR mode, the vector from the upper-right
  luma block is used, even if the upper-right block is not coded.
-Thus no explicit motion vector needs to be decoded for these modes.
-
-For INTER\_MV and INTER\_GOLDEN\_MV modes, a single motion vector is decoded
- and applied to each block.
-For INTER\_MV\_FOUR macro blocks, a motion vector is decoded for each coded
- luma block.
-Uncoded luma blocks receive the default $(0,0)$ vector for the purposes of
- computing the chroma motion vectors.
 
 The motion vectors are decoded from the stream as follows:
 
@@ -4537,8 +4539,9 @@ Care should be taken in a decoder to check for this, as otherwise it may permit
  buffer overflows from invalidly formed packets.
 \begin{verse}
 {\bf Note:} One way to achieve this efficiently is to combine the inverse
- zig-zag mapping (described later in Section~REF) with coefficient decode, and
- use a table look-up to map zig-zag indices greater than 63 to a safe location.
+ zig-zag mapping (described later in Section~\ref{sub:dequant}) with
+ coefficient decode, and use a table look-up to map zig-zag indices greater
+ than 63 to a safe location.
 \end{verse}
 
 \begin{enumerate}
