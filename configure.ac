@@ -40,7 +40,7 @@ dnl Check for doxygen
 AC_CHECK_PROG(HAVE_DOXYGEN, doxygen, true, false)
 AM_CONDITIONAL(HAVE_DOXYGEN,$HAVE_DOXYGEN)
 if test $HAVE_DOXYGEN = "false"; then
-        AC_MSG_WARN([*** doxygen not found, docs will not be built])
+        AC_MSG_WARN([*** doxygen not found, API documentation will not be built])
 fi
 
 dnl --------------------------------------------------
