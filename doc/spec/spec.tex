@@ -8,12 +8,36 @@
 \usepackage{booktabs}
 \usepackage[pdfpagemode=None,pdfstartview=FitH,pdfview=FitH,colorlinks=true]%
  {hyperref}
+\usepackage{tabularx}
 
 \newtheorem{theorem}{Theorem}[section]
-\newcommand{\qi}{\ensuremath{\mathit{qi}}}
-\newcommand{\ti}{\ensuremath{\mathit{ti}}}
-\newcommand{\bitvar}[1]{\ensuremath{\left[\mathrm{#1}\right]}}
+\newcommand{\idx}[1]{{\ensuremath{\mathit{#1}}}}
+\newcommand{\qti}{\idx{qti}}
+\newcommand{\qtj}{\idx{qtj}}
+\newcommand{\pli}{\idx{pli}}
+\newcommand{\plj}{\idx{plj}}
+\newcommand{\qi}{\idx{qi}}
+\newcommand{\ci}{\idx{ci}}
+\newcommand{\bmi}{\idx{bmi}}
+\newcommand{\qri}{\idx{qri}}
+\newcommand{\ti}{\idx{ti}}
+%\newcommand{\bitvar}[1]{\ensuremath{\left[\mathrm{#1}\right]}}
+\newcommand{\bitvar}[1]{\ensuremath{\mathbf{#1}}}
+\newcommand{\locvar}[1]{\ensuremath{\mathrm{#1}}}
 \newcommand{\term}[1]{{\em #1}}
+\newcommand{\bin}[1]{\ensuremath{\mathtt{b#1}}}
+\newcommand{\hex}[1]{\ensuremath{\mathtt{0x#1}}}
+\newcommand{\ilog}{\ensuremath{\mathop{\mathrm{ilog}}\nolimits}}
+
+%Section-based table, figure, and equation numbering.
+\makeatletter
+\renewcommand\theequation{\thesection.\arabic{equation}}
+\@addtoreset{equation}{section}
+\renewcommand\thefigure{\thesection.\arabic{figure}}
+\@addtoreset{figure}{section}
+\renewcommand\thetable{\thesection.\arabic{table}}
+\@addtoreset{table}{section}
+\makeatother
 
 \pagestyle{headings}
 \bibliographystyle{alpha}
@@ -70,7 +94,7 @@ The precise definition the color spaces supported appears in
 Three different chroma subsampling formats are supported: 4:2:0, 4:2:2,
  and 4:4:4.
 The precise details of each of these formats and their sampling locations are
- described in Section~REF.
+ described in Section~\ref{sec:pixfmts}.
 
 The Theora I format does not support interlaced material, variable frame rates,
  bit-depths larger than 8 bits per component, nor alternate color spaces such
@@ -202,6 +226,22 @@ Theora divides the pixel array up into three separate \term{color planes}, one
  for each of the $Y'$, $C_b$, and $C_r$ components of the pixel.
 The $Y'$ plane is also called the \term{luma plane}, and the $C_b$ and $C_r$
  planes are also called the \term{chroma planes}.
+Each plane is assigned a numerical value, as shown in
+ Table~\ref{tab:color-planes}.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{cl}\toprule
+Index & Color Plane \\\midrule
+$0$   & $Y'$        \\
+$1$   & $C_b$       \\
+$2$   & $C_r$       \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Color Plane Indices}
+\label{tab:color-planes}
+\end{table}
+
 In some pixel formats, the chroma planes are subsampled by a factor of two
  in one or both directions.
 This means that the width or height of the chroma planes may be half that of
@@ -471,15 +511,30 @@ For the format defined in this specification, these are `3', `2', and
 \subsubsection{Quantization Matrices}
 
 Theora allows up to 384 different quantization matrices to be defined, one for
- each \term{quantization type} (intra or inter), \term{color plane}
- ($Y'$, $C_b$, or $C_r$), and \term{quantization index}, \qi, which ranges from
- zero to 63, inclusive.
+ each \term{quantization type}, \term{color plane} ($Y'$, $C_b$, or $C_r$), and
+ \term{quantization index}, \qi, which ranges from zero to 63, inclusive.
+There are currently two quantization types defined, which depend on the coding
+ mode of the block being dequantized, as shown in Table~\ref{tab:quant-types}.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{cl}\toprule
+Quantization Type & Usage                          \\\midrule
+$0$               & INTRA-mode blocks               \\
+$1$               & Blocks in any other mode.       \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Quantization Type Indices}
+\label{tab:quant-types}
+\end{table}
+
 %r: I think 'nominally' is more specific than 'generally' here
-The quantization index nominally represents a progressive range of quality
- levels, from low quality near zero to high quality near 63.
+The quantization index, on the other hand, nominally represents a progressive
+ range of quality levels, from low quality near zero to high quality near 63.
 However, the interpretation is arbitrary, and it is possible, for example, to
  partition the scale into two completely separate ranges with 32 levels each
- that are meant to represent different classes of source material.
+ that are meant to represent different classes of source material, or any
+ other arrangement that suits the encoder's requirements.
 
 Each quantization matrix is an $8\times 8$ matrix of 16-bit values, which is
  used to quantize the output of the $8\times 8$ DCT.
@@ -575,13 +630,14 @@ A complete description of how the comment header is coded appears in
 The setup header includes extensive codec setup information, including the
  complete set of quantization matrices and Huffman codebooks needed to decode
  the DCT coefficients.
-A complete description of the setup header appears in Section~REF.
+A complete description of the setup header appears in
+ Section~\ref{sec:setupheader}.
 
 \subsubsection{Decode Procedure}
 
 The decoding and synthesis procedure for all video packets is fundamentally the
  same, with some steps omitted for intra frames.
-\begin{enumerate}
+\begin{itemize}
 \item
 Decode packet type flag.
 \item
@@ -608,7 +664,7 @@ Decode 63rd AC coefficient for each coded block.
 \item Reconstruct coded blocks.
 \item Copy uncoded bocks.
 \item Perform loop filtering.
-\end{enumerate}
+\end{itemize}
 
 Note that clever rearrangement of the steps in this process is possible.
 As an example, in a memory-constrained environment, one can make multiple
@@ -775,6 +831,124 @@ The DCT coefficients are dequantized, an inverse DCT transform is applied, and
 To complete the reconstructed frame, an ``in-loop" deblocking filter is applied to
  the edges of all coded blocks.
 
+\section{Notation and Conventions}
+
+All parameters either passed in or out of a decoding procedure are given in
+ \bitvar{bold\ face}.
+
+The prefix \bin{} indicates that the following value is to be interpreted as a
+ binary number (base 2).
+\begin{verse}
+{\bf Example:} The value \bin{1110100} is equal to the decimal value 116.
+\end{verse}
+
+The prefix \hex{} indicates the the following value is to be interpreted as a
+ hexadecimal number (base 16).
+\begin{verse}
+{\bf Example:} The value \hex{74} is equal to the decimal value 116.
+\end{verse}
+
+The following operators are defined:
+
+\begin{description}
+\item[$|a|$]
+The absolute value of a number $a$.
+\begin{align*}
+|a| & = \left\{\begin{array}{ll}
+-a, & a < 0 \\
+a, & a \ge 0
+\end{array}\right.
+\end{align*}
+
+\item[$a*b$]
+Multiplication of a number $a$ by a number $b$.
+\item[$\frac{a}{b}$]
+Exact division of a number $a$ by a number $b$, producing a potentially
+ non-integer result.
+
+\item[$\left\lfloor a\right\rfloor$] 
+The largest integer less than or equal to a real number $a$.
+
+\item[$\left\lceil a\right\rceil$]
+The smallest integer greater than or equal to a real number $a$.
+
+\item[$a//b$]
+Integer division of $a$ by $b$.
+\begin{align*}
+a//b & = \left\{\begin{array}{ll}
+\left\lceil\frac{a}{b}\right\rceil, & a < 0 \\
+\left\lfloor\frac{a}{b}\right\rfloor, & a \ge 0
+\end{array}\right.
+\end{align*}
+
+\item[$a\%b$]
+The remainder from the integer division of $a$ by $b$.
+\begin{align*}
+a\%b & = |a|-|b|*|a//b|
+\end{align*}
+Note that with this definition, the result is always non-negative and less than
+ $|b|$.
+
+\item[$a<<b$]
+The value obtained by left-shifting the two's complement integer $a$ by $b$
+ bits.
+For purposes of this specification, overflow is ignored, and so this is
+ equivalent to integer multiplication of $a$ by $2^b$.
+
+\item[$a>>b$]
+The value obtained by right-shifting the two's complement integer $a$ by $b$
+ bits, filling in the leftmost bits of the new value with $0$ if $a$ is
+ non-negative and $1$ if $a$ is negative.
+This is {\em not} equivalent to integer division of $a$ by $2^b$.
+Instead,
+\begin{align*}
+a>>b & = \left\lfloor\frac{a}{2^b}\right\rfloor.
+\end{align*}
+
+\item[$\ilog(a)$]
+The minimum number of bits required to store a positive integer $a$ in
+ two's complement notation, or $0$ for a non-positive integer $a$.
+\begin{align*}
+\ilog(a) = \left\{\begin{array}{ll}
+0, & a \le 0 \\
+\left\lceil\log_2{a}\right\rceil, & a > 0
+\end{array}\right.
+\end{align*}
+
+\begin{verse}
+{\bf Examples:}
+\begin{itemize}
+\item $\ilog(-1)=0$
+\item $\ilog(0)=0$
+\item $\ilog(1)=1$
+\item $\ilog(2)=2$
+\item $\ilog(3)=2$
+\item $\ilog(4)=3$
+\item $\ilog(7)=3$
+\end{itemize}
+\end{verse}
+
+\end{description}
+
+\subsection{Key words}
+
+The key words ``MUST'', ``MUST NOT'', ``REQUIRED'', ``SHALL'', ``SHALL NOT'',
+ ``SHOULD'', ``SHOULD NOT'', ``RECOMMENDED'', ``MAY'', and ``OPTIONAL'' in this
+ document are to be intrepreted as described in RFC 2119 \cite{rfc2119}.
+
+Where such assertions are placed on the contents of a Theora bitstream itself,
+ implementations should be prepared to encounter bitstreams that do not follow
+ these requirements.
+An application's behavior in the presecence of such non-conforming bitstreams
+ is not defined by this specification, but any reasonable method of handling 
+ them MAY be used.
+By way of example, applications MAY discard the current frame, retain the
+ current output thus far, or attempt to continue on by assuming some default
+ values for the erroneous bits.
+An application SHOULD NOT allow such non-conformant bitstreams to overflow
+ buffers and potentially execute arbitrary code, as this represents a serious
+ security risk.
+
 \section{Video Formats}
 
 This section gives a precise description of the video formats that Theora is
@@ -851,14 +1025,14 @@ Because some values may fall outside the offset and excursion defined for each
  $Y'P_bP_r$ space.
 No clamping should be done at this stage.
 
-\begin{align*}
+\begin{align}
 Y'_\mathrm{out} & =
  \frac{Y'_\mathrm{in}-\mathrm{Offset}_Y}{\mathrm{Excursion}_Y} \\
 P_b             & =
  \frac{C_b-\mathrm{Offset}_{C_b}}{\mathrm{Excursion}_{C_b}} \\
 P_r             & =
  \frac{C_r-\mathrm{Offset}_{C_r}}{\mathrm{Excursion}_{C_r}}
-\end{align*}
+\end{align}
 
 Parameters: $\mathrm{Offset}_{Y,C_b,C_r}$, $\mathrm{Excursion}_{Y,C_b,C_r}$.
 
@@ -869,11 +1043,11 @@ This conversion takes the one luma and two chroma channel representation and
  maps it to the non-linear $R'G'B'$ space used to drive actual output devices.
 Values should be clamped into the range $[0\ldots1]$ after this stage.
 
-\begin{align*}
+\begin{align}
 R' & = Y'+2(1-K_r)P_r \\
 G' & = Y'-2\frac{(1-K_b)K_b}{1-K_b-K_r}P_b-2\frac{(1-K_r)K_r}{1-K_b-K_r}P_r\\
 B' & = Y'+2(1-K_b)P_b
-\end{align*}
+\end{align}
 
 Parameters: $K_b,K_r$.
 
@@ -889,18 +1063,18 @@ Because a dim viewing environment is assumed in most television standards, the
  $1.2$, and not a strict $1.0$.
 
 For calibration with actual output devices, the model
-\begin{displaymath}
-L=(E'+\Delta)^\gamma
-\end{displaymath}
+\begin{align}
+L & =(E'+\Delta)^\gamma
+\end{align}
  should be used, with $\Delta$ the free parameter and $\gamma$ held fixed to
  the value specified in this document.
 The conversion function presented here is an idealized version with $\Delta=0$.
 
-\begin{align*}
+\begin{align}
 R & = R'^\gamma \\
 G & = G'^\gamma \\
 B & = B'^\gamma
-\end{align*}
+\end{align}
 
 Parameters: $\gamma$.
 
@@ -921,7 +1095,7 @@ The rest of the scale is adjusted so that the power segment of the curve
  intersects the linear segment with the proper slope, and so that it still maps
  0 to 0 and 1 to 1.
 
-\begin{align*}
+\begin{align}
 R' & = \left\{
 \begin{array}{ll}
 \alpha R,                     & 0\le R<\delta   \\
@@ -937,7 +1111,7 @@ B' & = \left\{
 \alpha B,                     & 0\le B<\delta   \\
 (1+\epsilon)B^\beta-\epsilon, & \delta\le B\le1
 \end{array}\right.
-\end{align*}
+\end{align}
 
 Parameters: $\beta$, $\alpha$, $\delta$, $\epsilon$.
 
@@ -954,7 +1128,7 @@ This is how hardware manufacturers and standards typically describe a
 The math required to convert these parameters into a useful transformation
  matrix is reproduced below.
 
-\begin{align*}
+\begin{align}
 F                  & =
 \left[\begin{array}{ccc}
 \frac{x_r}{y_r}       & \frac{x_g}{y_g}       & \frac{x_b}{y_b}       \\
@@ -981,7 +1155,7 @@ s_rR \\
 s_gG \\
 s_bB
 \end{array}\right]
-\end{align*}
+\end{align}
 Parameters: $x_r,x_g,x_b,x_w, y_r,y_g,y_b,y_w$.
 
 \end{description}
@@ -1111,6 +1285,131 @@ x_b,y_b                        & = 0.15, 0.06      \\
 \end{table}
 
 \subsection{Pixel Formats}
+\label{sec:pixfmts}
+
+Theora supports several different pixel formats, each of which uses different
+ subsampling for the chroma planes relative to the luma plane.
+
+\subsubsection{4:4:4 Subsampling}
+\label{sec:444}
+
+All three color planes are stored at full resolution.
+The samples in the different planes are all at co-located sites.
+
+%TODO: Figure.
+%YRB         YRB
+%
+%
+%
+%YRB         YRB
+%
+%
+%
+
+
+\subsubsection{4:2:2 Subsampling}
+\label{sec:422}
+
+The $C_b$ and $C_r$ planes are stored with half the horizontal resolution of
+ the $Y'$ plane.
+Thus, each of these planes has half the number of horizontal blocks as the luma
+ plane.
+Similarly, they have half the number of horizontal super blocks, rounded up.
+Macro blocks are defined across color planes, and so their number does not
+ change, but each macro block has half as many chroma blocks contained in it.
+
+The chroma samples are vertically aligned with the luma samples, but
+ horizontally centered between two luma samples.
+Thus, each luma sample has a unique closest chroma sample.
+A horizontal phase shift may be required to produce signals which use different
+ horizontal chroma sampling locations for compatibility with different systems.
+
+%TODO: Figure.
+%Y     RB    Y           Y     RB    Y
+%
+%
+%
+%Y     RB    Y           Y     RB    Y
+%
+%
+%
+
+\subsubsection{4:2:0 Subsampling}
+\label{sec:420}
+
+The $C_b$ and $C_r$ planes are stored with half the horizontal and half the
+ vertical resolution of the $Y'$ plane.
+Thus, each of these planes has half the number of horizontal blocks and half
+ the number of vertical blocks as the luma plane, for a total of one quarter
+ the number of blocks.
+Similarly, they have half the number of horizontal super blocks and half the
+ number of vertical super blocks, rounded up.
+Macro blocks are defined across color planes, and so their number does not
+ change, but each macro block has one quarter as many chroma blocks contained
+ in it.
+
+The chroma samples are vertically and horizontally centered between four luma
+ samples.
+Thus, each luma sample has a unique closest chroma sample.
+This is the same sub-sampling pattern used with JPEG, MJPEG, and MPEG-1, and
+ was inherited from VP3.
+A horizontal or vertical phase shift may be required to produce signals which
+ use different chroma sampling locations for compatibility with different
+ systems.
+
+%TODO: Figure.
+%Y           Y           Y           Y
+%
+%      RB                      RB
+%
+%Y           Y           Y           Y
+%
+%
+%
+%Y           Y           Y           Y
+%
+%      RB                      RB
+%
+%Y           Y           Y           Y
+%
+%
+%
+
+\subsubsection{Subsampling and the Picture Region}
+
+Although the frame size must be an integral number of macro blocks, and thus
+ both the number of pixels and the number of blocks in each direction must be
+ even, no such requirement is made of the picture region.
+Thus, when using subsampled pixel formats, careful attention must be paid to
+ which chroma samples correspond to which luma samples.
+
+As mentioned above, for each pixel format, there is a unique chroma sample that
+ is the closest to each luma sample.
+When cropping the chroma planes to the picture region, all the chroma samples
+ corresponding to a luma sample in the cropped picture region must be included.
+Thus, when dividing the width or height of the picture region by two to obtain
+ the size of the subsampled chroma planes, they must be rounded up.
+
+Furthermore, the sampling locations are defined relative to the frame,
+ {\em not} the picture region.
+When the width of the picture region is odd in the 4:2:2 and 4:2:0 formats,
+ then the locations of chroma samples relative to the luma samples depends on
+ whether or not the X offset of the picture region is odd.
+If the offset is even, each column of chroma samples corresponds to two columns
+ of luma samples, except the last column which corresponds to one.
+If the offset is odd, then it is the first column of chroma samples which
+ corresponds to only one column of luma samples, while the remaining columns
+ each correspond to two.
+
+A similar process is followed with the rows of a picture region of odd height
+ encoded in the 4:2:0 format.
+If the Y offset is even, each row of chroma samples corresponds to two rows of
+ luma samples, except the last row which corresponds to one.
+If the offset is odd, then it is the first row of chroma samples which
+ corresponds to only one row of luma samples, while the remaining rows each
+ correspond to two.
+
+%TODO: Figures!
 
 \section{Bitpacking Convention}
 \label{sec:bitpacking}
@@ -1204,9 +1503,9 @@ The binary integers decoded by the above process may be either signed or
  unsigned.
 This varies from integer to integer, and this specification
  indicates how each value should be interpreted as it is read.
-That is, depending on context, the three bit binary pattern `b111' can be taken
- to represent either `$7$' as an unsigned integer or `$-1$' as a signed, two's
- complement integer.
+That is, depending on context, the three bit binary pattern \bin{111} can be
+ taken to represent either `$7$' as an unsigned integer or `$-1$' as a signed,
+ two's complement integer.
 
 \subsubsection{Encoding Example}
 
@@ -1214,7 +1513,8 @@ The following example shows the state of an (8-bit) byte stream after several
  binary integers are encoded, including the location of the put pointer for the
  next bit to write to and the total length of the stream in bytes.
 
-Encode the 4 bit unsigned integer value `12' (b1100) into an empty byte stream.
+Encode the 4 bit unsigned integer value `12' (\bin{1100}) into an empty byte
+ stream.
 
 \begin{tabular}{r|ccccccccl}
 \multicolumn{1}{r}{}& &&&&$\downarrow$&&&& \\
@@ -1230,7 +1530,7 @@ byte stream length: 1 byte
 \end{tabular}
 \vspace{\baselineskip}
 
-Continue by encoding the 3 bit signed integer value `-1' (b111).
+Continue by encoding the 3 bit signed integer value `-1' (\bin{111}).
 
 \begin{tabular}{r|ccccccccl}
 \multicolumn{1}{r}{} &&&&&&&&$\downarrow$& \\
@@ -1246,7 +1546,7 @@ byte stream length: 1 byte
 \end{tabular}
 \vspace{\baselineskip}
 
-Continue by encoding the 7 bit integer value `17' (b0010001).
+Continue by encoding the 7 bit integer value `17' (\bin{0010001}).
 
 \begin{tabular}{r|ccccccccl}
 \multicolumn{1}{r}{} &&&&&&&$\downarrow$&& \\
@@ -1263,7 +1563,7 @@ byte stream length: 2 bytes
 \end{tabular}
 \vspace{\baselineskip}
 
-Continue by encoding the 13 bit integer value `6969' (b11011 00111001).
+Continue by encoding the 13 bit integer value `6969' (\bin{11011\ 00111001}).
 
 \begin{tabular}{r|ccccccccl}
 \multicolumn{1}{r}{} &&&&$\downarrow$&&&&& \\
@@ -1301,7 +1601,7 @@ byte stream length: 4 bytes
 \end{tabular}
 \vspace{\baselineskip}
 
-Value read: 3 (b11).
+Value read: 3 (\bin{11}).
 
 Read another two bit unsigned integer from the example encoded above.
 
@@ -1317,7 +1617,7 @@ byte stream length: 4 bytes
 \end{tabular}
 \vspace{\baselineskip}
 
-Value read: 0 (b00).
+Value read: 0 (\bin{00}).
 
 Two things are worth noting here.
 \begin{itemize}
@@ -1387,18 +1687,44 @@ An end-of-packet condition encountered while decode the comment header is a
  non-fatal error condition, and MAY be ignored by a decoder.
 
 \subsection{Common Header Decode}
+\label{sub:common-header}
 
-Each header packet begins with the same header fields:
+\paragraph{Input parameters:} None
+
+\paragraph{Output parameters:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\bitvar{HEADERTYPE} & Integer & 8 & No & The type of the header being
+ decoded. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+\paragraph{Variables used:} None
+
+Each header packet begins with the same header fields, which are decoded as
+ follows:
 
 \begin{enumerate}
-\item{\bitvar{packet\_type}:} 8 bit unsigned integer.
-\item{0x74, 0x68, 0x65, 0x6F, 0x72, 0x61:}
-The characters `t', `h', `e', `o', `r', and `a' as 8 bit unsigned integers.
+\item
+Read an 8-bit unsigned integer as \bitvar{HEADERTYPE}.
+If the most significant bit of this integer is not set, then stop.
+This is not a header packet.
+\item
+Read 6 8-bit unsigned integers.
+If these do not have the values \hex{74}, \hex{68}, \hex{65}, \hex{6F},
+ \hex{72}, and \hex{61}, respectively then stop.
+This stream is not decodable by this specification.
+These values correspond to the ASCII values of the characters `t', `h', `e',
+ `o', `r', and `a'.
 \end{enumerate}
 
-Decode continues according to packet type.
-The identification header is type 0x80, the comment header is type 0x81, and
- the setup header is type 0x82.
+Decode continues according to \bitvar{HEADERTYPE}.
+The identification header is type \hex{80}, the comment header is type
+ \hex{81}, and the setup header is type \hex{82}.
 These packets must occur in the order: identification, comment, setup.
 %r: I clarified the initial-bit scheme here
 %TBT: Dashes let the reader know they'll have to pick up the rest of the
@@ -1411,95 +1737,134 @@ This distinguishes them from video data packets in which the first bit
 % extra header packets are a feature Dan argued for way back when for 
 % backward-compatible extensions (and icc colourspace for example)
 % I think it's reasonable
-Packets with other header types (0x83--0xFF) are reserved and must be
+Packets with other header types (\hex{83}--\hex{FF}) are reserved and MUST be
  ignored.
 
 \subsection{Identification Header}
 \label{sec:idheader}
 
+\paragraph{Input parameters:} None
+
+\paragraph{Output parameters:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\bitvar{VMAJ}     & Integer &  8 & No & The major version number. \\
+\bitvar{VMIN}     & Integer &  8 & No & The minor version number. \\
+\bitvar{VREV}     & Integer &  8 & No & The minor version revision number. \\
+\bitvar{FMBW}     & Integer & 16 & No & The width of the frame in macro
+ blocks. \\
+\bitvar{FMBH}     & Integer & 16 & No & The height of the frame in macro
+ blocks. \\
+\bitvar{PICW}     & Integer & 20 & No & The width of the picture region in
+ pixels. \\
+\bitvar{PICH}     & Integer & 20 & No & The height of the picture region in
+ pixels. \\
+\bitvar{FRN}      & Integer & 32 & No & The frame-rate numerator. \\
+\bitvar{FRD}      & Integer & 32 & No & The frame-rate denominator. \\
+\bitvar{PARN}     & Integer & 24 & No & The pixel aspect-ratio numerator. \\
+\bitvar{PARD}     & Integer & 24 & No & The pixel aspect-ratio denominator. \\
+\bitvar{CS}       & Integer &  8 & No & The color space. \\
+\bitvar{PF}       & Integer &  8 & No & The pixel format. \\
+\bitvar{NOMBR}    & Integer & 24 & No & The nominal bitrate of the stream, in
+ bits per second. \\
+\bitvar{QUAL}     & Integer &  6 & No & The quality hint. \\
+\bitvar{KFGSHIFT} & Integer &  5 & No & The amount to shift the key frame
+ number by in the granule position. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+\paragraph{Variables used:} None
+
 The identification header is a short header with only a few fields used to
  declare the stream definitively as Theora and provide detailed information
  about the format of the fully decoded video data.
-The identification header is coded as follows:
+The identification header is decoded as follows:
 
 \begin{enumerate}
-\item{\bitvar{version\_major}:} 8-bit unsigned integer.
-\item{\bitvar{version\_minor}:} 8-bit unsigned integer.
-\item{\bitvar{version\_revision}:} 8-bit unsigned integer.
-\item{\bitvar{frame\_mb\_width}:} 16-bit unsigned integer.
-\item{\bitvar{frame\_mb\_height}:} 16-bit unsigned integer.
-\item{\bitvar{picture\_width}:} 24-bit unsigned integer.
-\item{\bitvar{picture\_height}:} 24-bit unsigned integer.
-\item{\bitvar{picture\_x\_offset}:} 8-bit unsigned integer.
-\item{\bitvar{picture\_y\_offset}:} 8-bit unsigned integer.
-\item{\bitvar{frame\_rate\_numerator}:} 32-bit unsigned integer.
-\item{\bitvar{frame\_rate\_denominator}:} 32-bit unsigned integer.
-\item{\bitvar{pixel\_aspect\_numerator}:} 24-bit unsigned integer.
-\item{\bitvar{pixel\_aspect\_denominator}:} 24-bit unsigned integer.
-\item{\bitvar{color\_space}:} 8-bit unsigned integer.
-\item{\bitvar{nominal\_bitrate}:} 24-bit unsigned integer.
-\item{\bitvar{quality}:} 6-bit unsigned integer.
-\item{\bitvar{keyframe\_granule\_shift}:} 5-bit unsigned integer.
-\item{\bitvar{pixel\_format}:} 2-bit unsigned integer.
-\item{\bitvar{reserved}:} 3-bit unsigned integer.
-\end{enumerate}
-
-\bitvar{version\_major}, \bitvar{version\_minor}, and
- \bitvar{version\_revision} MUST be $3$, $2$, and $0$, respectively in order
- to be compatible with this document.
-
-Both \bitvar{frame\_mb\_width} and \bitvar{frame\_mb\_height} MUST be greater
- than zero.
-Each specifies the width of the coded video frame in macro blocks.
-The actual width of the frame in pixels is $16*\bitvar{frame\_mb\_width}$, and
- the height in pixels is $16*\bitvar{frame\_mb\_height}$.
-The size of the displayable picture within this coded frame in pixels is
- \bitvar{picture\_width} by \bitvar{picture\_height}.
-The lower-left corner of the displayable picture is located in position
- $(\bitvar{picture\_x\_offset},$ $\bitvar{picture\_y\_offset})$.
-These MUST be less than the frame width and frame height in pixels,
- respectively.
-In addition, $\bitvar{picture\_x\_offset}+\bitvar{picture\_width}$ and
- $\bitvar{picture\_y\_offset}+\bitvar{picture\_height}$ MUST be less than the
- frame width and frame height in pixels, respectively.
-
-If any of these checks fail, the stream is rendered undecodable.
-
+\item
+Decode the common header fields according to the procedure described in
+ Section~\ref{sub:common-header}.
+If \bitvar{HEADERTYPE} returned by this procedure is not \hex{80}, then stop.
+This packet is not the identification header.
+\item
+Read an 8-bit unsigned integer as \bitvar{VMAJ}.
+If \bitvar{VMAJ} is not $3$, then stop.
+This stream is not decodable according to this specification.
+\item
+Read an 8-bit unsigned integer as \bitvar{VMIN}.
+If \bitvar{VMIN} is not $2$, then stop.
+This stream is not decodable according to this specification.
+\item
+Read an 8-bit unsigned integer as \bitvar{VREV}.
+If \bitvar{VREV} is not $0$, then stop.
+This stream is not decodable according to this specification.
+\item
+Read a 16-bit unsigned integer as \bitvar{FMBW}.
+This MUST be greater than zero.
+This specifies the width of the coded frame in macro blocks.
+The actual width of the frame in pixels is $\bitvar{FMBW}*16$.
+\item
+Read a 16-bit unsigned integer as \bitvar{FMBH}.
+This MUST be greater than zero.
+This specifies the height of the coded frame in macro blocks.
+The actual height of the frame in pixels is $\bitvar{FMBH}*16$.
+\item
+Read a 24-bit unsigned integer as \bitvar{PICW}.
+This MUST be no greater than $(\bitvar{FMBW}*16)$.
+Note that 24 bits are read, even though only 20 bits are sufficient to specify
+ any value of the picture width.
+This is done to preserve octet alignment in this header, to allow for a
+ simplified parser implementation.
+\item
+Read a 24-bit unsigned integer as \bitvar{PICH}.
+This MUST be no greater than $(\bitvar{FMBH}*16)$.
+Together with \bitvar{PICW}, this specifies the size of the displayable picture
+ region within the coded frame.
+See Figure~\ref{fig:pic-frame}.
+Again, 24 bits are read instead of 20.
+\item
+Read an 8-bit unsigned integer as \bitvar{PICX}.
+This MUST be no greater than $(\bitvar{FMBW}*16-\bitvar{PICX})$.
+\item
+Read an 8-bit unsigned integer as \bitvar{PICY}.
+This MUST be no greater than $(\bitvar{FMBH}*16-\bitvar{PICY})$.
+Together with \bitvar{PICX}, this specifies the location of the lower-left
+ corner of the displayable picture region.
+See Figure~\ref{fig:pic-frame}.
+\item
+Read a 32-bit unsigned integer as \bitvar{FRN}.
+This MUST be greater than zero.
+\item
+Read a 32-bit unsigned integer as \bitvar{FRD}.
+This MUST be greater than zero.
 Theora is a fixed-frame rate video codec.
-Frames are sampled at the constant rate of
- $\frac{\bitvar{frame\_rate\_numerator}}{\bitvar{frame\_rate\_denominator}}$
+Frames are sampled at the constant rate of $\frac{\bitvar{FRN}}{\bitvar{FRD}}$
  frames per second.
-Both of these fields MUST be greater than zero, or the stream is rendered
- undecodable.
-
-The aspect ratio of the pixels within a frame, defined as the ratio of the
- physical width of the pixel to its physical height, is specified by the ratio
- $\bitvar{pixel\_aspect\_numerator}:\bitvar{pixel\_aspect\_denominator}$.
+The presentation time of the first frame is at zero seconds.
+There is no mechanism provided to specify a non-zero offset for the initial
+ frame.
+\item
+Read a 24-bit unsigned integer as \bitvar{PARN}.
+\item
+Read a 24-bit unsigned integer as \bitvar{PRAD}.
+Together with \bitvar{PARN}, these specify the aspect ratio of the pixels
+ within a frame, defined as the ratio of the physical width of a pixel to its
+ physical height.
+This is given by the ratio $\bitvar{PARN}:\bitvar{PARD}$.
 Either of these fields MAY be zero, in which case the pixel aspect ratio
  defaults to $1:1$.
-
-The \bitvar{nominal\_bitrate} field is used only as a hint.
-For pure VBR streams, this value may be considerably off.
-The field MAY be set to zero to indicate that the encoder did not care to
- speculate.
-%TODO: Quality values... this is also a hint, but of what?
-%TODO: ideally, it should be semantically distinct from the \qi values.
-
-The \bitvar{keyframe\_granule\_shift} is used to partition the granule
- position associated with each packet into two different parts.
-The frame number of the last keyframe, starting from zero, is stored in the
- upper $64-\bitvar{keyframe\_granule\_shift}$ bits, while the lower
- \bitvar{keyframe\_granule\_shift} bits contain the number of frames since the
- last keyframe.
-Complete details on the granule position mapping are specified in Section~REF.
-
-The \bitvar{color\_space} field contains a value from an enumerated list of
- the available color spaces, given in Table~\ref{tab:colorspaces}.
-The `Undefined' value indicates that color space information was not
- available to the encoder.
+\item
+Read an 8-bit unsigned integer as \bitvar{CS}.
+This is a value from an enumerated list of the available color spaces, given in
+ Table~\ref{tab:colorspaces}.
+The `Undefined' value indicates that color space information was not available
+ to the encoder.
 It MAY be specified by the application via an external means.
 If a reserved value is given, a decoder MAY refuse to decode the stream.
-
 \begin{table}[htb]
 \begin{center}
 \begin{tabular*}{215pt}{cl@{\extracolsep{\fill}}c}\toprule
@@ -1509,33 +1874,60 @@ $1$      & Rec. 470M (see Section~\ref{sec:470m}).   \\
 $2$      & Rec. 470BG (see Section~\ref{sec:470bg}). \\
 $3$      & Reserved.                                 \\
 $\vdots$ &                                           \\
-$255$    &                                           \\\bottomrule
-\end{tabular*}
+$255$    &                                           \\
+\bottomrule\end{tabular*}
 \end{center}
 \caption{Enumerated List of Color Spaces}
 \label{tab:colorspaces}
 \end{table}
-
-The \bitvar{pixel\_format} field contains a value from an enumerated list of
- the available pixel formats, given in Table~\ref{tab:pixel-formats}.
-If the reserved value $1$ is given, the stream is rendered undecodable.
+\item
+Read a 24-bit unsigned integer as \bitvar{NOMBR}.
+The \bitvar{NOMBR} field is used only as a hint.
+For pure VBR streams, this value may be considerably off.
+The field MAY be set to zero to indicate that the encoder did not care to
+ speculate.
+\item
+Read a 6-bit unsigned integer as \bitvar{QUAL}.
+This value is used to provide a hint as to the relative quality of the stream
+ when compared to others produced by the same encoder.
+Larger values indicate higher quality.
+This can be used, for example, to select among several streams containing the
+ same material encoded with different settings.
+\item
+Read a 5-bit unsigned integer as \bitvar{KFGSHIFT}.
+The \bitvar{KFGSHIFT} is used to partition the granule position associated with
+ each packet into two different parts.
+The frame number of the last key frame, starting from zero, is stored in the
+ upper $64-\bitvar{KFGSHIFT}$ bits, while the lower \bitvar{KFGSHIFT} bits
+ contain the number of frames since the last keyframe.
+Complete details on the granule position mapping are specified in Section~REF.
+\item
+Read a 2-bit unsigned integer as \bitvar{PF}.
+The \bitvar{PF} field contains a value from an enumerated list of the available
+ pixel formats, given in Table~\ref{tab:pixel-formats}.
+If the reserved value $1$ is given, stop.
+This stream is not decodable according to this specification.
 
 \begin{table}[htb]
 \begin{center}
 \begin{tabular*}{215pt}{cl@{\extracolsep{\fill}}c}\toprule
 Value & Pixel Format             \\\midrule
-$0$   & 4:2:0 (see Section~REF). \\
+$0$   & 4:2:0 (see Section~\ref{sec:420}). \\
 $1$   & Reserved.                \\
-$2$   & 4:2:2 (see Section~REF). \\
-$3$   & 4:4:4 (see Section~REF). \\\bottomrule
-\end{tabular*}
+$2$   & 4:2:2 (see Section~\ref{sec:422}). \\
+$3$   & 4:4:4 (see Section~\ref{sec:444}). \\
+\bottomrule\end{tabular*}
 \end{center}
 \caption{Enumerated List of Pixel Formats}
 \label{tab:pixel-formats}
 \end{table}
 
-Finally, the bits in the \bitvar{reserved} field MUST be zero, or the stream
- is rendered undecodable.
+\item
+Read a 3-bit unsigned integer.
+These bits are reserved.
+If this value is not zero, then stop.
+This stream is not decodable according to this specification.
+\end{enumerate}
 
 \subsection{Comment Header}
 \label{sec:commentheader}
@@ -1556,8 +1948,6 @@ The essentials, in other words, whatever they turn out to be, e.g.:
 
 %TODO: Example
 
-\subsubsection{Comment Header Coding}
-
 The comment header is stored as a logical list of eight-bit clean vectors; the
  number of vectors is bounded at $2^{32}-1$ and the length of each vector is
  limited to $2^{32}-1$ bytes.
@@ -1567,59 +1957,122 @@ In addition to the vector list, there is a single vector for a vendor name,
  also eight-bit clean with a length encoded in 32 bits.
 %TODO: The 1.0 release of libtheora sets the vendor string to ...
 
-The comment header is decoded as follows:
-\begin{enumerate}
-\item{\bitvar{vendor\_length\_0}:} 8-bit unsigned integer.
-\item{\bitvar{vendor\_length\_1}:} 8-bit unsigned integer.
-\item{\bitvar{vendor\_length\_2}:} 8-bit unsigned integer.
-\item{\bitvar{vendor\_length\_3}:} 8-bit unsigned integer.
-\item{\bitvar{vendor\_string}:} \bitvar{vendor\_length} 8-bit unsigned
- integers.
-\item{\bitvar{user\_comment\_list\_length\_0}:} 8-bit unsigned integer.
-\item{\bitvar{user\_comment\_list\_length\_1}:} 8-bit unsigned integer.
-\item{\bitvar{user\_comment\_list\_length\_2}:} 8-bit unsigned integer.
-\item{\bitvar{user\_comment\_list\_length\_3}:} 8-bit unsigned integer.
-\item{\bitvar{user\_comment\_list}:} \bitvar{user\_comment\_list\_length}
- user comments.
-\end{enumerate}
+\subsubsection{Comment Length Decoding}
+\label{sub:comment-len}
 
-Here \bitvar{vendor\_length} and \bitvar{user\_comment\_list\_length} are
- formed by arranging their constituent octets in little-endian order.
-\begin{align*}
-\bitvar{vendor\_length} = &
-\bitvar{vendor\_length\_0} + \\
-& \bitvar{vendor\_length\_1}*2^8 + \\
-& \bitvar{vendor\_length\_2}*2^{16} + \\
-& \bitvar{vendor\_length\_3}*2^{24} \\
-\bitvar{user\_comment\_list\_length} = &
-\bitvar{user\_comment\_list\_length\_0} + \\
-& \bitvar{user\_comment\_list\_length\_1}*2^8 + \\
-& \bitvar{user\_comment\_list\_length\_2}*2^{16} + \\
-& \bitvar{user\_comment\_list\_length\_3}*2^{24}
-\end{align*}
+\paragraph{Input parameters:} None
+
+\paragraph{Output parameters:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\locvar{LEN}  & Integer & 32 & No & A single 32-bit length value. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+\paragraph{Variables used:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\locvar{LEN0} & Integer &  8 & No & The first octet of the string length. \\
+\locvar{LEN1} & Integer &  8 & No & The second octet of the string length. \\
+\locvar{LEN2} & Integer &  8 & No & The third octet of the string length. \\
+\locvar{LEN3} & Integer &  8 & No & The fourth octet of the string
+ length. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+A single comment vector is decoded as follows:
+
+\begin{enumerate}
+\item
+Read an 8-bit unsigned integer as \locvar{LEN0}.
+\item
+Read an 8-bit unsigned integer as \locvar{LEN1}.
+\item
+Read an 8-bit unsigned integer as \locvar{LEN2}.
+\item
+Read an 8-bit unsigned integer as \locvar{LEN3}.
+\item
+Assign \locvar{LEN} the value $(\locvar{LEN0}+(\locvar{LEN1}<<8)+
+ (\locvar{LEN2}<<16)+(\locvar{LEN3}<<24))$.
 This construction is used so that on platforms with 8-bit bytes, the memory
  organization of the comment header is identical with that of Vorbis I,
  allowing for common parsing code despite the different bit packing
  conventions.
-
-Each user comment is similarly decoded as:
-\begin{enumerate}
-\item{$\bitvar{comment\_length\_0}[i]$:} 8-bit unsigned integer.
-\item{$\bitvar{comment\_length\_1}[i]$:} 8-bit unsigned integer.
-\item{$\bitvar{comment\_length\_2}[i]$:} 8-bit unsigned integer.
-\item{$\bitvar{comment\_length\_3}[i]$:} 8-bit unsigned integer.
-\item{$\bitvar{comment\_string}[i]$:} $\bitvar{comment\_length}[i]$ 8-bit
- unsigned integers.
 \end{enumerate}
 
-Again, $\bitvar{comment\_length}[i]$ is formed as follows:
-\begin{align*}
-\bitvar{comment\_length}[i] = &
-\bitvar{comment\_length\_0}[i] + \\
-& \bitvar{comment\_length\_1}[i]*2^8 + \\
-& \bitvar{comment\_length\_2}[i]*2^{16} + \\
-& \bitvar{comment\_length\_3}[i]*2^{24} \\
-\end{align*}
+\subsubsection{Comment Header Decoding}
+
+\paragraph{Input parameters:} None
+
+\paragraph{Output parameters:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\bitvar{VENDOR}    & \multicolumn{3}{l}{String}       & The vendor string. \\
+\bitvar{NCOMMENTS} & Integer                & 32 & No & The number of user
+ comments. \\
+\bitvar{COMMENTS}  & \multicolumn{3}{l}{String Array} & A list of
+ \bitvar{NCOMMENTS} user comment values. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+\paragraph{Variables used:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\locvar{\ci} & Integer & 32 & No & The index of the current user
+ comment. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+The complete comment header is decoded as follows:
+
+\begin{enumerate}
+\item
+Decode the common header fields according to the procedure described in
+ Section~\ref{sub:common-header}.
+If \bitvar{HEADERTYPE} returned by this procedure is not \hex{81}, then stop.
+This packet is not the comment header.
+\item
+Decode the length of the vendor string using the procedure given in
+ Section~\ref{sub:comment-len} into \bitvar{LEN}.
+\item
+Read \bitvar{LEN} 8-bit unsigned integers.
+\item
+Set the string \bitvar{VENDOR} to the contents of these octets.
+\item
+Decode the number of user comments using the procedure given in
+ Section~\ref{sub:comment-len} into \bitvar{LEN}.
+\item
+Assign \bitvar{NCOMMENTS} the value stored in \bitvar{LEN}.
+\item
+For each consecutive value of \locvar{\ci} from $0$ to
+ $(\bitvar{NCOMMENTS}-1)$, inclusive:
+\begin{enumerate}
+\item
+Decode the length of the current user comment using the procedure given in
+ Section~\ref{sub:comment-len} into \bitvar{LEN}.
+\item
+Read \bitvar{LEN} 8-bit unsigned integers.
+\item
+Set the string $\bitvar{COMMENTS}[\locvar{\ci}]$ to the contents of these
+ octets.
+\end{enumerate}
+\end{enumerate}
 
 The comment header comprises the entirety of the second header packet.
 Unlike the first header packet, it is not generally the only packet on the
@@ -1636,25 +2089,27 @@ That is, comment fields consist of a field name and a corresponding value and
  look like:
 \begin{center}
 \begin{tabular}{rcl}
-$\bitvar{comment\_string}[0]$ & = & ``TITLE=the look of Theora" \\
-$\bitvar{comment\_string}[1]$ & = & ``DIRECTOR=me"
+$\bitvar{COMMENTS}[0]$ & = & ``TITLE=the look of Theora" \\
+$\bitvar{COMMENTS}[1]$ & = & ``DIRECTOR=me"
 \end{tabular}
 \end{center}
 
-The field name is case-insensitive and MUST consist of ASCII characters 0x20
- through 0x7D, 0x3D (`=') excluded.
-ASCII 0x41 through 0x5A inclusive (characters `A'--`Z') are to be considered
- equivalent to ASCII 0x61 through 0x7A inclusive (characters `a'--`z').
-%TODO: Is an empty field-name permitted?
+The field name is case-insensitive and MUST consist of ASCII characters
+ \hex{20} through \hex{7D}, \hex{3D} (`=') excluded.
+ASCII \hex{41} through \hex{5A} inclusive (characters `A'--`Z') are to be
+ considered equivalent to ASCII \hex{61} through \hex{7A} inclusive
+ (characters `a'--`z').
+An entirely empty field name---one that is zero characters long---is not
+ disallowed.
 
-The field name is immediately followed by ASCII 0x3D (`='); this equals sign is
- used to terminate the field name.
+The field name is immediately followed by ASCII \hex{3D} (`='); this equals
+ sign is used to terminate the field name.
 
-The data immediately after 0x3D until the end of the vector is the eight-bit
+The data immediately after \hex{3D} until the end of the vector is the eight-bit
  clean value of the field contents encoded as a UTF-8 string.
 %TODO: Cite UTF-8 standard.
 
-Field names MUST not be `internationalized'; this is a concession to
+Field names MUST NOT be `internationalized'; this is a concession to
  simplicity, not an attempt to exclude the majority of the world that doesn't
  speak English.
 Applications MAY wish to present internationalized versions of the standard
@@ -1691,6 +2146,239 @@ No field names are mandatory; a comment header may contain one or more, all, or
 %TODO: Complete list
 \end{description}
 
+\subsection{Setup Header}
+\label{sec:setupheader}
+
+The Theora setup header contains the limit values used to drive the loop
+ filter, the base matrices and scale values used to build the dequantization
+ tables, and the Huffman tables used to unpack the DCT tokens.
+Because the contents of this header are specific to Theora, no concessions have
+ been made to keep the fields octet-aligned for easy parsing.
+
+\subsubsection{Loop Filter Limit Table Decode}
+\label{sub:loop-filter-limits}
+
+\paragraph{Input parameters:} None
+
+\paragraph{Output parameters:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\bitvar{LFLIMS}    & \multicolumn{1}{p{40pt}}{Integer array} &
+                              7 & No & A 64-element array of loop filter limit
+ values. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+\paragraph{Variables used:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\locvar{\qi}    & Integer &  6 & No & The quantization index. \\
+\locvar{NBITS}  & Integer &  3 & No & The size of values being read in the
+ current table. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+This procedure decodes the table of loop filter limit values used to drive the
+ loop filter, which is described in Section~REF.
+It is decoded as follows:
+
+\begin{enumerate}
+\item
+Read a 3-bit unsigned integer as \locvar{NBITS}.
+\item
+For each consecutive value of \locvar{\qi} from $0$ to $63$, inclusive:
+\begin{enumerate}
+\item
+Read an \locvar{NBITS}-bit unsigned integer as $\bitvar{LFLIMS}[\locvar{\qi}]$.
+\end{enumerate}
+\end{enumerate}
+
+\subsubsection{Quantization Parameters Decode}
+\label{sub:quant-params}
+
+\paragraph{Input parameters:} None
+
+\paragraph{Output parameters:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\bitvar{ACSCALE} & \multicolumn{1}{p{40pt}}{Integer array} &
+                             16 & No & A 64-element array of scale values for
+ AC coefficients for each \qi\ value. \\
+\bitvar{DCSCALE} & \multicolumn{1}{p{40pt}}{Integer array} &
+                             16 & No & A 64-element array of scale values for
+ the DC coefficient for each \qi\ value. \\
+\bitvar{NBMS}    & Integer & 10 & No & The number of base matrices. \\
+\bitvar{BMS}     & \multicolumn{1}{p{50pt}}{2D Integer array} &
+                              8 & No & A $\bitvar{NBMS}\times 64$ array
+ containing the base matrices. \\
+\bitvar{NQRS}    & \multicolumn{1}{p{50pt}}{2D Integer array} &
+                              6 & No & A $2\times 3$ array containing the
+ number of quant ranges for a given \qti\ and \pli, respectively.
+This is at most $63$. \\
+\bitvar{QRSIZES} & \multicolumn{1}{p{50pt}}{3D Integer array} &
+                              6 & No & A $2\times 3\times 63$ array of the
+ sizes of each quant range for a given \qti\ and \pli, respectively.
+Only the first $\bitvar{NQRS}[\qti][\pli]$ values will be used. \\
+\bitvar{QRBMIS}  & \multicolumn{1}{p{50pt}}{3D Integer array} &
+                              9 & No & A $2\times 3\times 64$ array of the
+ \bmi's used for each quant range for a given \qti\ and \pli, respectively.
+Only the first $(\bitvar{NQRS}[\qti][\pli]+1)$ values will be used. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+\paragraph{Variables used:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\locvar{\qti}    & Integer &  1 & No & A quantization type index.
+See Table~\ref{tab:quant-types}.\\
+\locvar{\qtj}    & Integer &  1 & No & A quantization type index. \\
+\locvar{\pli}    & Integer &  2 & No & A color plane index.
+See Table~\ref{tab:color-planes}.\\
+\locvar{\plj}    & Integer &  2 & No & A color plane index. \\
+\locvar{\qi}     & Integer &  6 & No & The quantization index. \\
+\locvar{\ci}     & Integer &  6 & No & The DCT coefficient index. \\
+\locvar{\bmi}    & Integer &  9 & No & The base matrix index. \\
+\locvar{\qri}    & Integer &  9 & No & The quant range index. \\
+\locvar{NBITS}   & Integer &  5 & No & The size of fields to read. \\
+\locvar{NEWQR}   & Integer &  1 & No & Flag that indicates a new set of quant
+ ranges will be defined. \\
+\locvar{RPQR}    & Integer &  1 & No & Flag that indicates the quant ranges to
+ copy will come from the same color plane. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+The quantization parameters are decoded as follows:
+
+\begin{enumerate}
+\item
+Read a 4-bit unsigned integer.
+Assign \locvar{NBITS} the value read, plus one.
+\item
+For each consecutive value of \locvar{\qi} from $0$ to $63$, inclusive:
+\begin{enumerate}
+\item
+Read an \locvar{NBITS}-bit unsigned integer as
+ $\bitvar{ACSCALE}[\locvar{\qi}]$.
+\end{enumerate}
+\item
+Read a 4-bit unsigned integer.
+Assign \locvar{NBITS} the value read, plus one.
+\item
+For each consecutive value of \locvar{\qi} from $0$ to $63$, inclusive:
+\begin{enumerate}
+\item
+Read an \locvar{NBITS}-bit unsigned integer as
+ $\bitvar{DCSCALE}[\locvar{\qi}]$.
+\end{enumerate}
+\item
+Read a 9-bit unsigned integer.
+Assign \bitvar{NBMS} the value decoded, plus one.
+\item
+For each consecutive value of \locvar{\bmi} from $0$ to $(\bitvar{NBMS}-1)$,
+ inclusive:
+\begin{enumerate}
+\item
+For each consecutive value of \locvar{\ci} from $0$ to $63$, inclusive:
+\begin{enumerate}
+\item
+Read an 8-bit unsigned integer as $\bitvar{BMS}[\locvar{\bmi}][\locvar{\ci}]$.
+\end{enumerate}
+\end{enumerate}
+\item
+For each consecutive value of \locvar{\qti} from $0$ to $1$, inclusive:
+\begin{enumerate}
+\item
+For each consecutive value of \locvar{\pli} from $0$ to $2$, inclusive:
+\begin{enumerate}
+\item
+If $\locvar{\qti}>0$ or $\locvar{\pli}>0$, read a 1-bit unsigned integer as
+ \locvar{NEWQR}.
+\item
+Else, assign \locvar{NEWQR} the value one.
+\item
+If \locvar{NEWQR} is zero, then we are copying a previously defined set of
+ quant ranges.
+In that case:
+\begin{enumerate}
+\item
+If $\locvar{\qti}>0$, read a 1-bit unsigned integer as \locvar{RPQR}.
+\item
+Else, assign \locvar{RPQR} the value zero.
+\item
+If \locvar{RPQR} is one, assign \locvar{\qtj} the value $(\locvar{\qti}-1)$
+ and assign \locvar{\plj} the value \locvar{\pli}.
+This selects the set of quant ranges defined for the same color plane as this
+ one, but for the previous quantization type.
+\item
+Else assign \locvar{\qtj} the value $(3*\locvar{\qti}+\locvar{\pli}-1)//3$ and
+ assign \locvar{\plj} the value $(\locvar{\pli}+2)\%3$.
+This selects the most recent set of quant ranges defined.
+\item
+Assign $\bitvar{NQRS}[\locvar{\qti}][\locvar{\pli}]$ the value
+ $\bitvar{NQRS}[\locvar{\qtj}][\locvar{\plj}]$.
+\item
+Assign $\bitvar{QRSIZES}[\locvar{\qti}][\locvar{\pli}]$ the values in 
+ $\bitvar{QRSIZES}[\locvar{\qtj}][\locvar{\plj}]$.
+\item
+Assign $\bitvar{QRBMIS}[\locvar{\qti}][\locvar{\pli}]$ the values in
+ $\bitvar{QRBMIS}[\locvar{\qtj}][\locvar{\plj}]$.
+\end{enumerate}
+\item
+Else, \locvar{NEWQR} is one, which indicates that we are defining a new set of
+ quant ranges.
+In that case:
+\begin{enumerate}
+\item
+Assign $\locvar{\qri}$ the value zero.
+\item
+Assign $\locvar{\qi}$ the value zero.
+\item
+Read an $\ilog(\bitvar{NBMS}-1)$-bit unsigned integer as\\
+ $\bitvar{QRBMIS}[\locvar{\qti}][\locvar{\pli}][\locvar{\qri}]$.
+\item
+\label{step:qr-loop}
+Read an $\ilog(63-\locvar{\qi})$-bit unsigned integer.
+Assign\\ $\bitvar{QRSIZES}[\locvar{\qti}][\locvar{\pli}][\locvar{\qri}]$ the value
+ read, plus one.
+\item
+Assign \locvar{\qi} the value $\locvar{\qi}+
+ \bitvar{QRSIZES}[\locvar{\qti}][\locvar{\pli}][\locvar{\qri}]$.
+\item
+Assign \locvar{\qri} the value $\locvar{\qri}+1$.
+\item
+Read an $\ilog(\bitvar{NBMS}-1)$-bit unsigned integer as\\
+ $\bitvar{QRBMIS}[\locvar{\qti}][\locvar{\pli}][\locvar{\qri}]$.
+\item
+If \locvar{\qi} is less than 63, go back to step~\ref{step:qr-loop}.
+\item
+If \locvar{\qi} is greater than 63, stop.
+The stream is undecodable.
+\item
+Assign $\bitvar{NQRS}[\locvar{\qti}][\locvar{\pli}]$ the value \locvar{\qri}.
+\end{enumerate}
+
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
+
+
+
 \appendix
 
 \clearpage
@@ -1709,8 +2397,8 @@ It provides syncronization, multiplexing, framing, error detection and
 
 This document assumes familiarity with the details of the Ogg standard.
 The Xiph.org documentation provides an overview of the Ogg transport stream
- format \cite{oggstream} and a detailed description \cite{oggframe}.
-%TODO: Maybe we should just put these links in-line, instead of as references.
+ format at \url{http://www.xiph.org/ogg/doc/oggstream.html} and a detailed
+ description at \url{http://www.xiph.org/ogg/doc/framing.html}.
 The format is also defined in RFC~3533 \cite{rfc3533}.
 While Theora packets can be embedded in a wide variety of media
  containers and streaming mechanisms, the Xiph.org Foundation
@@ -1866,7 +2554,7 @@ This does not restrict third parties from distributing independent
 
 \begin{figure}[hb]
 \centering
-\includegraphics[height=20mm]{xifish}
+\input{xifish}
 \end{figure}
 
 These pages are copyright \textcopyright{} 2004 Xiph.org Foundation.
