@@ -273,7 +273,7 @@ static ogg_uint32_t GetHalfPixelSumAbsDiffs (unsigned char * SrcData,
   if ( RefOffset == 0 ) {
     /* Simple case as for non 0.5 pixel */
     DiffVal += GetSumAbsDiffs( SrcData, RefDataPtr1, PixelsPerLine,
-                               ErrorSoFar);
+                               0);
   } else  {
     for ( i=0; i < BLOCK_HEIGHT_WIDTH; i++ ) {
       DiffVal += abs( ((int)SrcData[0]) - (((int)RefDataPtr1[0] +
