@@ -1,3 +1,7 @@
+-------------------------------------------------------------------------
+          The Xiph.org Foundation's libtheora 1.0alpha4 release
+-------------------------------------------------------------------------
+
 *** What is Theora?
 
 Theora is Xiph.Org's first publicly released video codec, intended
@@ -21,21 +25,15 @@ means that files produced by the alpha3 encoder will always be playable
 according to the Theora I specification.
 
 Traditionally alpha mean proof of concept, not a production-ready 
-release. However the code is very robust, ready for and indeed in
-general use. WE DO INTEND TO MAKE INCOMPATIBLE API changes before
-stable beta release however, particularly on the encoding side.
+release. However the code is very robust, ready for and indeed
+in general use. But WE DO INTEND TO MAKE INCOMPATIBLE API changes 
+before stable beta release however, particularly on the encoding side.
 
 The purpose of this release is to provide an updated testing base for 
 those interested in theora and to dissiminate more widely the changes
 we've made since the last alpha release. These include some helper
-utility functions, and a draft format specification, located in the
-doc directory.
-
-Once more for the record: THIS RELEASE IS NOT PRODUCTION CODE.  It is
-not for ripping DVDs, or otherwise use for content you won't want to 
-re-encode on demand.  The Theora stream format MAY WELL CHANGE in future
-releases. The API WILL CHANGE.  We will not yet support any Theora
-files produced by this alpha.  Not yet.  Soon, Grasshopper, Soon.
+utility functions, a draft format specification and rough api 
+documentation located in the doc directory.
 
 -------------------------------------------------------------------------
 Getting started with the code
