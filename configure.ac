@@ -123,7 +123,8 @@ AC_SUBST(PROFILE)
 AC_CONFIG_FILES([
   Makefile lib/Makefile
   include/Makefile include/theora/Makefile
-  examples/Makefile doc/Makefile
+  examples/Makefile
+  doc/Makefile doc/python/Makefile
   debian/Makefile
   theora.pc
 ])
