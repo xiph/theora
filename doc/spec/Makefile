@@ -39,7 +39,7 @@ spec.bbl : spec.aux spec.bib
 	bibtex $<
 
 vp3huff.tex : vp3huff
-	vp3huff > $@
+	./vp3huff > $@
 
 figures : $(FIG_OBJS)
 
