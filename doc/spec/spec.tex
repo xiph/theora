@@ -3,14 +3,15 @@
 \usepackage{latexsym}
 \usepackage{amssymb}
 \usepackage{amsmath}
+\usepackage{textcomp}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage[pdfpagemode=None,pdfstartview=FitH,pdfview=FitH,colorlinks=true]%
  {hyperref}
 
 \newtheorem{theorem}{Theorem}[section]
-\newcommand{\qi}{\ensuremath{\mathit{qi}} }
-\newcommand{\ti}{\ensuremath{\mathit{ti}} }
+\newcommand{\qi}{\ensuremath{\mathit{qi}}}
+\newcommand{\ti}{\ensuremath{\mathit{ti}}}
 \newcommand{\bitvar}[1]{\ensuremath{\left[\mathrm{#1}\right]}}
 \newcommand{\term}[1]{{\em #1}}
 
@@ -40,8 +41,8 @@ The later sections assume a high-level understanding of the Theora decode
 Theora is a general purpose, lossy video codec.
 It is based on the VP3 video codec produced by On2 Technologies
  (\url{http://www.on2.com/}).
-On2 donated the VP3.2 source code to the Xiph.org
- Foundation and who released it under a BSD-like license.
+On2 donated the VP3.1 source code to the Xiph.org Foundation and released it
+ under a BSD-like license.
 On2 also made an irrevocable, royalty-free license grant for any patent claims
  it might have over the software and any derivatives.
 No formal specification exists for the VP3 format beyond this source code,
@@ -52,7 +53,7 @@ Portions of this specification were adopted from that text with permission.
 
 Theora contains a superset of the features that were available in the original
  VP3 codec.
-Content encoded with VP3.2 can be losslessly transcoded into the Theora format.
+Content encoded with VP3.1 can be losslessly transcoded into the Theora format.
 %TODO: what about VP3.1 etc? source tables all say 'VP31'
 Theora content cannot, in general, be losslessly transcoded into the VP3
  format.
@@ -77,9 +78,9 @@ The Theora I format does not support interlaced material, variable frame rates,
 Black and white content can be efficiently encoded, however, because the
  uniform chroma planes compress well.
 Support for interlaced material is planned for a future version.
-Note that infrequently changing frame rates, as when film and video sequences
- are cut together, can be supported in the Ogg container format by
- chaining several Theora streams together.
+Note that infrequently changing frame rates---as when film and video sequences
+ are cut together---can be supported in the Ogg container format by chaining
+ several Theora streams together.
 Support for increased bit depths or additional color spaces is not planned.
 
 \subsubsection{Classification}
@@ -107,7 +108,7 @@ Theora provides none of its own framing, synchronization, or protection against
 The decoder then accepts these raw packets in sequence, decodes them, and
  synthesizes a fascimile of the original video frames.
 Theora is a free-form variable bit rate (VBR) codec, and packets have no
- particular minimum size, maximum size, or fixed/expected size.
+ minimum size, maximum size, or fixed/expected size.
 
 Theora packets are thus intended to be used with a transport mechanism that
  provides free-form framing, synchronization, positioning, and error correction
@@ -176,8 +177,6 @@ Where appropriate, a non-normative description of encoder processes is
  included.
 These sections will be marked as such, and a proper Theora encoder is not
  bound to follow them.
- 
-
 
 %TODO: \subsubsection{Hardware Profile}
 
@@ -215,26 +214,33 @@ An encoded video frame in Theora is required to have a width and height that
  are multiples of sixteen, making an integral number of blocks even when the
  chroma planes are subsampled.
 However, inside a frame a smaller \term{picture region} may be defined
- to present material whose dimensions are not a multiple of 16 pixels.
+ to present material whose dimensions are not a multiple of sixteen pixels, as
+ shown in Figure~\ref{fig:pic-frame}.
 The picture region can be offset from the lower-left corner of the frame by up
  to 255 pixels in each direction, and may have an arbitrary width and height,
  provided that it is contained entirely within the coded frame.
 It is this picture region that contains the actual video data.
 The portions of the frame which lie outside the picture region may contain
- are not meaningful and the frame should be cropped to the picture region
+ arbitrary image data, so the frame must be cropped to the picture region
  before display.
 The picture region plays no other role in the decode process, which operates on
  the entire video frame.
 
-%TODO Figure illustrating picture region
+\begin{figure}[htb]
+\begin{center}
+\input{pic-frame}
+\end{center}
+\caption{Location of frame and picture regions}
+\label{fig:pic-frame}
+\end{figure}
 
 \subsubsection{Blocks and Super Blocks}
 
 Each color plane is subdivided into $8\times 8$ \term{blocks}.
 Blocks are grouped into $4\times 4$ arrays called \term{super blocks}.
 Each color plane has its own set of blocks and super blocks.
-The boundaries of the luma plane are not necessarily aligned with those of the
- chroma planes, if the chroma planes have been subsampled.
+The boundaries of blocks and super blocks in the luma plane do not necessarily
+ coincide with those of the chroma planes, if the chroma planes have been subsampled.
 
 Blocks are accessed in two different orders in the various decoder processes.
 The first is \term{raster order}.
@@ -280,7 +286,7 @@ When accessed in raster order, each block in the luma plane is assigned the
 \end{center}
 \vspace{\baselineskip}
 
-Where the index values count the order in which the blocks would be accessed.
+Here the index values specify the order in which the blocks would be accessed.
 
 When accessed in coded order, each block in the luma plane is assigned the
  following indices, illustrating the different order of access:
@@ -298,9 +304,11 @@ When accessed in coded order, each block in the luma plane is assigned the
 \end{center}
 \vspace{\baselineskip}
 
-% TODO belongs elsewhere:
-%Blocks in the chroma planes immediately follow those of the luma plane without
-% a break.
+The indices of the blocks are numbered continuously from one color plan to the
+ next.
+They do not reset to zero at the start of each plane.
+The implication is that the blocks from all planes are treated as a unit during
+ the various processing steps.
 
 \subsubsection{Macro Blocks}
 
@@ -308,15 +316,23 @@ A macro block contains a $2\times 2$ array of blocks in the luma plane
  {\em and} the co-located blocks in the chroma planes.
 Thus macro blocks can represent anywhere from six to twelve blocks, depending
  on how the chroma planes are subsampled.
+This is in contrast to super blocks, which only contain macro blocks from a
+ single color plane.
 % the whole super vs. macro blocks thing is a little confusing, and it can be
 % hard to remember which is what initially. A figure would/will help here,
 % but I tried to add some text emphasizing the difference in terms of
 % functionality.
-Super blocks describe an independent group of blocks within a single plane 
- while macro blocks group blocks from all the planes that cover a specific 
- area of the frame.
-Information about block coding mode and motion vectors are stored together for
- all the blocks in each macro block.
+%TBT: At this point we haven't described any functionality yet.
+%TBT: As far as the reader knows, the only purpose of the blocks, macro blocks
+%TBT:  and super blocks is for data organization---and for blocks and super
+%TBT:  blocks, this is essentially true.
+%TBT: So lets restrict the differences we emphasize to those of data
+%TBT:  organization, which the sentence I just added above does.
+Macro bocks contain information about coding mode and motion vectors for the
+ corresponding blocks in all color planes.
+
+%TODO: Add figure showing organization of blocks, super blocks, and macro
+% blocks.
 
 Macro blocks are also accessed in a \term{coded order}.
 This coded order proceeds by examining each super block in the luma plane in
@@ -352,34 +368,38 @@ They are assigned the following indices:
 \end{center}
 \vspace{\baselineskip}
 
-\subsubsection{Predictors}
+\subsubsection{Coding Modes and Prediction}
 
-%TODO the use of partial details here is confusing. Should use a more general
-% description. -r
 Each block is coded using one of a small, fixed set of \term{coding modes} that
- define the \term{predictor} for that block's contents.
-The INTRA mode uses a constant predictor and is the only mode allowed in intra
- frames.
-The other coding modes use the contents of one of two different \term{reference
- frames}.
+ define how the block is predicted from previous frames.
+A block is predicted using one of two \term{reference frames}, selected
+ according to the coding mode.
 A reference frame is the fully decoded version of a previous frame in the
  stream.
-The first available reference frame is the previous frame, whether it was an
- intra frame or an inter frame.
-The second available reference frame is the previous intra frame, called the
+The first available reference frame is the previous intra frame, called the
  \term{golden frame}.
-The most important inter coding mode is INTER\_NOMV, which uses the co-located
- contents of the block in the previous frame as the predictor with no
- motion-compensation, e.g., a motion vector of $(0,0)$.
+The second available reference frame is the previous frame, whether it was an
+ intra frame or an inter frame.
+If the previous frame was an intra frame, then both reference frames are the
+ same.
+
+Two coding modes in particular are worth mentioning here.
+The INTRA mode is used for blocks that are not predicted from either reference
+ frame.
+This is the only coding mode allowed in intra frames.
+The INTER\_NOMV coding mode uses the co-located contents of the block in the
+ previous frame as the predictor.
+This is the default coding mode.
 
 \subsubsection{DCT Coefficients}
 
 To each block's predictor, a \term{residual} is added to form the final
  contents of the block.
 %r: I reworded this next sentence to try and make it more decoder-oriented
-The residual is stored as a set of quantized coefficients from  an integer
+%TBT: Same content with 2/3 the words... sounds good to me.
+The residual is stored as a set of quantized coefficients from an integer
  approximation of a two-dimensional Type II Discrete Cosine Transform.
-The DCT takes an an $8\times 8$ array of pixel values as input and returns an
+The DCT takes an $8\times 8$ array of pixel values as input and returns an
  $8\times 8$ array of coefficient values.
 The \term{natural ordering} of these coefficients is defined to be row-major
  order, from lowest to highest frequency.
@@ -469,26 +489,26 @@ The first scale value is the \term{DC scale}, which is applied to the DC
  component of the base matrix.
 The second scale value is the \term{AC scale}, which is applied to all the
  other components of the base matrix.
-There are 64 DC scale values and 64 AC scale values, one for each \qi value.
+There are 64 DC scale values and 64 AC scale values, one for each \qi\ value.
 
 There are 64 elements in each base matrix, one for each DCT coefficient.
 They are stored in natural order.
 There is a separate set of base matrices for each quantization type and each
  color plane, with up to 64 possible base matrices in each set, one for each
- \qi value.
+ \qi\ value.
 %r: we will mention that the given matricies must bound the \qi range
 %r: in the detailed section. it's not important at this level.
 Typically the bitstream contains matrices for only a sparse subset of the
- possible \qi values.
-The base matrices for the remainder of the \qi values are computed using linear
- interpolation.
+ possible \qi\ values.
+The base matrices for the remainder of the \qi\ values are computed using
+ linear interpolation.
 This configuration allows the encoder to adjust the quantization matrices to
  approximate the complex, non-linear response of the human visual system to
- different material.
+ different quantization errors.
 
 Finally, because the in-loop deblocking filter strength depends on the strength
  of the quantization matrices defined in this header, a table of 64 \term{loop
- filter limit values} is defined, one for each \qi value.
+ filter limit values} is defined, one for each \qi\ value.
 
 The precise specification of how all of this information is decoded appears in
  Section~REF.
@@ -503,12 +523,12 @@ Each of the 32 token values has a different semantic meaning and is used to
 
 The 80 codes are divided up into five groups of 16, with each group
  corresponding to a set of DCT coefficient indices.
-The first group corresponds to the DC coefficient, while the remaining groups
- correspond to different subsets of the AC coefficients.
+The first group corresponds to the DC coefficient, while the remaining four
+ groups correspond to different subsets of the AC coefficients.
 Within each frame, two pairs of 4-bit codebook indices are stored.
 The first pair selects which codebooks to use from the DC coefficient group for
  the $Y'$ coefficients and the $C_b$ and $C_r$ coefficients.
-The second pair selects which codebooks to use from {\em all} of the AC % all of what?
+The second pair selects which codebooks to use from {\em all four} of the AC
  coefficient groups for the $Y'$ coefficients and the $C_b$ and $C_r$
  coefficients.
 
@@ -573,7 +593,7 @@ Decode macro block mode information (inter frames only).
 \item
 Decode motion vectors (inter frames only).
 \item
-Decode block-level \qi information.
+Decode block-level \qi\ information.
 \item
 Decode DC coefficient for each coded block.
 \item
@@ -628,15 +648,15 @@ The first is the frame type field, which specifies if this is an intra frame or
 Inter frames predict their contents from previously decoded reference frames.
 Intra frames can be independently decoded with no established reference frames.
 
-The next piece of information in the frame header is the list of \qi values
+The next piece of information in the frame header is the list of \qi\ values
  allowed in the frame.
-Theora allows between one and three different \qi values to be used in a single
+Theora allows from one to three different \qi\ values to be used in a single
  frame, each of which selects a set of six quantization matrices, one for each
  quantization type (inter or intra), and one for each color plane.
-The first \qi value is {\em always} used when dequantizing DC coefficients.
-The \qi value used when dequantizing AC coefficients, however, can vary from
+The first \qi\ value is {\em always} used when dequantizing DC coefficients.
+The \qi\ value used when dequantizing AC coefficients, however, can vary from
  block to block.
-VP3, in contrast, only allows a single \qi value per frame for both the DC and
+VP3, in contrast, only allows a single \qi\ value per frame for both the DC and
  AC coefficients.
 
 \paragraph{Coded Block Information}
@@ -664,17 +684,17 @@ All coded chroma blocks in uncoded macro blocks are assigned the INTER\_NOMV
 
 \paragraph{Motion Vectors}
 
-Intra frames are coded entirely in INTRA mode, and this stage is skipped.
+Intra frames are coded entirely in INTRA mode, and so this stage is skipped.
 Some inter coding modes, however, require one or more motion vectors to be
  specified for each macro block.
 These are decoded in this stage, and an appropriate motion vector is assigned
  to each coded block in the macro block.
 
-\paragraph{Block-Level \qi Information}
+\paragraph{Block-Level \qi\ Information}
 
-If a frame allows multiple \qi values, the \qi value assigned to each block is
- decoded here.
-Frames that use only a single \qi value have nothing to decode.
+If a frame allows multiple \qi\ values, the \qi\ value assigned to each block
+ is decoded here.
+Frames that use only a single \qi\ value have nothing to decode.
 
 \paragraph{DCT Coefficients}
 
@@ -714,7 +734,7 @@ When decoding, a current token index is maintained for each coded block.
 This index is advanced by the number of coefficients that are added to the
  block as each token is decoded.
 After fully decoding all the tokens with token index \ti, the current token
- index of every coded block will be \ti or greater.
+ index of every coded block will be \ti\ or greater.
 
 If an EOB run of $n$ blocks is decoded at token index \ti, then it ends the
  next $n$ blocks in coded block order whose current token index is equal to
@@ -724,7 +744,7 @@ If there are fewer than $n$ blocks with a current token index of \ti, then the
  with a current token index of $\ti+1$, and so on, until $n$ blocks have been
  ended.
 
-Tokens are read by parsing a Huffman code that depends on \ti and the color
+Tokens are read by parsing a Huffman code that depends on \ti\ and the color
  plane of the next coded block whose current token index is equal to \ti, but
  not greater.
 The Huffman codebooks are selected on a per-frame basis from the 80 codebooks
@@ -744,7 +764,7 @@ This adjustment is performed by scanning the blocks in raster order, not coded
 \paragraph{Reconstruction}
 
 Finally, using the coding mode, motion vector (if applicable), quantized
- coefficient list, and \qi value defined for each block, all the coded blocks
+ coefficient list, and \qi\ value defined for each block, all the coded blocks
  are reconstructed.
 The DCT coefficients are dequantized, an inverse DCT transform is applied, and
  the predictor is formed from the coding mode and motion vector and added to
@@ -831,14 +851,14 @@ Because some values may fall outside the offset and excursion defined for each
  $Y'P_bP_r$ space.
 No clamping should be done at this stage.
 
-\begin{eqnarray*}
-Y'_\mathrm{out} & = &
+\begin{align*}
+Y'_\mathrm{out} & =
  \frac{Y'_\mathrm{in}-\mathrm{Offset}_Y}{\mathrm{Excursion}_Y} \\
-P_b             & = &
+P_b             & =
  \frac{C_b-\mathrm{Offset}_{C_b}}{\mathrm{Excursion}_{C_b}} \\
-P_r             & = &
+P_r             & =
  \frac{C_r-\mathrm{Offset}_{C_r}}{\mathrm{Excursion}_{C_r}}
-\end{eqnarray*}
+\end{align*}
 
 Parameters: $\mathrm{Offset}_{Y,C_b,C_r}$, $\mathrm{Excursion}_{Y,C_b,C_r}$.
 
@@ -849,11 +869,11 @@ This conversion takes the one luma and two chroma channel representation and
  maps it to the non-linear $R'G'B'$ space used to drive actual output devices.
 Values should be clamped into the range $[0\ldots1]$ after this stage.
 
-\begin{eqnarray*}
-R' & = & Y'+2(1-K_r)P_r \\
-G' & = & Y'-2\frac{(1-K_b)K_b}{1-K_b-K_r}P_b-2\frac{(1-K_r)K_r}{1-K_b-K_r}P_r\\
-B' & = & Y'+2(1-K_b)P_b
-\end{eqnarray*}
+\begin{align*}
+R' & = Y'+2(1-K_r)P_r \\
+G' & = Y'-2\frac{(1-K_b)K_b}{1-K_b-K_r}P_b-2\frac{(1-K_r)K_r}{1-K_b-K_r}P_r\\
+B' & = Y'+2(1-K_b)P_b
+\end{align*}
 
 Parameters: $K_b,K_r$.
 
@@ -876,11 +896,11 @@ L=(E'+\Delta)^\gamma
  the value specified in this document.
 The conversion function presented here is an idealized version with $\Delta=0$.
 
-\begin{eqnarray*}
-R & = & R'^\gamma \\
-G & = & G'^\gamma \\
-B & = & B'^\gamma
-\end{eqnarray*}
+\begin{align*}
+R & = R'^\gamma \\
+G & = G'^\gamma \\
+B & = B'^\gamma
+\end{align*}
 
 Parameters: $\gamma$.
 
@@ -901,23 +921,23 @@ The rest of the scale is adjusted so that the power segment of the curve
  intersects the linear segment with the proper slope, and so that it still maps
  0 to 0 and 1 to 1.
 
-\begin{eqnarray*}
-R' & = & \left\{
+\begin{align*}
+R' & = \left\{
 \begin{array}{ll}
 \alpha R,                     & 0\le R<\delta   \\
 (1+\epsilon)R^\beta-\epsilon, & \delta\le R\le1
 \end{array}\right. \\
-G' & = & \left\{
+G' & = \left\{
 \begin{array}{ll}
 \alpha G,                     & 0\le G<\delta   \\
 (1+\epsilon)G^\beta-\epsilon, & \delta\le G\le1
 \end{array}\right. \\
-B' & = & \left\{
+B' & = \left\{
 \begin{array}{ll}
 \alpha B,                     & 0\le B<\delta   \\
 (1+\epsilon)B^\beta-\epsilon, & \delta\le B\le1
 \end{array}\right.
-\end{eqnarray*}
+\end{align*}
 
 Parameters: $\beta$, $\alpha$, $\delta$, $\epsilon$.
 
@@ -934,8 +954,8 @@ This is how hardware manufacturers and standards typically describe a
 The math required to convert these parameters into a useful transformation
  matrix is reproduced below.
 
-\begin{eqnarray*}
-F                  & = &
+\begin{align*}
+F                  & =
 \left[\begin{array}{ccc}
 \frac{x_r}{y_r}       & \frac{x_g}{y_g}       & \frac{x_b}{y_b}       \\
 1                     & 1                     & 1                     \\
@@ -945,7 +965,7 @@ F                  & = &
 s_r \\
 s_g \\
 s_b
-\end{array}\right] & = &
+\end{array}\right] & =
 F^{-1}\left[\begin{array}{c}
 \frac{x_w}{y_w} \\
 1 \\
@@ -955,13 +975,13 @@ F^{-1}\left[\begin{array}{c}
 X \\
 Y \\
 Z
-\end{array}\right] & = &
+\end{array}\right] & =
 F\left[\begin{array}{c}
 s_rR \\
 s_gG \\
 s_bB
 \end{array}\right]
-\end{eqnarray*}
+\end{align*}
 Parameters: $x_r,x_g,x_b,x_w, y_r,y_g,y_b,y_w$.
 
 \end{description}
@@ -1007,21 +1027,21 @@ The parameters for all the color transformations defined in
  Section~\ref{sec:color-xforms} are given in Table~\ref{tab:470m}.
 
 \begin{table}[htb]
-\begin{eqnarray*}
-\mathrm{Offset}_{Y,C_b,C_r}      & = & (16, 128, 128)  \\
-\mathrm{Excursion}_{Y,C_b,C_r}   & = & (219, 224, 224) \\
-K_r                              & = & 0.299           \\
-K_b                              & = & 0.114           \\
-\gamma                           & = & 2.2             \\
-\beta                            & = & 0.45            \\
-\alpha                           & = & 4.5             \\
-\delta                           & = & 0.018           \\
-\epsilon                         & = & 0.099           \\
-x_r,y_r                          & = & 0.67, 0.33      \\
-x_g,y_g                          & = & 0.21, 0.71      \\
-x_b,y_b                          & = & 0.14, 0.08      \\
-\mathrm{(Illuminant C)\ }x_w,y_w & = & 0.310, 0.316    \\
-\end{eqnarray*}
+\begin{align*}
+\mathrm{Offset}_{Y,C_b,C_r}       & = (16, 128, 128)  \\
+\mathrm{Excursion}_{Y,C_b,C_r}    & = (219, 224, 224) \\
+K_r                               & = 0.299           \\
+K_b                               & = 0.114           \\
+\gamma                            & = 2.2             \\
+\beta                             & = 0.45            \\
+\alpha                            & = 4.5             \\
+\delta                            & = 0.018           \\
+\epsilon                          & = 0.099           \\
+x_r,y_r                           & = 0.67, 0.33      \\
+x_g,y_g                           & = 0.21, 0.71      \\
+x_b,y_b                           & = 0.14, 0.08      \\
+\mathrm{(Illuminant\ C)\ }x_w,y_w & = 0.310, 0.316    \\
+\end{align*}
 \caption{Rec. 470M Parameters}
 \label{tab:470m}
 \end{table}
@@ -1071,21 +1091,21 @@ The parameters for all the color transformations defined in
  Section~\ref{sec:color-xforms} are given in Table~\ref{tab:470bg}.
 
 \begin{table}[htb]
-\begin{eqnarray*}
-\mathrm{Offset}_{Y,C_b,C_r}    & = & (16, 128, 128)  \\
-\mathrm{Excursion}_{Y,C_b,C_r} & = & (219, 224, 224) \\
-K_r                            & = & 0.299           \\
-K_b                            & = & 0.114           \\
-\gamma                         & = & 2.67            \\
-\beta                          & = & 0.45            \\
-\alpha                         & = & 4.5             \\
-\delta                         & = & 0.018           \\
-\epsilon                       & = & 0.099           \\
-x_r,y_r                        & = & 0.64, 0.33      \\
-x_g,y_g                        & = & 0.29, 0.60      \\
-x_b,y_b                        & = & 0.15, 0.06      \\
-\mathrm{(D65)\ }x_w,y_w        & = & 0.313, 0.329    \\
-\end{eqnarray*}
+\begin{align*}
+\mathrm{Offset}_{Y,C_b,C_r}    & = (16, 128, 128)  \\
+\mathrm{Excursion}_{Y,C_b,C_r} & = (219, 224, 224) \\
+K_r                            & = 0.299           \\
+K_b                            & = 0.114           \\
+\gamma                         & = 2.67            \\
+\beta                          & = 0.45            \\
+\alpha                         & = 4.5             \\
+\delta                         & = 0.018           \\
+\epsilon                       & = 0.099           \\
+x_r,y_r                        & = 0.64, 0.33      \\
+x_g,y_g                        & = 0.29, 0.60      \\
+x_b,y_b                        & = 0.15, 0.06      \\
+\mathrm{(D65)\ }x_w,y_w        & = 0.313, 0.329    \\
+\end{align*}
 \caption{Rec. 470BG Parameters}
 \label{tab:470bg}
 \end{table}
@@ -1325,9 +1345,9 @@ Often, the encoded packet bitstream is not an integer number of bytes, and so
 
 %r: I think the generality here is necessary to be consistent with our assertions
 %r: elsewhere about being independent of transport and byte width
-When a Theora encoder produces packets for embedding in a byte-aligned container,
- Unused space in the last byte of a packet is always zeroed during the encoding
- process.
+When a Theora encoder produces packets for embedding in a byte-aligned
+ container, unused space in the last byte of a packet is always zeroed during
+ the encoding process.
 Thus, should this unused space be read, it will return binary zeroes.
 There is no marker pattern or stuffing bits that will allow the decoder to
  obtain the exact size, in bits, of the original bitstream.
@@ -1381,8 +1401,11 @@ The identification header is type 0x80, the comment header is type 0x81, and
  the setup header is type 0x82.
 These packets must occur in the order: identification, comment, setup.
 %r: I clarified the initial-bit scheme here
+%TBT: Dashes let the reader know they'll have to pick up the rest of the
+%TBT:  sentence after the explanatory phrase.
+%TBT: Otherwise it just sounds like the bit must exist.
 All header packets have the most significant bit of the type
- field, which is the initial bit in the packet, set.
+ field---which is the initial bit in the packet---set.
 This distinguishes them from video data packets in which the first bit
  is unset.
 % extra header packets are a feature Dan argued for way back when for 
@@ -1479,12 +1502,14 @@ If a reserved value is given, a decoder MAY refuse to decode the stream.
 
 \begin{table}[htb]
 \begin{center}
-\begin{tabular*}{215pt}{cl@{\extracolsep{\fill}}}\toprule
-Value        & Color Space                               \\\midrule
-$0$          & Undefined.                                \\
-$1$          & Rec. 470M (see Section~\ref{sec:470m}).   \\
-$2$          & Rec. 470BG (see Section~\ref{sec:470bg}). \\
-$3\ldots255$ & Reserved.                                 \\\bottomrule
+\begin{tabular*}{215pt}{cl@{\extracolsep{\fill}}c}\toprule
+Value    & Color Space                               \\\midrule
+$0$      & Undefined.                                \\
+$1$      & Rec. 470M (see Section~\ref{sec:470m}).   \\
+$2$      & Rec. 470BG (see Section~\ref{sec:470bg}). \\
+$3$      & Reserved.                                 \\
+$\vdots$ &                                           \\
+$255$    &                                           \\\bottomrule
 \end{tabular*}
 \end{center}
 \caption{Enumerated List of Color Spaces}
@@ -1497,7 +1522,7 @@ If the reserved value $1$ is given, the stream is rendered undecodable.
 
 \begin{table}[htb]
 \begin{center}
-\begin{tabular*}{215pt}{cl@{\extracolsep{\fill}}}\toprule
+\begin{tabular*}{215pt}{cl@{\extracolsep{\fill}}c}\toprule
 Value & Pixel Format             \\\midrule
 $0$   & 4:2:0 (see Section~REF). \\
 $1$   & Reserved.                \\
@@ -1560,18 +1585,18 @@ The comment header is decoded as follows:
 
 Here \bitvar{vendor\_length} and \bitvar{user\_comment\_list\_length} are
  formed by arranging their constituent octets in little-endian order.
-\begin{eqnarray*}
-\bitvar{vendor\_length} & = &
+\begin{align*}
+\bitvar{vendor\_length} = &
 \bitvar{vendor\_length\_0} + \\
-&& \bitvar{vendor\_length\_1}*2^8 + \\
-&& \bitvar{vendor\_length\_2}*2^{16} + \\
-&& \bitvar{vendor\_length\_3}*2^{32} \\
-\bitvar{user\_comment\_list\_length} & = &
+& \bitvar{vendor\_length\_1}*2^8 + \\
+& \bitvar{vendor\_length\_2}*2^{16} + \\
+& \bitvar{vendor\_length\_3}*2^{24} \\
+\bitvar{user\_comment\_list\_length} = &
 \bitvar{user\_comment\_list\_length\_0} + \\
-&& \bitvar{user\_comment\_list\_length\_1}*2^8 + \\
-&& \bitvar{user\_comment\_list\_length\_2}*2^{16} + \\
-&& \bitvar{user\_comment\_list\_length\_3}*2^{32}
-\end{eqnarray*}
+& \bitvar{user\_comment\_list\_length\_1}*2^8 + \\
+& \bitvar{user\_comment\_list\_length\_2}*2^{16} + \\
+& \bitvar{user\_comment\_list\_length\_3}*2^{24}
+\end{align*}
 This construction is used so that on platforms with 8-bit bytes, the memory
  organization of the comment header is identical with that of Vorbis I,
  allowing for common parsing code despite the different bit packing
@@ -1588,13 +1613,13 @@ Each user comment is similarly decoded as:
 \end{enumerate}
 
 Again, $\bitvar{comment\_length}[i]$ is formed as follows:
-\begin{eqnarray*}
-\bitvar{comment\_length}[i] & = &
+\begin{align*}
+\bitvar{comment\_length}[i] = &
 \bitvar{comment\_length\_0}[i] + \\
-&& \bitvar{comment\_length\_1}[i]*2^8 + \\
-&& \bitvar{comment\_length\_2}[i]*2^{16} + \\
-&& \bitvar{comment\_length\_3}[i]*2^{32} \\
-\end{eqnarray*}
+& \bitvar{comment\_length\_1}[i]*2^8 + \\
+& \bitvar{comment\_length\_2}[i]*2^{16} + \\
+& \bitvar{comment\_length\_3}[i]*2^{24} \\
+\end{align*}
 
 The comment header comprises the entirety of the second header packet.
 Unlike the first header packet, it is not generally the only packet on the
@@ -1646,6 +1671,8 @@ Abuse will be discouraged.
 There is no vendor-specific prefix to `non-standard' field names.
 Vendors SHOULD make some effort to avoid arbitrarily polluting the common
  namespace.
+%"and other bodies"?
+%If you're going to be that vague, you might as well not say anything at all.
 Xiph.org and other bodies will generally collect and rationalize the more 
  useful tags to help with standardization.
 
@@ -1842,10 +1869,10 @@ This does not restrict third parties from distributing independent
 \includegraphics[height=20mm]{xifish}
 \end{figure}
 
-These pages are copyright \copyright{} 2004 Xiph.org Foundation.
+These pages are copyright \textcopyright{} 2004 Xiph.org Foundation.
 All rights reserved.
-Ogg, Theora, Vorbis, Xiph.org Foundation and their logos are trademarks (tm) of
- the \href{http://www.xiph.org}{Xiph.org Foundation}.
+Ogg, Theora, Vorbis, Xiph.org Foundation and their logos are trademarks
+ (\texttrademark) of the \href{http://www.xiph.org}{Xiph.org Foundation}.
 
 This document is set in \LaTeX.
 
