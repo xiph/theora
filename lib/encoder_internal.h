@@ -450,7 +450,7 @@ typedef struct PB_INSTANCE {
   HUFF_ENTRY    *HuffRoot_VP3x[NUM_HUFF_TABLES];
   ogg_uint32_t  *HuffCodeArray_VP3x[NUM_HUFF_TABLES];
   unsigned char *HuffCodeLengthArray_VP3x[NUM_HUFF_TABLES];
-  unsigned char *ExtraBitLengths_VP3x;
+  const unsigned char *ExtraBitLengths_VP3x;
 
   /* Quantiser and rounding tables */
   ogg_int32_t    fp_quant_UV_coeffs[64];

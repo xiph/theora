@@ -18,7 +18,7 @@
 #include "huffman.h"
 #include "encoder_internal.h"
 
-unsigned char ExtraBitLengths_VP31[MAX_ENTROPY_TOKENS] = {
+const unsigned char ExtraBitLengths_VP31[MAX_ENTROPY_TOKENS] = {
   0, 0, 0, 2, 3, 4, 12,3, 6,                 /* EOB and Zero-run tokens. */
   0, 0, 0, 0,                                /* Very low value tokens. */
   1, 1, 1, 1, 2, 3, 4, 5, 6, 10,             /* Other value tokens */
@@ -30,7 +30,7 @@ unsigned char ExtraBitLengths_VP31[MAX_ENTROPY_TOKENS] = {
 
 #if NEW_FREQS
 /* New baseline frequency tables for encoder version >= 2 */
-ogg_uint32_t FrequencyCounts_VP3[NUM_HUFF_TABLES][MAX_ENTROPY_TOKENS] = {
+const ogg_uint32_t FrequencyCounts_VP3[NUM_HUFF_TABLES][MAX_ENTROPY_TOKENS] = {
   /* DC Intra bias  */
   {  272,    84,    31,    36,    10,    2,    1,    92,    1,
      701,   872,   410,   478,
@@ -531,7 +531,7 @@ ogg_uint32_t FrequencyCounts_VP3[NUM_HUFF_TABLES][MAX_ENTROPY_TOKENS] = {
 
 #else /* Frequency tables for encoder version < 2 */
 
-ogg_uint32_t FrequencyCounts_VP3[NUM_HUFF_TABLES][MAX_ENTROPY_TOKENS] = {
+const ogg_uint32_t FrequencyCounts_VP3[NUM_HUFF_TABLES][MAX_ENTROPY_TOKENS] = {
   /* DC Intra bias */
   {  198,    62,    22,    31,    14,     6,     6,   205,     3,
      843,   843,   415,   516,

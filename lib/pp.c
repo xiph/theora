@@ -24,7 +24,7 @@
 #define MIN(a, b) ((a<b)?a:b)
 #define PP_QUALITY_THRESH   49
 
-static ogg_int32_t SharpenModifier[ Q_TABLE_SIZE ] =
+static const ogg_int32_t SharpenModifier[ Q_TABLE_SIZE ] =
 {  -12, -11, -10, -10,  -9,  -9,  -9,  -9,
    -6,  -6,  -6,  -6,  -6,  -6,  -6,  -6,
    -4,  -4,  -4,  -4,  -4,  -4,  -4,  -4,
@@ -35,7 +35,7 @@ static ogg_int32_t SharpenModifier[ Q_TABLE_SIZE ] =
    0,  0,  0,  0,  0,  0,  0,  0
 };
 
-static ogg_uint32_t DcQuantScaleV1[ Q_TABLE_SIZE ] = {
+static const ogg_uint32_t DcQuantScaleV1[ Q_TABLE_SIZE ] = {
   22, 20, 19, 18, 17, 17, 16, 16,
   15, 15, 14, 14, 13, 13, 12, 12,
   11, 11, 10, 10, 9,  9,  9,  8,
@@ -46,7 +46,7 @@ static ogg_uint32_t DcQuantScaleV1[ Q_TABLE_SIZE ] = {
   2,  1,  1,  1,  1,  1,  1,  1
 };
 
-static ogg_uint32_t *DeringModifierV1=DcQuantScaleV1;
+static const ogg_uint32_t *DeringModifierV1=DcQuantScaleV1;
 
 static void PClearFrameInfo(PP_INSTANCE * ppi){
   int i;
@@ -185,7 +185,7 @@ static void DeringBlockStrong(unsigned char *SrcPtr,
                               unsigned char *DstPtr,
                               ogg_int32_t Pitch,
                               ogg_uint32_t FragQIndex,
-                              ogg_uint32_t *QuantScale){
+                              const ogg_uint32_t *QuantScale){
 
   ogg_int16_t UDMod[72];
   ogg_int16_t LRMod[72];
@@ -311,7 +311,7 @@ static void DeringBlockWeak(unsigned char *SrcPtr,
                             unsigned char *DstPtr,
                             ogg_int32_t Pitch,
                             ogg_uint32_t FragQIndex,
-                            ogg_uint32_t *QuantScale){
+                            const ogg_uint32_t *QuantScale){
 
   ogg_int16_t UDMod[72];
   ogg_int16_t LRMod[72];
@@ -434,7 +434,7 @@ static void DeringFrame(PB_INSTANCE *pbi,
   unsigned char  *SrcPtr;
   unsigned char  *DestPtr;
   ogg_uint32_t BlocksAcross,BlocksDown;
-  ogg_uint32_t *QuantScale;
+  const ogg_uint32_t *QuantScale;
   ogg_uint32_t Block;
   ogg_uint32_t LineLength;
 
@@ -600,7 +600,7 @@ static void DeblockLoopFilteredBand(PB_INSTANCE *pbi,
                              ogg_uint32_t PlaneLineStep,
                              ogg_uint32_t FragsAcross,
                              ogg_uint32_t StartFrag,
-                             ogg_uint32_t *QuantScale){
+                             const ogg_uint32_t *QuantScale){
   ogg_uint32_t j,k;
   ogg_uint32_t CurrentFrag=StartFrag;
   ogg_int32_t QStep;
@@ -743,7 +743,7 @@ static void DeblockVerticalEdgesInLoopFilteredBand(PB_INSTANCE *pbi,
                                             ogg_uint32_t PlaneLineStep,
                                             ogg_uint32_t FragsAcross,
                                             ogg_uint32_t StartFrag,
-                                            ogg_uint32_t *QuantScale){
+                                            const ogg_uint32_t *QuantScale){
   ogg_uint32_t j,k;
   ogg_uint32_t CurrentFrag=StartFrag;
   ogg_int32_t QStep;
@@ -818,7 +818,7 @@ static void DeblockPlane(PB_INSTANCE *pbi,
   unsigned char * SrcPtr=0, * DesPtr=0;
   ogg_uint32_t FragsAcross=0;
   ogg_uint32_t FragsDown=0;
-  ogg_uint32_t *QuantScale=0;
+  const ogg_uint32_t *QuantScale=0;
 
   switch( Channel ){
   case 0:

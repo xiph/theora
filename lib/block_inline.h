@@ -17,8 +17,8 @@
 
 #include "encoder_internal.h"
 
-static ogg_int32_t MBOrderMap[4] = { 0, 2, 3, 1 };
-static ogg_int32_t BlockOrderMap1[4][4] = {
+static const ogg_int32_t MBOrderMap[4] = { 0, 2, 3, 1 };
+static const ogg_int32_t BlockOrderMap1[4][4] = {
   { 0, 1, 3, 2 },
   { 0, 2, 3, 1 },
   { 0, 2, 3, 1 },

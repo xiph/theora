@@ -21,7 +21,7 @@
 #include "encoder_internal.h"
 #include "quant_lookup.h"
 
-static ogg_uint32_t QThreshTableV1[Q_TABLE_SIZE] = {
+static const ogg_uint32_t QThreshTableV1[Q_TABLE_SIZE] = {
   500,  450,  400,  370,  340,  310, 285, 265,
   245,  225,  210,  195,  185,  180, 170, 160,
   150,  145,  135,  130,  125,  115, 110, 107,
@@ -32,7 +32,7 @@ static ogg_uint32_t QThreshTableV1[Q_TABLE_SIZE] = {
   21,   19,   18,   17,   15,   13,  12,  10
 };
 
-static Q_LIST_ENTRY DcScaleFactorTableV1[ Q_TABLE_SIZE ] = {
+static const Q_LIST_ENTRY DcScaleFactorTableV1[ Q_TABLE_SIZE ] = {
   220, 200, 190, 180, 170, 170, 160, 160,
   150, 150, 140, 140, 130, 130, 120, 120,
   110, 110, 100, 100, 90,  90,  90,  80,
@@ -47,7 +47,7 @@ static Q_LIST_ENTRY DcScaleFactorTableV1[ Q_TABLE_SIZE ] = {
 #define NEW_QTABLES 0
 #if NEW_QTABLES
 
-static Q_LIST_ENTRY Y_coeffsV1[64] =
+static const Q_LIST_ENTRY Y_coeffsV1[64] =
 {
         8,  16,  16,  16,  20,  20,  20,  20,
         16,  16,  16,  16,  20,  20,  20,  20,
@@ -59,7 +59,7 @@ static Q_LIST_ENTRY Y_coeffsV1[64] =
         20,  20,  22,  22,  24,  24,  24,  24
 };
 
-static Q_LIST_ENTRY UV_coeffsV1[64] =
+static const Q_LIST_ENTRY UV_coeffsV1[64] =
 {       17,     18,     24,     47,     99,     99,     99,     99,
         18,     21,     26,     66,     99,     99,     99,     99,
         24,     26,     56,     99,     99,     99,     99,     99,
@@ -71,7 +71,7 @@ static Q_LIST_ENTRY UV_coeffsV1[64] =
 };
 
 /* Different matrices for different encoder versions */
-static Q_LIST_ENTRY Inter_coeffsV1[64] =
+static const Q_LIST_ENTRY Inter_coeffsV1[64] =
 {
         12, 16,  16,  16,  20,  20,  20,  20,
         16,  16,  16,  16,  20,  20,  20,  20,
@@ -85,7 +85,7 @@ static Q_LIST_ENTRY Inter_coeffsV1[64] =
 
 #else /* these are the old VP3 values: */
 
-static Q_LIST_ENTRY Y_coeffsV1[64] ={
+static const Q_LIST_ENTRY Y_coeffsV1[64] ={
   16,  11,  10,  16,  24,  40,  51,  61,
   12,  12,  14,  19,  26,  58,  60,  55,
   14,  13,  16,  24,  40,  57,  69,  56,
@@ -96,7 +96,7 @@ static Q_LIST_ENTRY Y_coeffsV1[64] ={
   72,  92,  95,  98, 112, 100, 103,  99
 };
 
-static Q_LIST_ENTRY UV_coeffsV1[64] ={
+static const Q_LIST_ENTRY UV_coeffsV1[64] ={
   17,   18,     24,     47,     99,     99,     99,     99,
   18,   21,     26,     66,     99,     99,     99,     99,
   24,   26,     56,     99,     99,     99,     99,     99,
@@ -108,7 +108,7 @@ static Q_LIST_ENTRY UV_coeffsV1[64] ={
 };
 
 /* Different matrices for different encoder versions */
-static Q_LIST_ENTRY Inter_coeffsV1[64] ={
+static const Q_LIST_ENTRY Inter_coeffsV1[64] ={
   16,  16,  16,  20,  24,  28,  32,  40,
   16,  16,  20,  24,  28,  32,  40,  48,
   16,  20,  24,  28,  32,  40,  48,  64,
@@ -359,11 +359,11 @@ static void init_quantizer ( CP_INSTANCE *cpi,
     double temp_fp_ZeroBinSize;
     PB_INSTANCE *pbi = &cpi->pb;
 
-    Q_LIST_ENTRY * Inter_coeffs;
-    Q_LIST_ENTRY * Y_coeffs;
-    Q_LIST_ENTRY * UV_coeffs;
-    Q_LIST_ENTRY * DcScaleFactorTable;
-    Q_LIST_ENTRY * UVDcScaleFactorTable;
+    const Q_LIST_ENTRY * Inter_coeffs;
+    const Q_LIST_ENTRY * Y_coeffs;
+    const Q_LIST_ENTRY * UV_coeffs;
+    const Q_LIST_ENTRY * DcScaleFactorTable;
+    const Q_LIST_ENTRY * UVDcScaleFactorTable;
 
     /* Notes on setup of quantisers.  The initial multiplication by
      the scale factor is done in the ogg_int32_t domain to insure that the

@@ -21,7 +21,8 @@
 #include "hufftables.h"
 
 static void CreateHuffmanList(HUFF_ENTRY ** HuffRoot,
-                              ogg_uint32_t HIndex, ogg_uint32_t *FreqList ) {
+                              ogg_uint32_t HIndex,
+                              const ogg_uint32_t *FreqList ) {
   int i;
   HUFF_ENTRY *entry_ptr;
   HUFF_ENTRY *search_ptr;
@@ -102,7 +103,7 @@ static void  BuildHuffmanTree( HUFF_ENTRY **HuffRoot,
                         ogg_uint32_t *HuffCodeArray,
                         unsigned char *HuffCodeLengthArray,
                         ogg_uint32_t HIndex,
-                        ogg_uint32_t *FreqList ){
+                        const ogg_uint32_t *FreqList ){
 
   HUFF_ENTRY *entry_ptr;
   HUFF_ENTRY *search_ptr;
