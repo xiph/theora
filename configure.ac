@@ -71,6 +71,24 @@ CFLAGS="$CFLAGS $cflags_save"
 LDFLAGS="$LDFLAGS $ldflags_save"
 
 dnl --------------------------------------------------
+dnl Overall build configuration options
+dnl --------------------------------------------------
+
+dnl Configuration option for building of encoding support.
+
+ac_enable_encode=yes
+AC_ARG_ENABLE(encode,
+     [  --disable-encode        disable building of encoding support ],
+     [ ac_enable_encode=no ], [ ac_enable_encode=yes] )
+
+if test "x${ac_enable_encode}" = xyes ; then
+    AC_DEFINE(THEORA_SUPPORT_ENCODE, [1], [Build encoding support])
+else
+    AC_DEFINE(THEORA_SUPPORT_ENCODE, [0], [Do not build encoding support])
+fi
+AM_CONDITIONAL(THEORA_SUPPORT_ENCODE, [test "x${ac_enable_encode}" = "xyes"])
+
+dnl --------------------------------------------------
 dnl Check for headers
 dnl --------------------------------------------------
 
