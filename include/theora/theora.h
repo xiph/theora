@@ -247,7 +247,7 @@ extern int theora_encode_tables(theora_state *t, ogg_packet *op);
  *                      has not yet been seen; OR this packet has the signature
  *                      of a comment packet, but contains invalid data; OR
  *                      this packet has the signature of codebook tables,
- *                      but the initial header and comments have not yet
+ *                      but the initial header or comments have not yet
  *                      been seen; OR this packet has the signature of codebook
  *                      tables, but contains invalid data;
  *                      OR the stream being decoded has a compatible version
