@@ -38,16 +38,19 @@
 \newcommand{\ti}{\idx{ti}}
 \newcommand{\tj}{\idx{tj}}
 \newcommand{\rfi}{\idx{rfi}}
+\newcommand{\zzi}{\idx{zzi}}
+\newcommand{\ri}{\idx{ri}}
 %This somewhat odd construct ensures that \bitvar{\qi}, etc., will set the
 % qi in bold face, even though it is in a \mathit font, yet \bitvar{VAR} will
 % set VAR in a bold, roman font.
-\newcommand{\bitvar}[1]{\ensuremath{\mathbf{\bm #1}}}
+\newcommand{\bitvar}[1]{\ensuremath{\mathbf{\bm{#1}}}}
 \newcommand{\locvar}[1]{\ensuremath{\mathrm{#1}}}
 \newcommand{\term}[1]{{\em #1}}
 \newcommand{\bin}[1]{\ensuremath{\mathtt{b#1}}}
 \newcommand{\hex}[1]{\ensuremath{\mathtt{0x#1}}}
 \newcommand{\ilog}{\ensuremath{\mathop{\mathrm{ilog}}\nolimits}}
 \newcommand{\round}{\ensuremath{\mathop{\mathrm{round}}\nolimits}}
+\newcommand{\sign}{\ensuremath{\mathop{\mathrm{sign}}\nolimits}}
 
 %Section-based table, figure, and equation numbering.
 \numberwithin{equation}{chapter}
@@ -106,6 +109,19 @@ The prefix \hex{} indicates the the following value is to be interpreted as a
 \begin{verse}
 {\bf Example:} The value \hex{74} is equal to the decimal value 116.
 \end{verse}
+
+All arithmetic defined by this specification is exact.
+However, any real numbers that do arise will always be converted back to
+ integers again in short order.
+The entire specification can be implemented using only normal integer
+ operations.
+All operations are to be implemented with sufficiently large integers so that
+ overflow cannot occur.
+Where the result of a computation is to be truncated to a fixed-sized binary
+ representation, this will be explicitly noted.
+The size given for all variables is the maximum number of bits needed to store
+ any value in that variable.
+Intermediate computations involving that variable may require more bits.
 
 The following operators are defined:
 
@@ -170,6 +186,16 @@ Rounds a number $a$ to the nearest integer, with ties rounded away from $0$.
 \round(a) = \left\{\begin{array}{ll}
 \lceil a-\frac{1}{2}\rceil   & a \le 0 \\
 \lfloor a+\frac{1}{2}\rfloor & a > 0
+\end{array}\right.
+\end{align*}
+
+\item[$\sign(a)$]
+Returns the sign of a given number.
+\begin{align*}
+\sign(a) = \left\{\begin{array}{ll}
+-1 & a < 0 \\
+0  & a = 0 \\
+1  & a > 0
 \end{array}\right.
 \end{align*}
 
@@ -307,7 +333,7 @@ Theora I is a block-based lossy transform codec that utilizes an
  compensation.
 This places it in the same class of codecs as MPEG-1, -2, -4, and H.263.
 The details of how individual blocks are organized and how DCT coefficients are
- organized in the bitstream differ substantially from these codecs, however.
+ stored in the bitstream differ substantially from these codecs, however.
 Theora supports only intra frames (I frames in MPEG) and inter frames (P frames
  in MPEG).
 There is no equivalent to the bi-predictive frames (B frames) found in MPEG
@@ -673,11 +699,10 @@ The INTER\_NOMV coding mode uses the co-located contents of the block in the
 This is the default coding mode.
 
 \section{DCT Coefficients}
+\label{sec:dct-coeffs}
 
 A \term{residual} is added to the predicted contents of a block to form the
  final reconstruction.
-%r: I reworded this next sentence to try and make it more decoder-oriented
-%TBT: Same content with 2/3 the words... sounds good to me.
 The residual is stored as a set of quantized coefficients from an integer
  approximation of a two-dimensional Type II Discrete Cosine Transform.
 The DCT takes an $8\times 8$ array of pixel values as input and returns an
@@ -689,23 +714,24 @@ They are also often indexed in \term{zig-zag order}, as shown in
 
 \begin{figure}[htbp]
 \begin{center}
-\begin{tabular}[c]{r|c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c}
-\multicolumn{1}{r}{} &0&&1&&2&&3&&4&&5&&6&&7 \\\cline{2-16}
-0 &  0 &$\rightarrow$&  1 &&  5 &$\rightarrow$&  6 && 14 &$\rightarrow$& 15 && 27 &$\rightarrow$& 28            \\[-0.5\defaultaddspace]
-  &    &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&                  \\
-1 &  2 &             &  4 &&  7 &             & 13 && 16 &             & 26 && 29 &             & 42            \\[-0.5\defaultaddspace]
-  &$\downarrow$&$\nearrow$&&$\swarrow$&&$\nearrow$&&$\swarrow$&&$\nearrow$&&$\swarrow$&&$\nearrow$&$\downarrow$ \\
-2 &  3 &             &  8 && 12 &             & 17 && 25 &             & 30 && 41 &             & 43            \\[-0.5\defaultaddspace]
-  &    &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&                  \\
-3 &  9 &             & 11 && 18 &             & 24 && 31 &             & 40 && 44 &             & 53            \\[-0.5\defaultaddspace]
-  &$\downarrow$&$\nearrow$&&$\swarrow$&&$\nearrow$&&$\swarrow$&&$\nearrow$&&$\swarrow$&&$\nearrow$&$\downarrow$ \\
-4 & 10 &             & 19 && 23 &             & 32 && 39 &             & 45 && 52 &             & 54            \\[-0.5\defaultaddspace]
-  &    &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&                  \\
-5 & 20 &             & 22 && 33 &             & 38 && 46 &             & 51 && 55 &             & 60            \\[-0.5\defaultaddspace]
-  &$\downarrow$&$\nearrow$&&$\swarrow$&&$\nearrow$&&$\swarrow$&&$\nearrow$&&$\swarrow$&&$\nearrow$&$\downarrow$ \\
-6 & 21 &             & 34 && 37 &             & 47 && 50 &             & 56 && 59 &             & 61            \\[-0.5\defaultaddspace]
-  &    &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&                  \\
-7 & 35 &$\rightarrow$& 36 && 48 &$\rightarrow$& 49 && 57 &$\rightarrow$& 58 && 62 &$\rightarrow$& 63
+\begin{tabular}[c]{rr|c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c@{}c}
+ &\multicolumn{1}{r}{} & && &&&&&$c$&&& && &&  \\
+ &\multicolumn{1}{r}{} &0&&1&&2&&3&&4&&5&&6&&7 \\\cline{3-17}
+ &0 &  0 &$\rightarrow$&  1 &&  5 &$\rightarrow$&  6 && 14 &$\rightarrow$& 15 && 27 &$\rightarrow$& 28            \\[-0.5\defaultaddspace]
+ &  &    &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&                  \\
+ &1 &  2 &             &  4 &&  7 &             & 13 && 16 &             & 26 && 29 &             & 42            \\[-0.5\defaultaddspace]
+ &  &$\downarrow$&$\nearrow$&&$\swarrow$&&$\nearrow$&&$\swarrow$&&$\nearrow$&&$\swarrow$&&$\nearrow$&$\downarrow$ \\
+ &2 &  3 &             &  8 && 12 &             & 17 && 25 &             & 30 && 41 &             & 43            \\[-0.5\defaultaddspace]
+ &  &    &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&                  \\
+ &3 &  9 &             & 11 && 18 &             & 24 && 31 &             & 40 && 44 &             & 53            \\[-0.5\defaultaddspace]
+$r$&&$\downarrow$&$\nearrow$&&$\swarrow$&&$\nearrow$&&$\swarrow$&&$\nearrow$&&$\swarrow$&&$\nearrow$&$\downarrow$ \\
+ &4 & 10 &             & 19 && 23 &             & 32 && 39 &             & 45 && 52 &             & 54            \\[-0.5\defaultaddspace]
+ &  &    &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&                  \\
+ &5 & 20 &             & 22 && 33 &             & 38 && 46 &             & 51 && 55 &             & 60            \\[-0.5\defaultaddspace]
+ &  &$\downarrow$&$\nearrow$&&$\swarrow$&&$\nearrow$&&$\swarrow$&&$\nearrow$&&$\swarrow$&&$\nearrow$&$\downarrow$ \\
+ &6 & 21 &             & 34 && 37 &             & 47 && 50 &             & 56 && 59 &             & 61            \\[-0.5\defaultaddspace]
+ &  &    &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&&$\nearrow$& &$\swarrow$&                  \\
+ &7 & 35 &$\rightarrow$& 36 && 48 &$\rightarrow$& 49 && 57 &$\rightarrow$& 58 && 62 &$\rightarrow$& 63
 \end{tabular}
 \end{center}
 \caption{Zig-zag order}
@@ -799,7 +825,7 @@ The second scale value is the \term{AC scale}, which is applied to all the
 There are 64 DC scale values and 64 AC scale values, one for each \qi\ value.
 
 There are 64 elements in each base matrix, one for each DCT coefficient.
-They are stored in natural order.
+They are stored in natural order (cf. Section~\ref{sec:dct-coeffs}).
 There is a separate set of base matrices for each quantization type and each
  color plane, with up to 64 possible base matrices in each set, one for each
  \qi\ value.
@@ -1337,7 +1363,7 @@ This is the same as that specified by SMPTE 170M \cite{smpte170m}, which claims
 The parameters for all the color transformations defined in
  Section~\ref{sec:color-xforms} are given in Table~\ref{tab:470m}.
 
-\begin{table}[htbp]
+\begin{table}[htb]
 \begin{align*}
 \mathrm{Offset}_{Y,C_b,C_r}    & = (16, 128, 128)  \\
 \mathrm{Excursion}_{Y,C_b,C_r} & = (219, 224, 224) \\
@@ -1403,7 +1429,7 @@ For Theora, the Rec 709 \cite{rec709} input function is assumed.
 The parameters for all the color transformations defined in
  Section~\ref{sec:color-xforms} are given in Table~\ref{tab:470bg}.
 
-\begin{table}[htbp]
+\begin{table}[htb]
 \begin{align*}
 \mathrm{Offset}_{Y,C_b,C_r}    & = (16, 128, 128)  \\
 \mathrm{Excursion}_{Y,C_b,C_r} & = (219, 224, 224) \\
@@ -2750,7 +2776,7 @@ See Table~\ref{tab:color-planes}.\\
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{QMAT} & \multicolumn{1}{p{40pt}}{Integer array} &
                              16 & No & A 64-element array of quantization
- values for each DCT coefficient. \\
+ values for each DCT coefficient in natural order. \\
 \bottomrule\end{tabularx}
 
 \paragraph{Variables used:}\hfill\\*
@@ -3097,6 +3123,7 @@ This is not a data packet.
 Read a 1-bit unsigned integer as \bitvar{FTYPE}.
 This is the type of frame being decoded, as given in
  Table~\ref{tab:frame-type}.
+If this is the first frame being decoded, this MUST be zero.
 
 \begin{table}[htbp]
 \begin{center}
@@ -3687,7 +3714,7 @@ Otherwise, if \locvar{MSCHEME} is not 7, assign the entries of
  \locvar{MALPHABET} the values in the corresponding column of
  Table~\ref{tab:mode-codes}.
 \item
-For each consecutive macro block in coded order (see
+For each consecutive macro block in coded order (cf.
  Section~\ref{sec:mbs})---indexed by \locvar{\mbi}:
 \begin{enumerate}
 \item
@@ -3774,12 +3801,12 @@ For each subsampled axis in the chroma planes, the corresponding motion vector
  component is interpreted as being at quarter-pixel resolution, i.e.
  $-7.75\ldots 7.75$ pixels.
 The precise details of how these vectors are used to compute predictors for
- each block are described in Section~REF.
+ each block are described in Section~\ref{sec:predictors}.
 
 \begin{table}[ht]
 \begin{center}
 \begin{tabular}{lrlr}\toprule
-Huffman Code   & Value & Huffman Codee  & Value \\\midrule
+Huffman Code   & Value & Huffman Code   & Value \\\midrule
 \bin{000}      & $0$   \\
 \bin{001}      & $1$   & \bin{010}      & $-1$  \\
 \bin{0110}     & $2$   & \bin{0111}     & $-2$  \\
@@ -3956,7 +3983,7 @@ Read a 1-bit unsigned integer as \locvar{MVMODE}.
 Note that this value is read even if no macro blocks require a motion vector to
  be decoded.
 \item
-For each consecutive macro block in coded order (see
+For each consecutive macro block in coded order (cf.
  Section~\ref{sec:mbs})---indexed by \locvar{\mbi}:
 \begin{enumerate}
 \item
@@ -4275,10 +4302,13 @@ This must be in the range $0\ldots 6$. \\
 \bitvar{NBS}      & Integer & 36 & No  & The total number of blocks in a
  frame. \\
 \bitvar{TIS}      & \multicolumn{1}{p{40pt}}{Integer Array} &
-                               6 & No  & An \bitvar{NBS}-element array of the
+                               7 & No  & An \bitvar{NBS}-element array of the
  current token index for each block. \\
+\bitvar{NCOEFFS}  & \multicolumn{1}{p{40pt}}{Integer Array} &
+                               7 & No  & An \bitvar{NBS}-element array of the
+ coefficient count for each block. \\
 \bitvar{COEFFS}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
-                              11 & Yes & An $\bitvar{NBS}\times 64$ array of
+                              16 & Yes & An $\bitvar{NBS}\times 64$ array of
  quantized DCT coefficient values for each block in zig-zag order. \\
 \bitvar{\bi}      & Integer & 36 & No  & The index of the current block in
  coded order. \\
@@ -4293,10 +4323,10 @@ This must be in the range $0\ldots 6$. \\
 \multicolumn{1}{c}{Signed?} &
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{TIS}      & \multicolumn{1}{p{40pt}}{Integer Array} &
-                               6 & No  & An \bitvar{NBS}-element array of the
+                               7 & No  & An \bitvar{NBS}-element array of the
  current token index for each block. \\
 \bitvar{COEFFS}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
-                              11 & Yes & An $\bitvar{NBS}\times 64$ array of
+                              16 & Yes & An $\bitvar{NBS}\times 64$ array of
  quantized DCT coefficient values for each block in zig-zag order. \\
 \bitvar{EOBS}     & Integer & 36 & No  & The remaining length of the current
  EOB run. \\
@@ -4393,6 +4423,8 @@ If \bitvar{EOBS} is zero, assign \bitvar{EOBS} to be the number of coded blocks
 For each value of \locvar{\tj} from $\bitvar{\ti}$ to 63, assign
  $\bitvar{COEFFS}[\bitvar{\bi}][\locvar{\tj}]$ the value zero.
 \item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
+\item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value 64.
 \item
 Assign \bitvar{EOBS} the value $(\bitvar{EOBS}-1)$.
@@ -4423,10 +4455,10 @@ This must be in the range $7\ldots 31$. \\
 \bitvar{NBS}      & Integer & 36 & No  & The total number of blocks in a
  frame. \\
 \bitvar{TIS}      & \multicolumn{1}{p{40pt}}{Integer Array} &
-                               6 & No  & An \bitvar{NBS}-element array of the
+                               7 & No  & An \bitvar{NBS}-element array of the
  current token index for each block. \\
 \bitvar{COEFFS}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
-                              11 & Yes & An $\bitvar{NBS}\times 64$ array of
+                              16 & Yes & An $\bitvar{NBS}\times 64$ array of
  quantized DCT coefficient values for each block in zig-zag order. \\
 \bitvar{\bi}      & Integer & 36 & No  & The index of the current block in
  coded order. \\
@@ -4441,10 +4473,13 @@ This must be in the range $7\ldots 31$. \\
 \multicolumn{1}{c}{Signed?} &
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{TIS}      & \multicolumn{1}{p{40pt}}{Integer Array} &
-                               6 & No  & An \bitvar{NBS}-element array of the
+                               7 & No  & An \bitvar{NBS}-element array of the
  current token index for each block. \\
+\bitvar{NCOEFFS}  & \multicolumn{1}{p{40pt}}{Integer Array} &
+                               7 & No  & An \bitvar{NBS}-element array of the
+ coefficient count for each block. \\
 \bitvar{COEFFS}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
-                              11 & Yes & An $\bitvar{NBS}\times 64$ array of
+                              16 & Yes & An $\bitvar{NBS}\times 64$ array of
  quantized DCT coefficient values for each block in zig-zag order. \\
 \bottomrule\end{tabularx}
 
@@ -4470,6 +4505,8 @@ A summary of the meanings of the token values is presented in
 There are often several different ways to tokenize a given coefficient list.
 Which one is optimal depends on the exact lengths of the Huffman codes used to
  represent each token.
+Note that we do not update the coefficient count for the block if we decode a
+ pure zero run.
 
 \begin{table}[htbp]
 \begin{center}
@@ -4562,6 +4599,8 @@ Otherwise, if \bitvar{TOKEN} is 9:
 Assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $1$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 10:
@@ -4570,6 +4609,8 @@ Otherwise, if \bitvar{TOKEN} is 10:
 Assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $-1$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 11:
@@ -4578,6 +4619,8 @@ Otherwise, if \bitvar{TOKEN} is 11:
 Assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $2$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 12:
@@ -4586,6 +4629,8 @@ Otherwise, if \bitvar{TOKEN} is 12:
 Assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $-2$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 13:
@@ -4599,6 +4644,8 @@ If \locvar{SIGN} is zero, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$
 Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $-3$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 14:
@@ -4612,6 +4659,8 @@ If \locvar{SIGN} is zero, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$
 Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $-4$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 15:
@@ -4625,6 +4674,8 @@ If \locvar{SIGN} is zero, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$
 Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $-5$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 16:
@@ -4638,6 +4689,8 @@ If \locvar{SIGN} is zero, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$
 Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $-6$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 17:
@@ -4656,6 +4709,8 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value
  $-\locvar{MAG}$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 18:
@@ -4674,6 +4729,8 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value
  $-\locvar{MAG}$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 19:
@@ -4692,6 +4749,8 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value
  $-\locvar{MAG}$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 20:
@@ -4710,6 +4769,8 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value
  $-\locvar{MAG}$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 21:
@@ -4728,6 +4789,8 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value
  $-\locvar{MAG}$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 22:
@@ -4746,6 +4809,8 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value
  $-\locvar{MAG}$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 23:
@@ -4762,6 +4827,8 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+1]$ the value
  $-1$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+2$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 24:
@@ -4779,6 +4846,8 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+2]$ the value
  $-1$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+3$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 25:
@@ -4796,6 +4865,8 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+3]$ the value
  $-1$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+4$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 26:
@@ -4813,6 +4884,8 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+4]$ the value
  $-1$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+5$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 27:
@@ -4830,8 +4903,9 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+5]$ the value
  $-1$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+6$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
-
 \item
 Otherwise, if \bitvar{TOKEN} is 28:
 \begin{enumerate}
@@ -4854,6 +4928,8 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+\locvar{RLEN}]$
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value
  $\bitvar{TIS}[\bitvar{\bi}]+\locvar{RLEN}+1$.
+\item
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 29:
@@ -4877,6 +4953,7 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+\locvar{RLEN}]$
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value
  $\bitvar{TIS}[\bitvar{\bi}]+\locvar{RLEN}+1$.
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 30:
@@ -4897,6 +4974,7 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+1]$ the value
  $-\locvar{MAG}$.
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+2$.
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \item
 Otherwise, if \bitvar{TOKEN} is 31:
@@ -4925,6 +5003,7 @@ Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+\locvar{RLEN}]$
 \item
 Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value
  $\bitvar{TIS}[\bitvar{\bi}]+\locvar{RLEN}+1$.
+Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \end{enumerate}
 \end{enumerate}
 
@@ -4960,8 +5039,11 @@ Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value
 \multicolumn{1}{c}{Signed?} &
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{COEFFS}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
-                              11 & Yes & An $\bitvar{NBS}\times 64$ array of
+                              16 & Yes & An $\bitvar{NBS}\times 64$ array of
  quantized DCT coefficient values for each block in zig-zag order. \\
+\bitvar{NCOEFFS}  & \multicolumn{1}{p{40pt}}{Integer Array} &
+                               7 & No  & An \bitvar{NBS}-element array of the
+ coefficient count for each block. \\
 \bottomrule\end{tabularx}
 
 \paragraph{Variables used:}\hfill\\*
@@ -4974,7 +5056,7 @@ Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value
 \locvar{NLBS}     & Integer & 34 & No & The number of blocks in the luma
  plane. \\
 \locvar{TIS}      & \multicolumn{1}{p{40pt}}{Integer Array} &
-                               6 & No & An \bitvar{NBS}-element array of the
+                               7 & No & An \bitvar{NBS}-element array of the
  current token index for each block. \\
 \locvar{EOBS}     & Integer & 36 & No & The remaining length of the current
  EOB run. \\
@@ -5002,6 +5084,17 @@ This procedure puts the above two procedures to work to decode the entire set
 At the end of this procedure, \locvar{EOBS} MUST be zero, and
  $\locvar{TIS}[\locvar{\bi}]$ MUST be 64 for every coded \locvar{\bi}.
 
+Note that we update the coefficient count of every block before continuing an
+ EOB run or decoding a token, despite the fact that it is already up to date
+ unless the previous token was a pure zero run.
+This is done intentionally to mimic the VP3 accounting rules.
+Thus the only time the coefficient count does not include the coefficients in a
+ pure zero run is when when that run reaches all the way to coefficient 63.
+Note, however, that regardless of the coefficient count, any additional
+ coefficients are still set to zero.
+The only use of the count is in determining if a special case of the inverse
+ DCT can be used in Section~\ref{sub:2d-idct}.
+
 \begin{enumerate}
 \item
 Assign \locvar{NLBS} the value $(\bitvar{NMBS}*4)$.
@@ -5027,6 +5120,8 @@ For each consecutive value of \locvar{\cbi} from 0 to $\bitvar{NBCODED}-1$ for
 \begin{enumerate}
 \item
 Assign \locvar{\bi} the value $\bitvar{CODEDBS}[\locvar{\cbi}]$.
+\item
+Assign $\bitvar{NCOEFFS}[\locvar{\bi}]$ the value \locvar{\ti}.
 \item
 If \locvar{EOBS} is greater than zero:
 \begin{enumerate}
@@ -5075,14 +5170,14 @@ If \locvar{TOKEN} is less than 7, expand an EOB token using the procedure given
  $\bitvar{COEFFS}[\locvar{\bi}]$, and \locvar{EOBS}.
 \item
 Otherwise, expand a coefficient token using the procedure given in
- Section~\ref{sub:coeff-token} to update $\locvar{TIS}[\locvar{\bi}]$ and
- $\bitvar{COEFFS}[\locvar{\bi}]$.
+ Section~\ref{sub:coeff-token} to update $\locvar{TIS}[\locvar{\bi}]$,
+ $\bitvar{COEFFS}[\locvar{\bi}]$, and $\bitvar{NCOEFFS}[\locvar{\bi}]$.
 \end{enumerate}
 \end{enumerate}
 \end{enumerate}
 \end{enumerate}
 
-\section{Reversing DC Prediction}
+\section{Undoing DC Prediction}
 
 The actual value of a DC coefficient decoded by Section~\ref{sec:dct-decode} is
  the residual from a predicted value computed by the encoder.
@@ -5123,7 +5218,7 @@ Those \qi\ values are applied only to the AC coefficients.
  most recently decoded DC value, one for inter mode and for each reference
  frame. \\
 \bitvar{COEFFS}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
-                              11 & Yes & An $\bitvar{NBS}\times 64$ array of
+                              16 & Yes & An $\bitvar{NBS}\times 64$ array of
  quantized DCT coefficient values for each block in zig-zag order. \\
 \bitvar{\bi}      & Integer & 36 & No  & The index of the current block in
  coded order. \\
@@ -5176,7 +5271,7 @@ The predictor is computed as a weighted sum of the neighboring DC values from
 This latter condition is determined only by checking the coding mode for the
  block.
 Even if the golden frame and the previous frame are in fact the same, e.g. for
- the first intra frame after an inter frame, they are still treated as being
+ the first inter frame after an intra frame, they are still treated as being
  different for the purposes of DC prediction.
 The weighted sum is divided by a power of two, with truncation towards zero,
  and the result is checked for outranging if necessary.
@@ -5196,7 +5291,7 @@ Assign \locvar{\rfi} the value of the Reference Frame Index column of
 
 \begin{table}[htpb]
 \begin{center}
-\begin{tabular}{lr}\toprule
+\begin{tabular}{ll}\toprule
 Coding Mode               & Reference Frame Index \\\midrule
 $0$ (INTER\_NOMV)         & $1$ (Previous)        \\
 $1$ (INTRA)               & $0$ (None)            \\
@@ -5346,12 +5441,18 @@ Assign the array \locvar{W} and the variable \locvar{PDIV} the values from the
  row of Table~\ref{tab:dc-weights} corresonding to the values of each
  $\locvar{P}[\idx{i}]$.
 
-\begin{table}[htbp]
+\begin{table}[htb]
 \begin{center}
 \begin{tabular}{ccccrrrrr}\toprule
-$\locvar{P}[0]$ & $\locvar{P}[1]$ & $\locvar{P}[2]$ & $\locvar{P}[3]$ &
- $\locvar{W}[0]$ & $\locvar{W}[1]$ & $\locvar{W}[2]$ & $\locvar{W}[3]$ &
- \locvar{PDIV} \\\midrule
+\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[0]$ (L)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[1]$ (UL)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[2]$ (U)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{P}[3]$ (R)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[3]$ (L)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[1]$ (UL)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[2]$ (U)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[3]$ (R)} &
+\locvar{PDIV} \\\midrule
 $1$ & $0$ & $0$ & $0$ &  $1$ &   $0$ &  $0$ &  $0$ &   $1$ \\
 $0$ & $1$ & $0$ & $0$ &  $0$ &   $1$ &  $0$ &  $0$ &   $1$ \\
 $1$ & $1$ & $0$ & $0$ &  $1$ &   $0$ &  $0$ &  $0$ &   $1$ \\
@@ -5407,7 +5508,7 @@ Otherwise, if $|\bitvar{DCPRED}-\bitvar{COEFFS}[\locvar{PBI}[1]][0]|$ is
 \end{enumerate}
 \end{enumerate}
 
-\subsection{Undoing DC Prediction} 
+\subsection{Inverting the DC Prediction Process}
 \label{sub:dc-pred-undo}
 
 \paragraph{Input parameters:}\hfill\\*
@@ -5424,7 +5525,7 @@ Otherwise, if $|\bitvar{DCPRED}-\bitvar{COEFFS}[\locvar{PBI}[1]][0]|$ is
                                3 & No  & An \bitvar{NMBS}-element array of
  coding modes for each macro block. \\
 \bitvar{COEFFS}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
-                              11 & Yes & An $\bitvar{NBS}\times 64$ array of
+                              16 & Yes & An $\bitvar{NBS}\times 64$ array of
  quantized DCT coefficient values for each block in zig-zag order. \\
 \bottomrule\end{tabularx}
 
@@ -5436,7 +5537,7 @@ Otherwise, if $|\bitvar{DCPRED}-\bitvar{COEFFS}[\locvar{PBI}[1]][0]|$ is
 \multicolumn{1}{c}{Signed?} &
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{COEFFS}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
-                              11 & Yes & An $\bitvar{NBS}\times 64$ array of
+                              16 & Yes & An $\bitvar{NBS}\times 64$ array of
  quantized DCT coefficient values for each block in zig-zag order. The DC 
  value of each block will be updated. \\
 \bottomrule\end{tabularx}
@@ -5452,7 +5553,9 @@ Otherwise, if $|\bitvar{DCPRED}-\bitvar{COEFFS}[\locvar{PBI}[1]][0]|$ is
                               16 & Yes & A 3-element array containing the
  most recently decoded DC value, one for inter mode and for each reference
  frame. \\
-\locvar{DCPRED}   & Integer & 16 & Yes & The predicted DC value for the current
+\locvar{DCPRED}   & Integer & 11 & Yes & The predicted DC value for the current
+ block. \\
+\locvar{DC}       & Integer & 17 & Yes & The actual DC value for the current
  block. \\
 \locvar{\bi}      & Integer & 36 & No  & The index of the current block in
  coded order. \\
@@ -5465,6 +5568,13 @@ Otherwise, if $|\bitvar{DCPRED}-\bitvar{COEFFS}[\locvar{PBI}[1]][0]|$ is
 
 This procedure describes the complete process of undoing the DC prediction to
  recover the original DC values.
+Because it is possible to add a value as large as $580$ to the predicted DC
+ coefficient value at every block, which will then be used to increase the
+ predictor for the next block, the reconstructed DC value could overflow a
+ 16-bit integer.
+This is handled by truncating the result to a 16-bit signed representation,
+ simply throwing away any higher bits in the two's complement representation of
+ the number.
 
 \begin{enumerate}
 \item
@@ -5483,8 +5593,13 @@ If $\bitvar{BCODED}[\locvar{\bi}]$ is non-zero:
 Compute the value \locvar{DCPRED} using the procedure outlined in
  Section~\ref{sub:dc-pred}.
 \item
-Assign $\bitvar{COEFFS}[\locvar{\bi}][0]$ the value
+Assign \locvar{DC} the value
  $(\bitvar{COEFFS}[\locvar{\bi}][0]+\locvar{DCPRED})$.
+\item
+Truncate \locvar{DC} to a 16-bit representation by dropping any higher-order
+ bits.
+\item
+Assign $\bitvar{COEFFS}[\locvar{\bi}][0]$ the value \locvar{DC}.
 \item
 Assign \locvar{\mbi} the index of the macro block containing block
  \locvar{\bi}.
@@ -5492,30 +5607,474 @@ Assign \locvar{\mbi} the index of the macro block containing block
 Assign \locvar{\rfi} the value of the Reference Frame Index column of
  Table~\ref{tab:cm-refs} corresponding to $\bitvar{MBMODES}[\locvar{\mbi}]$.
 \item
-Assign $\locvar{LASTDC}[\rfi]$ the value $\bitvar{COEFFS}[\locvar{\bi}][0]$.
+Assign $\locvar{LASTDC}[\rfi]$ the value $\locvar{DC}$.
 \end{enumerate}
 \end{enumerate}
 \end{enumerate}
 
 \section{Reconstruction}
 
+At this stage, the complete contents of the data packet have been decoded.
+All that remains is to reconstruct the contents of the new frame.
+This is applied on a block by block basis, and as each block is independent,
+ the order they are processed in does not matter.
+
 \subsection{Predictors}
+\label{sec:predictors}
+
+For each block, a predictor is formed based on its coding mode and motion
+ vector.
+There are three basic types of predictors: the intra predictor, the whole-pixel
+ predictor, and the half-pixel predictor.
+The former is used for all blocks coded in INTRA mode, while all other blocks
+ use one of the latter two.
+The whole-pixel predictor is used if the fractional part of both motion vector
+ components is zero, otherwise the half-pixel predictor is used.
 
 \subsubsection{The Intra Predictor}
+\label{sub:predintra}
 
-\subsubsection{The Whole Pixel Predictor}
+\paragraph{Input parameters:} None.
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{PRED}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                               8 & No  & An $8\times 8$ array of predictor
+ values to use for INTRA coded blocks. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{\idx{bx}}  & Integer &  3 & No  & The horizontal pixel index in the
+ block. \\
+\locvar{\idx{by}}  & Integer &  3 & No  & The vertical pixel index in the
+ block. \\
+\bottomrule\end{tabularx}
+\medskip
+
+The intra predictor is nothing more than the constant value $128$.
+This is applied for the sole purpose of centering the range of possible DC
+ values for INTRA blocks around zero.
+
+\begin{enumerate}
+\item
+For each value of \locvar{\idx{by}} from $0$ to $7$, inclusive:
+\begin{enumerate}
+\item
+For each value of \locvar{\idx{bx}} from $0$ to $7$, inclusive:
+\begin{enumerate}
+\item
+Assign $\bitvar{PRED}[\locvar{\idx{by}}][\locvar{\idx{bx}}]$ the value $128$.
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
+
+\subsubsection{The Whole-Pixel Predictor}
+\label{sub:predfullpel}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{RPW}   & Integer   & 20 & No  & The width of the current plane of the
+ reference frame in pixels. \\
+\bitvar{RPH}   & Integer   & 20 & No  & The height of the current plane of the
+ reference frame in pixels. \\
+\bitvar{REFP}  & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                              8 & No  & A $\bitvar{RPH}\times\bitvar{RPW}$
+ array containing the contents of the current plane of the reference frame. \\
+\bitvar{BX}    & Integer   & 20 & No  & The horizontal pixel index of the
+ lower-left corner of the current block. \\
+\bitvar{BY}    & Integer   & 20 & No  & The vertical pixel index of the
+ lower-left corner of the current block. \\
+\bitvar{MVX}   & Integer   &  5 & No  & The horizontal component of the block
+ motion vector.
+This is always a whole-pixel value. \\
+\bitvar{MVY}   & Integer   &  5 & No  & The vertical component of the block
+ motion vector.
+This is always a whole-pixel value. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{PRED}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                               8 & No  & An $8\times 8$ array of predictor
+ values to use for INTER coded blocks. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{\idx{bx}} & Integer &  3 & Yes & The horizontal pixel index in the
+ block. \\
+\locvar{\idx{by}} & Integer &  3 & Yes & The vertical pixel index in the
+ block. \\
+\locvar{\idx{rx}} & Integer & 20 & No  & The horizontal pixel index in the
+ reference frame. \\
+\locvar{\idx{ry}} & Integer & 20 & No  & The vertical pixel index in the
+ reference frame. \\
+\bottomrule\end{tabularx}
+\medskip
+
+The whole pixel predictor simply copies verbatim the contents of the reference
+ frame pointed to by the block's motion vector.
+If the vector points outside the reference frame, then the closest value on the
+ edge of the reference frame is used instead.
+In practice, this is usually implemented by expanding the size of the reference
+ frame by $8$ or $16$ pixels on each side---depending on whether or not the
+ corresponding axis is subsampled in the current plane---and copying the border
+ pixels into this region.
+
+\begin{enumerate}
+\item
+For each value of \locvar{\idx{by}} from $0$ to $7$, inclusive:
+\begin{enumerate}
+\item
+Assign \locvar{\idx{ry}} the value
+ $(\bitvar{BY}+\bitvar{MVY}+\locvar{\idx{by}})$.
+\item
+If \locvar{\idx{ry}} is greater than $(\bitvar{RPH}-1)$, assign
+ \locvar{\idx{ry}} the value $(\bitvar{RPH}-1)$.
+\item
+If \locvar{\idx{ry}} is less than zero, assign \locvar{\idx{ry}} the value
+ zero.
+\item
+For each value of \locvar{\idx{bx}} from $0$ to $7$, inclusive:
+\begin{enumerate}
+\item
+Assign \locvar{\idx{rx}} the value
+ $(\bitvar{BX}+\bitvar{MVX}+\locvar{\idx{bx}})$.
+\item
+If \locvar{\idx{rx}} is greater than $(\bitvar{RPW}-1)$, assign
+ \locvar{\idx{rx}} the value $(\bitvar{RPW}-1)$.
+\item
+If \locvar{\idx{rx}} is less than zero, assign \locvar{\idx{rx}} the value
+ zero.
+\item
+Assign $\bitvar{PRED}[\locvar{\idx{by}}][\locvar{\idx{bx}}]$ the value
+ $\bitvar{REFP}[\locvar{\idx{ry}}][\locvar{\idx{rx}}]$.
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
 
 \subsubsection{The Half-Pixel Predictor}
+\label{sub:predhalfpel}
 
-\subsubsection{The Complete Prediction Algorithm}
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{RPW}   & Integer   & 20 & No  & The width of the current plane of the
+ reference frame in pixels. \\
+\bitvar{RPH}   & Integer   & 20 & No  & The height of the current plane of the
+ reference frame in pixels. \\
+\bitvar{REFP}  & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                              8 & No  & A $\bitvar{RPH}\times\bitvar{RPW}$
+ array containing the contents of the current plane of the reference frame. \\
+\bitvar{BX}    & Integer   & 20 & No  & The horizontal pixel index of the
+ lower-left corner of the current block. \\
+\bitvar{BY}    & Integer   & 20 & No  & The vertical pixel index of the
+ lower-left corner of the current block. \\
+\bitvar{MVX}   & Integer   &  5 & No  & The horizontal component of the first
+ whole-pixel motion vector. \\
+\bitvar{MVY}   & Integer   &  5 & No  & The vertical component of the first
+ whole-pixel motion vector. \\
+\bitvar{MVX2}  & Integer   &  5 & No  & The horizontal component of the second
+ whole-pixel motion vector. \\
+\bitvar{MVY2}  & Integer   &  5 & No  & The vertical component of the second
+ whole-pixel motion vector. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{PRED}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                               8 & No  & An $8\times 8$ array of predictor
+ values to use for INTER coded blocks. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{\idx{bx}} & Integer &  3 & Yes & The horizontal pixel index in the
+ block. \\
+\locvar{\idx{by}} & Integer &  3 & Yes & The vertical pixel index in the
+ block. \\
+\locvar{\idx{rx1}} & Integer & 20 & No  & The first horizontal pixel index in
+ the reference frame. \\
+\locvar{\idx{ry1}} & Integer & 20 & No  & The first vertical pixel index in the
+ reference frame. \\
+\locvar{\idx{rx2}} & Integer & 20 & No  & The second horizontal pixel index in
+ the reference frame. \\
+\locvar{\idx{ry2}} & Integer & 20 & No  & The second vertical pixel index in
+ the reference frame. \\
+\bottomrule\end{tabularx}
+\medskip
+
+If one or both of the components of the block motion vector is not a
+ whole-pixel value, then the half-pixel predictor is used.
+The half-pixel predictor converts the fractional motion vector into two
+ whole-pixel motion vectors.
+The first is formed by truncating the values of each component towards zero,
+ and the second is formed by truncating them away from zero.
+The contributions from the reference frame at the locations pointed to by each
+ vector are averaged, truncating towards negative infinity.
+
+Only two samples from the reference frame contribute to each predictor value,
+ even if both components of the motion vector have non-zero fractional
+ components.
+Motion vector components with quarter-pixel accuracy in the chroma planes are
+ treated exactly the same as those with half-pixel accuracy.
+Any non-zero fractional part gets rounded one way in the first vector, and the
+ other way in the second.
+
+\begin{enumerate}
+\item
+For each value of \locvar{\idx{by}} from $0$ to $7$, inclusive:
+\begin{enumerate}
+\item
+Assign \locvar{\idx{ry1}} the value
+ $(\bitvar{BY}+\bitvar{MVY1}+\locvar{\idx{by}})$.
+\item
+If \locvar{\idx{ry1}} is greater than $(\bitvar{RPH}-1)$, assign
+ \locvar{\idx{ry1}} the value $(\bitvar{RPH}-1)$.
+\item
+If \locvar{\idx{ry1}} is less than zero, assign \locvar{\idx{ry1}} the value
+ zero.
+\item
+Assign \locvar{\idx{ry2}} the value
+ $(\bitvar{BY}+\bitvar{MVY2}+\locvar{\idx{by}})$.
+\item
+If \locvar{\idx{ry2}} is greater than $(\bitvar{RPH}-1)$, assign
+ \locvar{\idx{ry2}} the value $(\bitvar{RPH}-1)$.
+\item
+If \locvar{\idx{ry2}} is less than zero, assign \locvar{\idx{ry2}} the value
+ zero.
+\item
+For each value of \locvar{\idx{bx}} from $0$ to $7$, inclusive:
+\begin{enumerate}
+\item
+Assign \locvar{\idx{rx1}} the value
+ $(\bitvar{BX}+\bitvar{MVX1}+\locvar{\idx{bx}})$.
+\item
+If \locvar{\idx{rx1}} is greater than $(\bitvar{RPW}-1)$, assign
+ \locvar{\idx{rx1}} the value $(\bitvar{RPW}-1)$.
+\item
+If \locvar{\idx{rx1}} is less than zero, assign \locvar{\idx{rx1}} the value
+ zero.
+\item
+Assign \locvar{\idx{rx2}} the value
+ $(\bitvar{BX}+\bitvar{MVX2}+\locvar{\idx{bx}})$.
+\item
+If \locvar{\idx{rx2}} is greater than $(\bitvar{RPW}-1)$, assign
+ \locvar{\idx{rx2}} the value $(\bitvar{RPW}-1)$.
+\item
+If \locvar{\idx{rx2}} is less than zero, assign \locvar{\idx{rx2}} the value
+ zero.
+\item
+Assign $\bitvar{PRED}[\locvar{\idx{by}}][\locvar{\idx{bx}}]$ the value
+\begin{equation*}
+ (\bitvar{REFP}[\locvar{\idx{ry1}}][\locvar{\idx{rx1}}]+
+ \bitvar{REFP}[\locvar{\idx{ry2}}][\locvar{\idx{rx2}}])>>1.
+\end{equation*}
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
 
 \subsection{Dequantization}
+\label{sub:dequant}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{COEFFS}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                             16 & Yes & An $\bitvar{NBS}\times 64$ array of
+ quantized DCT coefficient values for each block in zig-zag order. \\
+\bitvar{ACSCALE} & \multicolumn{1}{p{40pt}}{Integer array} &
+                             16 & No  & A 64-element array of scale values for
+ AC coefficients for each \qi\ value. \\
+\bitvar{DCSCALE} & \multicolumn{1}{p{40pt}}{Integer array} &
+                             16 & No  & A 64-element array of scale values for
+ the DC coefficient for each \qi\ value. \\
+\bitvar{BMS}     & \multicolumn{1}{p{50pt}}{2D Integer array} &
+                              8 & No  & A $\bitvar{NBMS}\times 64$ array
+ containing the base matrices. \\
+\bitvar{NQRS}    & \multicolumn{1}{p{50pt}}{2D Integer array} &
+                              6 & No  & A $2\times 3$ array containing the
+ number of quant ranges for a given \qti\ and \pli, respectively.
+This is at most $63$. \\
+\bitvar{QRSIZES} & \multicolumn{1}{p{50pt}}{3D Integer array} &
+                              6 & No  & A $2\times 3\times 63$ array of the
+ sizes of each quant range for a given \qti\ and \pli, respectively.
+Only the first $\bitvar{NQRS}[\qti][\pli]$ values are used. \\
+\bitvar{QRBMIS}  & \multicolumn{1}{p{50pt}}{3D Integer array} &
+                              9 & No  & A $2\times 3\times 64$ array of the
+ \bmi's used for each quant range for a given \qti\ and \pli, respectively.
+Only the first $(\bitvar{NQRS}[\qti][\pli]+1)$ values are used. \\
+\bitvar{\qti}    & Integer &  1 & No  & A quantization type index.
+See Table~\ref{tab:quant-types}.\\
+\bitvar{\pli}    & Integer &  2 & No  & A color plane index.
+See Table~\ref{tab:color-planes}.\\
+\bitvar{\idx{qi0}} & Integer &  6 & No  & The quantization index of the DC
+ coefficient. \\
+\bitvar{\qi}     & Integer &  6 & No  & The quantization index of the AC
+ coefficients. \\
+\bitvar{\bi}     & Integer & 36 & No  & The index of the current block in
+ coded order. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{DQC}   & \multicolumn{1}{p{40pt}}{Integer Array} &
+                              14 & Yes & A $64$-element array of dequantized
+ DCT coefficients in natural order (cf. Section~\ref{sec:dct-coeffs}). \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{QMAT}    & \multicolumn{1}{p{40pt}}{Integer array} &
+                             16 & No  & A 64-element array of quantization
+ values for each DCT coefficient in natural order. \\
+\locvar{\ci}     & Integer &  6 & No  & The DCT coefficient index in natural
+ order. \\
+\locvar{\zzi}    & Integer &  6 & No  & The DCT coefficient index in zig-zag
+ order. \\
+\locvar{C}       & Integer & 29 & Yes & A single dequantized coefficient. \\
+\bottomrule\end{tabularx}
+\medskip
+
+This procedure takes the quantized DCT coefficient values in zig-zag order for
+ a single block---after DC prediction has been undone---and returns the
+ dequantized values in natural order.
+If large coefficient values are decoded for coarsely quantized coefficients,
+ the resulting dequantized value can be significantly larger than 16 bits.
+Such a coefficient is truncated to a signed 16-bit representation by discarding
+ the higher-order bits of its twos-complement representation.
+
+Although this procedure recomputes the quantization matrices from the
+ parameters in the setup header for each block, there are at most six different
+ ones used for each color plane.
+An efficient implementation could compute them once in advance.
+
+\begin{enumerate}
+\item
+Using \bitvar{ACSCALE}, \bitvar{DCSCALE}, \bitvar{BMS}, \bitvar{NQRS},
+ \bitvar{QRSIZES}, \bitvar{QRBMIS}, \bitvar{\qti}, \bitvar{\pli}, and
+ \bitvar{\idx{qi0}}, use the procedure given in Section~\ref{sub:quant-mat} to
+ compute the DC quantization matrix \locvar{QMAT}.
+\item
+Assign \locvar{C} the value
+ $\bitvar{COEFFS}[\bitvar{\bi}][0]*\locvar{QMAT}[0]$.
+\item
+Truncate \locvar{C} to a 16-bit representation by dropping any higher-order
+ bits.
+\item
+Assign $\bitvar{DQC}[0]$ the value \locvar{C}.
+\item
+Using \bitvar{ACSCALE}, \bitvar{DCSCALE}, \bitvar{BMS}, \bitvar{NQRS},
+ \bitvar{QRSIZES}, \bitvar{QRBMIS}, \bitvar{\qti}, \bitvar{\pli}, and
+ \bitvar{\qi}, use the procedure given in Section~\ref{sub:quant-mat} to
+ compute the AC quantization matrix \locvar{QMAT}.
+\item
+For each value of \locvar{\ci} from 1 to 63, inclusive:
+\begin{enumerate}
+\item
+Assign \locvar{\zzi} the index in zig-zag order corresponding to \locvar{\ci}.
+E.g., the value at row $(\locvar{\ci}//8)$ and column $(\locvar{\ci}\%8)$ in
+ Figure~\ref{tab:zig-zag}
+\item
+Assign \locvar{C} the value
+ $\bitvar{COEFFS}[\bitvar{\bi}][\locvar{\zzi}]*\locvar{QMAT}[\locvar{\ci}]$.
+\item
+Truncate \locvar{C} to a 16-bit representation by dropping any higher-order
+ bits.
+\item
+Assign $\bitvar{DQC}[\locvar{\ci}]$ the value \locvar{C}.
+\end{enumerate}
+\end{enumerate}
 
 \subsection{The Inverse DCT}
 
 The 2D inverse DCT is separated into two applications of the 1D inverse DCT.
 The transform is first applied to each row, and then applied to each column of
  the result.
+
+Each application of the 1D inverse DCT scales the values by a factor of two
+ relative to the orthonormal version of the transform, for a total scale factor
+ of four for the 2D transform.
+It is assumed that a similar scale factor is applied during the forward DCT
+ used in the encoder, so that a division by 16 is required after the transform
+ has been applied in both directions.
+The inclusion of this scale factor allows the integerized transform to operate
+ with increased precision.
+All divisions throughout the transform are implemented with right shifts.
+Only the final division by $16$ is rounded, with ties rounded towards positive
+ infinity.
+
+All intermediate values are truncated to a 32-bit signed representation by
+ discarding any higher-order bits in their two's complement representation.
+The final output of each 1D transform is truncated to 16-bits in the same
+ manner.
+In practice, 32 bits is sufficient for every calculation except scaling by
+ $C4$.
+Here we specify truncating to 16 bits after the right shift by 16, but this is
+ equivalent to truncating the result of the multiply to 32 bits before the
+ right shift.
+
+The 1D transform can only overflow if input coefficients larger than $\pm 6201$
+ are present.
+However, the result of applying the 2D forward transform on pixel values in the
+ range $-255\ldots 255$ can be as large as $\pm 8157$ due to the scale factor
+ of four that is applied, and quantization errors could make this even larger.
+Therefore, the coefficients cannot simply be clamped into a valid range, as
+ they could still overflow just the 1D inverse transform by itself.
 
 \subsubsection{The 1D Inverse DCT}
 \label{sub:1d-idct}
@@ -5551,9 +6110,9 @@ The transform is first applied to each row, and then applied to each column of
 \multicolumn{1}{c}{Signed?} &
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \locvar{T}        & \multicolumn{1}{p{40pt}}{Integer Array} &
-                              16 & Yes & An 8-element array containing the
+                              32 & Yes & An 8-element array containing the
  current value of each signal line. \\
-\locvar{R}        & Integer & 16 & Yes & A temporary value. \\
+\locvar{R}        & Integer & 32 & Yes & A temporary value. \\
 \bottomrule\end{tabularx}
 \medskip
 
@@ -5615,23 +6174,19 @@ $\locvar{C7}$  & $\locvar{S1}$ & $12785$ \\
 \label{tab:dct-consts}
 \end{table}
 
-Each application of the inverse DCT scales the values by a factor of two
- relative to the orthonormal version of the transform, for a total scale factor
- of four for the 2D transform.
-It is assumed that a similar scale factor is applied during the forward DCT
- used in the encoder, so that a division by 16 is required after the transform
- has been applied in both directions.
-All divisions throughout the transform are implemented with right shifts.
-Only the final division by $16$ is rounded, with ties rounded towards positive
- infinity.
-
 \begin{enumerate}
 \item
 Assign $\locvar{T}[0]$ the value
  $\locvar{C4}*(\bitvar{Y}[0]+\bitvar{Y}[4])>>16$.
 \item
+Truncate $\locvar{T}[0]$ to a 16-bit representation by dropping any
+ higher-order bits.
+\item
 Assign $\locvar{T}[1]$ the value
  $\locvar{C4}*(\bitvar{Y}[0]-\bitvar{Y}[4])>>16$.
+\item
+Truncate $\locvar{T}[1]$ to a 16-bit representation by dropping any
+ higher-order bits.
 \item
 Assign $\locvar{T}[2]$ the value $(\locvar{C6}*\bitvar{Y}[2]>>16)-
  (\locvar{S6}*\bitvar{Y}[6]>>16)$.
@@ -5656,12 +6211,18 @@ Assign \locvar{R} the value $\locvar{T}[4]+\locvar{T}[5]$.
 Assign $\locvar{T}[5]$ the value
  $\locvar{C4}*(\locvar{T}[4]-\locvar{T}[5])>>16$.
 \item
+Truncate $\locvar{T}[5]$ to a 16-bit representation by dropping any
+ higher-order bits.
+\item
 Assign $\locvar{T}[4]$ the value $\locvar{R}$.
 \item
 Assign \locvar{R} the value $\locvar{T}[7]+\locvar{T}[6]$.
 \item
 Assign $\locvar{T}[6]$ the value
  $\locvar{C4}*(\locvar{T}[7]-\locvar{T}[6])>>16$.
+\item
+Truncate $\locvar{T}[6]$ to a 16-bit representation by dropping any
+ higher-order bits.
 \item
 Assign $\locvar{T}[7]$ the value $\locvar{R}$.
 \item
@@ -5683,25 +6244,161 @@ Assign $\locvar{T}[5]$ the value $\locvar{T}[6]-\locvar{T}[5]$.
 \item
 Assign $\locvar{T}[6]$ the value \locvar{R}.
 \item
-Assign $\bitvar{X}[0]$ the value $\locvar{T}[0]+\locvar{T}[7]$.
+Assign \locvar{R} the value $\locvar{T}[0]+\locvar{T}[7]$.
 \item
-Assign $\bitvar{X}[1]$ the value $\locvar{T}[1]+\locvar{T}[6]$.
+Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
+ bits.
 \item
-Assign $\bitvar{X}[2]$ the value $\locvar{T}[2]+\locvar{T}[5]$.
+Assign $\bitvar{X}[0]$ the value \locvar{R}.
 \item
-Assign $\bitvar{X}[3]$ the value $\locvar{T}[3]+\locvar{T}[4]$.
+Assign \locvar{R} the value $\locvar{T}[1]+\locvar{T}[6]$.
 \item
-Assign $\bitvar{X}[4]$ the value $\locvar{T}[3]-\locvar{T}[4]$.
+Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
+ bits.
 \item
-Assign $\bitvar{X}[5]$ the value $\locvar{T}[2]-\locvar{T}[5]$.
+Assign $\bitvar{X}[1]$ the value \locvar{R}.
 \item
-Assign $\bitvar{X}[6]$ the value $\locvar{T}[1]-\locvar{T}[6]$.
+Assign \locvar{R} the value $\locvar{T}[2]+\locvar{T}[5]$.
 \item
-Assign $\bitvar{X}[7]$ the value $\locvar{T}[0]-\locvar{T}[7]$.
+Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
+ bits.
+\item
+Assign $\bitvar{X}[2]$ the value \locvar{R}.
+\item
+Assign \locvar{R} the value $\locvar{T}[3]+\locvar{T}[4]$.
+\item
+Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
+ bits.
+\item
+Assign $\bitvar{X}[3]$ the value \locvar{R}.
+\item
+Assign \locvar{R} the value $\locvar{T}[3]-\locvar{T}[4]$.
+\item
+Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
+ bits.
+\item
+Assign $\bitvar{X}[4]$ the value \locvar{R}.
+\item
+Assign \locvar{R} the value $\locvar{T}[2]-\locvar{T}[5]$.
+\item
+Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
+ bits.
+\item
+Assign $\bitvar{X}[5]$ the value \locvar{R}.
+\item
+Assign \locvar{X} the value $\locvar{T}[1]-\locvar{T}[6]$.
+\item
+Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
+ bits.
+\item
+Assign $\bitvar{X}[6]$ the value \locvar{R}.
+\item
+Assign \locvar{R} the value $\locvar{T}[0]-\locvar{T}[7]$.
+\item
+Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
+ bits.
+\item
+Assign $\bitvar{X}[7]$ the value \locvar{R}.
 \end{enumerate}
 
 \subsubsection{The 2D Inverse DCT}
 \label{sub:2d-idct}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{DQC}      & \multicolumn{1}{p{40pt}}{Integer Array} &
+                              14 & Yes & A $64$-element array of dequantized
+ DCT coefficients in natural order (cf. Section~\ref{sec:dct-coeffs}). \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{RES}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                              16 & Yes & An $8\times 8$ array containing the
+ decoded residual for the current block. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{\ci}     & Integer &  3 & No  & The column index. \\
+\locvar{\ri}     & Integer &  3 & No  & The row index. \\
+\locvar{Y}       & \multicolumn{1}{p{40pt}}{Integer Array} &
+                             16 & Yes & An 8-element array of 1-D iDCT input
+ values. \\
+\locvar{X}       & \multicolumn{1}{p{40pt}}{Integer Array} &
+                             16 & Yes & An 8-element array of 1-D iDCT output
+ values. \\
+\bottomrule\end{tabularx}
+\medskip
+
+This procedure applies the 1-D inverse DCT transform 16 times to a block of
+ dequantized coefficients: once for each of the 8 rows, and once for each of
+ the 8 columns of the result.
+Note that the coordinate system used for the columns is the same right-handed
+ coordinate system used by the rest of Theora.
+Thus, the column is indexed from bottom to top, not top to bottom.
+The final values are divided by sixteen, rounding with ties rounded towards
+ postive infinity.
+
+\begin{enumerate}
+\item
+For each value of \locvar{\ri} from 0 to 7:
+\begin{enumerate}
+\item
+For each value of \locvar{\ci} from 0 to 7:
+\begin{enumerate}
+\item
+Assign $\locvar{Y}[\locvar{\ci}]$ the value
+ $\bitvar{DQC}[\locvar{\ri}*8+\locvar{\ci}]$.
+\end{enumerate}
+\item
+Compute \locvar{X}, the 1-D inverse DCT of \locvar{Y} using the procedure
+ described in Section~\ref{sub:1d-idct}.
+\item
+For each value of $\locvar{\ci}$ from 0 to 7:
+\begin{enumerate}
+\item
+Assign $\bitvar{RES}[\locvar{\ri}][\locvar{\ci}]$ the value
+ $\locvar{X}[\locvar{\ci}]$.
+\end{enumerate}
+\end{enumerate}
+\item
+For each value of \locvar{\ci} from 0 to 7:
+\begin{enumerate}
+\item
+For each value of \locvar{\ri} from 0 to 7:
+\begin{enumerate}
+\item
+Assign $\locvar{Y}[\locvar{\ri}]$ the value
+ $\bitvar{RES}[\locvar{\ri}][\locvar{\ci}]$.
+\end{enumerate}
+\item
+Compute \locvar{X}, the 1-D inverse DCT of \locvar{Y} using the procedure
+ described in Section~\ref{sub:1d-idct}.
+\item
+For each value of \locvar{\ri} from 0 to 7:
+\begin{enumerate}
+\item
+Assign $\bitvar{RES}[\locvar{\ri}][\locvar{\ci}]$ the value
+ $(\locvar{X}[\locvar{\ri}]+8)>>4$.
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
 
 \subsubsection{The 1D Forward DCT (Non-Normative)}
 
@@ -5713,7 +6410,7 @@ Assign $\bitvar{X}[7]$ the value $\locvar{T}[0]-\locvar{T}[7]$.
 \multicolumn{1}{c}{Signed?} &
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{X}        & \multicolumn{1}{p{40pt}}{Integer Array} &
-                              16 & Yes & An 8-element array of input values. \\
+                              14 & Yes & An 8-element array of input values. \\
 \bottomrule\end{tabularx}
 
 \paragraph{Output parameters:}\hfill\\*
@@ -5749,7 +6446,10 @@ Precise equivalence in the inverse transform alone is all that is required to
  any compliant decoder implementation.
 However, a forward transform is provided here as a convenience for implementing
  an encoder.
-This is the version of the transform used by Xiph.org's Theora encoder.
+This is the version of the transform used by Xiph.org's Theora encoder, which
+ is the same as that used by VP3.
+Like the inverse DCT, it is first applied to each row, and then applied to each
+ column of the result.
 
 \begin{figure}[htbp]
 \begin{center}
@@ -5767,11 +6467,15 @@ It is important to note that the signs on the constants in the rotations have
  appear on the opposite side.
 The column of numbers on the left represents the unpermuted input, and the
  column on the right the permuted output DCT coefficients.
+
 An offset is also added before right-shifting the output of the
  multiplications, to effect rounding with ties rounded towards positive
  infinity.
 This increases the complexity of the transform to 16 multiplications and
  42 additions and subtractions.
+Unlike the inverse DCT, 16 bit registers and a $16\times16\rightarrow32$ bit
+ multiply are sufficient to avoid any overflow, so long as the input is in the
+ range $-6270\ldots 6270$, which is more than sufficient.
 
 \begin{enumerate}
 \item
@@ -5854,8 +6558,380 @@ Assign $\bitvar{Y}[7]$ the value
 \end{enumerate}
 
 \subsection{The Complete Reconstruction Algorithm}
+\label{sub:recon}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{ACSCALE}   & \multicolumn{1}{p{40pt}}{Integer array} &
+                               16 & No  & A 64-element array of scale values
+ for AC coefficients for each \qi\ value. \\
+\bitvar{DCSCALE}   & \multicolumn{1}{p{40pt}}{Integer array} &
+                               16 & No  & A 64-element array of scale values
+ for the DC coefficient for each \qi\ value. \\
+\bitvar{BMS}       & \multicolumn{1}{p{50pt}}{2D Integer array} &
+                                8 & No  & A $\bitvar{NBMS}\times 64$ array
+ containing the base matrices. \\
+\bitvar{NQRS}      & \multicolumn{1}{p{50pt}}{2D Integer array} &
+                                6 & No  & A $2\times 3$ array containing the
+ number of quant ranges for a given \qti\ and \pli, respectively.
+This is at most $63$. \\
+\bitvar{QRSIZES}   & \multicolumn{1}{p{50pt}}{3D Integer array} &
+                                6 & No  & A $2\times 3\times 63$ array of the
+ sizes of each quant range for a given \qti\ and \pli, respectively.
+Only the first $\bitvar{NQRS}[\qti][\pli]$ values are used. \\
+\bitvar{QRBMIS}    & \multicolumn{1}{p{50pt}}{3D Integer array} &
+                                9 & No  & A $2\times 3\times 64$ array of the
+ \bmi's used for each quant range for a given \qti\ and \pli, respectively.
+Only the first $(\bitvar{NQRS}[\qti][\pli]+1)$ values are used. \\
+\bitvar{RPYW}      & Integer & 20 & No  & The width of the $Y'$ plane of the
+ reference frames in pixels. \\
+\bitvar{RPYH}      & Integer & 20 & No  & The height of the $Y'$ plane of the
+ reference frames in pixels. \\
+\bitvar{RPCW}      & Integer & 20 & No  & The width of the $C_b$ and $C_r$
+ planes of the reference frames in pixels. \\
+\bitvar{RPCH}      & Integer & 20 & No  & The height of the $C_b$ and $C_r$
+ planes of the reference frames in pixels. \\
+\bitvar{GOLDREFY}  & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPYH}\times\bitvar{RPYW}$
+ array containing the contents of the $Y'$ plane of the golden reference
+ frame. \\
+\bitvar{GOLDREFCB} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_b$ plane of the golden reference
+ frame. \\
+\bitvar{GOLDREFCR} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_r$ plane of the golden reference
+ frame. \\
+\bitvar{PREVREFY}  & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPYH}\times\bitvar{RPYW}$
+ array containing the contents of the $Y'$ plane of the previous reference
+ frame. \\
+\bitvar{PREVREFCB} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_b$ plane of the previous reference
+ frame. \\
+\bitvar{PREVREFCR} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_r$ plane of the previous reference
+ frame. \\
+\bitvar{NBS}       & Integer & 36 & No  & The total number of blocks in a
+ frame. \\
+\bitvar{BCODED}    & \multicolumn{1}{p{40pt}}{Integer Array} &
+                                1 & No  & An \bitvar{NBS}-element array of
+ flags indicating which blocks are coded. \\
+\bitvar{MBMODES}   & \multicolumn{1}{p{40pt}}{Integer Array} &
+                                3 & No  & An \bitvar{NMBS}-element array of
+ coding modes for each macro block. \\
+\bitvar{MVECTS}    & \multicolumn{1}{p{50pt}}{Array of 2D Integer Vectors} &
+                                6 & Yes & An \bitvar{NBS}-element array of
+ motion vectors for each block. \\
+\bitvar{COEFFS}    & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                               16 & Yes & An $\bitvar{NBS}\times 64$ array of
+ quantized DCT coefficient values for each block in zig-zag order. \\
+\bitvar{NCOEFFS}   & \multicolumn{1}{p{40pt}}{Integer Array} &
+                                7 & No  & An \bitvar{NBS}-element array of the
+ coefficient count for each block. \\
+\bitvar{QIS}       & \multicolumn{1}{p{40pt}}{Integer array} &
+                                6 & No  & An \bitvar{NQIS}-element array of
+ \qi\ values. \\
+\bitvar{QIIS}      & \multicolumn{1}{p{40pt}}{Integer Array} &
+                                2 & No  & An \bitvar{NBS}-element array of
+ \locvar{\qii} values for each block. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{RECY}  & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                               8 & No  & A $\bitvar{RPYH}\times\bitvar{RPYW}$
+ array containing the contents of the $Y'$ plane of the reconstructed frame. \\
+\bitvar{RECCB} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                               8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_b$ plane of the reconstructed frame. \\
+\bitvar{RECCR} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                               8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_r$ plane of the reconstructed frame. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{RPW}       & Integer & 20 & No  & The width of the current plane of the
+ current reference frame in pixels. \\
+\locvar{RPH}       & Integer & 20 & No  & The height of the current plane of
+ the current reference frame in pixels. \\
+\locvar{REFP}      & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPH}\times\bitvar{RPW}$
+ array containing the contents of the current plane of the current reference
+ frame. \\
+\locvar{BX}        & Integer & 20 & No  & The horizontal pixel index of the
+ lower-left corner of the current block. \\
+\locvar{BY}        & Integer & 20 & No  & The vertical pixel index of the
+ lower-left corner of the current block. \\
+\locvar{MVX}       & Integer &  5 & No  & The horizontal component of the first
+ whole-pixel motion vector. \\
+\locvar{MVY}       & Integer &  5 & No  & The vertical component of the first
+ whole-pixel motion vector. \\
+\locvar{MVX2}      & Integer &  5 & No  & The horizontal component of the second
+ whole-pixel motion vector. \\
+\locvar{MVY2}      & Integer &  5 & No  & The vertical component of the second
+ whole-pixel motion vector. \\
+\locvar{PRED}      & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & An $8\times 8$ array of predictor
+ values to use for the current block. \\
+\locvar{RES}       & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                               16 & Yes & An $8\times 8$ array containing the
+ decoded residual for the current block. \\
+\locvar{QMAT}      & \multicolumn{1}{p{40pt}}{Integer array} &
+                               16 & No  & A 64-element array of quantization
+ values for each DCT coefficient in natural order. \\
+\locvar{DC}        & Integer & 29 & Yes & The dequantized DC coefficient of a
+ block. \\
+\locvar{P}         & Integer & 17 & Yes & A reconstructed pixel value. \\
+\locvar{\bi}       & Integer & 32 & No  & The index of the current block in
+ coded order. \\
+\locvar{\mbi}      & Integer & 32 & No  & The index of the macro block
+ containing block \locvar{\bi}. \\
+\locvar{\pli}      & Integer &  2 & No  & The color plane index of the current
+ block. \\
+\locvar{\rfi}      & Integer &  2 & No  & The index of the reference frame
+ indicated by the coding mode for macro block \locvar{\mbi}. \\
+\locvar{\idx{bx}}  & Integer &  3 & No  & The horizontal pixel index in the
+ block. \\
+\locvar{\idx{by}}  & Integer &  3 & No  & The vertical pixel index in the
+ block. \\
+\locvar{\qti}      & Integer &  1 & No  & A quantization type index.
+See Table~\ref{tab:quant-types}.\\
+\locvar{\idx{qi0}} & Integer &  6 & No  & The quantization index of the DC
+ coefficient. \\
+\locvar{\qi}       & Integer &  6 & No  & The quantization index of the AC
+ coefficients. \\
+\bottomrule\end{tabularx}
+\medskip
+
+This section takes the decoded packet data and uses the previously defined
+ procedures to reconstruct each block of the current frame.
+For coded blocks, a predictor is formed using the coding mode and, if
+ applicable, the motion vector, and then the residual is computed from the
+ quantized DCT coefficients.
+For uncoded blocks, the contents of the co-located block are copied from the
+ previous frame and the residual is cleared to zero.
+Then the predictor and residual are added, and the result clamped to the range
+ $0\ldots 255$ and stored in the current frame.
+
+In the special case that a block contains only a DC coefficient, the
+ dequantization and inverse DCT transform is skipped.
+Instead the constant pixel value for the entire block is computed in one step.
+Note that the truncation of intermediate operations is omitted and the final
+ rounding is slightly different in this case.
+The check for whether or not the block contains only a DC coefficient is based
+ on the coefficient count returned from the token decode procedure of
+ Section~\ref{sec:dct-decode}, and not by checking to see if the remaining
+ coefficient values are zero.
+Also note that even when the coefficient count indicates the block contains
+ zero coefficients, the DC coefficient is still processed, as undoing DC
+ prediction might have made it non-zero.
+
+After this procedure, the frame is completely reconstructed, but before it can
+ be used as a reference frame, a loop filter must be run over it to help reduce
+ blocking artifacts.
+This is detailed in Section~\ref{sec:loopfilter}.
+
+\begin{enumerate}
+\item
+Assign \locvar{\idx{qi0}} the value $\bitvar{QIS}[0]$.
+\item
+For each value of \locvar{\bi} from 0 to $(\bitvar{NBS}-1)$:
+\begin{enumerate}
+\item
+Assign \locvar{\pli} the index of the color plane block \locvar{\bi} belongs
+ to.
+\item
+Assign \locvar{BX} the horizontal pixel index of the lower-left corner of block
+ \locvar{\bi}.
+\item
+Assign \locvar{BY} the vertical pixel index of the lower-left corner of block
+ \locvar{\bi}.
+\item
+If $\bitvar{BCODED}[\locvar{\bi}]$ is non-zero:
+\begin{enumerate}
+\item
+Assign \locvar{\mbi} the index of the macro block containing block
+ \locvar{\bi}.
+\item
+If $\bitvar{MBMODES}[\locvar{\mbi}]$ is 1 (INTRA), assign \locvar{\qti} the
+ value $0$.
+\item
+Otherwise, assign \locvar{\qti} the value $1$.
+\item
+Assign \locvar{\rfi} the value of the Reference Frame Index column of
+ Table~\ref{tab:cm-refs} corresponding to $\bitvar{MBMODES}[\locvar{\mbi}]$.
+\item
+If \locvar{\rfi} is zero, compute \locvar{PRED} using the procedure given in
+ Section~\ref{sub:predintra}.
+\item
+Otherwise:
+\begin{enumerate}
+\item
+Assign \locvar{REFP}, \locvar{RPW}, and \locvar{RPH} the values given in
+ Table~\ref{tab:refp} corresponding to current value of \locvar{\rfi} and
+ \locvar{\pli}.
+
+\begin{table}[htbp]
+\begin{center}
+\begin{tabular}{cclll}\toprule
+\locvar{\rfi} & \locvar{\pli} &
+\locvar{REFP} & \locvar{RPW} & \locvar{RPH} \\\midrule
+$1$ & $0$ & \bitvar{PREVREFY}  & \bitvar{RPYW} & \bitvar{RPYH} \\
+$1$ & $1$ & \bitvar{PREVREFCB} & \bitvar{RPCW} & \bitvar{RPCH} \\
+$1$ & $2$ & \bitvar{PREVREFCR} & \bitvar{RPCW} & \bitvar{RPCH} \\
+$2$ & $0$ & \bitvar{GOLDREFY}  & \bitvar{RPYW} & \bitvar{RPYH} \\
+$2$ & $1$ & \bitvar{GOLDREFCB} & \bitvar{RPCW} & \bitvar{RPCH} \\
+$2$ & $2$ & \bitvar{GOLDREFCR} & \bitvar{RPCW} & \bitvar{RPCH} \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Reference Planes and Sizes for Each \locvar{\rfi} and \locvar{\pli}}
+\label{tab:refp}
+\end{table}
+\item
+Assign \locvar{MVX} the value
+\begin{equation*}
+ \left\lfloor\lvert\bitvar{MVECTS}[\locvar{\bi}]_x\rvert\right\rfloor*
+ \sign(\bitvar{MVECTS}[\locvar{\bi}]_x).
+\end{equation*}
+\item
+Assign \locvar{MVY} the value
+\begin{equation*}
+ \left\lfloor\lvert\bitvar{MVECTS}[\locvar{\bi}]_y\rvert\right\rfloor*
+ \sign(\bitvar{MVECTS}[\locvar{\bi}]_y).
+\end{equation*}
+\item
+Assign \locvar{MVX2} the value
+\begin{equation*}
+ \left\lceil\lvert\bitvar{MVECTS}[\locvar{\bi}]_x\rvert\right\rceil*
+ \sign(\bitvar{MVECTS}[\locvar{\bi}]_x).
+\end{equation*}
+\item
+Assign \locvar{MVY2} the value
+\begin{equation*}
+ \left\lceil\lvert\bitvar{MVECTS}[\locvar{\bi}]_y\rvert\right\rceil*
+ \sign(\bitvar{MVECTS}[\locvar{\bi}]_y).
+\end{equation*}
+\item
+If \locvar{MVX} equals \locvar{MVX2} and \locvar{MVY} equals \locvar{MVY2},
+ use the values \locvar{REFP}, \locvar{RPW}, \locvar{RPH}, \locvar{BX},
+ \locvar{BY}, \locvar{MVX}, and \locvar{MVY}, compute \locvar{PRED} using the
+ procedure given in Section~\ref{sub:predfullpel}.
+\item
+Otherwise, use the values \locvar{REFP}, \locvar{RPW}, \locvar{RPH},
+ \locvar{BX}, \locvar{BY}, \locvar{MVX}, \locvar{MVY}, \locvar{MVX2}, and
+ \locvar{MVY2} to compute \locvar{PRED} using the procedure given in
+ Section~\ref{sub:predhalfpel}.
+\end{enumerate}
+\item
+If $\bitvar{NCOEFFS}[\locvar{\bi}]$ is less than 2:
+\begin{enumerate}
+\item
+Using \bitvar{ACSCALE}, \bitvar{DCSCALE}, \bitvar{BMS}, \bitvar{NQRS}, \\
+ \bitvar{QRSIZES}, \bitvar{QRBMIS}, \locvar{\qti}, \locvar{\pli}, and
+ \locvar{\idx{qi0}}, use the procedure given in Section~\ref{sub:quant-mat} to
+ compute the DC quantization matrix \locvar{QMAT}.
+\item
+Assign \locvar{DC} the value
+\begin{equation*}
+ (\bitvar{COEFFS}[\bitvar{\bi}][0]*\locvar{QMAT}[0]+15)>>5.
+\end{equation*}
+\item
+Truncate \locvar{DC} to a 16-bit representation by dropping any higher-order
+ bits.
+For each value of \locvar{\idx{by}} from 0 to 7, and each value of
+ \locvar{\idx{bx}} from 0 to 7, assign
+ $\locvar{RES}[\locvar{\idx{by}}][\locvar{\idx{bx}}]$ the value \locvar{DC}.
+\end{enumerate}
+\item
+Otherwise:
+\begin{enumerate}
+\item
+Assign \locvar{\qi} the value $\bitvar{QIS}[\bitvar{QIIS}[\locvar{\bi}]]$.
+\item
+Using \bitvar{ACSCALE}, \bitvar{DCSCALE}, \bitvar{BMS}, \bitvar{NQRS}, \\
+ \bitvar{QRSIZES}, \bitvar{QRBMIS}, \locvar{\qti}, \locvar{\pli},
+ \locvar{\idx{qi0}}, and \locvar{\qi}, compute \locvar{DQC} using the procedure
+ given in Section~\ref{sub:dequant}.
+\item
+Using \locvar{DQC}, compute \locvar{RES} using the procedure given in
+ Section~\ref{sub:2d-idct}.
+\end{enumerate}
+\end{enumerate}
+\item
+Otherwise:
+\begin{enumerate}
+\item
+Assign \locvar{\rfi} the value 1.
+\item
+Assign \locvar{REFP}, \locvar{RPW}, and \locvar{RPH} the values given in
+ Table~\ref{tab:refp} corresponding to current value of \locvar{\rfi} and
+ \locvar{\pli}.
+\item
+Assign \locvar{MVX} the value 0.
+\item
+Assign \locvar{MVY} the value 0.
+\item
+Using the values \locvar{REFP}, \locvar{RPW}, \locvar{RPH}, \locvar{BX},
+ \locvar{BY}, \locvar{MVX}, and \locvar{MVY}, compute \locvar{PRED} using the
+ procedure given in Section~\ref{sub:predfullpel}.
+This is simply a copy of the co-located block in the previous reference frame.
+\item
+For each value of \locvar{\idx{by}} from 0 to 7, and each value of
+ \locvar{\idx{bx}} from 0 to 7, assign
+ $\locvar{RES}[\locvar{\idx{by}}][\locvar{\idx{bx}}]$ the value 0.
+\end{enumerate}
+\item
+For each value of \locvar{\idx{by}} form 0 to 7, and each value of
+ \locvar{\idx{bx}} from 0 to 7:
+\begin{enumerate}
+\item
+Assign \locvar{P} the value
+ $(\locvar{PRED}[\locvar{\idx{by}}][\locvar{\idx{bx}}]+
+ \locvar{RES}[\locvar{\idx{by}}][\locvar{\idx{bx}}])$.
+\item
+If \locvar{P} is greater than $255$, assign \locvar{P} the value $255$.
+\item
+If \locvar{P} is less than $0$, assign \locvar{P} the value $0$.
+\item
+If \locvar{\pli} equals 0, assign
+ $\bitvar{RECY}[\locvar{BY}+\locvar{\idx{by}}][\locvar{BX}+\locvar{\idx{bx}}]$
+ the value \locvar{P}.
+\item
+Otherwise, if \locvar{\pli} equals 1, assign
+ $\bitvar{RECB}[\locvar{BY}+\locvar{\idx{by}}][\locvar{BX}+\locvar{\idx{bx}}]$
+ the value \locvar{P}.
+\item
+Otherwise, \locvar{\pli} equals 2, so assign
+ $\bitvar{RECR}[\locvar{BY}+\locvar{\idx{by}}][\locvar{BX}+\locvar{\idx{bx}}]$
+ the value \locvar{P}.
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
 
 \section{Loop Filtering}
+\label{sec:loopfilter}
+
+\section{Complete Frame Decode}
 
 %\backmatter
 \appendix
