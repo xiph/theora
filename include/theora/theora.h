@@ -47,19 +47,27 @@ ogg_buffer_state *ogg_buffer_create(void);
  */
 
 /**
- * A YUV buffer.
+ * A YUV buffer for passing uncompressed frames to and from the codec.
+ * This holds a Y'CbCr frame in planar format. The CbCr planes can be
+ * subsampled and have their own separate dimensions and row stride
+ * offsets. Note that the strides may be negative in some 
+ * configurations. For theora the width and height of the largest plane
+ * must be a multiple of 16. The actual meaningful picture size and 
+ * offset are stored in the theora_info structure; frames returned by
+ * the decoder my been to be cropped for display. 
+ * All samples are 8 bits.
  */
 typedef struct {
-    int   y_width;
-    int   y_height;
-    int   y_stride;
+    int   y_width;	/* width of the Y' luminance plane */
+    int   y_height;	/* height of the luminance plane */
+    int   y_stride;	/* offset in bytes between successive rows */
 
-    int   uv_width;
-    int   uv_height;
-    int   uv_stride;
-    unsigned char *y;
-    unsigned char *u;
-    unsigned char *v;
+    int   uv_width;	/* height of the Cb and Cr chroma planes */
+    int   uv_height;	/* width of the chroma planes */
+    int   uv_stride;	/* offset between successive chroma rows */
+    unsigned char *y;	/* pointer to start of luminance data */
+    unsigned char *u;	/* pointer to start of Cb data */
+    unsigned char *v;	/* pointer to start of Cr data */
 
 } yuv_buffer;
 
@@ -67,11 +75,16 @@ typedef struct {
  * A Colorspace.
  */
 typedef enum {
-  OC_CS_UNSPECIFIED,
-  OC_CS_ITU_REC_470M,
-  OC_CS_ITU_REC_470BG,
+  OC_CS_UNSPECIFIED,	/**< the colorspace is unknown or unspecified */
+  OC_CS_ITU_REC_470M,	/**< best option for 'NTSC' content */
+  OC_CS_ITU_REC_470BG,	/**< best option for 'PAL' content */
 } theora_colorspace;
 
+/**
+ * Theora bitstream info.
+ * Contains the basic playback parameters for a stream,
+ * corresponds to the initial 'info' header packet.
+ */
 typedef struct {
   ogg_uint32_t  width;
   ogg_uint32_t  height;
@@ -86,7 +99,7 @@ typedef struct {
   theora_colorspace colorspace;
   int           target_bitrate;
   int           quality;
-  int           quick_p;  /** <= quick encode/decode */
+  int           quick_p;  /**< quick encode/decode */
 
   /* decode only */
   unsigned char version_major;
@@ -109,6 +122,8 @@ typedef struct {
 
 } theora_info;
 
+/** Codec internal state and context.
+ */
 typedef struct{
   theora_info *i;
   ogg_int64_t granulepos;
@@ -118,11 +133,30 @@ typedef struct{
 
 } theora_state;
 
+/** 
+ * Comment header metadata.
+ *
+ * This structure holds the in-stream metadata corresponding to
+ * the 'comment' header packet.
+ *
+ * Meta data is stored as a series of (tag, value) pairs, in
+ * length-encoded string vectors. The first occurence of the 
+ * '=' character delimits the tag and value. A particular tag
+ * may occur more than once. The character set encoding for
+ * the strings is always utf-8, but the tag names are limited
+ * to case-insensitive ascii. See the spec for details.
+ *
+ * In filling in this structure, theora_decode_header() will
+ * null-terminate the user_comment strings for safety. However,
+ * the bitstream format itself treats them as 8-bit clean,
+ * and so the length array should be treated as authoritative
+ * for their length.
+ */
 typedef struct theora_comment{
-  char **user_comments;
-  int   *comment_lengths;
-  int    comments;
-  char  *vendor;
+  char **user_comments;		/**< an array of comment string vectors */
+  int   *comment_lengths;	/**< an array of corresponding string vector lengths in bytes */
+  int    comments;		/**< the total number of comment string vectors */
+  char  *vendor;		/**< the vendor string identifying the encoder, null terminated */
 
 } theora_comment;
 
@@ -136,8 +170,8 @@ typedef struct theora_comment{
 #define OC_BADPACKET   -24
 #define OC_NEWPACKET   -25
 
-/**
- * Retrieve a human-readable string to identify the vendor and version.
+/** 
+ * Retrieve a human-readable string to identify the encoder vendor and version.
  * \returns a version string.
  */
 extern const char *theora_version_string(void);
@@ -162,7 +196,7 @@ extern ogg_uint32_t theora_version_number(void);
 extern int theora_encode_init(theora_state *th, theora_info *c);
 
 /**
- * Input a YUV buffer into the theora encoder.
+ * Submit a YUV buffer to the theora encoder.
  * \param t A theora_state handle previously initialized for encoding.
  * \param yuv A buffer of YUV data to encode.
  * \retval OC_EINVAL Encoder is not ready, or is finished.
@@ -172,10 +206,10 @@ extern int theora_encode_init(theora_state *th, theora_info *c);
 extern int theora_encode_YUVin(theora_state *t, yuv_buffer *yuv);
 
 /**
- * Request the next packet of encoded video. The encoded data is placed
- * in a user-provided ogg_packet structure.
+ * Request the next packet of encoded video. 
+ * The encoded data is placed in a user-provided ogg_packet structure.
  * \param t A theora_state handle previously initialized for encoding.
- * \param last_p ???
+ * \param last_p whether this is the last packet the encoder should produce.
  * \param op An ogg_packet structure to fill. libtheora will set all
  *           elements of this structure, including a pointer to encoded
  *           data. The memory for the encoded data is owned by libtheora.
