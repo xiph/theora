@@ -51,6 +51,7 @@
 \newcommand{\ilog}{\ensuremath{\mathop{\mathrm{ilog}}\nolimits}}
 \newcommand{\round}{\ensuremath{\mathop{\mathrm{round}}\nolimits}}
 \newcommand{\sign}{\ensuremath{\mathop{\mathrm{sign}}\nolimits}}
+\newcommand{\lflim}{\ensuremath{\mathop{\mathrm{lflim}}\nolimits}}
 
 %Section-based table, figure, and equation numbering.
 \numberwithin{equation}{chapter}
@@ -2412,7 +2413,7 @@ The field name is immediately followed by ASCII \hex{3D} (`='); this equals
  sign is used to terminate the field name.
 
 The data immediately after \hex{3D} until the end of the vector is the eight-bit
- clean value of the field contents encoded as a UTF-8 string~\cite{UTF8-96}.
+ clean value of the field contents encoded as a UTF-8 string~\cite{rfc2044}.
 
 Field names MUST NOT be `internationalized'; this is a concession to
  simplicity, not an attempt to exclude the majority of the world that doesn't
@@ -4039,14 +4040,14 @@ Let \locvar{E} and \locvar{F} be the index in coded order of the one block in
 Assign $\bitvar{MVECTS}[\locvar{E}]$ and $\bitvar{MVECTS}[\locvar{F}]$ the
  value
 \begin{multline*}
-(\round(\frac{\begin{aligned}
+(\round\biggl(\frac{\begin{aligned}
  \bitvar{MVECTS}[\locvar{A}]_x+\bitvar{MVECTS}[\locvar{B}]_x+\\
  \bitvar{MVECTS}[\locvar{C}]_x+\bitvar{MVECTS}[\locvar{D}]_x
- \end{aligned}}{4}), \\
- \round(\frac{\begin{aligned}
+ \end{aligned}}{4}\biggr), \\
+ \round\biggl(\frac{\begin{aligned}
  \bitvar{MVECTS}[\locvar{A}]_y+\bitvar{MVECTS}[\locvar{B}]_y+\\
  \bitvar{MVECTS}[\locvar{C}]_y+\bitvar{MVECTS}[\locvar{D}]_y
- \end{aligned}}{4})
+ \end{aligned}}{4}\biggr))
 \end{multline*}
 \end{enumerate}
 \item
@@ -6807,6 +6808,7 @@ $2$ & $2$ & \bitvar{GOLDREFCR} & \bitvar{RPCW} & \bitvar{RPCH} \\
 \caption{Reference Planes and Sizes for Each \locvar{\rfi} and \locvar{\pli}}
 \label{tab:refp}
 \end{table}
+
 \item
 Assign \locvar{MVX} the value
 \begin{equation*}
@@ -6858,6 +6860,7 @@ Assign \locvar{DC} the value
 \item
 Truncate \locvar{DC} to a 16-bit representation by dropping any higher-order
  bits.
+\item
 For each value of \locvar{\idx{by}} from 0 to 7, and each value of
  \locvar{\idx{bx}} from 0 to 7, assign
  $\locvar{RES}[\locvar{\idx{by}}][\locvar{\idx{bx}}]$ the value \locvar{DC}.
@@ -6901,7 +6904,7 @@ For each value of \locvar{\idx{by}} from 0 to 7, and each value of
  $\locvar{RES}[\locvar{\idx{by}}][\locvar{\idx{bx}}]$ the value 0.
 \end{enumerate}
 \item
-For each value of \locvar{\idx{by}} form 0 to 7, and each value of
+For each value of \locvar{\idx{by}} from 0 to 7, and each value of
  \locvar{\idx{bx}} from 0 to 7:
 \begin{enumerate}
 \item
@@ -6930,6 +6933,429 @@ Otherwise, \locvar{\pli} equals 2, so assign
 
 \section{Loop Filtering}
 \label{sec:loopfilter}
+
+The loop filter is a simple deblocking filter that is based on running a small
+ edge detecting filter over the coded block edges and adjusting the pixel
+ values by a tapered response.
+The filter response is modulated by the following non-linear function:
+\begin{align*}
+\lflim(\locvar{R},\bitvar{L})&=\left\{\begin{array}{ll}
+0,                        & \locvar{R}\le-2*\bitvar{L} \\
+-\locvar{R}-2*\bitvar{L}, & -2*\bitvar{L}<\locvar{R}\le-\bitvar{L} \\
+\locvar{R},               & -\bitvar{L}<\locvar{R}<\bitvar{L} \\
+-\locvar{R}+2*\bitvar{L}, & \bitvar{L}\le\locvar{R}<2*\bitvar{L} \\
+0,                        & 2*\bitvar{L}\le\locvar{R}
+\end{array}\right.
+\end{align*}
+Here \bitvar{L} is a limiting value equal to $\bitvar{LFLIMS}[\idx{qi0}]$.
+It defines the peaks of the function.
+\bitvar{LFLIMS} is an array of values specified in the setup header and is
+ indexed by \idx{qi0}, the first quantization index for the frame, the one used
+ for all the DC coefficients.
+Larger values of \bitvar{L} indicate a stronger filter.
+
+\subsection{Horizontal Filter}
+\label{sub:filth}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{RECP}      & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                   8 & No  & A $\bitvar{RPH}\times\bitvar{RPW}$
+ array containing the contents of a plane of the reconstructed frame. \\
+\bitvar{FX}        & Integer   & 20 & No  & The horizontal pixel index of the
+ lower-left corner of the area to be filtered. \\
+\bitvar{FY}        & Integer   & 20 & No  & The vertical pixel index of the
+ lower-left corner of the area to be filtered. \\
+\bitvar{L}         & Integer   &  7 & No  & The loop filter limit value. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{RECP}  & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                               8 & No  & A $\bitvar{RPH}\times\bitvar{RPW}$
+ array containing the contents of a plane of the reconstructed frame. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{R}         & Integer &  9 & Yes & The edge detector response. \\
+\locvar{P}         & Integer &  9 & Yes & A filtered pixel value. \\
+\locvar{\idx{by}}  & Integer & 20 & No  & The vertical pixel index in the
+ block. \\
+\bottomrule\end{tabularx}
+\medskip
+
+This procedure applies a $4$-tap horizontal filter to each row of a vertical
+ block edge.
+
+\begin{enumerate}
+\item
+For each value of \locvar{\idx{by}} from $0$ to $7$:
+\begin{enumerate}
+\item
+Assign \locvar{R} the value
+\begin{multline*}
+(\bitvar{RECP}[\bitvar{FY}+\locvar{\idx{by}}][\bitvar{FX}]-
+ 3*\bitvar{RECP}[\bitvar{FY}+\locvar{\idx{by}}][\bitvar{FX}+1]+\\
+ 3*\bitvar{RECP}[\bitvar{FY}+\locvar{\idx{by}}][\bitvar{FX}+2]-
+ \bitvar{RECP}[\bitvar{FY}+\locvar{\idx{by}}][\bitvar{FX}+3]+4)>>3
+\end{multline*}
+\item
+Assign \locvar{P} the value
+ $(\bitvar{RECP}[\bitvar{FY}+\locvar{\idx{by}}][\bitvar{FX}+1]+
+ \lflim(\locvar{R},\bitvar{L}))$.
+\item
+If \locvar{P} is less than zero, assign
+ $\bitvar{RECP}[\bitvar{FY}+\locvar{\idx{by}}][\bitvar{FX}+1]$ the value zero.
+\item
+Otherwise, if \locvar{P} is greater than $255$, assign
+ $\bitvar{RECP}[\bitvar{FY}+\locvar{\idx{by}}][\bitvar{FX}+1]$ the value $255$.
+\item
+Otherwise, assign
+ $\bitvar{RECP}[\bitvar{FY}+\locvar{\idx{by}}][\bitvar{FX}+1]$ the value
+ \locvar{P}.
+\item
+Assign \locvar{P} the value
+ $(\bitvar{RECP}[\bitvar{FY}+\locvar{\idx{by}}][\bitvar{FX}+2]-
+ \lflim(\locvar{R},\bitvar{L}))$.
+\item
+If \locvar{P} is less than zero, assign
+ $\bitvar{RECP}[\bitvar{FY}+\locvar{\idx{by}}][\bitvar{FX}+2]$ the value zero.
+\item
+Otherwise, if \locvar{P} is greater than $255$, assign
+ $\bitvar{RECP}[\bitvar{FY}+\locvar{\idx{by}}][\bitvar{FX}+2]$ the value $255$.
+\item
+Otherwise, assign
+ $\bitvar{RECP}[\bitvar{FY}+\locvar{\idx{by}}][\bitvar{FX}+2]$ the value
+ \locvar{P}.
+\end{enumerate}
+\end{enumerate}
+
+\subsection{Vertical Filter}
+\label{sub:filtv}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{RECP}      & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                   8 & No  & A $\bitvar{RPH}\times\bitvar{RPW}$
+ array containing the contents of a plane of the reconstructed frame. \\
+\bitvar{FX}        & Integer   & 20 & No  & The horizontal pixel index of the
+ lower-left corner of the area to be filtered. \\
+\bitvar{FY}        & Integer   & 20 & No  & The vertical pixel index of the
+ lower-left corner of the area to be filtered. \\
+\bitvar{L}         & Integer   &  7 & No  & The loop filter limit value. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{RECP}  & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                               8 & No  & A $\bitvar{RPH}\times\bitvar{RPW}$
+ array containing the contents of a plane of the reconstructed frame. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{R}         & Integer &  9 & Yes & The edge detector response. \\
+\locvar{P}         & Integer &  9 & Yes & A filtered pixel value. \\
+\locvar{\idx{bx}}  & Integer & 20 & No  & The horizontal pixel index in the
+ block. \\
+\bottomrule\end{tabularx}
+\medskip
+
+This procedure applies a $4$-tap vertical filter to each column of a horizontal
+ block edge.
+
+\begin{enumerate}
+\item
+For each value of \locvar{\idx{bx}} from $0$ to $7$:
+\begin{enumerate}
+\item
+Assign \locvar{R} the value
+\begin{multline*}
+(\bitvar{RECP}[\bitvar{FY}][\bitvar{FX}+\locvar{\idx{bx}}]-
+ 3*\bitvar{RECP}[\bitvar{FY}+1][\bitvar{FX}+\locvar{\idx{bx}}]+\\
+ 3*\bitvar{RECP}[\bitvar{FY}+2][\bitvar{FX}+\locvar{\idx{bx}}]-
+ \bitvar{RECP}[\bitvar{FY}+3][\bitvar{FX}+\locvar{\idx{bx}}]+4)>>3
+\end{multline*}
+\item
+Assign \locvar{P} the value
+ $(\bitvar{RECP}[\bitvar{FY}+1][\bitvar{FX}+\locvar{\idx{bx}}]+
+ \lflim(\locvar{R},\bitvar{L}))$.
+\item
+If \locvar{P} is less than zero, assign
+ $\bitvar{RECP}[\bitvar{FY}+1][\bitvar{FX}+\locvar{\idx{bx}}]$ the value zero.
+\item
+Otherwise, if \locvar{P} is greater than $255$, assign
+ $\bitvar{RECP}[\bitvar{FY}+1][\bitvar{FX}+\locvar{\idx{bx}}]$ the value $255$.
+\item
+Otherwise, assign
+ $\bitvar{RECP}[\bitvar{FY}+1][\bitvar{FX}+\locvar{\idx{bx}}]$ the value
+ \locvar{P}.
+\item
+Assign \locvar{P} the value
+ $(\bitvar{RECP}[\bitvar{FY}+2][\bitvar{FX}+\locvar{\idx{bx}}]-
+ \lflim(\locvar{R},\bitvar{L}))$.
+\item
+If \locvar{P} is less than zero, assign
+ $\bitvar{RECP}[\bitvar{FY}+2][\bitvar{FX}+\locvar{\idx{bx}}]$ the value zero.
+\item
+Otherwise, if \locvar{P} is greater than $255$, assign
+ $\bitvar{RECP}[\bitvar{FY}+2][\bitvar{FX}+\locvar{\idx{bx}}]$ the value $255$.
+\item
+Otherwise, assign
+ $\bitvar{RECP}[\bitvar{FY}+2][\bitvar{FX}+\locvar{\idx{bx}}]$ the value
+ \locvar{P}.
+\end{enumerate}
+\end{enumerate}
+
+\subsection{Complete Loop Filter}
+\label{sub:filt-plane}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{LFLIMS}    & \multicolumn{1}{p{40pt}}{Integer array} &
+                              7 & No & A 64-element array of loop filter limit
+ values. \\
+\bitvar{RPYW}      & Integer & 20 & No  & The width of the $Y'$ plane of the
+ reconstruced frame in pixels. \\
+\bitvar{RPYH}      & Integer & 20 & No  & The height of the $Y'$ plane of the
+ reconstruced frame in pixels. \\
+\bitvar{RPCW}      & Integer & 20 & No  & The width of the $C_b$ and $C_r$
+ planes of the reconstruced frame in pixels. \\
+\bitvar{RPCH}      & Integer & 20 & No  & The height of the $C_b$ and $C_r$
+ planes of the reconstruced frame in pixels. \\
+\bitvar{NBS}       & Integer & 36 & No  & The total number of blocks in a
+ frame. \\
+\bitvar{BCODED}    & \multicolumn{1}{p{40pt}}{Integer Array} &
+                                1 & No  & An \bitvar{NBS}-element array of
+ flags indicating which blocks are coded. \\
+\bitvar{QIS}       & \multicolumn{1}{p{40pt}}{Integer array} &
+                                6 & No  & An \bitvar{NQIS}-element array of
+ \qi\ values. \\
+\bitvar{RECY}      & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPYH}\times\bitvar{RPYW}$
+ array containing the contents of the $Y'$ plane of the reconstructed frame. \\
+\bitvar{RECCB}     & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_b$ plane of the reconstructed frame. \\
+\bitvar{RECCR}     & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_r$ plane of the reconstructed frame. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{RECY}  & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                               8 & No  & A $\bitvar{RPYH}\times\bitvar{RPYW}$
+ array containing the contents of the $Y'$ plane of the reconstructed frame. \\
+\bitvar{RECCB} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                               8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_b$ plane of the reconstructed frame. \\
+\bitvar{RECCR} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                               8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_r$ plane of the reconstructed frame. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{RPW}       & Integer & 20 & No  & The width of the current plane of the
+ reconstructed frame in pixels. \\
+\locvar{RPH}       & Integer & 20 & No  & The height of the current plane of
+ the reconstructed frame in pixels. \\
+\locvar{RECP}      & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPH}\times\bitvar{RPW}$
+ array containing the contents of the current plane of the reconstruced
+ frame. \\
+\locvar{BX}        & Integer & 20 & No  & The horizontal pixel index of the
+ lower-left corner of the current block. \\
+\locvar{BY}        & Integer & 20 & No  & The vertical pixel index of the
+ lower-left corner of the current block. \\
+\locvar{FX}        & Integer & 20 & No  & The horizontal pixel index of the
+ lower-left corner of the area to be filtered. \\
+\locvar{FY}        & Integer & 20 & No  & The vertical pixel index of the
+ lower-left corner of the area to be filtered. \\
+\locvar{L}         & Integer &  7 & No  & The loop filter limit value. \\
+\locvar{\bi}       & Integer & 32 & No  & The index of the current block in
+ coded order. \\
+\locvar{\bi}       & Integer & 32 & No  & The index of a neighboring block in
+ coded order. \\
+\locvar{\pli}      & Integer &  2 & No  & The color plane index of the current
+ block. \\
+\bottomrule\end{tabularx}
+\medskip
+
+This procedure defines the order that the various block edges are filtered.
+Because each application of one of the two filters above destructively modifies
+ the contents of the reconstructed image, the precise output obtained differs
+ depending on the order that horizontal and vertical filters are applied to the
+ edges of a single block.
+The order defined here conforms to that used by VP3.
+
+\begin{enumerate}
+\item
+Assign \locvar{L} the value $\bitvar{LFLIMS}[\bitvar{QIS}[0]]$.
+\item
+For each block in {\em raster} order, with coded-order index \locvar{\bi}:
+\begin{enumerate}
+\item
+If $\bitvar{BCODED}[\locvar{\bi}]$ is non-zero:
+\begin{enumerate}
+\item
+Assign \locvar{\pli} the index of the color plane block \locvar{\bi} belongs
+ to.
+\item
+Assign \locvar{REC}, \locvar{RPW}, and \locvar{RPH} the values given in
+ Table~\ref{tab:recp} corresponding to the value of \locvar{\pli}.
+
+\begin{table}[htbp]
+\begin{center}
+\begin{tabular}{clll}\toprule
+\locvar{\pli} & \locvar{REFP}  & \locvar{RPW}  & \locvar{RPH}  \\\midrule
+$0$           & \bitvar{RECY}  & \bitvar{RPYW} & \bitvar{RPYH} \\
+$1$           & \bitvar{RECCB} & \bitvar{RPCW} & \bitvar{RPCH} \\
+$2$           & \bitvar{RECCR} & \bitvar{RPCW} & \bitvar{RPCH} \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Reconstructed Planes and Sizes for Each \locvar{\pli}}
+\label{tab:recp}
+\end{table}
+
+\item
+Assign \locvar{BX} the horizontal pixel index of the lower-left corner of the
+ block \locvar{\bi}.
+\item
+Assign \locvar{BY} the vertical pixel index of the lower-left corner of the
+ block \locvar{\bi}.
+\item
+If \locvar{BX} is greater than zero:
+\begin{enumerate}
+\item
+Assign \locvar{FX} the value $(\locvar{BX}-2)$.
+\item
+Assign \locvar{FY} the value \locvar{BY}.
+\item
+Using \locvar{RECP}, \locvar{FX}, \locvar{FY}, and \locvar{L}, apply the
+ horizontal block filter to the left edge of block \locvar{\bi} with the
+ procedure described in Section~\ref{sub:filth}.
+\end{enumerate}
+\item
+If \locvar{BY} is greater than zero:
+\begin{enumerate}
+\item
+Assign \locvar{FX} the value \locvar{BX}.
+\item
+Assign \locvar{FY} the value $(\locvar{BY}-2)$
+\item
+Using \locvar{RECP}, \locvar{FX}, \locvar{FY}, and \locvar{L}, apply the
+ vertical block filter to the bottom edge of block \locvar{\bi} with the
+ procedure described in Section~\ref{sub:filtv}.
+\end{enumerate}
+\item
+If $(\locvar{BX}+8)$ is less than \locvar{RPW} and
+ $\bitvar{BCODED}[\locvar{\bj}]$ is zero, where \locvar{\bj} is the coded-order
+ index of the block adjacent to \locvar{\bi} on the right:
+\begin{enumerate}
+\item
+Assign \locvar{FX} the value $(\locvar{BX}+6)$.
+\item
+Assign \locvar{FY} the value \locvar{BY}.
+\item
+Using \locvar{RECP}, \locvar{FX}, \locvar{FY}, and \locvar{L}, apply the
+ horizontal block filter to the right edge of block \locvar{\bi} with the
+ procedure described in Section~\ref{sub:filth}.
+\end{enumerate}
+\item
+If $(\locvar{BY}+8)$ is less than \locvar{RPH} and
+ $\bitvar{BCODED}[\locvar{\bj}]$ is zero, where \locvar{\bj} is the coded-order
+ index of the block adjacent to \locvar{\bi} above:
+\begin{enumerate}
+\item
+Assign \locvar{FX} the value \locvar{BX}.
+\item
+Assign \locvar{FY} the value $(\locvar{BY}+6)$
+\item
+Using \locvar{RECP}, \locvar{FX}, \locvar{FY}, and \locvar{L}, apply the
+ vertical block filter to the top edge of block \locvar{\bi} with the
+ procedure described in Section~\ref{sub:filtv}.
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
+
+\paragraph{VP3 Compatibility}
+
+The original VP3 decoder implemented unrestricted motion vectors by enlarging
+ the reconstructed frame buffers and repeating the pixels on its edges into the
+ padding region.
+However, for the previous reference frame this padding ocurred before the loop
+ filter was applied, but for the golden reference frame it occurred afterwards.
+
+This means that for the previous reference frame, the padding values were
+ required to be stored separately from the main image values.
+Furthermore, even if the previous and golden reference frames were in fact the
+ same frame, they could have different padding values.
+Finally, the encoder did not apply the loop filter at all, which resulted in
+ artifacts, particularly in near-static scenes, due to prediction-loop
+ mismatch.
+This last can only be considered a bug in the VP3 encoder.
+
+Given all these things, Theora now uniformly applies the loop filter before
+ the reference frames are padded.
+This means it is possible to use the same buffer for the previous and golden
+ reference frames when they do indeed refer to the same frame.
+It also means that on architectures where memory bandwidth is limited, it is
+ possible to avoid storing padding values, and simply clamp the motion vectors
+ applied to each pixel as described in Sections~\ref{sub:predfullpel}
+ and~\ref{sub:predhalfpel}.
+This means that the predicted pixel values along the edges of the frame might
+ differ slightly between VP3 and Theora, but since the VP3 encoder did not
+ apply the loop filter in the first place, this is not likely to impose any
+ serious compatibility issues.
 
 \section{Complete Frame Decode}
 
