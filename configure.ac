@@ -124,23 +124,57 @@ AC_CHECK_FUNC(getopt_long, [GETOPT_OBJS=''], [GETOPT_OBJS='getopt.$(OBJEXT) geto
 AC_SUBST(GETOPT_OBJS)
 
 
-XIPH_PATH_OGG(, AC_MSG_ERROR([
+dnl check for Ogg
+HAVE_OGG=no
+
+dnl first check through pkg-config since it's more flexible
+
+dnl check for pkg-config itself so we don't try the m4 macro without pkg-config
+AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
+if test "x$HAVE_PKG_CONFIG" = "xyes"
+then
+  PKG_CHECK_MODULES(OGG, ogg >= 1.1, HAVE_OGG=yes, HAVE_OGG=no)
+fi
+if test "x$HAVE_OGG" = "xno"
+then
+  dnl fall back to the old school test
+  XIPH_PATH_OGG(, AC_MSG_ERROR([
     libogg is required to build this package!
     please see http://www.xiph.org/ for how to
     obtain a copy.
-]))
-cflags_save=$CFLAGS
-libs_save=$LIBS
-CFLAGS="$CFLAGS $OGG_CFLAGS"
-LIBS="$LIBS $OGG_LIBS"
-AC_CHECK_FUNC(oggpackB_read, , [
-  AC_MSG_ERROR([newer libogg version (>1.0) required])
-])
-CFLAGS=$cflags_save
-LIBS=$libs_save
+  ]))
+  cflags_save=$CFLAGS
+  libs_save=$LIBS
+  CFLAGS="$CFLAGS $OGG_CFLAGS"
+  LIBS="$LIBS $OGG_LIBS"
+  AC_CHECK_FUNC(oggpackB_read, , [
+    AC_MSG_ERROR([newer libogg version (>1.0) required])
+  ])
+  CFLAGS=$cflags_save
+  LIBS=$libs_save
+fi
 
 dnl the examples use Vorbis and SDL
-XIPH_PATH_VORBIS(HAVE_VORBIS=yes, HAVE_VORBIS=no)
+dnl check for Vorbis
+HAVE_VORBIS=no
+
+dnl first check through pkg-config since it's more flexible
+
+if test "x$HAVE_PKG_CONFIG" = "xyes"
+then
+  PKG_CHECK_MODULES(VORBIS, vorbis >= 1.0.1, HAVE_VORBIS=yes, HAVE_VORBIS=no)
+  dnl also set VORBISENC_LIBS since an examples needs it
+  dnl the old .m4 sets this to a value to use on top of VORBIS_LIBS,
+  dnl so we do the same here.
+  VORBISENC_LIBS="-lvorbisenc"
+  AC_SUBST(VORBISENC_LIBS)
+fi
+if test "x$HAVE_VORBIS" = "xno"
+then
+  dnl fall back to the old school test
+  XIPH_PATH_VORBIS(HAVE_VORBIS=yes, HAVE_VORBIS=no)
+fi
+
 
 AM_PATH_SDL(,[
 	HAVE_SDL=yes
