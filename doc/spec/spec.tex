@@ -31,6 +31,8 @@
 \newcommand{\bi}{\idx{bi}}
 \newcommand{\mbi}{\idx{mbi}}
 \newcommand{\mi}{\idx{mi}}
+\newcommand{\cbi}{\idx{cbi}}
+\newcommand{\qii}{\idx{qii}}
 \newcommand{\ti}{\idx{ti}}
 %This somewhat odd construct ensures that \bitvar{\qi}, etc., will set the
 % qi in bold face, even though it is in a \mathit font, yet \bitvar{VAR} will
@@ -1905,7 +1907,7 @@ Packets with other header types (\hex{83}--\hex{FF}) are reserved and MUST be
  blocks. \\
 \bitvar{NSBS}     & Integer & 32 & No & The total number of super blocks in a
  frame. \\
-\bitvar{NBS}      & Integer & 32 & No & The total number of blocks in a
+\bitvar{NBS}      & Integer & 36 & No & The total number of blocks in a
  frame. \\
 \bitvar{NMBS}     & Integer & 32 & No & The total number of macro blocks in a
  frame. \\
@@ -3208,8 +3210,8 @@ VP3 does not read a new bit value after decoding a run length of 4129.
 This limits the maximum number of consecutive 0's or 1's to 4129 in
  VP3-compatible streams.
 For reasonable video sizes of $1920\times 1080$ or less in 4:2:0 format---the
- only format VP3 supports---this does not pose any problems because runs this
- long are not needed.
+ only pixel format VP3 supports---this does not pose any problems because runs
+ longer than 4129 are not needed.
 
 \subsection{Short-Run Bit String Decode}
 \label{sub:short-run}
@@ -3485,7 +3487,7 @@ If \locvar{\bi} is in the luma plane, assign \bitvar{NLBCODED} the value
 \bitvar{FTYPE}    & Integer &  1 & No & The frame type. \\
 \bitvar{NMBS}     & Integer & 32 & No & The total number of macro blocks in a
  frame. \\
-\bitvar{NBS}      & Integer & 32 & No & The total number of blocks in a
+\bitvar{NBS}      & Integer & 36 & No & The total number of blocks in a
  frame. \\
 \bitvar{BCODED}   & \multicolumn{1}{p{40pt}}{Integer Array} &
                               1 & No & An \bitvar{NBS}-element array of flags
@@ -3790,7 +3792,7 @@ If \locvar{MVSIGN} is 1, assign \bitvar{MVY} the value $-\bitvar{MVY}$.
 \bitvar{MBMODES} & \multicolumn{1}{p{40pt}}{Integer Array} &
                               3 & No & An \bitvar{NMBS}-element array of coding
  modes for each macro block. \\
-\bitvar{NBS}      & Integer & 32 & No & The total number of blocks in a
+\bitvar{NBS}      & Integer & 36 & No & The total number of blocks in a
  frame. \\
 \bitvar{BCODED}   & \multicolumn{1}{p{40pt}}{Integer Array} &
                               1 & No & An \bitvar{NBS}-element array of flags
@@ -3950,9 +3952,9 @@ If \bitvar{PF} is 2 (4:2:2):
 \begin{enumerate}
 \item
 Let \locvar{E} and \locvar{F} be the indices in coded order of the top and
- bottom blocks in the macro block from the $C_b$ plane, and \locvar{G} and
- \locvar{H} be the indices in coded order of the top and bottom blocks in the
- $C_r$ plane. %TODO: as shown in Figure~REF.
+ bottom blocks in the macro block from the $C_b$ plane, respectively, and
+ \locvar{G} and \locvar{H} be the indices in coded order of the top and bottom
+ blocks in the $C_r$ plane, respectively. %TODO: as shown in Figure~REF.
 \item
 Assign $\bitvar{MVECTS}[\locvar{E}]$ and $\bitvar{MVECTS}[\locvar{G}]$ the
  value
@@ -3976,24 +3978,24 @@ Assign $\bitvar{MVECTS}[\locvar{F}]$ and $\bitvar{MVECTS}[\locvar{H}]$ the
 If \bitvar{PF} is 3 (4:4:4):
 \begin{enumerate}
 \item
-Let \locvar{E}, \locvar{F}, \locvar{G}, and \locvar{H} be the indices in coded
- order \locvar{\bi} of the $C_b$ plane blocks in macro block \locvar{\mbi},
- arranged into raster order, and \locvar{I}, \locvar{J}, \locvar{K}, and
- \locvar{L} be the indices in coded order \locvar{\bi} of the $C_r$ plane
- blocks in macro block \locvar{\mbi}, arranged into raster order.
+Let \locvar{E}, \locvar{F}, \locvar{G}, and \locvar{H} be the indices
+ \locvar{\bi} in coded order of the $C_b$ plane blocks in macro block
+ \locvar{\mbi}, arranged into raster order, and \locvar{I}, \locvar{J},
+ \locvar{K}, and \locvar{L} be the indices \locvar{\bi} in coded order of the
+ $C_r$ plane blocks in macro block \locvar{\mbi}, arranged into raster order.
  %TODO: as shown in Figure~REF.
 \item
 Assign $\bitvar{MVECTS}[\locvar{E}]$ and $\bitvar{MVECTS}[\locvar{I}]$ the
- value $\bitvar{MVECTS}[\locvar{A}]$.
+ value \\ $\bitvar{MVECTS}[\locvar{A}]$.
 \item
 Assign $\bitvar{MVECTS}[\locvar{F}]$ and $\bitvar{MVECTS}[\locvar{J}]$ the
- value $\bitvar{MVECTS}[\locvar{B}]$.
+ value \\ $\bitvar{MVECTS}[\locvar{B}]$.
 \item
 Assign $\bitvar{MVECTS}[\locvar{G}]$ and $\bitvar{MVECTS}[\locvar{K}]$ the
- value $\bitvar{MVECTS}[\locvar{C}]$.
+ value \\ $\bitvar{MVECTS}[\locvar{C}]$.
 \item
 Assign $\bitvar{MVECTS}[\locvar{H}]$ and $\bitvar{MVECTS}[\locvar{L}]$ the
- value $\bitvar{MVECTS}[\locvar{D}]$.
+ value \\ $\bitvar{MVECTS}[\locvar{D}]$.
 \end{enumerate}
 
 
@@ -4049,7 +4051,118 @@ Assign $\bitvar{MVECTS}[\locvar{\bi}]$ the value $(\locvar{MVX},\locvar{MVY})$.
 \end{enumerate}
 \end{enumerate}
 
+\paragraph{VP3 Compatibility}
 
+Unless all four luma blocks in the macro block are coded, the VP3 encoder does
+ not select mode INTER\_MV\_FOUR.
+Theora removes this restriction by treating the motion vector for an uncoded
+ luma block as the default $(0,0)$ vector.
+This is consistent with the premise that the block has not changed since the
+ previous frame and that chroma information can be largely ignored when
+ estimating motion.
+
+No modification is required for INTER\_MV\_FOUR macro blocks in VP3 streams to
+ be decoded correctly by a Theora decoder.
+However, regardless of how many of the luma blocks are actually coded, the VP3
+ decoder always reads four motion vectors from the stream for INTER\_MV\_FOUR
+ mode.
+The motion vectors read are used to calculate the motion vectors for the chroma
+ blocks, but are otherwise ignored.
+Thus, care should be taken when creating Theora streams meant to be compatible
+ with VP3 to only use INTER\_MV\_FOUR mode when all four luma blocks are coded.
+
+\section{Block-Level \qi\ Decode}
+\label{sub:block-qis}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{NBS}      & Integer & 36 & No & The total number of blocks in a
+ frame. \\
+\bitvar{NBCODED}  & Integer & 36 & No & The total number of coded blocks in a
+ frame. \\
+\bitvar{CODEDBS}  & \multicolumn{1}{p{40pt}}{Integer Array} &
+                              36 & No & An \bitvar{NBCODED}-element array of
+ coded block indices in coded order. \\
+\bitvar{NQIS}    & Integer &  2 & No & The number of \qi\ values. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{QIIS}   & \multicolumn{1}{p{20pt}}{Integer Array} &
+                               2 & No & An \bitvar{NBS}-element array of
+ \locvar{\qii} values for each block. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{NBITS}    & Integer & 36 & No & The length of a bit string to decode. \\
+\locvar{BITS}     & Bit string & &    & A decoded set of flags. \\
+\locvar{\cbi}     & Integer & 36 & No & The index of the current block in the
+ coded block list. \\
+\locvar{\qii}     & Integer &  2 & No & The index of \qi\ value in the list of
+ \qi\ values defined for this frame. \\
+\bottomrule\end{tabularx}
+\medskip
+
+This procedure selects the \qi\ value to be used for dequantizing the AC
+ coefficients of each block.
+The value is actually represented by an index \locvar{\qii} into the list of
+ \qi\ values defined for the frame.
+It makes multiple passes through the list of coded blocks, one for each \qi\
+ value except the last one.
+In each pass, an RLE-coded bitmask is decoded to divide the blocks into two
+ groups: those that use a value of \qi\ from later in the list, and those that
+ do not.
+Each block in the second group is assigned the current \qi\ value.
+Each subsequent pass is restricted to the blocks in the first group.
+
+\begin{enumerate}
+\item
+For each value of \locvar{\cbi} from 0 to $\bitvar{NBCODED}-1$, assign \\
+ $\bitvar{QIIS}[\bitvar{CODEDBS}[\locvar{\cbi}]]$ the value zero.
+\item
+For each value of \locvar{\qii} from 0 to $\bitvar{NQIS}-2$:
+\begin{enumerate}
+\item
+Let \locvar{NBITS} be the number of blocks such that \\
+ $\bitvar{QIIS}[\bitvar{CODEDBS}[\locvar{\cbi}]]$ equals $\locvar{\qii}$.
+\item
+Read an \locvar{NBITS}-bit bit string into \locvar{BITS}, using the procedure
+ described in Section~\ref{sub:long-run}.
+This represents the list of blocks that use \qi\ value \locvar{\qii} or higher.
+\item
+For each value of \locvar{\cbi} such that
+ $\bitvar{QIIS}[\bitvar{CODEDBS}[\locvar{\cbi}]]$ equals $\locvar{\qii}$:
+\begin{enumerate}
+\item
+Remove the bit at the head of the string \locvar{BITS} and add its value to
+ $\bitvar{QIIS}[\bitvar{CODEDBS}[\locvar{\cbi}]]$.
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
+
+\paragraph{VP3 Compatibility}
+
+For VP3 compatible streams, only one \qi\ value can be specified in the frame
+ header, so the main loop of the above procedure, which goes to
+ $\bitvar{NQIIS}-2$ instead of $\bitvar{NQIIS}-1$, is never executed.
+Thus, no bits are read and each block uses the one \qi\ value defined for the
+ frame.
 
 \cleardoublepage
 
