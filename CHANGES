@@ -1,0 +1,57 @@
+libtheora 1.0alpha4 (unreleased)
+
+ * first draft of the Theora I Format Specification
+ * API documentation generated from theora.h with Doxygen
+ * fix a double-update bug in the motion analysis
+ * apply the loop filter before filling motion vector border 
+   in the reference frame
+ * optional support for building without floating point
+ * optional support for building without encode support 
+ * various build and packaging fixes
+ * pkg-config support
+ * SymbianOS build support
+
+libtheora 1.0alpha3 (2004 March 20)
+
+ UPDATE: on 2004 July 1 the Theora I bitstream format was frozen. Files
+ produced by the libtheora 1.0alpha3 reference encoder will always be
+ decodably by the Theora I spec.
+
+ * Bitstream info header FORMAT CHANGES:
+   - move the granulepos shift field to maintain byte alignment longer.
+   - reserve 5 additional bits for subsampling and interlace flags.
+ * Bitstream setup header FORMAT CHANGES:
+   - support for a range of interpolated quant matricies.
+   - include the in-loop block filter coeff.
+ * Bitsteam data packet FORMAT CHANGES:
+   - Reserve a bit for per-block Q index selection.
+   - Flip the coded image orientation for compatibility with VP3.
+     This allows lossless transcoding of VP3 content, but files
+     encoded with earlier theora releases would play upside down.
+ * example VP3 lossless transcoder
+ * optional support for libogg2
+ * timing improvements in the example player
+ * packaging and build system updates and fixes
+
+libtheora 1.0alpha2 (2003 June 9)
+
+ * bitstream FORMAT CHANGES:
+   - store the quant tables in a third setup header for
+     future encoder flexibility
+   - store the huffman tables in the third setup header
+   - add a field for marking the colorspace to the info header
+   - add crop parameters for non-multiple-of-16 frame sizes
+   - add a second vorbiscomment-style metadata header
+ * API changes to handle multiple headers with a single 
+   theora_decode_header() call, like libvorbis
+ * code cleanup and minor fixes
+ * new dump_video code example/utility
+ * experimental win32 code examples
+
+libtheora 1.0alpha1 (2002 September 25)
+
+ * First release of the theora reference implementation
+ * Port of the newly opened VP3 code to the Ogg container
+ * Rewrite of the code for portability and to use the libogg bitpacker
+
+

@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2004                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -31,16 +31,17 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-/*#include <sys/time.h>*/
 #include <sys/types.h>
 #include <sys/stat.h>
-/*Yes, yes, we're going to hell.*/
+
 #if defined(_WIN32)
 #include <io.h>
 #endif
+
 #include <fcntl.h>
 #include <math.h>
 #include <signal.h>
+
 #include "getopt.h"
 #include "theora/theora.h"
 
@@ -86,10 +87,13 @@ static void sigint_handler (int signal) {
   got_sigint = 1;
 }
 
+/* this is a nop in the current implementation. we could
+   open a file here or something if so moved. */
 static void open_video(void){
-
+   return;
 }
 
+/* write out the planar YUV frame, uncropped */
 static void video_write(void){
   int i;
 
@@ -104,7 +108,7 @@ static void video_write(void){
     fwrite(yuv.v+yuv.uv_stride*i, 1, yuv.uv_width, outfile);
 
 }
-/* dump the theora (or vorbis) comment header */
+/* dump the theora comment header */
 static int dump_comments(theora_comment *tc){
   int i, len;
   char *value;
@@ -127,9 +131,7 @@ static int dump_comments(theora_comment *tc){
   return(0);
 }
 
-/* helper: push a page into the appropriate steam */
-/* this can be done blindly; a stream won't accept a page
-                that doesn't belong to it */
+/* helper: push a page into the steam for packetization */
 static int queue_page(ogg_page *page){
   if(theora_p)ogg_stream_pagein(&to,&og);
   return 0;
@@ -154,7 +156,7 @@ int main(int argc,char *argv[]){
   outfile = stdout;
 
 
-#ifdef _WIN32 /* We need to set stdin/stdout to binary mode. Damn windows. */
+#ifdef _WIN32 /* We need to set stdin/stdout to binary mode on windows. */
   /* Beware the evil ifdef. We avoid these where we can, but this one we
      cannot. Don't add any more, you'll probably go to hell if you do. */
   _setmode( _fileno( stdin ), _O_BINARY );
@@ -188,19 +190,34 @@ int main(int argc,char *argv[]){
     }
   }
 
+
+  /*
+     Ok, Ogg parsing. The idea here is we have a bitstream
+     that is made up of Ogg pages. The libogg sync layer will
+     find them for us. There may be pages from several logical
+     streams interleaved; we find the first theora stream and
+     ignore any others.
+
+     Then we pass the pages for our stream to the libogg stream
+     layer which assembles our original set of packets out of
+     them. It's the packets that libtheora actually knows how
+     to handle.
+  */
+
   /* start up Ogg stream synchronization layer */
   ogg_sync_init(&oy);
-
-  /* init supporting Vorbis structures needed in header parsing */
-  /*vorbis_info_init(&vi);*/
-  /*vorbis_comment_init(&vc);*/
 
   /* init supporting Theora structures needed in header parsing */
   theora_comment_init(&tc);
   theora_info_init(&ti);
 
   /* Ogg file open; parse the headers */
-  /* Only interested in Vorbis/Theora streams */
+
+  /* Vorbis and Theora both depend on some initial header packets
+     for decoder setup and initialization. We retrieve these first
+     before entering the main decode loop. */
+
+  /* Only interested in Theora streams */
   while(!stateflag){
     int ret=buffer_data(infile,&oy);
     if(ret==0)break;
@@ -221,7 +238,7 @@ int main(int argc,char *argv[]){
 
       /* identify the codec: try theora */
       if(!theora_p && theora_decode_header(&ti,&tc,&op)>=0){
-        /* it is theora */
+        /* it is theora -- save this stream state */
         memcpy(&to,&test,sizeof(test));
         theora_p=1;
       }else{
@@ -229,7 +246,7 @@ int main(int argc,char *argv[]){
         ogg_stream_clear(&test);
       }
     }
-    /* fall through to non-bos page parsing */
+    /* fall through to non-initial page parsing */
   }
 
   /* we're expecting more header packets. */
@@ -255,9 +272,9 @@ int main(int argc,char *argv[]){
        care about, or the stream is not obeying spec */
 
     if(ogg_sync_pageout(&oy,&og)>0){
-      queue_page(&og); /* demux into the appropriate stream */
+      queue_page(&og); /* demux into the stream state */
     }else{
-      int ret=buffer_data(infile,&oy); /* someone needs more data */
+      int ret=buffer_data(infile,&oy); /* need more data */
       if(ret==0){
         fprintf(stderr,"End of file while searching for codec headers.\n");
         exit(1);
@@ -265,7 +282,7 @@ int main(int argc,char *argv[]){
     }
   }
 
-  /* and now we have it all.  initialize decoders */
+  /* Now we have all the required headers. initialize the decoder. */
   if(theora_p){
     theora_decode_init(&td,&ti);
     fprintf(stderr,"Ogg logical stream %x is Theora %dx%d %.02f fps video\nEncoded frame content is %dx%d with %dx%d offset\n",
@@ -283,7 +300,26 @@ int main(int argc,char *argv[]){
   /* install signal handler */
   signal (SIGINT, sigint_handler);
 
-  /* on to the main decode loop.*/
+  /* Finally the main decode loop. 
+
+     It's one Theora packet per frame, so this is pretty 
+     straightforward if we're not trying to maintain sync
+     with other multiplexed streams.
+
+     the videobuf_ready flag is used to maintain the input
+     buffer in the libogg stream state. If there's no output
+     frame available at the end of the decode step, we must
+     need more input data. We could simplify this by just 
+     using the return code on ogg_page_packetout(), but the
+     flag system extends easily to the case were you care
+     about more than one multiplexed stream (like with audio
+     playback). In that case, just maintain a flag for each
+     decoder you care about, and pull data when any one of
+     them stalls.
+
+     videobuf_time holds the presentation time of the currently
+     buffered video frame. We ignore this value.
+  */
 
   stateflag=0; /* playback has not begun */
   /* queue any remaining pages from data we buffered but that did not
@@ -306,9 +342,9 @@ int main(int argc,char *argv[]){
         break;
     }
 
-    if(!videobuf_ready  && feof(infile))break;
+    if(!videobuf_ready && feof(infile))break;
 
-    if(!videobuf_ready ){
+    if(!videobuf_ready){
       /* no data yet for somebody.  Grab another page */
       int ret=buffer_data(infile,&oy);
       while(ogg_sync_pageout(&oy,&og)>0){
@@ -321,7 +357,7 @@ int main(int argc,char *argv[]){
     videobuf_ready=0;
   }
 
-  /* close everything */
+  /* end of decoder loop -- close everything */
 
   if(theora_p){
     ogg_stream_clear(&to);

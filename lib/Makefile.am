@@ -40,7 +40,6 @@ noinst_HEADERS = \
 	encoder_lookup.h \
 	huffman.h \
 	hufftables.h \
-	mcomp.h \
 	pp.h \
 	quant_lookup.h \
 	toplevel.h \
@@ -48,7 +47,9 @@ noinst_HEADERS = \
 	cpu.h \
 	dsp.h
 
+libtheora_la_CFLAGS = $(OGG_CFLAGS)
 libtheora_la_LDFLAGS = -version-info @V_LIB_CURRENT@:@V_LIB_REVISION@:@V_LIB_AGE@
+libtheora_la_LIBS = $(OGG_LIBS)
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@" LDFLAGS="-lefence"	
