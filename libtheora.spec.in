@@ -7,7 +7,7 @@ Group:		System Environment/Libraries
 License:	BSD
 URL:		http://www.theora.org/
 Vendor:		Xiph.org Foundation <team@xiph.org>
-Source:		http://www.theora.org/files/%{name}-%{version}.tar.gz
+Source:		http://downloads.xiph.org/releases/theora/%{name}-%{version}.tar.gz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-root
 
 BuildRequires:	libogg-devel >= 2:1.1
