@@ -206,7 +206,7 @@ AC_OUTPUT([
   Makefile lib/Makefile
   include/Makefile include/theora/Makefile
   examples/Makefile
-  doc/Makefile doc/Doxyfile doc/python/Makefile
+  doc/Makefile doc/Doxyfile
   debian/Makefile
   libtheora.spec
   theora.pc
