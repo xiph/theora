@@ -255,7 +255,7 @@ No formal specification exists for the VP3 format beyond this source code,
  however Mike Melanson maintains a detailed description \cite{Mel04}.
 Portions of this specification were adopted from that text with permission.
 
-\subsection{VP3 and Theora}
+\section{VP3 and Theora}
 
 Theora contains a superset of the features that were available in the original
  VP3 codec.
@@ -269,7 +269,7 @@ A complete list of these features appears in Appendix~REF.
 %TODO: VP3 - theora comparison in appendix
                                                                                   
 
-\subsection{Video Formats}
+\section{Video Formats}
 
 Theora I currently supports progressive video data of arbitrary dimensions at a
  constant frame rate in one of several $Y'C_bC_r$ color spaces.
@@ -286,12 +286,14 @@ The Theora I format does not support interlaced material, variable frame rates,
 Black and white content can be efficiently encoded, however, because the
  uniform chroma planes compress well.
 Support for interlaced material is planned for a future version.
-Note that infrequently changing frame rates---as when film and video sequences
+\begin{verse}
+{\bf Note:} Infrequently changing frame rates---as when film and video sequences
  are cut together---can be supported in the Ogg container format by chaining
  several Theora streams together.
+\end{verse}
 Support for increased bit depths or additional color spaces is not planned.
 
-\subsection{Classification}
+\section{Classification}
 
 Theora I is a block-based lossy transform codec that utilizes an
  $8\times 8$ Type-II Discrete Cosine Transform and block-based motion
@@ -304,7 +306,7 @@ Theora supports only intra frames (I frames in MPEG) and inter frames (P frames
 There is no equivalent to the bi-predictive frames (B frames) found in MPEG
  codecs.
 
-\subsection{Assumptions}
+\section{Assumptions}
 
 The Theora codec design assumes a complex, psychovisually-aware encoder and a
  simple, low-complexity decoder.
@@ -329,7 +331,7 @@ For the purposes of a few examples in this document, we will assume that Theora
 The specification for embedding Theora into an Ogg transport stream is given in
  Appendix~\ref{app:oggencapsulation}.
 
-\subsection{Codec Setup and Probability Model}
+\section{Codec Setup and Probability Model}
 
 Theora's heritage is the proprietary commerical codec VP3, and it retains a
  fair amount of inflexibility when compared to Vorbis \cite{vorbis}, the first
@@ -372,7 +374,7 @@ However, we find that it does not fundamentally limit Theora's suitable
 
 %silvia: renamed
 %\subsection{Format Specification}
-\subsection{Format Conformance}
+\section{Format Conformance}
 
 The Theora format is well-defined by its decode specification; any encoder that
  produces packets that are correctly decoded by an implementation following
@@ -393,9 +395,9 @@ These sections will be marked as such, and a proper Theora encoder is not
 
 \chapter{Coded Video Structure}
 
-Theora is based on $8\times 8$ blocks of pixels.
-This sections describes how a video frame is laid out, divided into blocks, and
- how those blocks are organized.
+Theora's encoding and decoding process is based on $8\times 8$ blocks of pixels.
+This sections describes how a video frame is laid out, divided into such
+blocks, and how those blocks are organized.
 
 \section{Frame Layout}
 
@@ -464,12 +466,21 @@ The picture region plays no other role in the decode process, which operates on
 \section{Blocks and Super Blocks}
 \label{sec:blocks-and-sbs}
 
-Each color plane is subdivided into $8\times 8$ \term{blocks}.
-Blocks are grouped into $4\times 4$ arrays called \term{super blocks}.
+Each color plane is subdivided into \term{blocks} of $8\times 8$ pixels.
+Blocks are grouped into $4\times 4$ arrays called \term{super blocks} as
+shown in Figure~\ref{fig:superblock}.
 Each color plane has its own set of blocks and super blocks.
 The boundaries of blocks and super blocks in the luma plane do not necessarily
  coincide with those of the chroma planes, if the chroma planes have been
  subsampled.
+
+\begin{figure}[htb]
+ \begin{center}
+ \include{superblock}
+ \end{center}
+ \caption{Subdivision of a frame into blocks and super blocks}
+ \label{fig:superblock}
+\end{figure}
 
 Blocks are accessed in two different orders in the various decoder processes.
 The first is \term{raster order}.
@@ -543,7 +554,7 @@ The implication is that the blocks from all planes are treated as a unit during
 \label{sec:mbs}
 
 A macro block contains a $2\times 2$ array of blocks in the luma plane
- {\em and} the co-located blocks in the chroma planes.
+ {\em and} the co-located blocks in the chroma planes, as shown in Figure~\ref{fig:macroblock}.
 Thus macro blocks can represent anywhere from six to twelve blocks, depending
  on how the chroma planes are subsampled.
 This is in contrast to super blocks, which only contain macro blocks from a
@@ -561,8 +572,13 @@ This is in contrast to super blocks, which only contain macro blocks from a
 Macro bocks contain information about coding mode and motion vectors for the
  corresponding blocks in all color planes.
 
-%TODO: Add figure showing organization of blocks, super blocks, and macro
-% blocks.
+\begin{figure}[htb]
+ \begin{center}
+ \include{macroblock}
+ \end{center}
+ \caption{Subdivision of a frame into macro blocks}
+ \label{fig:macroblock}
+\end{figure}
 
 Macro blocks are also accessed in a \term{coded order}.
 This coded order proceeds by examining each super block in the luma plane in
