@@ -37,4 +37,8 @@
 
 #define THEORA_SUPPORT_ENCODE 0
 
+/* Do not build floating point code */
+
+#define THEORA_SUPPORT_FLOAT 0
+
 #endif /* ! CONFIG_H */
