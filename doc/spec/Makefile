@@ -22,8 +22,7 @@ Theora_I_spec.pdf : spec.pdf
 
 spec.pdf : $(SPEC_SRCS) $(FIG_OBJS) spec.bbl
 	# three times is the charm with references
-	# But we get one from spec.aux... so two should cut it.
-	#pdflatex --interaction nonstopmode spec.tex
+	pdflatex --interaction nonstopmode spec.tex
 	pdflatex --interaction nonstopmode spec.tex
 	pdflatex --interaction nonstopmode spec.tex
 
