@@ -15,13 +15,10 @@ FIG_SRCS = pic-frame.fig hilbert-mb.fig hilbert-block.fig xifish.fig \
 
 FIG_TEXS = $(FIG_SRCS:.fig=.tex)
 FIG_AUXS = $(FIG_SRCS:.fig=.aux)
-FIG_OBJS = $(FIG_SRCS:.fig=.pdf)
+FIG_PDFS = $(FIG_SRCS:.fig=.pdf)
 
-#FIG_OBJS = pic-frame.pdf hilbert-mb.pdf hilbert-block.pdf xifish.pdf \
-#	    superblock.pdf macroblock.odf raster-block.pdf 
-#	    reference-frames.pdf \
-#	    pixel444.pdf pixel422.pdf pixel420.pdf idct.pdf fdct.pdf \
-#	    pic_even.tex pic_even_odd.tex pic_odd.tex pic_odd_even.tex
+# add any native-pdf figures here
+FIG_OJBS = $(FIG_PDFS)
 
 Theora_I_spec.pdf : spec.pdf
 	$(MV) $< $@
@@ -34,7 +31,7 @@ spec.pdf : $(SPEC_SRCS) $(FIG_OBJS) vp3huff.tex spec.bbl
 
 spec.aux : spec.tex
 	#Long tables require the .aux file to start from scratch
-	-rm spec.aux
+	-$(RM) spec.aux
 	pdflatex --interaction nonstopmode $<
 
 spec.bbl : spec.aux spec.bib
@@ -45,7 +42,7 @@ vp3huff.tex : vp3huff
 
 figures : $(FIG_OBJS)
 
-# rule to generate latex versions of the xfig figures
+# rules to generate latex and pdf versions of the xfig figures
 %.tex : %.fig
 	fig2dev -L latex $< $@
 
@@ -58,6 +55,7 @@ figures : $(FIG_OBJS)
 clean:
 	-$(RM) $(FIG_TEXS)
 	-$(RM) $(FIG_AUXS)
+	-$(RM) $(FIG_PDFS)
 	-$(RM) vp3huff
 	-$(RM) vp3huff.tex
 	-$(RM) vp3huff.aux
