@@ -36,6 +36,13 @@ CFLAGS="$cflags_save"
 
 AM_PROG_LIBTOOL
 
+dnl Check for doxygen
+AC_CHECK_PROG(HAVE_DOXYGEN, doxygen, true, false)
+AM_CONDITIONAL(HAVE_DOXYGEN,$HAVE_DOXYGEN)
+if test $HAVE_DOXYGEN = "false"; then
+        AC_MSG_WARN([*** doxygen not found, docs will not be built])
+fi
+
 dnl --------------------------------------------------
 dnl Set build flags based on environment
 dnl --------------------------------------------------
@@ -123,7 +130,7 @@ AC_OUTPUT([
   Makefile lib/Makefile
   include/Makefile include/theora/Makefile
   examples/Makefile
-  doc/Makefile doc/python/Makefile
+  doc/Makefile doc/Doxyfile doc/python/Makefile
   debian/Makefile
   theora.pc
 ])
