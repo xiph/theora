@@ -81,21 +81,168 @@
 \listoftables
 \cleardoublepage
 
+\thispagestyle{plain}
+\markboth{{\sc Notation and Conventions}}{{\sc Notation and Conventions}}
+\chapter*{Notation and Conventions}
+
+All parameters either passed in or out of a decoding procedure are given in
+ \bitvar{bold\ face}.
+
+The prefix \bin{} indicates that the following value is to be interpreted as a
+ binary number (base 2).
+\begin{verse}
+{\bf Example:} The value \bin{1110100} is equal to the decimal value 116.
+\end{verse}
+
+The prefix \hex{} indicates the the following value is to be interpreted as a
+ hexadecimal number (base 16).
+\begin{verse}
+{\bf Example:} The value \hex{74} is equal to the decimal value 116.
+\end{verse}
+
+The following operators are defined:
+
+\begin{description}
+\item[$|a|$]
+The absolute value of a number $a$.
+\begin{align*}
+|a| & = \left\{\begin{array}{ll}
+-a, & a < 0 \\
+a, & a \ge 0
+\end{array}\right.
+\end{align*}
+
+\item[$a*b$]
+Multiplication of a number $a$ by a number $b$.
+\item[$\frac{a}{b}$]
+Exact division of a number $a$ by a number $b$, producing a potentially
+ non-integer result.
+
+\item[$\left\lfloor a\right\rfloor$] 
+The largest integer less than or equal to a real number $a$.
+
+\item[$\left\lceil a\right\rceil$]
+The smallest integer greater than or equal to a real number $a$.
+
+\item[$a//b$]
+Integer division of $a$ by $b$.
+\begin{align*}
+a//b & = \left\{\begin{array}{ll}
+\left\lceil\frac{a}{b}\right\rceil, & a < 0 \\
+\left\lfloor\frac{a}{b}\right\rfloor, & a \ge 0
+\end{array}\right.
+\end{align*}
+
+\item[$a\%b$]
+The remainder from the integer division of $a$ by $b$.
+\begin{align*}
+a\%b & = |a|-|b|*|a//b|
+\end{align*}
+Note that with this definition, the result is always non-negative and less than
+ $|b|$.
+
+\item[$a<<b$]
+The value obtained by left-shifting the two's complement integer $a$ by $b$
+ bits.
+For purposes of this specification, overflow is ignored, and so this is
+ equivalent to integer multiplication of $a$ by $2^b$.
+
+\item[$a>>b$]
+The value obtained by right-shifting the two's complement integer $a$ by $b$
+ bits, filling in the leftmost bits of the new value with $0$ if $a$ is
+ non-negative and $1$ if $a$ is negative.
+This is {\em not} equivalent to integer division of $a$ by $2^b$.
+Instead,
+\begin{align*}
+a>>b & = \left\lfloor\frac{a}{2^b}\right\rfloor.
+\end{align*}
+
+\item[$\ilog(a)$]
+The minimum number of bits required to store a positive integer $a$ in
+ two's complement notation, or $0$ for a non-positive integer $a$.
+\begin{align*}
+\ilog(a) = \left\{\begin{array}{ll}
+0, & a \le 0 \\
+\left\lceil\log_2{a}\right\rceil, & a > 0
+\end{array}\right.
+\end{align*}
+
+\begin{verse}
+{\bf Examples:}
+\begin{itemize}
+\item $\ilog(-1)=0$
+\item $\ilog(0)=0$
+\item $\ilog(1)=1$
+\item $\ilog(2)=2$
+\item $\ilog(3)=2$
+\item $\ilog(4)=3$
+\item $\ilog(7)=3$
+\end{itemize}
+\end{verse}
+
+\item[$\min(a,b)$]
+The minimum of two numbers $a$ and $b$.
+
+\item[$\max(a,b)$]
+The maximum of two numbers $a$ and $b$.
+
+\end{description}
+\cleardoublepage
+
+
+\thispagestyle{plain}
+\markboth{{\sc Key words}}{{\sc Key words}}
+\chapter*{Key words}
+
+%We can't rewrite this, because this is text required by RFC 2119, so we use
+% some emergency stretching to get it typeset properly.
+\setlength{\emergencystretch}{2em}
+The key words ``MUST'', ``MUST NOT'', ``REQUIRED'', ``SHALL'', ``SHALL NOT'',
+ ``SHOULD'', ``SHOULD NOT'', ``RECOMMENDED'', ``MAY'', and ``OPTIONAL'' in this
+ document are to be intrepreted as described in RFC 2119 \cite{rfc2119}.\par
+\setlength{\emergencystretch}{0em}
+
+Where such assertions are placed on the contents of a Theora bitstream itself,
+ implementations should be prepared to encounter bitstreams that do not follow
+ these requirements.
+An application's behavior in the presecence of such non-conforming bitstreams
+ is not defined by this specification, but any reasonable method of handling 
+ them MAY be used.
+By way of example, applications MAY discard the current frame, retain the
+ current output thus far, or attempt to continue on by assuming some default
+ values for the erroneous bits.
+When such an error occurs in the bitstream headers, an application MAY refuse
+ to decode the entire stream.
+An application SHOULD NOT allow such non-conformant bitstreams to overflow
+ buffers and potentially execute arbitrary code, as this represents a serious
+ security risk.
+
+An application MUST, however, ensure any reserved bits have the value zero, and
+ refuse to decode the stream if they are not.
+These are used as place holders for future bitstream features with which the
+ current bitstream is forward-compatible.
+Such features will not increment the bitstream version number, and can only be
+ recognized by checking the value of these reserved bits.
+
+\cleardoublepage
+
+
 
 \mainmatter
 
 \pagenumbering{arabic}
 \setcounter{page}{1}
                                                                                 
-\chapter{Introduction and Description}
+\chapter{Introduction}
 
-This section provides a high level description of the Theora codec's
- construction.
-A bit-by-bit specification appears beginning in Section~\ref{sec:bitpacking}.
-The later sections assume a high-level understanding of the Theora decode
- process, which is provided below.
-
-\section{Overview}
+%[silvia: COMMENTED OUT, should move somewhere else]
+%This section provides a high level description of the Theora codec's
+% construction.
+%A bit-by-bit specification appears beginning in Section~\ref{sec:bitpacking}.
+%The later sections assume a high-level understanding of the Theora decode
+% process, which is provided below.
+%
+%\section{Overview}
 
 Theora is a general purpose, lossy video codec.
 It is based on the VP3 video codec produced by On2 Technologies
@@ -119,6 +266,8 @@ Theora content cannot, in general, be losslessly transcoded into the VP3
 If a feature is not available in the original VP3 format, this is mentioned
  when that feature is defined.
 A complete list of these features appears in Appendix~REF.
+%TODO: VP3 - theora comparison in appendix
+                                                                                  
 
 \subsection{Video Formats}
 
@@ -221,14 +370,16 @@ Our own design work indicates that the primary liability of the required header
 However, we find that it does not fundamentally limit Theora's suitable
  application space.
 
-\subsection{Format Specification}
+%silvia: renamed
+%\subsection{Format Specification}
+\subsection{Format Conformance}
 
 The Theora format is well-defined by its decode specification; any encoder that
  produces packets that are correctly decoded by an implementation following
  this specification may be considered a proper Theora encoder.
 A decoder must faithfully and completely implement the specification defined
  herein %, except where noted,
- to be considered a proper Theora decoder.
+ to be considered a conformant Theora decoder.
 A decoder need not be implemented strictly as described, but the
  actual decoder process MUST be {\em entirely mathematically equivalent}
  to the described process.
@@ -239,13 +390,14 @@ These sections will be marked as such, and a proper Theora encoder is not
 
 %TODO: \subsection{Hardware Profile}
 
-\section{Coded Video Structure}
+
+\chapter{Coded Video Structure}
 
 Theora is based on $8\times 8$ blocks of pixels.
 This sections describes how a video frame is laid out, divided into blocks, and
  how those blocks are organized.
 
-\subsection{Frame Layout}
+\section{Frame Layout}
 
 A video frame in Theora is a two-dimensional array of pixels.
 Theora, like VP3, uses a right-handed coordinate system, with the origin in the
@@ -283,7 +435,7 @@ This means that the width or height of the chroma planes may be half that of
  the total frame width and height.
 The luma plane is never subsampled.
 
-\subsection{Picture Region}
+\section{Picture Region}
 
 An encoded video frame in Theora is required to have a width and height that
  are multiples of sixteen, making an integral number of blocks even when the
@@ -309,7 +461,7 @@ The picture region plays no other role in the decode process, which operates on
 \label{fig:pic-frame}
 \end{figure}
 
-\subsection{Blocks and Super Blocks}
+\section{Blocks and Super Blocks}
 \label{sec:blocks-and-sbs}
 
 Each color plane is subdivided into $8\times 8$ \term{blocks}.
@@ -387,7 +539,7 @@ They do not reset to zero at the start of each plane.
 The implication is that the blocks from all planes are treated as a unit during
  the various processing steps.
 
-\subsection{Macro Blocks}
+\section{Macro Blocks}
 \label{sec:mbs}
 
 A macro block contains a $2\times 2$ array of blocks in the luma plane
@@ -446,7 +598,7 @@ They are assigned the following indices:
 \end{center}
 \vspace{\baselineskip}
 
-\subsection{Coding Modes and Prediction}
+\section{Coding Modes and Prediction}
 
 Each block is coded using one of a small, fixed set of \term{coding modes} that
  define how the block is predicted from previous frames.
@@ -469,7 +621,7 @@ The INTER\_NOMV coding mode uses the co-located contents of the block in the
  previous frame as the predictor.
 This is the default coding mode.
 
-\subsection{DCT Coefficients}
+\section{DCT Coefficients}
 
 To each block's predictor, a \term{residual} is added to form the final
  contents of the block.
@@ -525,6 +677,9 @@ Due to the right-handed coordinate system used for pixel locations in Theora,
 
 DCT coefficient $(0,0)$ is called the \term{DC coefficient}.
 All the other coefficients are called \term{AC coefficients}.
+
+
+\chapter{Decoding}
 
 \section{Decoder Configuration}
 
@@ -866,145 +1021,8 @@ The DCT coefficients are dequantized, an inverse DCT transform is applied, and
 
 \paragraph{Loop Filtering}
 
-To complete the reconstructed frame, an ``in-loop" deblocking filter is applied to
- the edges of all coded blocks.
+To complete the reconstructed frame, an ``in-loop'' deblocking filter is applied to the edges of all coded blocks.
 
-\chapter{Notation and Conventions}
-
-All parameters either passed in or out of a decoding procedure are given in
- \bitvar{bold\ face}.
-
-The prefix \bin{} indicates that the following value is to be interpreted as a
- binary number (base 2).
-\begin{verse}
-{\bf Example:} The value \bin{1110100} is equal to the decimal value 116.
-\end{verse}
-
-The prefix \hex{} indicates the the following value is to be interpreted as a
- hexadecimal number (base 16).
-\begin{verse}
-{\bf Example:} The value \hex{74} is equal to the decimal value 116.
-\end{verse}
-
-The following operators are defined:
-
-\begin{description}
-\item[$|a|$]
-The absolute value of a number $a$.
-\begin{align*}
-|a| & = \left\{\begin{array}{ll}
--a, & a < 0 \\
-a, & a \ge 0
-\end{array}\right.
-\end{align*}
-
-\item[$a*b$]
-Multiplication of a number $a$ by a number $b$.
-\item[$\frac{a}{b}$]
-Exact division of a number $a$ by a number $b$, producing a potentially
- non-integer result.
-
-\item[$\left\lfloor a\right\rfloor$] 
-The largest integer less than or equal to a real number $a$.
-
-\item[$\left\lceil a\right\rceil$]
-The smallest integer greater than or equal to a real number $a$.
-
-\item[$a//b$]
-Integer division of $a$ by $b$.
-\begin{align*}
-a//b & = \left\{\begin{array}{ll}
-\left\lceil\frac{a}{b}\right\rceil, & a < 0 \\
-\left\lfloor\frac{a}{b}\right\rfloor, & a \ge 0
-\end{array}\right.
-\end{align*}
-
-\item[$a\%b$]
-The remainder from the integer division of $a$ by $b$.
-\begin{align*}
-a\%b & = |a|-|b|*|a//b|
-\end{align*}
-Note that with this definition, the result is always non-negative and less than
- $|b|$.
-
-\item[$a<<b$]
-The value obtained by left-shifting the two's complement integer $a$ by $b$
- bits.
-For purposes of this specification, overflow is ignored, and so this is
- equivalent to integer multiplication of $a$ by $2^b$.
-
-\item[$a>>b$]
-The value obtained by right-shifting the two's complement integer $a$ by $b$
- bits, filling in the leftmost bits of the new value with $0$ if $a$ is
- non-negative and $1$ if $a$ is negative.
-This is {\em not} equivalent to integer division of $a$ by $2^b$.
-Instead,
-\begin{align*}
-a>>b & = \left\lfloor\frac{a}{2^b}\right\rfloor.
-\end{align*}
-
-\item[$\ilog(a)$]
-The minimum number of bits required to store a positive integer $a$ in
- two's complement notation, or $0$ for a non-positive integer $a$.
-\begin{align*}
-\ilog(a) = \left\{\begin{array}{ll}
-0, & a \le 0 \\
-\left\lceil\log_2{a}\right\rceil, & a > 0
-\end{array}\right.
-\end{align*}
-
-\begin{verse}
-{\bf Examples:}
-\begin{itemize}
-\item $\ilog(-1)=0$
-\item $\ilog(0)=0$
-\item $\ilog(1)=1$
-\item $\ilog(2)=2$
-\item $\ilog(3)=2$
-\item $\ilog(4)=3$
-\item $\ilog(7)=3$
-\end{itemize}
-\end{verse}
-
-\item[$\min(a,b)$]
-The minimum of two numbers $a$ and $b$.
-
-\item[$\max(a,b)$]
-The maximum of two numbers $a$ and $b$.
-
-\end{description}
-
-\section{Key words}
-
-%We can't rewrite this, because this is text required by RFC 2119, so we use
-% some emergency stretching to get it typeset properly.
-\setlength{\emergencystretch}{2em}
-The key words ``MUST'', ``MUST NOT'', ``REQUIRED'', ``SHALL'', ``SHALL NOT'',
- ``SHOULD'', ``SHOULD NOT'', ``RECOMMENDED'', ``MAY'', and ``OPTIONAL'' in this
- document are to be intrepreted as described in RFC 2119 \cite{rfc2119}.\par
-\setlength{\emergencystretch}{0em}
-
-Where such assertions are placed on the contents of a Theora bitstream itself,
- implementations should be prepared to encounter bitstreams that do not follow
- these requirements.
-An application's behavior in the presecence of such non-conforming bitstreams
- is not defined by this specification, but any reasonable method of handling 
- them MAY be used.
-By way of example, applications MAY discard the current frame, retain the
- current output thus far, or attempt to continue on by assuming some default
- values for the erroneous bits.
-When such an error occurs in the bitstream headers, an application MAY refuse
- to decode the entire stream.
-An application SHOULD NOT allow such non-conformant bitstreams to overflow
- buffers and potentially execute arbitrary code, as this represents a serious
- security risk.
-
-An application MUST, however, ensure any reserved bits have the value zero, and
- refuse to decode the stream if they are not.
-These are used as place holders for future bitstream features with which the
- current bitstream is forward-compatible.
-Such features will not increment the bitstream version number, and can only be
- recognized by checking the value of these reserved bits.
 
 \chapter{Video Formats}
 
