@@ -741,10 +741,9 @@ static void CompressFrame( CP_INSTANCE *cpi) {
 
     /* Proceed with the frame update. */
     UpdateFrame(cpi);
-    
-    if ( cpi->MotionScore > 0 ){
-      cpi->DropCount = 0;
+    cpi->DropCount = 0;
 
+    if ( cpi->MotionScore > 0 ){
       /* Note the Quantizer used for each block coded. */
       for ( i = 0; i < cpi->pb.UnitFragments; i++ ){
         if ( cpi->pb.display_fragments[i] ){
