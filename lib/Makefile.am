@@ -26,6 +26,12 @@ libtheora_la_SOURCES = \
 	reconstruct.c \
 	scan.c \
 	toplevel.c \
+	cpu.c \
+	dsp.c \
+	i386/dsp_mmx.c \
+	i386/dsp_mmxext.c \
+ 	i386/recon_mmx.c \
+	i386/fdct_mmx.c \
 	$(encoder_sources)
 
 noinst_HEADERS = \
@@ -38,7 +44,9 @@ noinst_HEADERS = \
 	pp.h \
 	quant_lookup.h \
 	toplevel.h \
-	toplevel_lookup.h
+	toplevel_lookup.h \
+	cpu.h \
+	dsp.h
 
 libtheora_la_LDFLAGS = -version-info @V_LIB_CURRENT@:@V_LIB_REVISION@:@V_LIB_AGE@
 

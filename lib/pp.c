@@ -19,6 +19,7 @@
 #include <string.h>
 #include "encoder_internal.h"
 #include "pp.h"
+#include "dsp.h"
 
 #define MAX(a, b) ((a>b)?a:b)
 #define MIN(a, b) ((a<b)?a:b)
@@ -490,7 +491,7 @@ static void DeringFrame(PB_INSTANCE *pbi,
 
       } else {
 
-        CopyBlock(SrcPtr + 8 * col, DestPtr + 8 * col, LineLength);
+        dsp_static_copy8x8(SrcPtr + 8 * col, DestPtr + 8 * col, LineLength);
 
       }
 
@@ -529,7 +530,7 @@ static void DeringFrame(PB_INSTANCE *pbi,
         DeringBlockWeak(SrcPtr + 8 * col, DestPtr + 8 * col,
                         LineLength,Quality,QuantScale);
       }else{
-        CopyBlock(SrcPtr + 8 * col, DestPtr + 8 * col, LineLength);
+        dsp_static_copy8x8(SrcPtr + 8 * col, DestPtr + 8 * col, LineLength);
       }
 
       ++Block;
@@ -565,7 +566,7 @@ static void DeringFrame(PB_INSTANCE *pbi,
         DeringBlockWeak(SrcPtr + 8 * col, DestPtr + 8 * col,
                         LineLength,Quality,QuantScale);
       }else{
-        CopyBlock(SrcPtr + 8 * col, DestPtr + 8 * col, LineLength);
+        dsp_static_copy8x8(SrcPtr + 8 * col, DestPtr + 8 * col, LineLength);
       }
 
       ++Block;

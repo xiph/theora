@@ -777,6 +777,8 @@ int theora_encode_init(theora_state *th, theora_info *c){
 
   CP_INSTANCE *cpi;
 
+  dsp_static_init ();
+
   memset(th, 0, sizeof(*th));
   th->internal_encode=cpi=_ogg_calloc(1,sizeof(*cpi));
 

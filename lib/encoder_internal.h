@@ -24,6 +24,7 @@
 
 #include <theora/theora.h>
 #include "huffman.h"
+#include "dsp.h"
 
 #ifndef LIBOGG2
 #define theora_read(x,y,z) ( *z = oggpackB_read(x,y) )
@@ -689,23 +690,9 @@ extern void IDct1( Q_LIST_ENTRY * InputData,
                    ogg_int16_t *QuantMatrix,
                    ogg_int16_t * OutputData );
 
-extern void ReconIntra( PB_INSTANCE *pbi, unsigned char * ReconPtr,
-                        ogg_int16_t * ChangePtr, ogg_uint32_t LineStep );
-
-extern void ReconInter( PB_INSTANCE *pbi, unsigned char * ReconPtr,
-                        unsigned char * RefPtr, ogg_int16_t * ChangePtr,
-                        ogg_uint32_t LineStep ) ;
-
-extern void ReconInterHalfPixel2( PB_INSTANCE *pbi, unsigned char * ReconPtr,
-                                  unsigned char * RefPtr1,
-                                  unsigned char * RefPtr2,
-                                  ogg_int16_t * ChangePtr,
-                                  ogg_uint32_t LineStep ) ;
+extern void dsp_recon_init (DspFunctions *funcs);
 
 extern void SetupLoopFilter(PB_INSTANCE *pbi);
-extern void CopyBlock(unsigned char *src,
-                      unsigned char *dest,
-                      unsigned int srcstride);
 extern void LoopFilter(PB_INSTANCE *pbi);
 extern void ReconRefFrames (PB_INSTANCE *pbi);
 extern void ExpandToken( Q_LIST_ENTRY * ExpandedBlock,
