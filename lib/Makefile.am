@@ -1,5 +1,3 @@
-AUTOMAKE_OPTIONS = foreign
-
 INCLUDES = -I$(top_srcdir)/include
 
 lib_LTLIBRARIES = libtheora.la

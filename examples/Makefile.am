@@ -1,7 +1,5 @@
 ## Process this file with automake to produce Makefile.in
 
-AUTOMAKE_OPTIONS = foreign
-
 INCLUDES = -I$(top_srcdir)/include 
 
 noinst_PROGRAMS = encoder_example dump_video $(BUILDABLE_EXAMPLES)

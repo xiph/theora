@@ -5,7 +5,11 @@ dnl Initialization and Versioning
 dnl ------------------------------------------------
 
 AC_INIT(libtheora,[unreleased])
-AC_CONFIG_HEADERS([config.h])
+
+AC_CANONICAL_HOST
+AC_CANONICAL_TARGET
+
+AM_CONFIG_HEADER([config.h])
 AC_CONFIG_SRCDIR([lib/dct.c])
 AM_INIT_AUTOMAKE
 
@@ -37,9 +41,6 @@ AM_PROG_LIBTOOL
 dnl --------------------------------------------------
 dnl Set build flags based on environment
 dnl --------------------------------------------------
-
-AC_CANONICAL_HOST
-AC_CANONICAL_TARGET
 
 dnl Set some target options
 

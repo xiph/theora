@@ -1,7 +1,5 @@
 ## Process this file with automake to produce Makefile.in
 
-AUTOMAKE_OPTIONS = foreign
-
 SUBDIRS = python
 
 docdir = $(datadir)/doc/$(PACKAGE)-$(VERSION)
