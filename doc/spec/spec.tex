@@ -29,11 +29,13 @@
 \newcommand{\hti}{\idx{hti}}
 \newcommand{\sbi}{\idx{sbi}}
 \newcommand{\bi}{\idx{bi}}
+\newcommand{\bj}{\idx{bj}}
 \newcommand{\mbi}{\idx{mbi}}
 \newcommand{\mi}{\idx{mi}}
 \newcommand{\cbi}{\idx{cbi}}
 \newcommand{\qii}{\idx{qii}}
 \newcommand{\ti}{\idx{ti}}
+\newcommand{\tj}{\idx{tj}}
 %This somewhat odd construct ensures that \bitvar{\qi}, etc., will set the
 % qi in bold face, even though it is in a \mathit font, yet \bitvar{VAR} will
 % set VAR in a bold, roman font.
@@ -2846,6 +2848,9 @@ It is allowable to use a Huffman code that omits some---but not all---of the
  possible token values.
 It is also allowable, if not particularly useful, to specify multiple codes for
  the same token value in a single table.
+Note also that token values may appear in the tree in any order.
+In particular, it is not safe to assume that token value zero (which ends a
+ single block), has a Huffman code of all zeros.
 
 The tree is decoded as follows:
 
@@ -3701,7 +3706,7 @@ For each subsampled axis in the chroma planes, the corresponding motion vector
 The precise details of how these vectors are used to compute predictors for
  each block are described in Section~REF.
 
-\begin{table}[htb]
+\begin{table}[ht]
 \begin{center}
 \begin{tabular}{lrlr}\toprule
 Huffman Code   & Value & Huffman Codee  & Value \\\midrule
@@ -3937,14 +3942,14 @@ Let \locvar{E} and \locvar{F} be the index in coded order of the one block in
 Assign $\bitvar{MVECTS}[\locvar{E}]$ and $\bitvar{MVECTS}[\locvar{F}]$ the
  value
 \begin{multline*}
-(\round\left(\frac{\begin{aligned}
+(\round(\frac{\begin{aligned}
  \bitvar{MVECTS}[\locvar{A}]_x+\bitvar{MVECTS}[\locvar{B}]_x+\\
  \bitvar{MVECTS}[\locvar{C}]_x+\bitvar{MVECTS}[\locvar{D}]_x
- \end{aligned}}{4}\right), \\
- \round\left(\frac{\begin{aligned}
+ \end{aligned}}{4}), \\
+ \round(\frac{\begin{aligned}
  \bitvar{MVECTS}[\locvar{A}]_y+\bitvar{MVECTS}[\locvar{B}]_y+\\
  \bitvar{MVECTS}[\locvar{C}]_y+\bitvar{MVECTS}[\locvar{D}]_y
- \end{aligned}}{4}\right))
+ \end{aligned}}{4})
 \end{multline*}
 \end{enumerate}
 \item
@@ -3997,20 +4002,15 @@ Assign $\bitvar{MVECTS}[\locvar{G}]$ and $\bitvar{MVECTS}[\locvar{K}]$ the
 Assign $\bitvar{MVECTS}[\locvar{H}]$ and $\bitvar{MVECTS}[\locvar{L}]$ the
  value \\ $\bitvar{MVECTS}[\locvar{D}]$.
 \end{enumerate}
-
-
-
 \item
 Assign \locvar{LAST2} the value \locvar{LAST1}.
 \item
 Assign \locvar{LAST1} the value $(\locvar{MVX},\locvar{MVY})$.
 \end{enumerate}
-
 \item
 Otherwise, if $\bitvar{MBMODES}[\locvar{\mbi}]$ is 6 (INTER\_GOLDEN\_MV),
  decode a single motion vector into \locvar{MVX} and \locvar{MVY} using the
  procedure described in Section~\ref{sub:mv-decode}.
-
 \item
 Otherwise, if $\bitvar{MBMODES}[\locvar{\mbi}]$ is 4 (INTER\_MV\_LAST2):
 \begin{enumerate}
@@ -4021,11 +4021,9 @@ Assign \locvar{LAST2} the value \locvar{LAST1}.
 \item
 Assign \locvar{LAST1} the value $(\locvar{MVX},\locvar{MVY})$.
 \end{enumerate}
-
 \item
 Otherwise, if $\bitvar{MBMODES}[\locvar{\mbi}]$ is 3 (INTER\_MV\_LAST), assign
  $(\locvar{MVX},\locvar{MVY})$ the value \locvar{LAST1}.
-
 \item
 Otherwise, if $\bitvar{MBMODES}[\locvar{\mbi}]$ is 2 (INTER\_MV):
 \begin{enumerate}
@@ -4037,12 +4035,11 @@ Assign \locvar{LAST2} the value \locvar{LAST1}.
 \item
 Assign \locvar{LAST1} the value $(\locvar{MVX},\locvar{MVY})$.
 \end{enumerate}
-
 \item
-Otherwise, assign \locvar{MVX} and \locvar{MVY} the value zero.
-
+Otherwise (5: INTER\_GOLDEN\_NOMV, 1: INTRA, or 0: INTER\_NOMV), assign
+ \locvar{MVX} and \locvar{MVY} the value zero.
 \item
-If $\bitvar{MBMODES}[\locvar{\mbi}]$ is not 7 (INTER\_MV\_FOUR), then for
+If $\bitvar{MBMODES}[\locvar{\mbi}]$ is not 7 (not INTER\_MV\_FOUR), then for
  each coded block \locvar{\bi} in macro block \locvar{\mbi}:
 \begin{enumerate}
 \item
@@ -4068,8 +4065,9 @@ However, regardless of how many of the luma blocks are actually coded, the VP3
  mode.
 The motion vectors read are used to calculate the motion vectors for the chroma
  blocks, but are otherwise ignored.
-Thus, care should be taken when creating Theora streams meant to be compatible
- with VP3 to only use INTER\_MV\_FOUR mode when all four luma blocks are coded.
+Thus, care should be taken when creating Theora streams meant to be backwards
+ compatible with VP3 to only use INTER\_MV\_FOUR mode when all four luma
+ blocks are coded.
 
 \section{Block-Level \qi\ Decode}
 \label{sub:block-qis}
@@ -4098,7 +4096,7 @@ Thus, care should be taken when creating Theora streams meant to be compatible
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
-\bitvar{QIIS}   & \multicolumn{1}{p{20pt}}{Integer Array} &
+\bitvar{QIIS}   & \multicolumn{1}{p{40pt}}{Integer Array} &
                                2 & No & An \bitvar{NBS}-element array of
  \locvar{\qii} values for each block. \\
 \bottomrule\end{tabularx}
@@ -4136,7 +4134,7 @@ Each subsequent pass is restricted to the blocks in the first group.
 For each value of \locvar{\cbi} from 0 to $\bitvar{NBCODED}-1$, assign \\
  $\bitvar{QIIS}[\bitvar{CODEDBS}[\locvar{\cbi}]]$ the value zero.
 \item
-For each value of \locvar{\qii} from 0 to $\bitvar{NQIS}-2$:
+For each consecutive value of \locvar{\qii} from 0 to $\bitvar{NQIS}-2$:
 \begin{enumerate}
 \item
 Let \locvar{NBITS} be the number of blocks such that \\
@@ -4165,6 +4163,852 @@ Thus, no bits are read and each block uses the one \qi\ value defined for the
  frame.
 
 \cleardoublepage
+
+\section{DCT Coefficients}
+
+The quantized DCT coefficients are decoded by making 64 passes through the list
+ of coded blocks, one for each token index in zig-zag order.
+For the DC tokens, two Huffman tables are chosen from among the first 16, one
+ for the luma plane and one for the chroma planes.
+The AC tokens, however, are divided into four different groups.
+Again, two 4-bit indices are decoded, one for the luma plane, and one for the
+ chroma planes, but these select the codebooks for {\em all four} groups.
+AC coefficients in group one use codebooks $16\ldots 31$, while group two uses
+ $32\ldots 47$, etc.
+Note that this second set of indices is decoded even if there are no non-zero
+ AC coefficients in the frame.
+
+Tokens are divided into two major types: EOB tokens, which fill the remainder
+ of one or more blocks with zeros, and coefficient tokens, which fill in one or
+ more coefficients within a single block.
+A decoding procedure for the first is given in Section~\ref{sub:eob-token}, and
+ for the second in Section~\ref{sub:coeff-token}.
+The decoding procedure for the complete set of quantized coefficients is given
+ in Section~\ref{sub:dct-coeffs}.
+
+\subsection{EOB Token Decode}
+\label{sub:eob-token}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{TOKEN}    & Integer &  5 & No  & The token being decoded.
+This must be in the range $0\ldots 6$. \\
+\bitvar{NBS}      & Integer & 36 & No  & The total number of blocks in a
+ frame. \\
+\bitvar{TIS}      & \multicolumn{1}{p{40pt}}{Integer Array} &
+                               6 & No  & An \bitvar{NBS}-element array of the
+ current token index for each block. \\
+\bitvar{COEFFS}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                              11 & Yes & An $\bitvar{NBS}\times 64$ array of
+ quantized DCT coefficient values for each block in zig-zag order. \\
+\bitvar{\bi}      & Integer & 36 & No  & The index of the current block in
+ coded order. \\
+\bitvar{\ti}      & Integer &  6 & No  & The current token index. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{TIS}      & \multicolumn{1}{p{40pt}}{Integer Array} &
+                               6 & No  & An \bitvar{NBS}-element array of the
+ current token index for each block. \\
+\bitvar{COEFFS}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                              11 & Yes & An $\bitvar{NBS}\times 64$ array of
+ quantized DCT coefficient values for each block in zig-zag order. \\
+\bitvar{EOBS}     & Integer & 36 & No  & The remaining length of the current
+ EOB run. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{\bj}      & Integer & 36 & No & Another index of a block in coded
+ order. \\
+\locvar{\tj}      & Integer &  6 & No & Another token index. \\
+\bottomrule\end{tabularx}
+\medskip
+
+A summary of the EOB tokens is given in Table~\ref{tab:eob-tokens}.
+An important thing to note is that token 6 does not add an offset to the
+ decoded run value, even though in general it should only be used for runs of
+ size 32 or longer.
+If a value of zero is decoded for this run, it is treated as an EOB run the
+ size of the remaining coded blocks.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{ccl}\toprule
+Token Value  & Extra Bits & EOB Run Lengths                         \\\midrule
+$0$          & $0$        & $1$                                     \\
+$1$          & $0$        & $2$                                     \\
+$2$          & $0$        & $3$                                     \\
+$3$          & $2$        & $4\ldots 7$                             \\
+$4$          & $3$        & $8\ldots 15$                            \\
+$5$          & $4$        & $16\ldots 31$                           \\
+$6$          & $12$       & $1\ldots 4095$, or all remaining blocks \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{EOB Token Summary}
+\label{tab:eob-tokens}
+\end{table}
+
+There is no restriction that one EOB token cannot be immediately followed by
+ another, so no special cases are necessary to extend the range of the maximum
+ run length as were required in Section~\ref{sub:long-run}.
+Indeed, depending on the lengths of the Huffman codes, it may even cheaper to
+ encode, by way of example, an EOB run of length 31 followed by an EOB run of
+ length 1 than to encode an EOB run of length 32 directly.
+There is also no restriction that an EOB run stop at the end of a color plane
+ or a token index.
+The run MUST, however, end at or before the end of the frame.
+
+\begin{enumerate}
+\item
+If \bitvar{TOKEN} is 0, assign \bitvar{EOBS} the value 1.
+\item
+Otherwise, if \bitvar{TOKEN} is 1, assign \bitvar{EOBS} the value 2.
+\item
+Otherwise, if \bitvar{TOKEN} is 2, assign \bitvar{EOBS} the value 3.
+\item
+Otherwise, if \bitvar{TOKEN} is 3:
+\begin{enumerate}
+\item
+Read a 2-bit unsigned integer as \bitvar{EOBS}.
+\item
+Assign \bitvar{EOBS} the value $(\bitvar{EOBS}+4)$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 4:
+\begin{enumerate}
+\item
+Read a 3-bit unsigned integer as \bitvar{EOBS}.
+\item
+Assign \bitvar{EOBS} the value $(\bitvar{EOBS}+8)$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 5:
+\begin{enumerate}
+\item
+Read a 4-bit unsigned integer as \bitvar{EOBS}.
+\item
+Assign \bitvar{EOBS} the value $(\bitvar{EOBS}+16)$.
+\end{enumerate}
+\item
+Otherwise, \bitvar{TOKEN} is 6:
+\begin{enumerate}
+\item
+Read a 12-bit unsigned integer as \bitvar{EOBS}.
+\item
+If \bitvar{EOBS} is zero, assign \bitvar{EOBS} to be the number of coded blocks
+ \locvar{\bj} such that $\bitvar{TIS}[\locvar{\bj}]$ is less than 64.
+\end{enumerate}
+\item
+For each value of \locvar{\tj} from $\bitvar{\ti}$ to 63, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\locvar{\tj}]$ the value zero.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value 64.
+\item
+Assign \bitvar{EOBS} the value $(\bitvar{EOBS}-1)$.
+\end{enumerate}
+
+\paragraph{VP3 Compatibility}
+
+The VP3 encoder does not use the special interpretation of a zero-length EOB
+ run, though its decoder {\em does} support it.
+That may be due more to a happy accident in the way the decoder was written
+ than intentional design, however, and other VP3 implementations might not
+ reproduce it faithfully.
+For backwards compatibility, it may be wise to avoid it, especially as for most
+ frame sizes there are fewer than 4095 blocks, thus making it unnecessary.
+
+\subsection{Coefficient Token Decode}
+\label{sub:coeff-token}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{TOKEN}    & Integer &  5 & No  & The token being decoded.
+This must be in the range $7\ldots 31$. \\
+\bitvar{NBS}      & Integer & 36 & No  & The total number of blocks in a
+ frame. \\
+\bitvar{TIS}      & \multicolumn{1}{p{40pt}}{Integer Array} &
+                               6 & No  & An \bitvar{NBS}-element array of the
+ current token index for each block. \\
+\bitvar{COEFFS}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                              11 & Yes & An $\bitvar{NBS}\times 64$ array of
+ quantized DCT coefficient values for each block in zig-zag order. \\
+\bitvar{\bi}      & Integer & 36 & No  & The index of the current block in
+ coded order. \\
+\bitvar{\ti}      & Integer &  6 & No  & The current token index. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{TIS}      & \multicolumn{1}{p{40pt}}{Integer Array} &
+                               6 & No  & An \bitvar{NBS}-element array of the
+ current token index for each block. \\
+\bitvar{COEFFS}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                              11 & Yes & An $\bitvar{NBS}\times 64$ array of
+ quantized DCT coefficient values for each block in zig-zag order. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{SIGN}     & Integer &  1 & No & A flag indicating the sign of the
+ current coefficient. \\
+\locvar{MAG}      & Integer & 10 & No & The magnitude of the current
+ coefficient. \\
+\locvar{RLEN}     & Integer &  6 & No & The length of the current zero run. \\
+\locvar{\tj}      & Integer &  6 & No & Another token index. \\
+\bottomrule\end{tabularx}
+\medskip
+
+Each of these tokens decodes one or more coefficients in the current block.
+A summary of the meanings of the token values is presented in
+ Table~\ref{tab:coeff-tokens}.
+There are often several different ways to tokenize a given coefficient list.
+Which one is optimal depends on the exact lengths of the Huffman codes used to
+ represent each token.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabularx}{\textwidth}{cclX}\toprule
+Token Value  & Extra Bits & \multicolumn{1}{p{55pt}}{Number of Coefficients}
+                                    & Description                    \\\midrule
+$7$          & $3$  & $1\ldots 8$   & Short zero run.                \\
+$8$          & $6$  & $1\ldots 64$  & Zero run.                      \\
+$9$          & $0$  & $1$           & $1$.                           \\
+$10$         & $0$  & $1$           & $-1$.                          \\
+$11$         & $0$  & $1$           & $2$.                           \\
+$12$         & $0$  & $1$           & $-2$.                          \\
+$13$         & $1$  & $1$           & $\pm 3$.                       \\
+$14$         & $1$  & $1$           & $\pm 4$.                       \\
+$15$         & $1$  & $1$           & $\pm 5$.                       \\
+$16$         & $1$  & $1$           & $\pm 6$.                       \\
+$17$         & $2$  & $1$           & $\pm 7\ldots 8$.               \\
+$18$         & $3$  & $1$           & $\pm 9\ldots 12$.              \\
+$19$         & $4$  & $1$           & $\pm 13\ldots 20$.             \\
+$20$         & $5$  & $1$           & $\pm 21\ldots 36$.             \\
+$21$         & $6$  & $1$           & $\pm 37\ldots 68$.             \\
+$22$         & $10$ & $1$           & $\pm 69\ldots 580$.            \\
+$23$         & $1$  & $2$           & One zero followed by $\pm 1$.  \\
+$24$         & $1$  & $3$           & Two zeros followed by $\pm 1$. \\
+$25$         & $1$  & $4$           & Three zeros followed by
+ $\pm 1$. \\
+$26$         & $1$  & $5$           & Four zeros followed by
+ $\pm 1$. \\
+$27$         & $1$  & $6$           & Five zeros followed by
+ $\pm 1$. \\
+$28$         & $3$  & $7\ldots 10$  & $6\ldots 9$ zeros followed by
+ $\pm 1$.  \\
+$29$         & $4$  & $11\ldots 18$ & $10\ldots 17$ zeros followed by
+ $\pm 1$.\\
+$30$         & $2$  & $2$           & One zero followed by
+ $\pm 2\ldots 3$. \\
+$31$         & $3$  & $3\ldots 4$   & $2\ldots 3$ zeros followed by
+ $\pm 2\ldots 3$. \\
+\bottomrule\end{tabularx}
+\end{center}
+\caption{Coefficient Token Summary}
+\label{tab:coeff-tokens}
+\end{table}
+
+For tokens which represent more than one coefficient, they MUST NOT bring the
+ total number of coefficients in the block to more than 64.
+Care should be taken in a decoder to check for this, as otherwise it may permit
+ buffer overflows from invalidly formed packets.
+\begin{verse}
+{\bf Note:} One way to achieve this efficiently is to combine the inverse
+ zig-zag mapping (described later in Section~REF) with coefficient decode, and
+ use a table look-up to map zig-zag indices greater than 63 to a safe location.
+\end{verse}
+
+\begin{enumerate}
+\item
+If \bitvar{TOKEN} is 7:
+\begin{enumerate}
+\item
+Read in a 3-bit unsigned integer as \locvar{RLEN}.
+\item
+Assign \locvar{RLEN} the value $(\locvar{RLEN}+1)$.
+\item
+For each value of \locvar{\tj} from \bitvar{\ti} to
+ $(\bitvar{\ti}+\locvar{RLEN}-1)$, assign
+  $\bitvar{COEFFS}[\bitvar{\bi}][\locvar{\tj}]$ the value zero.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value
+ $\bitvar{TIS}[\bitvar{\bi}]+\locvar{RLEN}$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 8:
+\begin{enumerate}
+\item
+Read in a 6-bit unsigned integer as \locvar{RLEN}.
+\item
+Assign \locvar{RLEN} the value $(\locvar{RLEN}+1)$.
+\item
+For each value of \locvar{\tj} from \bitvar{\ti} to
+ $(\bitvar{\ti}+\locvar{RLEN}-1)$, assign
+  $\bitvar{COEFFS}[\bitvar{\bi}][\locvar{\tj}]$ the value zero.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value
+ $\bitvar{TIS}[\bitvar{\bi}]+\locvar{RLEN}$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 9:
+\begin{enumerate}
+\item
+Assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $1$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 10:
+\begin{enumerate}
+\item
+Assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $-1$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 11:
+\begin{enumerate}
+\item
+Assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $2$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 12:
+\begin{enumerate}
+\item
+Assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $-2$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 13:
+\begin{enumerate}
+\item
+Read a 1-bit unsigned integer as \locvar{SIGN}.
+\item
+If \locvar{SIGN} is zero, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$
+ the value $3$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $-3$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 14:
+\begin{enumerate}
+\item
+Read a 1-bit unsigned integer as \locvar{SIGN}.
+\item
+If \locvar{SIGN} is zero, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$
+ the value $4$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $-4$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 15:
+\begin{enumerate}
+\item
+Read a 1-bit unsigned integer as \locvar{SIGN}.
+\item
+If \locvar{SIGN} is zero, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$
+ the value $5$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $-5$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 16:
+\begin{enumerate}
+\item
+Read a 1-bit unsigned integer as \locvar{SIGN}.
+\item
+If \locvar{SIGN} is zero, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$
+ the value $6$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value $-6$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 17:
+\begin{enumerate}
+\item
+Read a 1-bit unsigned integer as \locvar{SIGN}.
+\item
+Read a 1-bit unsigned integer as \locvar{MAG}.
+\item
+Assign \locvar{MAG} the value $(\locvar{MAG}+7)$.
+\item
+If \locvar{SIGN} is zero, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$
+ the value $\locvar{MAG}$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value
+ $-\locvar{MAG}$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 18:
+\begin{enumerate}
+\item
+Read a 1-bit unsigned integer as \locvar{SIGN}.
+\item
+Read a 2-bit unsigned integer as \locvar{MAG}.
+\item
+Assign \locvar{MAG} the value $(\locvar{MAG}+9)$.
+\item
+If \locvar{SIGN} is zero, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$
+ the value $\locvar{MAG}$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value
+ $-\locvar{MAG}$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 19:
+\begin{enumerate}
+\item
+Read a 1-bit unsigned integer as \locvar{SIGN}.
+\item
+Read a 3-bit unsigned integer as \locvar{MAG}.
+\item
+Assign \locvar{MAG} the value $(\locvar{MAG}+13)$.
+\item
+If \locvar{SIGN} is zero, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$
+ the value $\locvar{MAG}$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value
+ $-\locvar{MAG}$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 20:
+\begin{enumerate}
+\item
+Read a 1-bit unsigned integer as \locvar{SIGN}.
+\item
+Read a 4-bit unsigned integer as \locvar{MAG}.
+\item
+Assign \locvar{MAG} the value $(\locvar{MAG}+21)$.
+\item
+If \locvar{SIGN} is zero, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$
+ the value $\locvar{MAG}$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value
+ $-\locvar{MAG}$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 21:
+\begin{enumerate}
+\item
+Read a 1-bit unsigned integer as \locvar{SIGN}.
+\item
+Read a 5-bit unsigned integer as \locvar{MAG}.
+\item
+Assign \locvar{MAG} the value $(\locvar{MAG}+37)$.
+\item
+If \locvar{SIGN} is zero, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$
+ the value $\locvar{MAG}$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value
+ $-\locvar{MAG}$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 22:
+\begin{enumerate}
+\item
+Read a 1-bit unsigned integer as \locvar{SIGN}.
+\item
+Read a 9-bit unsigned integer as \locvar{MAG}.
+\item
+Assign \locvar{MAG} the value $(\locvar{MAG}+69)$.
+\item
+If \locvar{SIGN} is zero, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$
+ the value $\locvar{MAG}$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value
+ $-\locvar{MAG}$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 23:
+\begin{enumerate}
+\item
+Assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}]$ the value zero.
+\item
+Read a 1-bit unsigned integer as SIGN.
+\item
+If \locvar{SIGN} is zero, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+1]$ the value $1$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+1]$ the value
+ $-1$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+2$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 24:
+\begin{enumerate}
+\item
+For each value of \locvar{\tj} from \bitvar{\ti} to $(\bitvar{\ti}+1)$, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\locvar{\tj}]$ the value zero.
+\item
+Read a 1-bit unsigned integer as SIGN.
+\item
+If \locvar{SIGN} is zero, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+2]$ the value $1$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+2]$ the value
+ $-1$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+3$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 25:
+\begin{enumerate}
+\item
+For each value of \locvar{\tj} from \bitvar{\ti} to $(\bitvar{\ti}+2)$, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\locvar{\tj}]$ the value zero.
+\item
+Read a 1-bit unsigned integer as SIGN.
+\item
+If \locvar{SIGN} is zero, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+3]$ the value $1$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+3]$ the value
+ $-1$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+4$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 26:
+\begin{enumerate}
+\item
+For each value of \locvar{\tj} from \bitvar{\ti} to $(\bitvar{\ti}+3)$, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\locvar{\tj}]$ the value zero.
+\item
+Read a 1-bit unsigned integer as SIGN.
+\item
+If \locvar{SIGN} is zero, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+4]$ the value $1$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+4]$ the value
+ $-1$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+5$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 27:
+\begin{enumerate}
+\item
+For each value of \locvar{\tj} from \bitvar{\ti} to $(\bitvar{\ti}+4)$, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\locvar{\tj}]$ the value zero.
+\item
+Read a 1-bit unsigned integer as SIGN.
+\item
+If \locvar{SIGN} is zero, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+5]$ the value $1$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+5]$ the value
+ $-1$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+6$.
+\end{enumerate}
+
+\item
+Otherwise, if \bitvar{TOKEN} is 28:
+\begin{enumerate}
+\item
+Read a 1-bit unsigned integer as \locvar{SIGN}.
+\item
+Read a 2-bit unsigned integer as \locvar{RLEN}.
+\item
+Assign \locvar{RLEN} the value $(\locvar{RLEN}+6)$.
+\item
+For each value of \locvar{\tj} from \bitvar{\ti} to
+ $(\bitvar{\ti}+\locvar{RLEN}-1)$, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\locvar{\tj}]$ the value zero.
+\item
+If \locvar{SIGN} is zero, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+\locvar{RLEN}]$ the value $1$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+\locvar{RLEN}]$
+ the value $-1$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value
+ $\bitvar{TIS}[\bitvar{\bi}]+\locvar{RLEN}+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 29:
+\begin{enumerate}
+\item
+Read a 1-bit unsigned integer as \locvar{SIGN}.
+\item
+Read a 3-bit unsigned integer as \locvar{RLEN}.
+\item
+Assign \locvar{RLEN} the value $(\locvar{RLEN}+10)$.
+\item
+For each value of \locvar{\tj} from \bitvar{\ti} to
+ $(\bitvar{\ti}+\locvar{RLEN}-1)$, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\locvar{\tj}]$ the value zero.
+\item
+If \locvar{SIGN} is zero, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+\locvar{RLEN}]$ the value $1$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+\locvar{RLEN}]$
+ the value $-1$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value
+ $\bitvar{TIS}[\bitvar{\bi}]+\locvar{RLEN}+1$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 30:
+\begin{enumerate}
+\item
+Assign $\bitvar{COEFFS}[\bitvar{\bi}][\locvar{\ti}]$ the value zero.
+\item
+Read a 1-bit unsigned integer as \locvar{SIGN}.
+\item
+Read a 1-bit unsigned integer as \locvar{MAG}.
+\item
+Assign \locvar{MAG} the value $(\locvar{MAG}+2)$.
+\item
+If \locvar{SIGN} is zero, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+1]$ the value $\locvar{MAG}$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+1]$ the value
+ $-\locvar{MAG}$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]+2$.
+\end{enumerate}
+\item
+Otherwise, if \bitvar{TOKEN} is 31:
+\begin{enumerate}
+\item
+Read a 1-bit unsigned integer as \locvar{SIGN}.
+\item
+Read a 1-bit unsigned integer as \locvar{MAG}.
+\item
+Assign \locvar{MAG} the value $(\locvar{MAG}+2)$.
+\item
+Read a 1-bit unsigned integer as \locvar{RLEN}.
+\item
+Assign \locvar{RLEN} the value $(\locvar{RLEN}+2)$.
+\item
+For each value of \locvar{\tj} from \bitvar{\ti} to
+ $(\bitvar{\ti}+\locvar{RLEN}-1)$, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\locvar{\tj}]$ the value zero.
+\item
+If \locvar{SIGN} is zero, assign
+ $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+\locvar{RLEN}]$ the value
+ $\locvar{MAG}$.
+\item
+Otherwise, assign $\bitvar{COEFFS}[\bitvar{\bi}][\bitvar{\ti}+\locvar{RLEN}]$
+ the value $-\locvar{MAG}$.
+\item
+Assign $\bitvar{TIS}[\bitvar{\bi}]$ the value
+ $\bitvar{TIS}[\bitvar{\bi}]+\locvar{RLEN}+1$.
+\end{enumerate}
+\end{enumerate}
+
+\subsection{DCT Coefficient Decode}
+\label{sub:dct-coeffs}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{NBS}      & Integer & 36 & No  & The total number of blocks in a
+ frame. \\
+\bitvar{NMBS}     & Integer & 32 & No & The total number of macro blocks in a
+ frame. \\
+\bitvar{NBCODED}  & Integer & 36 & No & The total number of coded blocks in a
+ frame. \\
+\bitvar{CODEDBS}  & \multicolumn{1}{p{40pt}}{Integer Array} &
+                              36 & No & An \bitvar{NBCODED}-element array of
+ coded block indices in coded order. \\
+\bitvar{HTS} & \multicolumn{3}{l}{Huffman table array}
+                                     & An 80-element array of Huffman tables
+ with up to 32 entries each. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{COEFFS}   & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                              11 & Yes & An $\bitvar{NBS}\times 64$ array of
+ quantized DCT coefficient values for each block in zig-zag order. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{NLBS}     & Integer & 34 & No & The number of blocks in the luma
+ plane. \\
+\locvar{TIS}      & \multicolumn{1}{p{40pt}}{Integer Array} &
+                               6 & No & An \bitvar{NBS}-element array of the
+ current token index for each block. \\
+\locvar{EOBS}     & Integer & 36 & No & The remaining length of the current
+ EOB run. \\
+\locvar{TOKEN}    & Integer &  5 & No & The current token being decoded. \\
+\locvar{HG}       & Integer &  3 & No & The current Huffman table group. \\
+\locvar{\cbi}     & Integer & 36 & No & The index of the current block in the
+ coded block list. \\
+\locvar{\bi}      & Integer & 36 & No & The index of the current block in
+ coded order. \\
+\locvar{\bj}      & Integer & 36 & No & Another index of a block in coded
+ order. \\
+\locvar{\ti}      & Integer &  6 & No & The current token index. \\
+\locvar{\tj}      & Integer &  6 & No & Another token index. \\
+\locvar{\hti_L}   & Integer &  4 & No & The index of the current Huffman table
+ to use for the luma plane within a group. \\
+\locvar{\hti_C}   & Integer &  4 & No & The index of the current Huffman table
+ to use for the chroma planes within a group. \\
+\locvar{\hti}     & Integer &  7 & No & The index of the current Huffman table
+ to use. \\
+\bottomrule\end{tabularx}
+\medskip
+
+This procedure puts the above two procedures to work to decode the entire set
+ of DCT coefficients for the frame.
+At the end of this procedure, \locvar{EOBS} MUST be zero, and
+ $\locvar{TIS}[\locvar{\bi}]$ MUST be 64 for every coded \locvar{\bi}.
+
+\begin{enumerate}
+\item
+Assign \locvar{NLBS} the value $(\bitvar{NMBS}*4)$.
+\item
+For each consecutive value of \locvar{\cbi} from 0 to $\bitvar{NBCODED}-1$,
+ assign $\locvar{TIS}[\bitvar{CODEDBS}[\locvar{\cbi}]]$ the value zero.
+\item
+Assign \locvar{EOBS} the value 0.
+\item
+For each consecutive value of \locvar{\ti} from 0 to 63:
+\begin{enumerate}
+\item
+If \locvar{\ti} is $0$ or $1$:
+\begin{enumerate}
+\item
+Read a 4-bit unsigned integer as \locvar{\hti_L}.
+\item
+Read a 4-bit unsigned integer as \locvar{\hti_C}.
+\end{enumerate}
+\item
+For each consecutive value of \locvar{\cbi} from 0 to $\bitvar{NBCODED}-1$ for
+ which $\locvar{TIS}[\bitvar{CODEDBS}[\locvar{\cbi}]]$ equals \locvar{\ti}:
+\begin{enumerate}
+\item
+Assign \locvar{\bi} the value $\bitvar{CODEDBS}[\locvar{\cbi}]$.
+\item
+If \locvar{EOBS} is greater than zero:
+\begin{enumerate}
+\item
+For each value of \locvar{\tj} from $\locvar{\ti}$ to 63, assign
+ $\bitvar{COEFFS}[\locvar{\bi}][\locvar{\tj}]$ the value zero.
+\item
+Assign $\locvar{TIS}[\locvar{\bi}]$ the value 64.
+\item
+Assign \locvar{EOBS} the value $(\locvar{EOBS}-1)$.
+\end{enumerate}
+\item
+Otherwise:
+\begin{enumerate}
+\item
+Assign \locvar{HG} a value based on \locvar{\ti} from
+ Table~\ref{tab:huff-groups}.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{lc}\toprule
+\locvar{\ti}  & \locvar{HG} \\\midrule
+$0$           & $0$ \\
+$1\ldots 4$   & $1$ \\
+$5\ldots 13$  & $2$ \\
+$14\ldots 26$ & $3$ \\
+$27\ldots 63$ & $4$ \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Huffman Table Groups}
+\label{tab:huff-groups}
+\end{table}
+
+\item
+If \locvar{\bi} is less than \locvar{NLBS}, assign \locvar{\hti} the value
+ $(16*\locvar{HG}+\locvar{\hti_L})$.
+\item
+Otherwise, assign \locvar{\hti} the value
+ $(16*\locvar{HG}+\locvar{\hti_C})$.
+\item
+Read one bit at a time until one of the codes in $\bitvar{HTS}[\locvar{\hti}]$
+ is recognized, and assign the value to \locvar{TOKEN}.
+\item
+If \locvar{TOKEN} is less than 7, expand an EOB token using the procedure given
+ in Section~\ref{sub:eob-token} to update $\locvar{TIS}[\locvar{\bi}]$,
+ $\bitvar{COEFFS}[\locvar{\bi}]$, and \locvar{EOBS}.
+\item
+Otherwise, expand a coefficient token using the procedure given in
+ Section~\ref{sub:coeff-token} to update $\locvar{TIS}[\locvar{\bi}]$ and
+ $\bitvar{COEFFS}[\locvar{\bi}]$.
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
+
+
 
 %\backmatter
 \appendix
