@@ -13,3 +13,6 @@ regarding technology used in this software:
   distribute, and sell said changes as well as applications for other 
   fields of use.
 
+This reference implementation is originally derived from the On2 VP3
+Codec Software, and the Theora video format is essentially compatible
+with the VP3 video format, consisting of a backward-compatible superset.
