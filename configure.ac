@@ -78,7 +78,7 @@ dnl Configuration option for building of floating point code.
 
 ac_enable_float=yes
 AC_ARG_ENABLE(float,
-     [  --disable-float         disable building of floating point code ],
+     [  --disable-float         disable use of floating point code ],
      [ ac_enable_float=no ], [ ac_enable_float=yes] )
 
 if test "x${ac_enable_float}" = xyes ; then
@@ -92,7 +92,7 @@ dnl Configuration option for building of encoding support.
 
 ac_enable_encode=yes
 AC_ARG_ENABLE(encode,
-     [  --disable-encode        disable building of encoding support ],
+     [  --disable-encode        disable encoding support ],
      [ ac_enable_encode=no ], [ ac_enable_encode=yes] )
 
 if test "x${ac_enable_encode}" = xyes ; then
