@@ -10,7 +10,10 @@ SPEC_SRCS = spec.tex spec.bib
 
 FIG_SRCS = pic-frame.fig hilbert-mb.fig hilbert-block.fig xifish.fig
 
-FIG_OBJS = $(FIG_SRCS:.fig=.tex)
+FIG_TEXS = $(FIG_SRCS:.fig=.tex)
+FIG_PDFS = $(FIG_SRCS:.fig=.pdf)
+
+FIG_OBJS = pic-frame.tex hilbert-mb.tex hilbert-block.tex xifish.pdf
 
 Theora_I_spec.pdf : spec.pdf
 	$(MV) $< $@
@@ -33,6 +36,8 @@ figures : $(FIG_OBJS)
 %.tex : %.fig
 	fig2dev -L latex $< $@
 
+%.pdf : %.fig
+	fig2dev -L pdf $< $@
 
 .PHONY: clean distclean maintainer-clean
 
