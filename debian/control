@@ -1,0 +1,21 @@
+Source: libtheora
+Section: libs
+Priority: optional
+Maintainer: Christopher L Cheney <ccheney@debian.org>
+Build-Depends: cdbs, autotools-dev, debhelper (>> 4.0.0), devscripts, libogg-dev (>= 1.1.0), python
+Standards-Version: 3.5.6.0
+
+Package: libtheora0
+Architecture: any
+Section: libs
+Depends: ${shlibs:Depends}
+Description: The Theora Video Compression Codec
+ Ogg Theora
+
+Package: libtheora-dev
+Architecture: any
+Section: devel
+Depends: libogg-dev, libtheora-dev (= ${Source-Version})
+Description: Theora Library Development
+ The libtheora-dev package contains the header files and documentation
+ needed to develop applications with libtheora.

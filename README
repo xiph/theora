@@ -1,0 +1,150 @@
+-------------------------------------------------------------------------
+This README file is up to date with and covers Xiph.Org's first alpha
+release of the Theora video codec on 25 09 2002.
+-------------------------------------------------------------------------
+
+*** What is Theora?
+
+Theora is Xiph.Org's first publicly released video codec, intended
+for use within the Ogg's project's Ogg multimedia streaming system.
+Theora is derived directly from On2's VP3 codec; Currently the two are
+nearly identical, varying only in encapsulating decoder tables in the 
+bitstream headers, but Theora will make use of this extra freedom 
+in the future to improve over what is possible with VP3.
+
+*** Where is Theora?
+
+Theora's main site is www.theora.org.  Theora and related libraries
+can be gotten from www.theora.org or the main Xiph.Org site at
+www.xiph.org.  In order to access CVS at xiph.org (the best way to get
+to the source), see http://www.xiph.org/cvs.html
+
+*** What is the goal of this alpha release?
+
+This alpha is a proof of concept, not a production-ready release.  Do
+not expect the Theora packet or stream format from this release to
+remain compatible with future releases.  When the format for Theora is
+officially frozen, we'll let you know.
+
+The purpose of this release is to provide an updated testing base for 
+those interested in theora and to dissiminate more widely the bitstream 
+changes we've made since the last alpha release.
+
+In particular, the alpha 3 release includes a more complete set of 
+decoder data tables in the third header packet. Also, the encoded image 
+has been flipped vertically from the sense used in the alpha 1 and 2 
+releases. The origin is now in the lower left to match the original VP3. 
+Except for this change, lossless transcoding from alpha 1 and alpha 2 is 
+possible. Without this change, lossless transcoding from VP3 is not 
+possible.
+
+Once more for the record: THIS RELEASE IS NOT PRODUCTION CODE.  It is
+not for ripping DVDs, or otherwise use for content you won't want to 
+re-encode on demand.  The Theora stream format MAY WELL CHANGE in future
+releases. The API WILL CHANGE.  We will not yet support any Theora
+files produced by this alpha.  Not yet.  Soon, Grasshopper, Soon.
+
+-------------------------------------------------------------------------
+Getting started with the code
+-------------------------------------------------------------------------
+
+*** What do I need to build the source?
+
+Requirements summary:
+
+  For libtheora:  
+         
+      libogg 1.1 or newer.
+      (there is optional support for libogg2, unreleased at this time)
+
+  For example encoder:
+
+      as above
+
+      libvorbis and libvorbisenc 1.0.1 or newer.
+
+  For the player only:
+
+      as above, 
+
+      SDL (Simple Direct media Layer) libraries and headers
+ 
+      OSS audio driver and development headers
+
+The provided build system is the GNU automake/autoconf system, and
+the main library, libtheora, should already build smoothly on any
+system.  Failure of libtheora to build on a GNU-enabled system is
+considered a bug; please report problems to theora-dev@xiph.org.
+
+Some windows build support is included in the win32 directory.
+
+*** How do I use the sample encoder?
+
+The sample encoder takes raw video in YUV4MPEG2 format, as used by
+lavtools, mjpeg-tools and other packages.  Snatch and MPlayer version
+0.90 and later can also export in YUV4MPEG format (more on this
+later).  The encoder take audio as WAV files.  encoder_example -h
+lists options accepted by the encoder.
+
+An easy way to get raw video and audio files is to use MPlayer as an
+export utility.  The options " -ao pcm -vo yuv4mpeg " will export a
+wav file named audiodump.wav and a YUV video file in the correct
+format for encoder_example as stream.yuv.  Be careful when exporting
+video alone; MPlayer may drop frames to 'keep up' with the audio
+timer.  The example encoder can't properly synchronize input audio and
+video file that aren't in sync to begin with.  
+
+The encoder will also take video or audio on stdin if '-' is specified
+as the input file name.
+
+*** How do I use the sample player?
+
+The sample player takes an Ogg file on standard in; the file may be
+audio alone, video alone or video with audio.  
+
+-------------------------------------------------------------------------
+Troubleshooting the build process
+-------------------------------------------------------------------------
+
+*** Compile error, such as:
+
+encoder_internal.h:664: parse error before `ogg_uint16_t'
+
+This means you have version of libogg prior to 1.1. A *complete* new Ogg 
+install, libs and headers, from a new release or CVS is needed.  Don't 
+forget to re-reun autogen.sh so that autoconf sucks in the new type 
+declarations.
+
+Also be sure that there aren't multiple copies of Ogg installed in
+/usr and /usr/local; an older one might be first on the search path
+for libs and headers.
+
+*** Link error, such as:
+
+undefined reference to `oggpackB_stream'
+
+See above; you need libogg 1.1 or later.
+
+*** Link error, such as:
+
+undefined reference to `vorbis_granule_time'
+
+You need libvorbis and libvorbisenc from the 1.0.1 release or later.
+
+*** Link error, such as:
+
+/usr/lib/libSDL.a(SDL_esdaudio.lo): In function `ESD_OpenAudio':
+SDL_esdaudio.lo(.text+0x25d): undefined reference to `esd_play_stream'
+
+Be sure to use an SDL that's built to work with OSS.  If you use an
+SDL that is also built with ESD and/or ALSA support, it will try to
+suck in all those extra libraries at link time too.  That will only
+work if the extra libraries are also installed.
+
+*** Link warning, such as:
+
+libtool: link: warning: library `/usr/lib/libogg.la' was moved.
+libtool: link: warning: library `/usr/lib/libogg.la' was moved.
+
+Re-run theora/autogen.sh after an Ogg or Vorbis rebuild/reinstall
+

@@ -1,0 +1,9 @@
+Debug
+Release
+*.exe
+*.ncb
+*.plg
+*.opt
+*.dep
+*.mak
+*.dsw

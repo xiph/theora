@@ -1,0 +1,10 @@
+Debug
+Release
+*.ogg
+*.exe
+*.ncb
+*.plg
+*.opt
+*.dep
+*.mak
+*.dsw

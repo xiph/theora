@@ -1,0 +1,88 @@
+\setlength{\unitlength}{4144sp}%
+%
+\begingroup\makeatletter\ifx\SetFigFont\undefined
+% extract first six characters in \fmtname
+\def\x#1#2#3#4#5#6#7\relax{\def\x{#1#2#3#4#5#6}}%
+\expandafter\x\fmtname xxxxxx\relax \def\y{splain}%
+\ifx\x\y   % LaTeX or SliTeX?
+\gdef\SetFigFont#1#2#3{%
+  \ifnum #1<17\tiny\else \ifnum #1<20\small\else
+  \ifnum #1<24\normalsize\else \ifnum #1<29\large\else
+  \ifnum #1<34\Large\else \ifnum #1<41\LARGE\else
+     \huge\fi\fi\fi\fi\fi\fi
+  \csname #3\endcsname}%
+\else
+\gdef\SetFigFont#1#2#3{\begingroup
+  \count@#1\relax \ifnum 25<\count@\count@25\fi
+  \def\x{\endgroup\@setsize\SetFigFont{#2pt}}%
+  \expandafter\x
+    \csname \romannumeral\the\count@ pt\expandafter\endcsname
+    \csname @\romannumeral\the\count@ pt\endcsname
+  \csname #3\endcsname}%
+\fi
+\fi\endgroup
+\begin{picture}(2784,2835)(859,-2821)
+\put(901,-2821){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}0}%
+}}}
+\put(1801,-2821){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}1}%
+}}}
+\put(1801,-1921){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}2}%
+}}}
+\put(901,-1921){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}3}%
+}}}
+\put(901,-1021){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}4}%
+}}}
+\put(901,-121){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}5}%
+}}}
+\put(1801,-121){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}6}%
+}}}
+\put(1801,-1021){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}7}%
+}}}
+\put(2701,-1021){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}8}%
+}}}
+\put(2701,-121){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}9}%
+}}}
+\put(3601,-121){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}10}%
+}}}
+\put(3601,-1021){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}11}%
+}}}
+\put(3601,-1921){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}12}%
+}}}
+\put(2701,-1921){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}13}%
+}}}
+\put(2701,-2821){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}14}%
+}}}
+\put(3601,-2821){\makebox(0,0)[b]{\smash{\SetFigFont{12}{14.4}{rm}{\color[rgb]{0,0,0}15}%
+}}}
+\thinlines
+{\color[rgb]{0,0,0}\put(1126,-2761){\vector( 1, 0){450}}
+}%
+{\color[rgb]{0,0,0}\put(1801,-2536){\vector( 0, 1){450}}
+}%
+{\color[rgb]{0,0,0}\put(1576,-1861){\vector(-1, 0){450}}
+}%
+{\color[rgb]{0,0,0}\put(901,-1636){\vector( 0, 1){450}}
+}%
+{\color[rgb]{0,0,0}\put(901,-736){\vector( 0, 1){450}}
+}%
+{\color[rgb]{0,0,0}\put(1126,-61){\vector( 1, 0){450}}
+}%
+{\color[rgb]{0,0,0}\put(1801,-286){\vector( 0,-1){450}}
+}%
+{\color[rgb]{0,0,0}\put(2026,-961){\vector( 1, 0){450}}
+}%
+{\color[rgb]{0,0,0}\put(2701,-736){\vector( 0, 1){450}}
+}%
+{\color[rgb]{0,0,0}\put(2926,-61){\vector( 1, 0){450}}
+}%
+{\color[rgb]{0,0,0}\put(3601,-286){\vector( 0,-1){450}}
+}%
+{\color[rgb]{0,0,0}\put(3601,-1186){\vector( 0,-1){450}}
+}%
+{\color[rgb]{0,0,0}\put(3376,-1861){\vector(-1, 0){450}}
+}%
+{\color[rgb]{0,0,0}\put(2701,-2086){\vector( 0,-1){450}}
+}%
+{\color[rgb]{0,0,0}\put(2926,-2761){\vector( 1, 0){450}}
+}%
+\end{picture}
