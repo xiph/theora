@@ -40,13 +40,13 @@ The later sections assume a high-level understanding of the Theora decode
 Theora is a general purpose, lossy video codec.
 It is based on the VP3 video codec produced by On2 Technologies
  (\url{http://www.on2.com/}).
-On2 Technologies donated the VP3.2 source code to the Xiph.org
- Foundation and it was released under a BSD-like license.
+On2 donated the VP3.2 source code to the Xiph.org
+ Foundation and who released it under a BSD-like license.
 On2 also made an irrevocable, royalty-free license grant for any patent claims
  it might have over the software and any derivatives.
 No formal specification exists for the VP3 format beyond this source code,
- though Mike Melanson maintains a detailed description \cite{Mel04}.
-Portions of this specification were adopted from his text with permission.
+ however Mike Melanson maintains a detailed description \cite{Mel04}.
+Portions of this specification were adopted from that text with permission.
 
 \subsubsection{VP3 and Theora}
 
@@ -77,7 +77,8 @@ The Theora I format does not support interlaced material, variable frame rates,
 Black and white content can be efficiently encoded, however, because the
  uniform chroma planes compress well.
 Support for interlaced material is planned for a future version.
-Support for infrequently changing frame rates can already be achieved by
+Note that infrequently changing frame rates, as when film and video sequences
+ are cut together, can be supported in the Ogg container format by
  chaining several Theora streams together.
 Support for increased bit depths or additional color spaces is not planned.
 
@@ -106,7 +107,7 @@ Theora provides none of its own framing, synchronization, or protection against
 The decoder then accepts these raw packets in sequence, decodes them, and
  synthesizes a fascimile of the original video frames.
 Theora is a free-form variable bit rate (VBR) codec, and packets have no
- minimum size, maximum size, or fixed/expected size.
+ particular minimum size, maximum size, or fixed/expected size.
 
 Theora packets are thus intended to be used with a transport mechanism that
  provides free-form framing, synchronization, positioning, and error correction
@@ -126,14 +127,14 @@ Theora's heritage is the proprietary commerical codec VP3, and it retains a
  Xiph.org codec, which began as a research codec.
 However, to provide additional scope for encoder improvement, Theora adopts
  some of the configurable aspects of decoder setup that are present in Vorbis.
-This configuration data is not available in VP3, which used hardcoded values
+This configuration data is not available in VP3, which uses hardcoded values
  instead.
 
 Theora makes the same controversial design decision that Vorbis made to include
  the entire probability model for the DCT coefficients and all the quantization
  parameters in the bitstream headers.
 This is often several hundred fields.
-This makes it impossible to begin decoding at any frame in the stream without
+It is therefore impossible to decode any frame in the stream without
  having previously fetched the codec info and codec setup headers.
 
 \begin{verse}
@@ -168,10 +169,15 @@ The Theora format is well-defined by its decode specification; any encoder that
 A decoder must faithfully and completely implement the specification defined
  herein %, except where noted,
  to be considered a proper Theora decoder.
+A decoder need not be implemented strictly as described, but the
+ actual decoder process MUST be {\em entirely mathematically equivalent}
+ to the described process.
 Where appropriate, a non-normative description of encoder processes is
  included.
 These sections will be marked as such, and a proper Theora encoder is not
  bound to follow them.
+ 
+
 
 %TODO: \subsubsection{Hardware Profile}
 
@@ -197,26 +203,30 @@ Theora divides the pixel array up into three separate \term{color planes}, one
  for each of the $Y'$, $C_b$, and $C_r$ components of the pixel.
 The $Y'$ plane is also called the \term{luma plane}, and the $C_b$ and $C_r$
  planes are also called the \term{chroma planes}.
-In some pixel formats, the chroma planes are decimated by two in one or both
- directions.
+In some pixel formats, the chroma planes are subsampled by a factor of two
+ in one or both directions.
 This means that the width or height of the chroma planes may be half that of
- the total frame width and height, and thus only a multiple of eight, not
- sixteen.
-The luma plane is never decimated.
+ the total frame width and height.
+The luma plane is never subsampled.
 
 \subsubsection{Picture Region}
 
-A video frame in Theora is required to have a width and height that are
- multiples of sixteen.
-However, inside a frame a smaller \term{picture region} may be defined.
+An encoded video frame in Theora is required to have a width and height that
+ are multiples of sixteen, making an integral number of blocks even when the
+ chroma planes are subsampled.
+However, inside a frame a smaller \term{picture region} may be defined
+ to present material whose dimensions are not a multiple of 16 pixels.
 The picture region can be offset from the lower-left corner of the frame by up
  to 255 pixels in each direction, and may have an arbitrary width and height,
  provided that it is contained entirely within the coded frame.
 It is this picture region that contains the actual video data.
 The portions of the frame which lie outside the picture region may contain
- arbitrary data, and should be cropped away after decode.
+ are not meaningful and the frame should be cropped to the picture region
+ before display.
 The picture region plays no other role in the decode process, which operates on
  the entire video frame.
+
+%TODO Figure illustrating picture region
 
 \subsubsection{Blocks and Super Blocks}
 
@@ -224,7 +234,7 @@ Each color plane is subdivided into $8\times 8$ \term{blocks}.
 Blocks are grouped into $4\times 4$ arrays called \term{super blocks}.
 Each color plane has its own set of blocks and super blocks.
 The boundaries of the luma plane are not necessarily aligned with those of the
- chroma planes, if the chroma planes have been decimated.
+ chroma planes, if the chroma planes have been subsampled.
 
 Blocks are accessed in two different orders in the various decoder processes.
 The first is \term{raster order}.
@@ -252,7 +262,7 @@ If a color plane does not contain a complete super block on the top or right
 To illustrate these two orderings, consider a frame that is 240 pixels wide and
  48 pixels high.
 Each row of the luma plane has 30 blocks and 8 super blocks, and there are 6
- rows of blocks and one row of super blocks.
+ rows of blocks and two rows of super blocks.
 
 When accessed in raster order, each block in the luma plane is assigned the
  following indices:
@@ -270,8 +280,10 @@ When accessed in raster order, each block in the luma plane is assigned the
 \end{center}
 \vspace{\baselineskip}
 
+Where the index values count the order in which the blocks would be accessed.
+
 When accessed in coded order, each block in the luma plane is assigned the
- following indices:
+ following indices, illustrating the different order of access:
 
 \vspace{\baselineskip}
 \begin{center}
@@ -286,25 +298,29 @@ When accessed in coded order, each block in the luma plane is assigned the
 \end{center}
 \vspace{\baselineskip}
 
-Blocks in the chroma planes immediately follow those of the luma plane without
- a break.
+% TODO belongs elsewhere:
+%Blocks in the chroma planes immediately follow those of the luma plane without
+% a break.
 
 \subsubsection{Macro Blocks}
 
 A macro block contains a $2\times 2$ array of blocks in the luma plane
  {\em and} the co-located blocks in the chroma planes.
 Thus macro blocks can represent anywhere from six to twelve blocks, depending
- on how the chroma planes are decimated.
-Macro blocks contain information about coding mode and motion vectors for the
- corresponding blocks in all color planes.
+ on how the chroma planes are subsampled.
+Super blocks describe an independent group of blocks within a single plane 
+ while macro blocks group blocks from all the planes that cover a specific 
+ area of the frame.
+Information about block coding mode and motion vectors are stored together for
+ all the blocks in each macro block.
 
 Macro blocks are also accessed in a \term{coded order}.
-This coded order proceeds be examining each super block in the luma plane in
+This coded order proceeds by examining each super block in the luma plane in
  raster order, and traversing the four macro blocks inside using a smaller
  Hilbert curve, as shown in Figure~\ref{fig:hilbert-mb}.
 If the luma plane does not contain a complete super block on the top or right
- sides, the same ordering is still used, simply with any macro blocks outside
- the frame boundary omitted.
+ sides, the same ordering is still used, with any macro blocks outside
+ the frame boundary simply omitted.
 Because the frame size is constrained to be a multiple of 16, there are never
  any partial macro blocks.
 Unlike blocks, macro blocks need never be accessed in a pure raster order.
@@ -333,6 +349,8 @@ They are assigned the following indices:
 
 \subsubsection{Predictors}
 
+%TODO the use of partial details here is confusing. Should use a more general
+% description. -r
 Each block is coded using one of a small, fixed set of \term{coding modes} that
  define the \term{predictor} for that block's contents.
 The INTRA mode uses a constant predictor and is the only mode allowed in intra
@@ -353,13 +371,12 @@ The most important inter coding mode is INTER\_NOMV, which uses the co-located
 
 To each block's predictor, a \term{residual} is added to form the final
  contents of the block.
-The residual is stored by first applying an integer approximation of a
- two-dimensional Type II Discrete Cosine Transform and then quantizing the
- resulting coefficients.
+The residual is stored as a set of quantized coefficients from  an integer
+ approximation of a two-dimensional Type II Discrete Cosine Transform.
 The DCT takes an an $8\times 8$ array of pixel values as input and returns an
  $8\times 8$ array of coefficient values.
 The \term{natural ordering} of these coefficients is defined to be row-major
- order.
+ order, from lowest to highest frequency.
 They are also often indexed in \term{zig-zag order}, as shown in
  Table~\ref{tab:zig-zag}.
 
@@ -408,7 +425,8 @@ All the other coefficients are called \term{AC coefficients}.
 \subsection{Decoder Configuration}
 
 Decoder setup consists of configuration of the quantization matrices and the
- Huffman codebooks for the DCT coefficients.
+ Huffman codebooks for the DCT coefficients, and a table of limit values for
+ the deblocking filter.
 The remainder of the decoding pipeline is not configurable.
 
 \subsubsection{Global Configuration}
@@ -419,7 +437,7 @@ The global codec configuration consists of a few video related fields, such as
 The version number is divided into a major version, a minor version, amd a
  minor revision number.
 For the format defined in this specification, these are `3', `2', and
- `0', respectively, in reference to Theora's origin as a successor to the VP3.2
+ `0', respectively, in reference to Theora's origin as a successor to the VP3.1
  format.
 
 \subsubsection{Quantization Matrices}
@@ -428,7 +446,7 @@ Theora allows up to 384 different quantization matrices to be defined, one for
  each \term{quantization type} (intra or inter), \term{color plane}
  ($Y'$, $C_b$, or $C_r$), and \term{quantization index}, \qi, which ranges from
  zero to 63, inclusive.
-The quantization index generally represents a progressive range of quality
+The quantization index nominally represents a progressive range of quality
  levels, from low quality near zero to high quality near 63.
 However, the interpretation is arbitrary, and it is possible, for example, to
  partition the scale into two completely separate ranges with 32 levels each
@@ -450,11 +468,12 @@ There is a separate set of base matrices for each quantization type and each
  color plane, with up to 64 possible base matrices in each set, one for each
  \qi value.
 Typically the bitstream contains matrices for only a sparse subset of the
- possible \qi values, including at least the first and the last.
+ possible \qi values.
 The base matrices for the remainder of the \qi values are computed using linear
  interpolation.
-This configuration allows the quantization matrices to approximate the complex,
- non-linear processes of the human visual system as the \qi value varies.
+This configuration allows the encoder to adjust the quantization matrices to
+ approximate the complex, non-linear response of the human visual system to
+ different material.
 
 Finally, because the in-loop deblocking filter strength depends on the strength
  of the quantization matrices defined in this header, a table of 64 \term{loop
@@ -478,7 +497,7 @@ The first group corresponds to the DC coefficient, while the remaining groups
 Within each frame, two pairs of 4-bit codebook indices are stored.
 The first pair selects which codebooks to use from the DC coefficient group for
  the $Y'$ coefficients and the $C_b$ and $C_r$ coefficients.
-The second pair selects which codebooks to use from {\em all} of the AC
+The second pair selects which codebooks to use from {\em all} of the AC % all of what?
  coefficient groups for the $Y'$ coefficients and the $C_b$ and $C_r$
  coefficients.
 
@@ -570,8 +589,6 @@ This operation produces entirely equivalent output and is naturally perfectly
  legal.
 It may even be a benefit in non-memory-constrained environments due to a
  reduced cache footprint.
-The decoder MUST be {\em entirely mathematically equivalent} to the
- specification; it need not be a literal semantic implementation.
 
 Theora makes equivalence easy to check by defining all decoding operations in
  terms of exact integer operations.
@@ -608,7 +625,7 @@ Theora allows between one and three different \qi values to be used in a single
 The first \qi value is {\em always} used when dequantizing DC coefficients.
 The \qi value used when dequantizing AC coefficients, however, can vary from
  block to block.
-VP3, in contrast, allowed just a single \qi value per frame for both the DC and
+VP3, in contrast, only allows a single \qi value per frame for both the DC and
  AC coefficients.
 
 \paragraph{Coded Block Information}
@@ -622,7 +639,7 @@ For intra frames, every block is coded, and so no data needs to be read from
 
 \paragraph{Macro Block Mode Information}
 
-For intra frames, every block is coded in INTRA mode, and this stage can be
+For intra frames, every block is coded in INTRA mode, and this stage is
  skipped.
 In inter frames a \term{coded macro block list} is constructed from the coded
  block list.
@@ -636,8 +653,7 @@ All coded chroma blocks in uncoded macro blocks are assigned the INTER\_NOMV
 
 \paragraph{Motion Vectors}
 
-Intra frames are all coded entirely in INTRA mode, and so this stage can be
- skipped.
+Intra frames are all centirely in INTRA mode, and this stage is skipped.
 Some inter coding modes, however, require one or more motion vectors to be
  specified for each macro block.
 These are decoded in this stage, and an appropriate motion vector is assigned
@@ -661,7 +677,8 @@ A single token can represent a single DCT coefficient, a run of zero
  coefficients followed by a single non-zero coefficient, an
  \term{End-Of-Block marker}, or a run of EOB markers.
 EOB markers signify that the remainder of the block is one long zero run.
-Unlike JPEG and MPEG, each block is not required to end with a special marker.
+Unlike JPEG and MPEG, there is no requirement for each block to end with 
+ a special marker.
 If non-EOB tokens yield values for all 64 of the coefficients in a block, then
  no EOB marker is needed.
 
@@ -724,7 +741,7 @@ The DCT coefficients are dequantized, an inverse DCT transform is applied, and
 
 \paragraph{Loop Filtering}
 
-To complete the reconstructed frame, an in-loop deblocking filter is applied to
+To complete the reconstructed frame, an ``in-loop" deblocking filter is applied to
  the edges of all coded blocks.
 
 \section{Video Formats}
@@ -742,6 +759,7 @@ Such video would require almost three terabytes of storage per frame for
 %TODO: Any lower limits?
 %TODO: We really need hardware device profiles, but such things should be
 %TODO:  developed with input from the hardware community.
+%TODO: And even then sometimes they're useless
 
 The remainder of this section talks about two specific aspects of the video
  format: the color space and the pixel format.
@@ -773,7 +791,7 @@ The Theora identification header contains an 8-bit value that describes the
  color space.
 This merely selects one of the color spaces available from an enumerated list.
 Currently, only two color spaces are defined, with a third possibility that
- indicates the color space is "unknown".
+ indicates the color space is ``unknown".
 
 \subsection{Color Space Conversions and Parameters}
 \label{sec:color-xforms}
@@ -832,7 +850,7 @@ Parameters: $K_b,K_r$.
 \vspace{\baselineskip}\hfill
 
 This conversion takes the non-linear $R'G'B'$ voltage levels and maps them to
- the linear light levels produced by the actual output device.
+ linear light levels produced by the actual output device.
 Note that this conversion is only that of the output device, and its inverse is
  {\em not} that used by the input device.
 Because a dim viewing environment is assumed in most television standards, the
@@ -861,7 +879,7 @@ Parameters: $\gamma$.
 %TODO: Tag section as non-normative
 
 This conversion takes linear light levels and maps them to the non-linear
- voltage levels used to drive the actual input device.
+ voltage levels produced in the actual input device.
 This information is merely informative.
 It is not required for building a decoder or for converting between the various
  formats and the actual output capabilities of a particular device.
@@ -898,7 +916,7 @@ Parameters: $\beta$, $\alpha$, $\delta$, $\epsilon$.
 This conversion maps a device-dependent linear RGB space to the
  device-independent linear CIE $XYZ$ space.
 The parameters are the CIE chromaticity coordinates of the three
- primaries---red red, green, and blue---as well as the chromaticity coordinates
+ primaries---red, green, and blue---as well as the chromaticity coordinates
  of the white point of the device.
 This is how hardware manufacturers and standards typically describe a
  particular $RGB$ space.
@@ -933,7 +951,7 @@ s_gG \\
 s_bB
 \end{array}\right]
 \end{eqnarray*}
-Parameters: $x_{r,g,b,q},y_{r,g,b,w}$.
+Parameters: $x_r,x_g,x_b,x_q, y_r,y_g,y_b,y_w$.
 
 \end{description}
 
@@ -1294,7 +1312,8 @@ Externally, each bitstream encoded as a byte stream MUST begin and end on a
 Often, the encoded packet bitstream is not an integer number of bytes, and so
  there is unused space in the last byte of a packet.
 
-Unused space in the last byte of a packet is always zeroed during the encoding
+When a Theora encoder produces packets for embedding in a byte-aligned container,
+ Unused space in the last byte of a packet is always zeroed during the encoding
  process.
 Thus, should this unused space be read, it will return binary zeroes.
 There is no marker pattern or stuffing bits that will allow the decoder to
@@ -1347,9 +1366,13 @@ The characters `t', `h', `e', `o', `r', and `a' as 8 bit unsigned integers.
 Decode continues according to packet type.
 The identification header is type 0x80, the comment header is type 0x81, and
  the setup header is type 0x82.
-These types all have their high bit set, as a packet with its first bit unset
- is a video data packet.
 These packets must occur in the order: identification, comment, setup.
+All header packets have the most significant bit of the type
+ field, which is the initial bit in the packet, set.
+This distinguishes them from video data packets in which the first bit
+ is unset.
+Packets with other header types (0x83--0xFF) are reserved and must be
+ ignored.
 
 \subsection{Identification Header}
 \label{sec:idheader}
@@ -1482,9 +1505,9 @@ It is meant for short text comments, not aribtrary metadata; arbitrary metadata
  machine parseability.
 
 The comment field is meant to be used much like someone jotting a quick note on
- the bottom of a CDR.
-It should be a little information to remember the disc by and explain it to
- others; a short, to-the-point text note taht need not only be a couple words,
+ the label of a video.
+It should be a little information to remember the disc or tape by and explain it to
+ others; a short, to-the-point text note that can be more than a couple words,
  but isn't going to be more than a short paragraph.
 The essentials, in other words, whatever they turn out to be, e.g.:
 
@@ -1605,8 +1628,8 @@ Abuse will be discouraged.
 There is no vendor-specific prefix to `non-standard' field names.
 Vendors SHOULD make some effort to avoid arbitrarily polluting the common
  namespace.
-We will generally collect the more useful tags here to help with
- standardization.
+Xiph.org and other bodies will generally collect and rationalize the more 
+ useful tags to help with standardization.
 
 Field names are not restricted to occur only once within a comment header.
 %TODO: Example
