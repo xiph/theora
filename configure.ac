@@ -121,7 +121,7 @@ AC_SUBST(LIBS)
 AC_SUBST(DEBUG)
 AC_SUBST(PROFILE)
 
-AC_CONFIG_FILES([
+AC_OUTPUT([
   Makefile lib/Makefile
   include/Makefile include/theora/Makefile
   examples/Makefile
@@ -129,4 +129,3 @@ AC_CONFIG_FILES([
   debian/Makefile
   theora.pc
 ])
-AC_OUTPUT
