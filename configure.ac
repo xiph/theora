@@ -188,7 +188,10 @@ AM_PATH_SDL(,[
 AC_CHECK_HEADERS([sys/soundcard.h soundcard.h machine/soundcard.h],[
   HAVE_OSS=yes
   break
-],AC_MSG_WARN([OSS audio support not found -- not compiling player_example]))
+])
+if test x$HAVE_OSS != xyes; then
+  AC_MSG_WARN([OSS audio support not found -- not compiling player_example])
+fi
 
 if test x$HAVE_SDL = xyes -a x$HAVE_OSS = xyes; then
   BUILDABLE_EXAMPLES="$BUILDABLE_EXAMPLES player_example"
