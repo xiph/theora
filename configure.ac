@@ -82,6 +82,7 @@ AC_ARG_ENABLE(encode,
      [ ac_enable_encode=no ], [ ac_enable_encode=yes] )
 
 if test "x${ac_enable_encode}" = xyes ; then
+    BUILDABLE_EXAMPLES="$BUILDABLE_EXAMPLES encoder_example"
     AC_DEFINE(THEORA_SUPPORT_ENCODE, [1], [Build encoding support])
 else
     AC_DEFINE(THEORA_SUPPORT_ENCODE, [0], [Do not build encoding support])

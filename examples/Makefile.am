@@ -2,10 +2,10 @@
 
 INCLUDES = -I$(top_srcdir)/include 
 
-noinst_PROGRAMS = encoder_example dump_video $(BUILDABLE_EXAMPLES)
+noinst_PROGRAMS = dump_video $(BUILDABLE_EXAMPLES)
 
 # possible contents of BUILDABLE_EXAMPLES:
-EXTRA_PROGRAMS = player_example
+EXTRA_PROGRAMS = player_example encoder_example
 
 CFLAGS = $(SDL_CFLAGS)
 LDADD = ../lib/libtheora.la -logg 
