@@ -144,13 +144,16 @@ static int _theora_unpack_info(theora_info *ci, oggpack_buffer *opb){
   theora_read(opb,24,&ret);
   ci->target_bitrate=ret;
   theora_read(opb,6,&ret);
-  ci->quality=ret=ret;
+  ci->quality=ret;
 
   theora_read(opb,5,&ret);
   ci->keyframe_frequency_force=1<<ret;
 
+  theora_read(opb,2,&ret);
+  ci->pixelformat=ret;
+
   /* spare configuration bits */
-  if ( theora_read(opb,5,&ret) == -1 )
+  if ( theora_read(opb,3,&ret) == -1 )
     return (OC_BADHEADER);
 
   return(0);

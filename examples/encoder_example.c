@@ -660,6 +660,7 @@ int main(int argc,char *argv[]){
   ti.aspect_numerator=video_an;
   ti.aspect_denominator=video_ad;
   ti.colorspace=OC_CS_UNSPECIFIED;
+  ti.pixelformat=OC_PF_420;
   ti.target_bitrate=video_r;
   ti.quality=video_q;
 

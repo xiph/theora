@@ -1065,7 +1065,9 @@ int theora_encode_header(theora_state *t, ogg_packet *op){
 
   oggpackB_write(cpi->oggbuffer,cpi->pb.keyframe_granule_shift,5);
 
-  oggpackB_write(cpi->oggbuffer,0,5); /* spare config bits */
+  oggpackB_write(cpi->oggbuffer,cpi->pb.info.pixelformat,2);
+
+  oggpackB_write(cpi->oggbuffer,0,3); /* spare config bits */
 
 #ifndef LIBOGG2
   op->packet=oggpackB_get_buffer(cpi->oggbuffer);
