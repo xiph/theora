@@ -44,6 +44,12 @@ static char id_str[MAX_INFO_STRLEN];
 #define VERSION "0.00"
 #endif
 
+#ifndef O_BINARY
+/* win32 wants a binary flag to open(); this sets it to null
+   on platforms that don't have it. */
+#define O_BINARY 0
+#endif
+
 /*******************************************************************
  *                                                                 *
  *    Utilities for writing an AVI File                            *
@@ -229,7 +235,7 @@ avi_t* AVI_open_output_file(char * filename)
   /* mask = umask (0);
    umask (mask);*/
 
-   AVI->fdes = open(filename, O_RDWR|O_CREAT, (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH) &~ mask);
+   AVI->fdes = open(filename, O_RDWR|O_CREAT|O_BINARY, 0644 &~ mask);
    if (AVI->fdes < 0)
    {
       AVI_errno = AVI_ERR_OPEN;
@@ -1076,7 +1082,7 @@ avi_t *AVI_open_input_file(char *filename, int getIndex)
   
   /* Open the file */
   
-  AVI->fdes = open(filename,O_RDONLY);
+  AVI->fdes = open(filename,O_RDONLY|O_BINARY);
   if(AVI->fdes < 0)
     {
       AVI_errno = AVI_ERR_OPEN;

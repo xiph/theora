@@ -54,7 +54,7 @@ ogg_buffer_state *ogg_buffer_create(void);
  * configurations. For theora the width and height of the largest plane
  * must be a multiple of 16. The actual meaningful picture size and 
  * offset are stored in the theora_info structure; frames returned by
- * the decoder my been to be cropped for display. 
+ * the decoder may need to be cropped for display. 
  * All samples are 8 bits.
  */
 typedef struct {
@@ -78,7 +78,22 @@ typedef enum {
   OC_CS_UNSPECIFIED,	/**< the colorspace is unknown or unspecified */
   OC_CS_ITU_REC_470M,	/**< best option for 'NTSC' content */
   OC_CS_ITU_REC_470BG,	/**< best option for 'PAL' content */
+  OC_CS_NSPACES		/* mark the end of the defined colorspaces */
 } theora_colorspace;
+
+/**
+ * A Chroma subsampling
+ *
+ * These enumerate the available chroma subsampling options supported
+ * by the theora format. See Section 4.4 of the specification for
+ * exact definitions.
+ */
+typedef enum {
+  OC_PF_420,	/**< Chroma subsampling by 2 in each direction (4:2:0) */
+  OC_PF_RSVD,	/**< reserved value */
+  OC_PF_422,	/**< Horizonatal chroma subsampling by 2 (4:2:2) */
+  OC_PF_444,	/**< No chroma subsampling at all (4:4:4) */
+} theora_pixelformat;
 
 /**
  * Theora bitstream info.
@@ -134,6 +149,8 @@ typedef struct {
   ogg_uint32_t  keyframe_mindistance;
   ogg_int32_t   noise_sensitivity;
   ogg_int32_t   sharpness;
+
+  theora_pixelformat pixelformat;
 
 } theora_info;
 

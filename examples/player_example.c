@@ -552,9 +552,18 @@ int main(int argc,char *argv[]){
   /* and now we have it all.  initialize decoders */
   if(theora_p){
     theora_decode_init(&td,&ti);
-    printf("Ogg logical stream %x is Theora %dx%d %.02f fps video\n",
+    printf("Ogg logical stream %x is Theora %dx%d %.02f fps",
            (unsigned int)to.serialno,ti.width,ti.height, 
            (double)ti.fps_numerator/ti.fps_denominator);
+    switch(ti.pixelformat){
+      case OC_PF_420: printf(" 4:2:0 video\n"); break;
+      case OC_PF_422: printf(" 4:2:2 video\n"); break;
+      case OC_PF_444: printf(" 4:4:4 video\n"); break;
+      case OC_PF_RSVD:
+      default:
+	printf(" video\n  (UNKNOWN Chroma sampling!)\n");
+	break;
+    }
     if(ti.width!=ti.frame_width || ti.height!=ti.frame_height)
       printf("  Frame content is %dx%d with offset (%d,%d).\n",
            ti.frame_width, ti.frame_height, ti.offset_x, ti.offset_y);
