@@ -1,4 +1,5 @@
 # makefile to generate the spec document from it sources
+# requires transfig and pdflatex
 
 SPEC_SRCS = spec.tex spec.bib
 
