@@ -1,4 +1,4 @@
-\documentclass[11pt,letterpaper]{book}
+\documentclass[9pt,letterpaper]{book}
 
 \usepackage{latexsym}
 \usepackage{amssymb}
@@ -1617,7 +1617,8 @@ In the typical case, with an even width and height, where one expects two rows
 \begin{center}
 \include{pic_even}
 \end{center}
-\caption{Pixel correspondance between color planes with even picture offset and even picture size}
+\caption{Pixel correspondance between color planes with even picture offset and
+ even picture size}
 \label{fig:pic_even}
 \end{figure}
 
@@ -3091,8 +3092,6 @@ This begins with the frame header, followed by coded block flags, macro block
 \bitvar{QIS}     & \multicolumn{1}{p{40pt}}{Integer array} &
                              6 & No & An \bitvar{NQIS}-element array of
  \qi\ values. \\
-\bitvar{MOREQIS} & Integer &  1 & No & A flag indicating there are more
- \qi\ values to be decoded. \\
 \bottomrule\end{tabularx}
 
 \paragraph{Variables used:}\hfill\\*
@@ -3102,7 +3101,7 @@ This begins with the frame header, followed by coded block flags, macro block
 \multicolumn{1}{p{30pt}}{\centering Size (bits)} &
 \multicolumn{1}{c}{Signed?} &
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
-\bitvar{MOREQIS} & Integer &  1 & No & A flag indicating there are more
+\locvar{MOREQIS} & Integer &  1 & No & A flag indicating there are more
  \qi\ values to be decoded. \\
 \bottomrule\end{tabularx}
 \medskip
@@ -3445,14 +3444,8 @@ Continue decoding runs from step~\ref{step:short-run-loop}.
 \multicolumn{1}{c}{Signed?} &
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{BCODED}   & \multicolumn{1}{p{40pt}}{Integer Array} &
-                              1 & No & An \bitvar{NBS}-element array of flags
+                               1 & No & An \bitvar{NBS}-element array of flags
  indicating which blocks are coded. \\
-\bitvar{NBCODED}  & Integer & 36 & No & The number of coded blocks. \\
-\bitvar{NLBCODED} & Integer & 36 & No & The number of coded blocks in the luma
- plane. \\
-\bitvar{CODEDBS}  & \multicolumn{1}{p{40pt}}{Integer Array} &
-                              36 & No & An \bitvar{NBCODED}-element list of the
- indices of all the coded blocks. \\
 \bottomrule\end{tabularx}
 
 \paragraph{Variables used:}\hfill\\*
@@ -3473,7 +3466,7 @@ Continue decoding runs from step~\ref{step:short-run-loop}.
  coded. \\
 \locvar{\sbi}     & Integer & 32 & No & The index of the current super
  block. \\
-\locvar{\bi}      & Integer & 32 & No & The index of the current block in coded
+\locvar{\bi}      & Integer & 36 & No & The index of the current block in coded
  order. \\
 \bottomrule\end{tabularx}
 \medskip
@@ -3481,41 +3474,26 @@ Continue decoding runs from step~\ref{step:short-run-loop}.
 This procedure determines which blocks are coded in a given frame.
 In an intra frame, it marks all blocks coded.
 In an inter frame, however, any or all of the blocks may remain uncoded.
+The output is a list of bit flags, one for each block, marking it coded or not
+ coded.
 
 It is important to note that flags are still decoded for any blocks which lie
  entirely outside the picture region, even though they are not displayed.
 Encoders MAY choose to code such blocks.
 Decoders MUST faithfully reconstruct such blocks, because their contents can be
- used as predictors in future frames.
+ used for predictors in future frames.
+Flags are \textit{not} decoded for portions of a super block which lie outside
+ the full frame, as there are no blocks in those regions.
 
-This procedure outputs two redundant representations of the coded blocks, for
- ease of reference elsewhere in the decoding process: a list of bit flags, one
- for each block, marking it coded or not coded, and a list of the indices of
- the coded blocks, in coded order.
-These are decoded as follows:
+The complete procedure is as follows:
 
 \begin{enumerate}
-\item
-Assign \bitvar{NBCODED} the value zero.
-\item
-Assign \bitvar{NLBCODED} the value zero.
 \item
 If \bitvar{FTYPE} is zero (intra frame):
 \begin{enumerate}
 \item
-For each consecutive block in coded order (see
- Section~\ref{sec:blocks-and-sbs})---indexed by \locvar{\bi}:
-\begin{enumerate}
-\item
-Assign $\bitvar{BCODED}[\locvar{\bi}]$ the value one.
-\item
-Assign $\bitvar{CODEDBS}[\bitvar{NBCODED}]$ the value \locvar{\bi}.
-\item
-Assign \bitvar{NBCODED} the value $(\bitvar{NBCODED}+1)$.
-\item
-If \locvar{\bi} is in the luma plane, assign \bitvar{NLBCODED} the value
- $(\bitvar{NLBCODED}+1)$.
-\end{enumerate}
+For each consecutive value of \locvar{\bi} from 0 to $(\locvar{NBS}-1)$, assign
+ $\bitvar{BCODED}[\locvar{\bi}]$ the value one.
 \end{enumerate}
 \item
 Otherwise (inter frame):
@@ -3527,9 +3505,9 @@ Read an \locvar{NBITS}-bit bit string into \locvar{BITS}, using the procedure
  described in Section~\ref{sub:long-run}.
 This represents the list of partially coded super blocks.
 \item
-For each consecutive super block in raster order---indexed by
- \locvar{\sbi}---remove the bit at the head of the string \locvar{BITS} and
- assign it to $\locvar{SBPCODED}[\locvar{\sbi}]$.
+For each consecutive value of \locvar{\sbi} from 0 to $(\locvar{NSBS}-1)$,
+ remove the bit at the head of the string \locvar{BITS} and assign it to
+ $\locvar{SBPCODED}[\locvar{\sbi}]$.
 \item
 Assign \locvar{NBITS} the total number of super blocks such that \\
  $\locvar{SBPCODED}[\locvar{\sbi}]$ equals zero.
@@ -3538,9 +3516,9 @@ Read an \locvar{NBITS}-bit bit string into \locvar{BITS}, using the procedure
  described in Section~\ref{sub:long-run}.
 This represents the list of fully coded super blocks.
 \item
-For each consecutive super block in raster order---indexed by
- \locvar{\sbi}---such that $\locvar{SBPCODED}[\locvar{\sbi}]$ equals zero,
- remove the bit at the head of the string \locvar{BITS} and assign it to
+For each consecutive value of \locvar{\sbi} from 0 to $(\locvar{NSBS}-1)$ such
+ that $\locvar{SBPCODED}[\locvar{\sbi}]$ equals zero, remove the bit at the
+ head of the string \locvar{BITS} and assign it to
  $\locvar{SBFCODED}[\locvar{\sbi}]$.
 \item
 Assign \locvar{NBITS} the number of blocks contained in super blocks where
@@ -3563,22 +3541,12 @@ If $\locvar{SBPCODED}[\locvar{\sbi}]$ is zero, assign
 \item
 Otherwise, remove the bit at the head of the string \locvar{BITS} and assign it
  to $\bitvar{BCODED}[\locvar{\bi}]$.
-\item
-If $\bitvar{BCODED}[\locvar{\bi}]$ is one:
-\begin{enumerate}
-\item
-Assign $\bitvar{CODEDBS}[\bitvar{NBCODED}]$ the value $\locvar{\bi}$.
-\item
-Assign \bitvar{NBCODED} the value $(\bitvar{NBCODED}+1)$.
-\item
-If \locvar{\bi} is in the luma plane, assign \bitvar{NLBCODED} the value
- $(\bitvar{NLBCODED}+1)$.
-\end{enumerate}
 \end{enumerate}
 \end{enumerate}
 \end{enumerate}
 
 \section{Macro Block Coding Modes}
+\label{sub:mb-modes}
 
 \paragraph{Input parameters:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
@@ -3622,8 +3590,8 @@ If \locvar{\bi} is in the luma plane, assign \bitvar{NLBCODED} the value
  Huffman code. \\
 \locvar{\mbi}      & Integer & 32 & No & The index of the current macro
  block. \\
-\locvar{\bi}       & Integer & 32 & No & The index of the current block in coded
- order. \\
+\locvar{\bi}       & Integer & 36 & No & The index of the current block in
+ coded order. \\
 \locvar{\mi}       & Integer & 32 & No & The index of a Huffman code from
  Table~\ref{tab:mode-codes}, starting from $0$. \\
 \bottomrule\end{tabularx}
@@ -3654,9 +3622,10 @@ $7$   & INTER\_MV\_FOUR     \\
 \end{table}
 
 An important thing to note is that a coding mode is only stored in the
- bitstream if it has at least {\em luma} block coded.
-A macro block with no coded blocks in the luma plane defaults to being coded in
- INTER\_NOMV mode, even if it contains coded blocks in the chroma planes.
+ bitstream for a macro block if it has at least one {\em luma} block coded.
+A macro block that contains coded blocks in the chroma planes, but not in the
+ luma plane, MUST be coded in INTER\_NOMV mode.
+Thus, no coding mode needs to be decoded for such a macro block.
 
 Coding modes are encoded using one of eight different schemes.
 Schemes 0 through 6 use the same simple Huffman code to represent the mode
@@ -3959,20 +3928,33 @@ If \locvar{MVSIGN} is 1, assign \bitvar{MVY} the value $-\bitvar{MVY}$.
 Motion vectors are stored for each macro block.
 In every mode except for INTER\_MV\_FOUR, every block in all the color planes
  are assigned the same motion vector.
-In INTER\_MV\_FOUR mode, a vector is decoded for each coded block in the luma
- plane, while the uncoded luma blocks are assigned the default $(0,0)$ vector.
-Motion vectors are decoded only for macro blocks with at least one coded block
- in the luma plane.
-For macro blocks with no coded luma blocks, which are by definition coded in
- INTER\_NOMV mode, the default vector $(0,0)$ is assigned to each block.
+In INTER\_MV\_FOUR mode, all four blocks in the luma plane are assigned their
+ own motion vector, and motion vectors for blocks in the chroma planes are
+ computed from these, using averaging appropriate to the pixel format.
 
-Instead of coding an explicit motion vector, modes INTER\_MV\_LAST and
- INTER\_MV\_LAST2 use the motion vector from the last macro block (in coded
- order) and the second to last macro block, respectively, that contained a
- motion vector pointing to the previous frame.
-Macro blocks coded in INTRA mode or one of the GOLDEN modes are not considered.
-For blocks coded in INTER\_MV\_FOUR mode, the vector from the upper-right block
- is used, even if the upper-right block is not coded.
+Only of a few of the macro block coding modes require decoding motion vectors
+ from the stream.
+INTRA mode does not use a motion-compensated predictor, and so requires no
+ motion vector, and INTER\_NOMV and INTER\_GOLDEN\_NOMV modes use the default
+ vector $(0,0)$ for each block.
+This also includes all macro blocks with no coded luma blocks, as they are
+ coded in INTER\_NOMV mode by definition.
+
+The modes INTER\_MV\_LAST and INTER\_MV\_LAST2 use the motion vector from the
+ last macro block (in coded order) and the second to last macro block,
+ respectively, that contained a motion vector pointing to the previous frame.
+Macro blocks coded in INTRA mode or one of the GOLDEN modes are not considered
+ in this process.
+For macro blocks coded in INTER\_MV\_FOUR mode, the vector from the upper-right
+ luma block is used, even if the upper-right block is not coded.
+Thus no explicit motion vector needs to be decoded for these modes.
+
+For INTER\_MV and INTER\_GOLDEN\_MV modes, a single motion vector is decoded
+ and applied to each block.
+For INTER\_MV\_FOUR macro blocks, a motion vector is decoded for each coded
+ luma block.
+Uncoded luma blocks receive the default $(0,0)$ vector for the purposes of
+ computing the chroma motion vectors.
 
 The motion vectors are decoded from the stream as follows:
 
@@ -3984,8 +3966,7 @@ Read a 1-bit unsigned integer as \locvar{MVMODE}.
 Note that this value is read even if no macro blocks require a motion vector to
  be decoded.
 \item
-For each consecutive macro block in coded order (cf.
- Section~\ref{sec:mbs})---indexed by \locvar{\mbi}:
+For each consecutive value of \locvar{\mbi} from 0 to $(\bitvar{NMBS}-1)$:
 \begin{enumerate}
 \item
 If $\bitvar{MBMODES}[\locvar{\mbi}]$ is 7 (INTER\_MV\_FOUR):
@@ -4134,8 +4115,8 @@ Assign \locvar{LAST2} the value \locvar{LAST1}.
 Assign \locvar{LAST1} the value $(\locvar{MVX},\locvar{MVY})$.
 \end{enumerate}
 \item
-Otherwise (5: INTER\_GOLDEN\_NOMV, 1: INTRA, or 0: INTER\_NOMV), assign
- \locvar{MVX} and \locvar{MVY} the value zero.
+Otherwise (5:~INTER\_GOLDEN\_NOMV, 1:~INTRA, or \\
+ 0:~INTER\_NOMV), assign \locvar{MVX} and \locvar{MVY} the value zero.
 \item
 If $\bitvar{MBMODES}[\locvar{\mbi}]$ is not 7 (not INTER\_MV\_FOUR), then for
  each coded block \locvar{\bi} in macro block \locvar{\mbi}:
@@ -4179,12 +4160,10 @@ Thus, care should be taken when creating Theora streams meant to be backwards
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{NBS}      & Integer & 36 & No & The total number of blocks in a
  frame. \\
-\bitvar{NBCODED}  & Integer & 36 & No & The total number of coded blocks in a
- frame. \\
-\bitvar{CODEDBS}  & \multicolumn{1}{p{40pt}}{Integer Array} &
-                              36 & No & An \bitvar{NBCODED}-element array of
- coded block indices in coded order. \\
-\bitvar{NQIS}    & Integer &  2 & No & The number of \qi\ values. \\
+\bitvar{BCODED}   & \multicolumn{1}{p{40pt}}{Integer Array} &
+                               1 & No & An \bitvar{NBS}-element array of flags
+ indicating which blocks are coded. \\
+\bitvar{NQIS}     & Integer &  2 & No & The number of \qi\ values. \\
 \bottomrule\end{tabularx}
 
 \paragraph{Output parameters:}\hfill\\*
@@ -4208,8 +4187,8 @@ Thus, care should be taken when creating Theora streams meant to be backwards
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \locvar{NBITS}    & Integer & 36 & No & The length of a bit string to decode. \\
 \locvar{BITS}     & Bit string & &    & A decoded set of flags. \\
-\locvar{\cbi}     & Integer & 36 & No & The index of the current block in the
- coded block list. \\
+\locvar{\bi}      & Integer & 36 & No & The index of the current block in
+ coded order. \\
 \locvar{\qii}     & Integer &  2 & No & The index of \qi\ value in the list of
  \qi\ values defined for this frame. \\
 \bottomrule\end{tabularx}
@@ -4232,25 +4211,27 @@ Each subsequent pass is restricted to the blocks in the first group.
 
 \begin{enumerate}
 \item
-For each value of \locvar{\cbi} from 0 to $\bitvar{NBCODED}-1$, assign \\
- $\bitvar{QIIS}[\bitvar{CODEDBS}[\locvar{\cbi}]]$ the value zero.
+For each value of \locvar{\bi} from 0 to $(\bitvar{NBS}-1)$, assign
+ $\bitvar{QIIS}[\locvar{\bi}]$ the value zero.
 \item
-For each consecutive value of \locvar{\qii} from 0 to $\bitvar{NQIS}-2$:
+For each consecutive value of \locvar{\qii} from 0 to $(\bitvar{NQIS}-2)$:
 \begin{enumerate}
 \item
-Let \locvar{NBITS} be the number of blocks such that \\
- $\bitvar{QIIS}[\bitvar{CODEDBS}[\locvar{\cbi}]]$ equals $\locvar{\qii}$.
+Assign \locvar{NBITS} be the number of blocks \locvar{\bi} such that
+ $\bitvar{BCODED}[\locvar{\bi}]$ is non-zero and $\bitvar{QIIS}[\locvar{\bi}]$
+ equals $\locvar{\qii}$.
 \item
 Read an \locvar{NBITS}-bit bit string into \locvar{BITS}, using the procedure
  described in Section~\ref{sub:long-run}.
 This represents the list of blocks that use \qi\ value \locvar{\qii} or higher.
 \item
-For each value of \locvar{\cbi} such that
- $\bitvar{QIIS}[\bitvar{CODEDBS}[\locvar{\cbi}]]$ equals $\locvar{\qii}$:
+For each consecutive value of \locvar{\bi} from 0 to $(\bitvar{NBS}-1)$ such
+ that $\bitvar{BCODED}[\locvar{\bi}]$ is non-zero and
+ $\bitvar{QIIS}[\locvar{\bi}]$ equals $\locvar{\qii}$:
 \begin{enumerate}
 \item
 Remove the bit at the head of the string \locvar{BITS} and add its value to
- $\bitvar{QIIS}[\bitvar{CODEDBS}[\locvar{\cbi}]]$.
+ $\bitvar{QIIS}[\locvar{\bi}]$.
 \end{enumerate}
 \end{enumerate}
 \end{enumerate}
@@ -5020,13 +5001,11 @@ Assign $\bitvar{NCOEFFS}[\bitvar{\bi}]$ the value $\bitvar{TIS}[\bitvar{\bi}]$.
 \multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
 \bitvar{NBS}      & Integer & 36 & No  & The total number of blocks in a
  frame. \\
+\bitvar{BCODED}   & \multicolumn{1}{p{40pt}}{Integer Array} &
+                               1 & No & An \bitvar{NBS}-element array of flags
+ indicating which blocks are coded. \\
 \bitvar{NMBS}     & Integer & 32 & No & The total number of macro blocks in a
  frame. \\
-\bitvar{NBCODED}  & Integer & 36 & No & The total number of coded blocks in a
- frame. \\
-\bitvar{CODEDBS}  & \multicolumn{1}{p{40pt}}{Integer Array} &
-                              36 & No & An \bitvar{NBCODED}-element array of
- coded block indices in coded order. \\
 \bitvar{HTS} & \multicolumn{3}{l}{Huffman table array}
                                      & An 80-element array of Huffman tables
  with up to 32 entries each. \\
@@ -5100,8 +5079,8 @@ The only use of the count is in determining if a special case of the inverse
 \item
 Assign \locvar{NLBS} the value $(\bitvar{NMBS}*4)$.
 \item
-For each consecutive value of \locvar{\cbi} from 0 to $\bitvar{NBCODED}-1$,
- assign $\locvar{TIS}[\bitvar{CODEDBS}[\locvar{\cbi}]]$ the value zero.
+For each consecutive value of \locvar{\bi} from 0 to $(\bitvar{NBS}-1)$,
+ assign $\locvar{TIS}[\locvar{\bi}]$ the value zero.
 \item
 Assign \locvar{EOBS} the value 0.
 \item
@@ -5116,11 +5095,10 @@ Read a 4-bit unsigned integer as \locvar{\hti_L}.
 Read a 4-bit unsigned integer as \locvar{\hti_C}.
 \end{enumerate}
 \item
-For each consecutive value of \locvar{\cbi} from 0 to $\bitvar{NBCODED}-1$ for
- which $\locvar{TIS}[\bitvar{CODEDBS}[\locvar{\cbi}]]$ equals \locvar{\ti}:
+For each consecutive value of \locvar{\bi} from 0 to $(\bitvar{NBS}-1)$ for
+ which $\bitvar{BCODED}[\locvar{\bi}]$ is non-zero and
+ $\locvar{TIS}[\locvar{\bi}]$ equals \locvar{\ti}:
 \begin{enumerate}
-\item
-Assign \locvar{\bi} the value $\bitvar{CODEDBS}[\locvar{\cbi}]$.
 \item
 Assign $\bitvar{NCOEFFS}[\locvar{\bi}]$ the value \locvar{\ti}.
 \item
@@ -6703,7 +6681,7 @@ Only the first $(\bitvar{NQRS}[\qti][\pli]+1)$ values are used. \\
 \locvar{DC}        & Integer & 29 & Yes & The dequantized DC coefficient of a
  block. \\
 \locvar{P}         & Integer & 17 & Yes & A reconstructed pixel value. \\
-\locvar{\bi}       & Integer & 32 & No  & The index of the current block in
+\locvar{\bi}       & Integer & 36 & No  & The index of the current block in
  coded order. \\
 \locvar{\mbi}      & Integer & 32 & No  & The index of the macro block
  containing block \locvar{\bi}. \\
@@ -7139,7 +7117,7 @@ Otherwise, assign
 \end{enumerate}
 
 \subsection{Complete Loop Filter}
-\label{sub:filt-plane}
+\label{sub:loop-filt}
 
 \paragraph{Input parameters:}\hfill\\*
 \begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
@@ -7220,9 +7198,9 @@ Otherwise, assign
 \locvar{FY}        & Integer & 20 & No  & The vertical pixel index of the
  lower-left corner of the area to be filtered. \\
 \locvar{L}         & Integer &  7 & No  & The loop filter limit value. \\
-\locvar{\bi}       & Integer & 32 & No  & The index of the current block in
+\locvar{\bi}       & Integer & 36 & No  & The index of the current block in
  coded order. \\
-\locvar{\bi}       & Integer & 32 & No  & The index of a neighboring block in
+\locvar{\bj}       & Integer & 36 & No  & The index of a neighboring block in
  coded order. \\
 \locvar{\pli}      & Integer &  2 & No  & The color plane index of the current
  block. \\
@@ -7358,6 +7336,274 @@ This means that the predicted pixel values along the edges of the frame might
  serious compatibility issues.
 
 \section{Complete Frame Decode}
+
+\paragraph{Input parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{FMBW}      & Integer & 16 & No  & The width of the frame in macro
+ blocks. \\
+\bitvar{FMBH}      & Integer & 16 & No  & The height of the frame in macro
+ blocks. \\
+\bitvar{NSBS}      & Integer & 32 & No  & The total number of super blocks in a
+ frame. \\
+\bitvar{NBS}       & Integer & 36 & No  & The total number of blocks in a
+ frame. \\
+\bitvar{NMBS}      & Integer & 32 & No  & The total number of macro blocks in a
+ frame. \\
+\bitvar{FRN}       & Integer & 32 & No  & The frame-rate numerator. \\
+\bitvar{FRD}       & Integer & 32 & No  & The frame-rate denominator. \\
+\bitvar{PARN}      & Integer & 24 & No  & The pixel aspect-ratio numerator. \\
+\bitvar{PARD}      & Integer & 24 & No  & The pixel aspect-ratio
+ denominator. \\
+\bitvar{CS}        & Integer &  8 & No  & The color space. \\
+\bitvar{PF}        & Integer &  2 & No  & The pixel format. \\
+\bitvar{NOMBR}     & Integer & 24 & No  & The nominal bitrate of the stream, in
+ bits per second. \\
+\bitvar{QUAL}      & Integer &  6 & No  & The quality hint. \\
+\bitvar{KFGSHIFT}  & Integer &  5 & No  & The amount to shift the key frame
+ number by in the granule position. \\
+\bitvar{LFLIMS}    & \multicolumn{1}{p{40pt}}{Integer array} &
+                                7 & No  & A 64-element array of loop filter
+ limit values. \\
+\bitvar{ACSCALE}   & \multicolumn{1}{p{40pt}}{Integer array} &
+                               16 & No  & A 64-element array of scale values
+ for AC coefficients for each \qi\ value. \\
+\bitvar{DCSCALE}   & \multicolumn{1}{p{40pt}}{Integer array} &
+                               16 & No  & A 64-element array of scale values
+ for the DC coefficient for each \qi\ value. \\
+\bitvar{NBMS}      & Integer & 10 & No  & The number of base matrices. \\
+\bitvar{BMS}       & \multicolumn{1}{p{50pt}}{2D Integer array} &
+                                8 & No  & A $\bitvar{NBMS}\times 64$ array
+ containing the base matrices. \\
+\bitvar{NQRS}      & \multicolumn{1}{p{50pt}}{2D Integer array} &
+                                6 & No  & A $2\times 3$ array containing the
+ number of quant ranges for a given \qti\ and \pli, respectively.
+This is at most $63$. \\
+\bitvar{QRSIZES}   & \multicolumn{1}{p{50pt}}{3D Integer array} &
+                                6 & No  & A $2\times 3\times 63$ array of the
+ sizes of each quant range for a given \qti\ and \pli, respectively.
+Only the first $\bitvar{NQRS}[\qti][\pli]$ values will be used. \\
+\bitvar{QRBMIS}    & \multicolumn{1}{p{50pt}}{3D Integer array} &
+                                9 & No  & A $2\times 3\times 64$ array of the
+ \bmi's used for each quant range for a given \qti\ and \pli, respectively.
+Only the first $(\bitvar{NQRS}[\qti][\pli]+1)$ values will be used. \\
+\bitvar{HTS}       & \multicolumn{3}{l}{Huffman table array}
+                                        & An 80-element array of Huffman tables
+ with up to 32 entries each. \\
+\bitvar{GOLDREFY}  & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPYH}\times\bitvar{RPYW}$
+ array containing the contents of the $Y'$ plane of the golden reference
+ frame. \\
+\bitvar{GOLDREFCB} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_b$ plane of the golden reference
+ frame. \\
+\bitvar{GOLDREFCR} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_r$ plane of the golden reference
+ frame. \\
+\bitvar{PREVREFY}  & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPYH}\times\bitvar{RPYW}$
+ array containing the contents of the $Y'$ plane of the previous reference
+ frame. \\
+\bitvar{PREVREFCB} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_b$ plane of the previous reference
+ frame. \\
+\bitvar{PREVREFCR} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_r$ plane of the previous reference
+ frame. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Output parameters:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\bitvar{RECY}      & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPYH}\times\bitvar{RPYW}$
+ array containing the contents of the $Y'$ plane of the reconstructed frame. \\
+\bitvar{RECCB}     & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_b$ plane of the reconstructed
+ frame. \\
+\bitvar{RECCR}     & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_r$ plane of the reconstructed
+ frame. \\
+\bitvar{GOLDREFY}  & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPYH}\times\bitvar{RPYW}$
+ array containing the contents of the $Y'$ plane of the golden reference
+ frame. \\
+\bitvar{GOLDREFCB} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_b$ plane of the golden reference
+ frame. \\
+\bitvar{GOLDREFCR} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_r$ plane of the golden reference
+ frame. \\
+\bitvar{PREVREFY}  & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPYH}\times\bitvar{RPYW}$
+ array containing the contents of the $Y'$ plane of the previous reference
+ frame. \\
+\bitvar{PREVREFCB} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_b$ plane of the previous reference
+ frame. \\
+\bitvar{PREVREFCR} & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                                8 & No  & A $\bitvar{RPCH}\times\bitvar{RPCW}$
+ array containing the contents of the $C_r$ plane of the previous reference
+ frame. \\
+\bottomrule\end{tabularx}
+
+\paragraph{Variables used:}\hfill\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule\endhead
+\locvar{FTYPE}   & Integer &  1 & No  & The frame type. \\
+\locvar{NQIS}    & Integer &  2 & No  & The number of \qi\ values. \\
+\locvar{QIS}     & \multicolumn{1}{p{40pt}}{Integer array} &
+                              6 & No  & An \locvar{NQIS}-element array of
+ \qi\ values. \\
+\locvar{BCODED}  & \multicolumn{1}{p{40pt}}{Integer Array} &
+                              1 & No  & An \bitvar{NBS}-element array of flags
+ indicating which blocks are coded. \\
+\locvar{MBMODES} & \multicolumn{1}{p{40pt}}{Integer Array} &
+                              3 & No  & An \bitvar{NMBS}-element array of
+ coding modes for each macro block. \\
+\locvar{MVECTS}  & \multicolumn{1}{p{50pt}}{Array of 2D Integer Vectors} &
+                              6 & Yes & An \bitvar{NBS}-element array of motion
+ vectors for each block. \\
+\locvar{QIIS}    & \multicolumn{1}{p{40pt}}{Integer Array} &
+                              2 & No  & An \bitvar{NBS}-element array of
+ \locvar{\qii} values for each block. \\
+\locvar{COEFFS}  & \multicolumn{1}{p{50pt}}{2D Integer Array} &
+                             16 & Yes & An $\bitvar{NBS}\times 64$ array of
+ quantized DCT coefficient values for each block in zig-zag order. \\
+\locvar{NCOEFFS} & \multicolumn{1}{p{40pt}}{Integer Array} &
+                              7 & No  & An \bitvar{NBS}-element array of the
+ coefficient count for each block. \\
+\bitvar{RPYW}    & Integer & 20 & No  & The width of the $Y'$ plane of the
+ reference frames in pixels. \\
+\bitvar{RPYH}    & Integer & 20 & No  & The height of the $Y'$ plane of the
+ reference frames in pixels. \\
+\bitvar{RPCW}    & Integer & 20 & No  & The width of the $C_b$ and $C_r$
+ planes of the reference frames in pixels. \\
+\bitvar{RPCH}    & Integer & 20 & No  & The height of the $C_b$ and $C_r$
+ planes of the reference frames in pixels. \\
+\locvar{\bi}     & Integer & 36 & No  & The index of the current block in coded
+ order. \\
+\bottomrule\end{tabularx}
+\medskip
+
+This procedure uses all the procedures defined in the previous section of this
+ chapter to decode and reconstruct a complete frame.
+As a special case, a 0-byte packet is treated exactly like an inter frame with
+ no coded blocks.
+It takes as input values decoded from the headers, as well as the current
+ reference frames.
+As output, it gives the uncropped, reconstructed frame.
+This should be cropped to picture region before display.
+
+\begin{enumerate}
+\item
+If the size of the data packet is non-zero:
+\begin{enumerate}
+\item
+Decode the frame header values \locvar{FTYPE}, \locvar{NQIS}, and \locvar{QIS}
+ using the procedure given in Section~\ref{sub:frame-header}.
+\item
+Using \locvar{FTYPE}, \bitvar{NSBS}, and \bitvar{NBS}, decode the list of coded
+ block flags into \locvar{BCODED} using the procedure given in
+ Section~\ref{sub:coded-blocks}.
+\item
+Using \locvar{FTYPE}, \bitvar{NMBS}, \bitvar{NBS}, and \bitvar{BCODED}, decode
+ the macro block coding modes into \locvar{MBMODES} using the procedure given
+ in Section~\ref{sub:mb-modes}.
+\item
+If \locvar{FTYPE} is non-zero (inter frame), using \bitvar{PF}, \bitvar{NMBS},
+ \locvar{MBMODES}, \bitvar{NBS}, and \locvar{BCODED}, decode the motion vectors
+ into \locvar{MVECTS} using the procedure given in Section~\ref{sub:mv-decode}.
+\item
+Using \bitvar{NBS}, \locvar{BCODED}, and \locvar{NQIS}, decode the block-level
+ \qi\ values into \locvar{QIIS} using the procedure given in
+ Section~\ref{sub:block-qis}.
+\item
+Using \bitvar{NBS}, \bitvar{NMBS}, \locvar{BCODED}, and \bitvar{HTS}, decode
+ the DCT coefficients into \locvar{NCOEFFS} and \locvar{NCOEFFS} using the
+ procedure given in Section~\ref{sub:dct-coeffs}.
+\item
+Using \locvar{BCODED}, \locvar{MBMODES}, undo the DC prediction on the DC
+ coefficients stored in \locvar{COEFFS} using the procedure given in
+ Section~\ref{sub:dc-pred-undo}.
+\end{enumerate}
+\item
+Otherwise:
+\begin{enumerate}
+\item
+Assign \locvar{FTYPE} the value 1 (inter frame).
+\item
+Assign \locvar{NQIS} the value 1.
+\item
+Assign $\locvar{QIS}[0]$ the value 63.
+\item
+For each value of \locvar{\bi} from 0 to $(\bitvar{NBS}-1)$, assign
+ $\locvar{BCODED}[\locvar{\bi}]$ the value zero.
+\end{enumerate}
+\item
+Assign \locvar{RPYW} and \locvar{RPYH} the values $(16*\bitvar{FMBW})$ and
+ $(16*\bitvar{FMBH})$, respectively.
+\item
+Assign \locvar{RPCW} and \locvar{RPCH} the values from the row of
+ Table~\ref{tab:rpcwh-for-pf} corresponding to \bitvar{PF}.
+
+\begin{table}[tb]
+\begin{center}
+\begin{tabular}{crr}\toprule
+\bitvar{PF} & \multicolumn{1}{c}{\locvar{RPCW}}
+                                 & \multicolumn{1}{c}{\locvar{RPCH}} \\\midrule
+$0$         &  $8*\bitvar{FMBW}$ &  $8*\bitvar{FMBH}$ \\
+$2$         &  $8*\bitvar{FMBW}$ & $16*\bitvar{FMBH}$ \\
+$3$         & $16*\bitvar{FMBW}$ & $16*\bitvar{FMBH}$ \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Width and Height of Chroma Planes for each Pixel Format}
+\label{tab:rpcwh-for-pf}
+\end{table}
+
+\item
+Using \bitvar{ACSCALE}, \bitvar{DCSCALE}, \bitvar{BMS}, \bitvar{NQRS},
+ \bitvar{QRSIZES}, \bitvar{QRBMIS}, \bitvar{NBS}, \locvar{BCODED},
+ \locvar{MBMODES}, \locvar{MVECTS}, \locvar{COEFFS}, \locvar{NCOEFFS},
+ \locvar{QIS}, \locvar{QIIS}, \locvar{RPYW}, \locvar{RPYH}, \locvar{RPCW},
+ \locvar{RPCH}, \bitvar{GOLDREFY}, \bitvar{GOLDREFCB}, \bitvar{GOLDREFCR},
+ \bitvar{PREVREFY}, \bitvar{PREVREFCB}, and \bitvar{PREVREFCR}, reconstruct the
+ complete frame into \bitvar{RECY}, \bitvar{RECCB}, and \bitvar{RECCR} using
+ the procedure given in Section~\ref{sub:recon}.
+\item
+Using \bitvar{LFLIMS}, \locvar{RPYW}, \locvar{RPYH}, \locvar{RPCW},
+ \locvar{RPCH}, \bitvar{NBS}, \locvar{BCODED}, and \locvar{QIS}, apply the loop
+ filter to the reconstructed frame in \bitvar{RECY}, \bitvar{RECCB}, and
+ \bitvar{RECCR} using the procedure given in Section~\ref{sub:loop-filt}.
+\item
+If \locvar{FTYPE} is zero (intra frame), assign \bitvar{GOLDREFY},
+ \bitvar{GOLDREFCB}, and \bitvar{GOLDREFCR} the values \bitvar{RECY},
+ \bitvar{RECCB}, and \bitvar{RECCR}, respectively.
+\item
+Assign \bitvar{PREVREFY}, \bitvar{PREVREFCB}, and \bitvar{PREVREFCR} the values
+ \bitvar{RECY}, \bitvar{RECCB}, and \bitvar{RECCR}, respectively.
+\end{enumerate}
 
 %\backmatter
 \appendix
