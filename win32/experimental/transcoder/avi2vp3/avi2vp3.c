@@ -16,7 +16,7 @@ int main(int argc, const char **argv)
 
     FILE * f = fopen("outfile.vp3", "wb");
     
-    char * buffer = malloc(32768);
+    char * buffer;
     int olength;
     int length;
     avi_t *avifile;
@@ -37,6 +37,7 @@ int main(int argc, const char **argv)
     framew = AVI_video_width(avifile);
     frameh = AVI_video_height(avifile);
     framerate = AVI_frame_rate(avifile);
+    buffer = malloc(AVI_max_video_chunk(avifile));
     printf("Frames(%d) Video(%dx%d) %3.2f fps\n",frames,framew, frameh,framerate);
     printf("Video Compressor: %s", AVI_video_compressor(avifile));
     fps_denominator = 1000000.0F;
