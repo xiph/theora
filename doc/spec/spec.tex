@@ -633,7 +633,17 @@ The first available reference frame is the previous intra frame, called the
 The second available reference frame is the previous frame, whether it was an
  intra frame or an inter frame.
 If the previous frame was an intra frame, then both reference frames are the
- same.
+ same. See Figure~\ref{fig:reference-frames} for an example of reference
+ frames, where the current frame is an inter frame not directly
+ following an intra frame.
+
+\begin{figure}[htb]
+\begin{center}
+\include{reference-frames}
+\end{center}
+\caption{Example of reference frames for an inter frame}
+\label{fig:reference-frames}
+\end{figure}
 
 Two coding modes in particular are worth mentioning here.
 The INTRA mode is used for blocks that are not predicted from either reference

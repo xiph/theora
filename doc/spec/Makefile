@@ -9,13 +9,13 @@ RM = rm -f
 SPEC_SRCS = spec.tex spec.bib
 
 FIG_SRCS = pic-frame.fig hilbert-mb.fig hilbert-block.fig xifish.fig \
-           superblock.fig macroblock.fig raster-block.fig
+           superblock.fig macroblock.fig raster-block.fig reference-frames.fig
 
 FIG_TEXS = $(FIG_SRCS:.fig=.tex)
 FIG_AUXS = $(FIG_SRCS:.fig=.aux)
 
 FIG_OBJS = pic-frame.tex hilbert-mb.tex hilbert-block.tex xifish.pdf \
-           superblock.tex macroblock.tex raster-block.tex
+           superblock.tex macroblock.tex raster-block.tex reference-frames.tex
 
 Theora_I_spec.pdf : spec.pdf
 	$(MV) $< $@
