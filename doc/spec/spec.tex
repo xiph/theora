@@ -6,9 +6,10 @@
 \usepackage{textcomp}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{wrapfig}
 \usepackage[pdfpagemode=None,pdfstartview=FitH,pdfview=FitH,colorlinks=true]%
  {hyperref}
-\usepackage{tabularx}
 
 \newtheorem{theorem}{Theorem}[section]
 \newcommand{\idx}[1]{{\ensuremath{\mathit{#1}}}}
@@ -19,7 +20,10 @@
 \newcommand{\qi}{\idx{qi}}
 \newcommand{\ci}{\idx{ci}}
 \newcommand{\bmi}{\idx{bmi}}
+\newcommand{\bmj}{\idx{bmj}}
 \newcommand{\qri}{\idx{qri}}
+\newcommand{\qrj}{\idx{qrj}}
+\newcommand{\hti}{\idx{hti}}
 \newcommand{\ti}{\idx{ti}}
 %\newcommand{\bitvar}[1]{\ensuremath{\left[\mathrm{#1}\right]}}
 \newcommand{\bitvar}[1]{\ensuremath{\mathbf{#1}}}
@@ -30,14 +34,9 @@
 \newcommand{\ilog}{\ensuremath{\mathop{\mathrm{ilog}}\nolimits}}
 
 %Section-based table, figure, and equation numbering.
-\makeatletter
-\renewcommand\theequation{\thesection.\arabic{equation}}
-\@addtoreset{equation}{section}
-\renewcommand\thefigure{\thesection.\arabic{figure}}
-\@addtoreset{figure}{section}
-\renewcommand\thetable{\thesection.\arabic{table}}
-\@addtoreset{table}{section}
-\makeatother
+\numberwithin{equation}{section}
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
 
 \pagestyle{headings}
 \bibliographystyle{alpha}
@@ -928,6 +927,12 @@ The minimum number of bits required to store a positive integer $a$ in
 \end{itemize}
 \end{verse}
 
+\item[$\min(a,b)$]
+The minimum of two numbers $a$ and $b$.
+
+\item[$\max(a,b)$]
+The maximum of two numbers $a$ and $b$.
+
 \end{description}
 
 \subsection{Key words}
@@ -1202,19 +1207,19 @@ The parameters for all the color transformations defined in
 
 \begin{table}[htb]
 \begin{align*}
-\mathrm{Offset}_{Y,C_b,C_r}       & = (16, 128, 128)  \\
-\mathrm{Excursion}_{Y,C_b,C_r}    & = (219, 224, 224) \\
-K_r                               & = 0.299           \\
-K_b                               & = 0.114           \\
-\gamma                            & = 2.2             \\
-\beta                             & = 0.45            \\
-\alpha                            & = 4.5             \\
-\delta                            & = 0.018           \\
-\epsilon                          & = 0.099           \\
-x_r,y_r                           & = 0.67, 0.33      \\
-x_g,y_g                           & = 0.21, 0.71      \\
-x_b,y_b                           & = 0.14, 0.08      \\
-\mathrm{(Illuminant\ C)\ }x_w,y_w & = 0.310, 0.316    \\
+\mathrm{Offset}_{Y,C_b,C_r}    & = (16, 128, 128)  \\
+\mathrm{Excursion}_{Y,C_b,C_r} & = (219, 224, 224) \\
+K_r                            & = 0.299           \\
+K_b                            & = 0.114           \\
+\gamma                         & = 2.2             \\
+\beta                          & = 0.45            \\
+\alpha                         & = 4.5             \\
+\delta                         & = 0.018           \\
+\epsilon                       & = 0.099           \\
+x_r,y_r                        & = 0.67, 0.33      \\
+x_g,y_g                        & = 0.21, 0.71      \\
+x_b,y_b                        & = 0.14, 0.08      \\
+\text{(Illuminant C)}x_w,y_w   & = 0.310, 0.316    \\
 \end{align*}
 \caption{Rec. 470M Parameters}
 \label{tab:470m}
@@ -1278,7 +1283,7 @@ K_b                            & = 0.114           \\
 x_r,y_r                        & = 0.64, 0.33      \\
 x_g,y_g                        & = 0.29, 0.60      \\
 x_b,y_b                        & = 0.15, 0.06      \\
-\mathrm{(D65)\ }x_w,y_w        & = 0.313, 0.329    \\
+\text{(D65)} x_w,y_w           & = 0.313, 0.329    \\
 \end{align*}
 \caption{Rec. 470BG Parameters}
 \label{tab:470bg}
@@ -1740,7 +1745,7 @@ This distinguishes them from video data packets in which the first bit
 Packets with other header types (\hex{83}--\hex{FF}) are reserved and MUST be
  ignored.
 
-\subsection{Identification Header}
+\subsection{Identification Header Decode}
 \label{sec:idheader}
 
 \paragraph{Input parameters:} None
@@ -1957,7 +1962,7 @@ In addition to the vector list, there is a single vector for a vendor name,
  also eight-bit clean with a length encoded in 32 bits.
 %TODO: The 1.0 release of libtheora sets the vendor string to ...
 
-\subsubsection{Comment Length Decoding}
+\subsubsection{Comment Length Decode}
 \label{sub:comment-len}
 
 \paragraph{Input parameters:} None
@@ -2008,7 +2013,7 @@ This construction is used so that on platforms with 8-bit bytes, the memory
  conventions.
 \end{enumerate}
 
-\subsubsection{Comment Header Decoding}
+\subsubsection{Comment Header Decode}
 
 \paragraph{Input parameters:} None
 
@@ -2230,11 +2235,11 @@ This is at most $63$. \\
 \bitvar{QRSIZES} & \multicolumn{1}{p{50pt}}{3D Integer array} &
                               6 & No & A $2\times 3\times 63$ array of the
  sizes of each quant range for a given \qti\ and \pli, respectively.
-Only the first $\bitvar{NQRS}[\qti][\pli]$ values will be used. \\
+Only the first $\bitvar{NQRS}[\qti][\pli]$ values are used. \\
 \bitvar{QRBMIS}  & \multicolumn{1}{p{50pt}}{3D Integer array} &
                               9 & No & A $2\times 3\times 64$ array of the
  \bmi's used for each quant range for a given \qti\ and \pli, respectively.
-Only the first $(\bitvar{NQRS}[\qti][\pli]+1)$ values will be used. \\
+Only the first $(\bitvar{NQRS}[\qti][\pli]+1)$ values are used. \\
 \bottomrule\end{tabularx}
 \vspace{\baselineskip}
 
@@ -2254,7 +2259,7 @@ See Table~\ref{tab:color-planes}.\\
 \locvar{\qi}     & Integer &  6 & No & The quantization index. \\
 \locvar{\ci}     & Integer &  6 & No & The DCT coefficient index. \\
 \locvar{\bmi}    & Integer &  9 & No & The base matrix index. \\
-\locvar{\qri}    & Integer &  9 & No & The quant range index. \\
+\locvar{\qri}    & Integer &  6 & No & The quant range index. \\
 \locvar{NBITS}   & Integer &  5 & No & The size of fields to read. \\
 \locvar{NEWQR}   & Integer &  1 & No & Flag that indicates a new set of quant
  ranges will be defined. \\
@@ -2263,7 +2268,42 @@ See Table~\ref{tab:color-planes}.\\
 \bottomrule\end{tabularx}
 \vspace{\baselineskip}
 
-The quantization parameters are decoded as follows:
+The AC scale and DC scale values are defined in two simple tables with 64
+ values each, one for each \qi\ value.
+The same scale values are used for every quantization type and color plane.
+
+The base matrices for all quantization types and color planes are stored in a
+ single table.
+These are then referenced by index in several sets of \term{quant ranges}.
+The purpose of the quant ranges is to specify which base matrices are used for
+ which \qi\ values.
+
+A set of quant ranges is defined for each quantization type and color plane.
+To save space in the header, bit flags allow a set of quant range to be copied
+ from a previously defined set instead of being specified explicitly.
+Every set except the first one can be copied from the immediately preceding
+ set.
+Similarly, if the quantization type is not $0$, the set can be copied from the
+ set defined for the same color plane for the preceding quantization type.
+This formulation allows, for example, the same set of quant ranges to be used
+ for both chroma channels, as was done in the original VP3, or the same set of
+ quant ranges to be used for INTRA and INTER modes.
+
+Each quant range is defined by a size and two base matrix indices, one for each
+ end of the range.
+The base matrix for the end of one range is used as the start of the next
+ range, so that for $n$ ranges, $n+1$ base matrices are specified.
+The base matrices for the \qi\ values between the two endpoints of the range
+ are generated by linear interpolation.
+
+The location of the endpoints of each range is encoded by their size.
+The \qi\ value for the left end-point is the sum of the sizes of all preceding
+ ranges, and the \qi\ value for the right end-point adds the size of the
+ current range.
+Thus the sum of the sizes of all the ranges MUST be 63, so that the last range
+ falls on the last possible \qi\ value.
+
+The complete set of quantization parameters are decoded as follows:
 
 \begin{enumerate}
 \item
@@ -2289,6 +2329,7 @@ Read an \locvar{NBITS}-bit unsigned integer as
 \item
 Read a 9-bit unsigned integer.
 Assign \bitvar{NBMS} the value decoded, plus one.
+\bitvar{NBMS} MUST be no greater than 384.
 \item
 For each consecutive value of \locvar{\bmi} from $0$ to $(\bitvar{NBMS}-1)$,
  inclusive:
@@ -2351,6 +2392,8 @@ Assign $\locvar{\qi}$ the value zero.
 \item
 Read an $\ilog(\bitvar{NBMS}-1)$-bit unsigned integer as\\
  $\bitvar{QRBMIS}[\locvar{\qti}][\locvar{\pli}][\locvar{\qri}]$.
+If this is greater than or equal to \bitvar{NBMS}, stop.
+The stream is undecodable.
 \item
 \label{step:qr-loop}
 Read an $\ilog(63-\locvar{\qi})$-bit unsigned integer.
@@ -2372,10 +2415,340 @@ The stream is undecodable.
 \item
 Assign $\bitvar{NQRS}[\locvar{\qti}][\locvar{\pli}]$ the value \locvar{\qri}.
 \end{enumerate}
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
 
+\subsubsection{Computing a Quantization Matrix}
+\label{sub:quant-mat}
+
+\paragraph{Input parameters:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\bitvar{ACSCALE} & \multicolumn{1}{p{40pt}}{Integer array} &
+                             16 & No & A 64-element array of scale values for
+ AC coefficients for each \qi\ value. \\
+\bitvar{DCSCALE} & \multicolumn{1}{p{40pt}}{Integer array} &
+                             16 & No & A 64-element array of scale values for
+ the DC coefficient for each \qi\ value. \\
+\bitvar{BMS}     & \multicolumn{1}{p{50pt}}{2D Integer array} &
+                              8 & No & A $\bitvar{NBMS}\times 64$ array
+ containing the base matrices. \\
+\bitvar{NQRS}    & \multicolumn{1}{p{50pt}}{2D Integer array} &
+                              6 & No & A $2\times 3$ array containing the
+ number of quant ranges for a given \qti\ and \pli, respectively.
+This is at most $63$. \\
+\bitvar{QRSIZES} & \multicolumn{1}{p{50pt}}{3D Integer array} &
+                              6 & No & A $2\times 3\times 63$ array of the
+ sizes of each quant range for a given \qti\ and \pli, respectively.
+Only the first $\bitvar{NQRS}[\qti][\pli]$ values are used. \\
+\bitvar{QRBMIS}  & \multicolumn{1}{p{50pt}}{3D Integer array} &
+                              9 & No & A $2\times 3\times 64$ array of the
+ \bmi's used for each quant range for a given \qti\ and \pli, respectively.
+Only the first $(\bitvar{NQRS}[\qti][\pli]+1)$ values are used. \\
+\bitvar{\qti}    & Integer &  1 & No & A quantization type index.
+See Table~\ref{tab:quant-types}.\\
+\bitvar{\pli}    & Integer &  2 & No & A color plane index.
+See Table~\ref{tab:color-planes}.\\
+\bitvar{\qi}     & Integer &  6 & No & The quantization index. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+\paragraph{Output parameters:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\bitvar{QMAT} & \multicolumn{1}{p{40pt}}{Integer array} &
+                             16 & No & A 64-element array of quantization
+ values for each DCT coefficient. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+\paragraph{Variables used:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\locvar{\ci}     & Integer &  6 & No & The DCT coefficient index. \\
+\locvar{\bmi}    & Integer &  9 & No & The base matrix index. \\
+\locvar{\bmj}    & Integer &  9 & No & The base matrix index. \\
+\locvar{\qri}    & Integer &  6 & No & The quant range index. \\
+\locvar{QISTART} & Integer &  6 & No & The left end-point of the \qi\ range. \\
+\locvar{QIEND  } & Integer &  6 & No & The right end-point of the \qi\ range. \\
+\locvar{BM}      & \multicolumn{1}{p{40pt}}{Integer array} &
+                              8 & No & A 64-element array containing the
+ interpolated base matrix. \\
+\locvar{QMIN}    & Integer & 16 & No & The minimum quantization value allowed
+ for the current coefficient. \\
+\locvar{QSCALE}  & Integer & 16 & No & The current scale value. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+The following procedure can be used to generate a single quantization matrix
+ for a given quantization type, color plane, and \qi\ value, given the
+ quantization parameters decoded in Section~\ref{sub:quant-params}.
+
+Note that the product of the scale value and the base matrix value is in units
+ of $100$ths of a pixel value, and thus is divided by $100$ to return it to
+ units of a single pixel value.
+This value is then scaled by four, to match the scaling of the DCT output,
+ which is also a factor of four larger than the orthonormal version of the
+ transform.
+
+\begin{enumerate}
+\item
+Assign \locvar{\qri} the index of a quant range such that
+\begin{displaymath}
+\sum_{\qrj=0}^{\locvar{\qri}-1}
+ \bitvar{\qi} \ge \bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\qrj],
+\end{displaymath}
+ and
+\begin{displaymath}
+\sum_{\qrj=0}^{\locvar{\qri}}
+ \bitvar{\qi} \le \bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\qrj],
+\end{displaymath}
+ where summation from $0$ to $-1$ is zero.
+If there is more than one such value of $\locvar{\qri}$, i.e., if \bitvar{\qi}
+ lies on the end point of a quant range, then which one is used is immaterial.
+\item
+Assign \locvar{QISTART} the value
+\begin{displaymath}
+\sum_{\qrj=0}^{\qri-1} \bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\qrj].
+\end{displaymath}
+\item
+Assign \locvar{QIEND} the value
+\begin{displaymath}
+\sum_{\qrj=0}^{\qri} \bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\qrj].
+\end{displaymath}
+\item
+Assign \locvar{\bmi} the value
+ $\bitvar{QRBMIS}[\bitvar{\qti}][\bitvar{\pli}][\qri]$.
+\item
+Assign \locvar{\bmj} the value
+ $\bitvar{QRBMIS}[\bitvar{\qti}][\bitvar{\pli}][\qri+1]$.
+\item
+For each consecutive value of \locvar{\ci} from $0$ to $63$, inclusive:
+\begin{enumerate}
+\item
+Assign $\locvar{BM}[\locvar{\ci}]$ the value
+\begin{displaymath}
+\begin{split}
+(&2*(\locvar{QIEND}-\bitvar{\qi})*\bitvar{BMS}[\locvar{\bmi}][\locvar{\ci}]\\
+ &+2*(\bitvar{\qi}-
+   \locvar{QISTART})*\bitvar{BMS}[\locvar{\bmj}][\locvar{\ci}]\\
+ &+\bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\locvar{\qri}])//
+ (2*\bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\locvar{\qri}])
+\end{split}
+\end{displaymath}
+\item
+Assign \locvar{QMIN} the value given by Table~\ref{tab:qmin} according to
+ \bitvar{\qti} and \locvar{\ci}.
+
+\begin{table}[htb]
+\begin{center}
+\begin{tabular}{ccr}\toprule
+Coefficient      & \bitvar{\qti} & \locvar{QMIN} \\\midrule
+$\locvar{\ci}=0$ & $0$           & $16$          \\
+$\locvar{\ci}>0$ & $0$           & $8$           \\
+$\locvar{\ci}=0$ & $1$           & $32$          \\
+$\locvar{\ci}>0$ & $1$           & $16$          \\
+\bottomrule\end{tabular}
+\end{center}
+\caption{Minimum Quantization Values}
+\label{tab:qmin}
+\end{table}
+
+\item
+If \locvar{\ci} equals zero, assign $\locvar{QSCALE}$ the value
+ $\bitvar{DCSCALE}[\bitvar{\qi}]$.
+\item
+Else, assign $\locvar{QSCALE}$ the value
+ $\bitvar{ACSCALE}[\bitvar{\qi}]$.
+\item
+Assign $\bitvar{QMAT}[\locvar{\ci}]$ the value
+\begin{displaymath}
+\max(\locvar{QMIN},
+ \min((\locvar{QSCALE}*\locvar{BM}[\locvar{\ci}]//100)*4,4096)).
+\end{displaymath}
+\end{enumerate}
+\end{enumerate}
+
+\subsubsection{DCT Token Huffman Tables}
+\label{sub:huffman-tables}
+
+\paragraph{Input parameters:} None.
+
+\paragraph{Output parameters:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\bitvar{HTS} & \multicolumn{3}{l}{Huffman table array}
+                                     & An 80-element array of Huffman tables
+ with up to 32 entries each. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+\paragraph{Variables used:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\locvar{HBITS}   & Bitstring & 32 & No & A string of up to 32 bits. \\
+\locvar{TOKEN}   & Integer   &  5 & No & A single DCT token value. \\
+\locvar{ISLEAF}  & Integer   &  1 & No & Flag that indicates if the current
+ node of the tree being decoded is a leaf node. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+The Huffman tables used to decode DCT tokens are stored in the setup header in
+ the form of a binary tree.
+This enforces the requirements that the code be full---so that any sequence of
+ bits will produce a valid sequence of tokens---and that the code be
+ prefix-free so that there is no ambiguity when decoding.
+
+One more restriction is placed on the tables that is not explicitly enforced by
+ the bitstream syntax, but nevertheless must be obeyed by compliant encoders.
+There must be no more than 32 entries in a single table.
+Note that this restriction along with the fullness requirement limit the
+ maximum size of a single Huffman code to 32 bits.
+It is probably a good idea to enforce this latter consequence explicitly when
+ implementing the decoding procedure as a recursive algorithm, so as to prevent
+ a possible stack overflow given an invalid bitstream.
+
+Although there are 32 different DCT tokens, and thus a normal table will have
+ exactly 32 entries, this is not explicitly required.
+It is allowable to use a Huffman code that omits some---but not all---of the
+ possible token values.
+It is also allowable, if not particularly useful, to specify multiple codes for
+ the same token value in a single table.
+
+The tree is decoded as follows:
+
+\begin{enumerate}
+\item
+For each consecutive value of \locvar{\hti} from $0$ to $80$, inclusive:
+\begin{enumerate}
+\item
+Set \locvar{HBITS} to the empty string.
+\item
+\label{step:huff-tree-loop}
+If \locvar{HBITS} is longer than 32 bits in length, stop.
+The stream is undecodable.
+\item
+Read a 1-bit unsigned integer as \locvar{ISLEAF}.
+\item
+If \locvar{ISLEAF} is one:
+\begin{enumerate}
+\item
+If the number of entries in table $\bitvar{HTS}[\locvar{\hti}]$ is already 32,
+ stop.
+The stream is undecodable.
+\item
+Read a 5-bit unsigned integer as \locvar{TOKEN}.
+\item
+Add the pair $(\locvar{HBITS},\locvar{TOKEN})$ to Huffman table
+ $\bitvar{HTS}[\locvar{\hti}]$.
+\end{enumerate}
+\item
+Otherwise:
+\begin{enumerate}
+\item
+Add a `0' to the end of \locvar{HBITS}.
+\item
+Decode the `0' sub-tree using this procedure, starting from
+ step~\ref{step:huff-tree-loop}.
+\item
+Remove the `0' from the end of \locvar{HBITS} and add a `1' to the end of
+ \locvar{HBITS}.
+\item
+Decode the `1' sub-tree using this procedure, starting from
+ step~\ref{step:huff-tree-loop}.
+\item
+Remove the `1' from the end of \locvar{HBITS}.
 \end{enumerate}
 \end{enumerate}
 \end{enumerate}
+
+\subsubsection{Setup Header Decode}
+
+\paragraph{Input parameters:} None
+
+\paragraph{Output parameters:}\hfill\\*\\*
+\begin{tabularx}{\textwidth}{@{}llrcX@{}}\toprule
+\multicolumn{1}{c}{Name} &
+\multicolumn{1}{c}{Type} &
+\multicolumn{1}{p{30pt}}{\centering Size (bits)} &
+\multicolumn{1}{c}{Signed?} &
+\multicolumn{1}{c}{Description and restrictions} \\\midrule
+\bitvar{LFLIMS}  & \multicolumn{1}{p{40pt}}{Integer array} &
+                              7 & No & A 64-element array of loop filter limit
+ values. \\
+\bitvar{ACSCALE} & \multicolumn{1}{p{40pt}}{Integer array} &
+                             16 & No & A 64-element array of scale values for
+ AC coefficients for each \qi\ value. \\
+\bitvar{DCSCALE} & \multicolumn{1}{p{40pt}}{Integer array} &
+                             16 & No & A 64-element array of scale values for
+ the DC coefficient for each \qi\ value. \\
+\bitvar{NBMS}    & Integer & 10 & No & The number of base matrices. \\
+\bitvar{BMS}     & \multicolumn{1}{p{50pt}}{2D Integer array} &
+                              8 & No & A $\bitvar{NBMS}\times 64$ array
+ containing the base matrices. \\
+\bitvar{NQRS}    & \multicolumn{1}{p{50pt}}{2D Integer array} &
+                              6 & No & A $2\times 3$ array containing the
+ number of quant ranges for a given \qti\ and \pli, respectively.
+This is at most $63$. \\
+\bitvar{QRSIZES} & \multicolumn{1}{p{50pt}}{3D Integer array} &
+                              6 & No & A $2\times 3\times 63$ array of the
+ sizes of each quant range for a given \qti\ and \pli, respectively.
+Only the first $\bitvar{NQRS}[\qti][\pli]$ values will be used. \\
+\bitvar{QRBMIS}  & \multicolumn{1}{p{50pt}}{3D Integer array} &
+                              9 & No & A $2\times 3\times 64$ array of the
+ \bmi's used for each quant range for a given \qti\ and \pli, respectively.
+Only the first $(\bitvar{NQRS}[\qti][\pli]+1)$ values will be used. \\
+\bitvar{HTS} & \multicolumn{3}{l}{Huffman table array}
+                                     & An 80-element array of Huffman tables
+ with up to 32 entries each. \\
+\bottomrule\end{tabularx}
+\vspace{\baselineskip}
+
+\paragraph{Variables used:} None.
+
+The complete setup header is decoded as follows:
+
+\begin{enumerate}
+\item
+Decode the common header fields according to the procedure described in
+ Section~\ref{sub:common-header}.
+If \bitvar{HEADERTYPE} returned by this procedure is not \hex{82}, then stop.
+This packet is not the setup header.
+\item
+Decode the loop filter limit value table using the procedure given in
+ Section~\ref{sub:loop-filter-limits} into \bitvar{LFLIMS}.
+\item
+Decode the quantization parameters using the procedure given in
+ Section~\ref{sub:quant-params}.
+The results are stored in \bitvar{ACSCALE}, \bitvar{DCSCALE}, \bitvar{NBMS},
+ \bitvar{BMS}, \bitvar{NQRS}, \bitvar{QRSIZES}, and \bitvar{QRBMIS}.
+\item
+Decode the DCT token Huffman tables using the procedure given in
+ Section~\ref{sub:huffman-tables} into \bitvar{HTS}.
+\end{enumerate}
+
+\section{Frame Decode}
 
 
 
@@ -2552,10 +2925,9 @@ Xiph.org's Theora software codec implementation is distributed under a BSD-like
 This does not restrict third parties from distributing independent
  implementations of Theora software under other licenses.
 
-\begin{figure}[hb]
-\centering
+\begin{wrapfigure}{l}{0pt}
 \includegraphics{xifish}
-\end{figure}
+\end{wrapfigure}
 
 These pages are copyright \textcopyright{} 2004 Xiph.org Foundation.
 All rights reserved.
