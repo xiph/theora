@@ -419,6 +419,19 @@ double theora_granule_time(theora_state *th,ogg_int64_t granulepos){
   return(-1);
 }
 
+/* check for header flag */
+int theora_packet_isheader(ogg_packet *op)
+{
+  return (op->packet[0] & 0x80) ? 1 : 0;
+}
+
+/* check for keyframe */
+int theora_packet_iskeyframe(ogg_packet *op)
+{
+  if (op->packet[0] & 0x80) return -1; /* not a data packet */
+  return (op->packet[0] & 0x40) ? 0 : 1; /* inter or intra */
+}
+
 /* returns frame number of current packet in given logical stream */
 ogg_int64_t theora_granule_frame(theora_state *th,ogg_int64_t granulepos){
   CP_INSTANCE *cpi=(CP_INSTANCE *)(th->internal_encode);
