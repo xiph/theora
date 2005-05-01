@@ -230,25 +230,27 @@ void UpRegulateDataStream (CP_INSTANCE *cpi, ogg_uint32_t RegulationQ,
 }
 
 void RegulateQ( CP_INSTANCE *cpi, ogg_int32_t UpdateScore ) {
-  double TargetUnitScoreBytes = (double)cpi->ThisFrameTargetBytes /
-    (double)UpdateScore;
   double PredUnitScoreBytes;
-  double LastBitError = 10000.0;       /* Silly high number */
   ogg_uint32_t QIndex = Q_TABLE_SIZE - 1;
   ogg_uint32_t i;
 
-  /* Search for the best Q for the target bitrate. */
-  for ( i = 0; i < Q_TABLE_SIZE; i++ ) {
-    PredUnitScoreBytes = GetEstimatedBpb( cpi, cpi->pb.QThreshTable[i] );
-    if ( PredUnitScoreBytes > TargetUnitScoreBytes ) {
-      if ( (PredUnitScoreBytes - TargetUnitScoreBytes) <= LastBitError ) {
-        QIndex = i;
+  if ( UpdateScore > 0 ) {
+    double TargetUnitScoreBytes = (double)cpi->ThisFrameTargetBytes /
+      (double)UpdateScore;
+    double LastBitError = 10000.0;       /* Silly high number */
+    /* Search for the best Q for the target bitrate. */
+    for ( i = 0; i < Q_TABLE_SIZE; i++ ) {
+      PredUnitScoreBytes = GetEstimatedBpb( cpi, cpi->pb.QThreshTable[i] );
+      if ( PredUnitScoreBytes > TargetUnitScoreBytes ) {
+        if ( (PredUnitScoreBytes - TargetUnitScoreBytes) <= LastBitError ) {
+          QIndex = i;
+        } else {
+          QIndex = i - 1;
+        }
+        break;
       } else {
-        QIndex = i - 1;
+        LastBitError = TargetUnitScoreBytes - PredUnitScoreBytes;
       }
-      break;
-    } else {
-      LastBitError = TargetUnitScoreBytes - PredUnitScoreBytes;
     }
   }
 
