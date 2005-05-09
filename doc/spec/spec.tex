@@ -5548,6 +5548,7 @@ Otherwise, if $|\bitvar{DCPRED}-\bitvar{COEFFS}[\locvar{PBI}[1]][0]|$ is
  containing block \locvar{\bi}. \\
 \locvar{\rfi}     & Integer &  2 & No  & The index of the reference frame
  indicated by the coding mode for macro block \locvar{\mbi}. \\
+\locvar{\pli}     & Integer &  2 & No  & A color plane index. \\
 \bottomrule\end{tabularx}
 \medskip
 
@@ -5563,13 +5564,17 @@ This is handled by truncating the result to a 16-bit signed representation,
 
 \begin{enumerate}
 \item
+For each consecutive value of \locvar{\pli} from $0$ to $2$:
+\begin{enumerate}
+\item
 Assign $\locvar{LASTDC}[0]$ the value zero.
 \item
 Assign $\locvar{LASTDC}[1]$ the value zero.
 \item
 Assign $\locvar{LASTDC}[2]$ the value zero.
 \item
-For each block in {\em raster} order, with coded-order index \locvar{\bi}:
+For each block of color plane \locvar{\pli} in {\em raster} order, with
+ coded-order index \locvar{\bi}:
 \begin{enumerate}
 \item
 If $\bitvar{BCODED}[\locvar{\bi}]$ is non-zero:
@@ -5593,6 +5598,7 @@ Assign \locvar{\rfi} the value of the Reference Frame Index column of
  Table~\ref{tab:cm-refs} corresponding to $\bitvar{MBMODES}[\locvar{\mbi}]$.
 \item
 Assign $\locvar{LASTDC}[\rfi]$ the value $\locvar{DC}$.
+\end{enumerate}
 \end{enumerate}
 \end{enumerate}
 \end{enumerate}
@@ -7550,7 +7556,7 @@ Using \bitvar{NBS}, \bitvar{NMBS}, \locvar{BCODED}, and \bitvar{HTS}, decode
  the DCT coefficients into \locvar{NCOEFFS} and \locvar{NCOEFFS} using the
  procedure given in Section~\ref{sub:dct-coeffs}.
 \item
-Using \locvar{BCODED}, \locvar{MBMODES}, undo the DC prediction on the DC
+Using \locvar{BCODED} and \locvar{MBMODES}, undo the DC prediction on the DC
  coefficients stored in \locvar{COEFFS} using the procedure given in
  Section~\ref{sub:dc-pred-undo}.
 \end{enumerate}
