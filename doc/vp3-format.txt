@@ -1,10 +1,12 @@
 VP3 Bitstream Format and Decoding Process
-by Mike Melanson (melanson@pcisys.net)
-v0.4: March 2, 2004
+by Mike Melanson (mike at multimedia.cx)
+v0.5: December 8, 2004
 
 
-  [This document is still categorized as a "work-in-progess" and has
-   many incomplete sections.]
+[December 8, 2004: Note that this document is not complete and likely
+will never be completed. However, it helped form the basis of Theora I 
+specification available at
+  http://www.theora.org/doc/Theora_I_spec.pdf ]
 
 
 Contents
@@ -91,7 +93,7 @@ is encoded as:
 
 This indicates that a run of 4 zeroes is followed by a coefficient of 5;
 then a run of 1 zero is followed by 2; then a run of 3 zeroes is
-followed by a 9.
+followed by 9.
 
 * Zigzag Ordering: After transforming and quantizing a block of samples,
 the samples are not in an optimal order for run length encoding. Zigzag
@@ -182,7 +184,7 @@ The high-level format of a compressed VP3 frame is laid out as:
 
  * chunk header
  * block coding information
- * coding mode information
+ * macroblock coding mode information
  * motion vectors
  * DC coefficients
  * 1st AC coefficients
@@ -943,58 +945,82 @@ new golden frame auxiliary DC predictor.
 If the decoder only finds one valid candidate predictor, then it is used
 by itself. When the decoder finds multiple valid candidate fragments
 from which to predict DC, it applies a weighting function to the
-surrounding fragments' DC coefficients.
+surrounding fragments' DC coefficients. The following table presents all 
+16 possible combinations of available/not available predictors and what 
+to do in each case:
 
-If the up-right and left predictors are available:
+    ul   u  ur   l
+    --  --  --  --
+     0   0   0   0    no predictors available:
+                        use the last predictor saved for the frame type
+                        (either intra, inter, or golden)
 
-  pred = (53 * ur.dc) + (75 * l.dc)
-         --------------------------
-                    128
+     0   0   0   1    left predictor available:
+                        pred = l.dc
 
-If the up, up-right, and left predictors are available, the up
-predictor is discarded and the predictor calculation is the same as for 
-[ur l] prediction.
+     0   0   1   0    up-right predictor available:
+                        pred = ur.dc
 
-If the up-left, up-right, and left predictors are available, the up-left
-predictor is discarded and the predictor calculation is the same as for 
-[ur l] prediction.
+     0   0   1   1    up-right, left predictors available:
+                        pred = (53 * ur.dc) + (75 * l.dc)
+                               --------------------------
+                                         128
 
-If the up and left predictors are available:
+     0   1   0   0    up predictor available:
+                        pred = u.dc
 
-  pred = (u.dc + l.dc)
-         -------------
-               2
+     0   1   0   1    up, left predictors available:
+                        pred = (u.dc + l.dc)
+                               -------------
+                                     2
 
-If the up and up-right predictors are available, the up-right predictor
-is discarded and the up predictor is used by itself.
+     0   1   1   0    up, up-right predictors available:
+                        discard up-right predictor
+                        pred = u.dc
 
-If the up-left and left predictors are available, the up-left predictor
-is discarded and the left predictor is used by itself.
+     0   1   1   1    up, up-right, left predictors available:
+                        discard up predictor
+                        pred = (53 * ur.dc) + (75 * l.dc)
+                               --------------------------
+                                         128
 
-If the up-left and up predictors are available, the up-left predictor is
-discarded and the left predictor is used by itself.
+     1   0   0   0    up-left predictor available:
+                        pred = ul.dc
 
-If the up-left and up-right predictors are available:
+     1   0   0   1    up-left, left predictors available:
+                        discard up-left predictor
+                        pred = l.dc
 
-  pred = (ul.dc + ur.dc)
-         ---------------
-                2
+     1   0   1   0    up-left, up-right predictors available:
+                        pred = (ul.dc + ur.dc)
+                               ---------------
+                                      2
 
-If the up-left, up, and up-right predictors are available:
+     1   0   1   1    up-left, up-right, left predictors available:
+                        discard up-left predictor
+                        pred = (53 * ur.dc) + (75 * l.dc)
+                               --------------------------
+                                         128
 
-  pred = (3 * ul.dc + 10 * u.dc + 3 * ur.dc)
-         -----------------------------------
-                         16
+     1   1   0   0    up-left, up predictors available:
+                        discard up-left
+                        pred = u.dc
 
-If the up-left, up, and left predictors are available:
+     1   1   0   1    up-left, up, left predictors available:
+                        pred = (-26 * ul.dc + 29 * u.dc + 29 * l.dc)
+                               -------------------------------------
+                                                 32
 
-  pred = (-26 * ul.dc + 29 * u.dc + 29 * l.dc)
-         -------------------------------------
-                          32
+     1   1   1   0    up-left, up, up-right predictors available:
+                        pred = (3 * ul.dc + 10 * u.dc + 3 * ur.dc)
+                               -----------------------------------
+                                                16
 
-If all 4 predictors are available (up-left, up, up-right, and left), the
-up-right predictor is discarded and the predictor calculation is the
-same as for [ul u l].
+     1   1   1   1    all 4 predictors available:
+                        discard up-right predictor
+                        pred = (-26 * ul.dc + 29 * u.dc + 29 * l.dc)
+                               -------------------------------------
+                                                 32
 
 Note that this final prediction case ([ul u l]) risks outranging. The
 difference of the predicted DC is checked against u.dc, l.dc, and ul.dc,
@@ -1070,7 +1096,8 @@ The following quantization matrices and scale factor tables are hardcoded
 into the VP31 coding standard. These tables can vary according to the
 setup information transported along with a Theora file.
 
-Base quantization matrix for golden frame Y fragments:
+Base quantization matrix for golden frame Y fragments (note that this 
+is the same as JPEG):
 
     16  11  10  16  24  40  51  61
     12  12  14  19  26  58  60  55
@@ -1082,7 +1109,8 @@ Base quantization matrix for golden frame Y fragments:
     72  92  95  98 112 100 103  99
 
 
-Base quantization matrix for golden frame C fragments:
+Base quantization matrix for golden frame C fragments (note that this 
+is the same as JPEG):
     
     17  18  24  47  99  99  99  99
     18  21  26  66  99  99  99  99
@@ -1231,7 +1259,8 @@ Dan Miller (dan at on2 dot com) for clarifications on pieces of the
 format.
 
 Timothy B. Terriberry (tterribe at vt dot edu) for clarification about the
-differences between VP3 and Theora
+differences between VP3 and Theora, detailed explanation of motion 
+vector mechanics.
 
 
 References
@@ -1251,6 +1280,10 @@ http://www.on2.com/
 
 ChangeLog
 ---------
+v0.5: December 8, 2004
+- reworked section "Reversing The DC Prediction" to include a tabular 
+representation of all 16 prediction modes
+
 v0.4: March 2, 2004
 - renamed and expanded section "Initializing The Quantization Matrices"
 - outlined section "Reconstructing The Frame"
