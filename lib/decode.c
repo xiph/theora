@@ -806,7 +806,9 @@ static void DecodeData(PB_INSTANCE *pbi){
   UnPackVideo(pbi);
 
   /* Reconstruct and display the frame */
+  dsp_static_save_fpu ();
   ReconRefFrames(pbi);
+  dsp_static_restore_fpu ();
 
 }
 

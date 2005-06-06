@@ -33,6 +33,7 @@ cflags_save="$CFLAGS"
 AC_PROG_CC
 AC_PROG_CPP
 CFLAGS="$cflags_save"
+CFLAGS="$CFLAGS -O2 -fforce-addr -fomit-frame-pointer -finline-functions -funroll-loops"
 
 AM_PROG_LIBTOOL
 
