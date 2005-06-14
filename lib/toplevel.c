@@ -296,6 +296,7 @@ int theora_decode_init(theora_state *th, theora_info *c){
   ci=(codec_setup_info *)c->codec_setup;
   memset(th, 0, sizeof(*th));
   th->internal_decode=pbi=_ogg_calloc(1,sizeof(*pbi));
+  th->internal_encode=NULL;
 
   InitPBInstance(pbi);
   memcpy(&pbi->info,c,sizeof(*c));
