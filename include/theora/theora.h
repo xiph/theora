@@ -251,8 +251,6 @@ extern int theora_encode_YUVin(theora_state *t, yuv_buffer *yuv);
  */
 extern int theora_encode_packetout( theora_state *t, int last_p,
                                     ogg_packet *op);
-extern int theora_encode_empty_packetout( theora_state *t, int last_p,
-                                    ogg_packet *op);
 
 /**
  * Request a packet containing the initial header.
