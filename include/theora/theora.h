@@ -251,6 +251,8 @@ extern int theora_encode_YUVin(theora_state *t, yuv_buffer *yuv);
  */
 extern int theora_encode_packetout( theora_state *t, int last_p,
                                     ogg_packet *op);
+extern int theora_encode_empty_packetout( theora_state *t, int last_p,
+                                    ogg_packet *op);
 
 /**
  * Request a packet containing the initial header.
@@ -347,6 +349,7 @@ extern int theora_decode_init(theora_state *th, theora_info *c);
  * Input a packet containing encoded data into the theora decoder.
  * \param th A theora_state handle previously initialized for decoding.
  * \param op An ogg_packet containing encoded theora data.
+ * \retval 0 Success
  * \retval OC_BADPACKET \a op does not contain encoded video data
  */
 extern int theora_decode_packetin(theora_state *th,ogg_packet *op);
