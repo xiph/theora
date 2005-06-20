@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2005                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -71,8 +71,11 @@ void theora_info_init(theora_info *c) {
 
 void theora_info_clear(theora_info *c) {
   codec_setup_info *ci=c->codec_setup;
+  int i;
   if(ci){
     if(ci->qmats) _ogg_free(ci->qmats);
+    for(i=0;i<6;i++)
+      if(ci->range_table[i]) _ogg_free(ci->range_table[i]);
     ClearHuffmanTrees(ci->HuffRoot);
     _ogg_free(ci);
   }

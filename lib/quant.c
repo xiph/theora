@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2005                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -168,12 +168,17 @@ void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer* opb) {
   oggpackB_write(opb, 0, 2);  /* inter V the same */
 }
 
-static int _read_qtable_range(codec_setup_info *ci, oggpack_buffer* opb, int N) 
+static int _read_qtable_range(codec_setup_info *ci, oggpack_buffer* opb,
+	 int N, int type) 
 {
   int index, range;
   int qi = 0;
+  int count = 0;
+  qmat_range_table table[65];
 
   theora_read(opb,_ilog(N-1),&index); /* qi=0 index */
+  table[count].startqi = 0;
+  table[count++].qmat = ci->qmats + index * Q_TABLE_SIZE;
   //fprintf(stderr, " [%d]",index);
   while(qi<63) {
     theora_read(opb,_ilog(62-qi),&range); /* range to next code q matrix */
@@ -182,10 +187,18 @@ static int _read_qtable_range(codec_setup_info *ci, oggpack_buffer* opb, int N)
     if(range<=0) return OC_BADHEADER;
     qi+=range;
     theora_read(opb,_ilog(N-1),&index); /* next index */
+    table[count].startqi = qi;
+    table[count++].qmat = ci->qmats + index * Q_TABLE_SIZE;
     //fprintf(stderr, " [%d]",index);
   }
 
-  return 0;
+  ci->range_table[type] = _ogg_malloc(count * sizeof(qmat_range_table));
+  if (ci->range_table[type] != NULL) {
+    memcpy(&ci->range_table[type], table, count * sizeof(qmat_range_table)); 
+    return 0;
+  }
+  
+  return OC_FAULT; /* allocation failed */
 }
 
 int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
@@ -224,18 +237,21 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
     //fprintf(stderr,"\n");
   }
   /* table mapping */
+  for(x=0; x<6; x++) {
+    ci->range_table[x] = NULL;
+  }
   {
     int flag, ret;
     /* intra Y */
     //fprintf(stderr,"\n Intra Y:");
-    if((ret=_read_qtable_range(ci,opb,N))<0) return ret;
+    if((ret=_read_qtable_range(ci,opb,N,0))<0) return ret;
     /* intra U */
     //fprintf(stderr, "\n Intra U:");
     theora_read(opb,1,&flag);
     if(flag<0) return OC_BADHEADER;
     if(flag) {
       /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N))<0) return ret;
+      if((ret=_read_qtable_range(ci,opb,N,1))<0) return ret;
     } else {
       /* same as previous */
       //fprintf(stderr," same as above");
@@ -246,7 +262,7 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
     if(flag<0) return OC_BADHEADER;
     if(flag) {
       /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N))<0) return ret;
+      if((ret=_read_qtable_range(ci,opb,N,2))<0) return ret;
     } else {
        /* same as previous */
       //fprintf(stderr," same as above");
@@ -257,7 +273,7 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
     if(flag<0) return OC_BADHEADER;
     if(flag) {
       /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N))<0) return ret;
+      if((ret=_read_qtable_range(ci,opb,N,3))<0) return ret;
     } else {
       theora_read(opb,1,&flag);
       if(flag<0) return OC_BADHEADER;
@@ -275,7 +291,7 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
     if(flag<0) return OC_BADHEADER;
     if(flag) {
       /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N))<0) return ret;
+      if((ret=_read_qtable_range(ci,opb,N,4))<0) return ret;
     } else {
       theora_read(opb,1,&flag);
       if(flag<0) return OC_BADHEADER;
@@ -293,7 +309,7 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
     if(flag<0) return OC_BADHEADER;
     if(flag) {
       /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N))<0) return ret;
+      if((ret=_read_qtable_range(ci,opb,N,5))<0) return ret;
     } else {
       theora_read(opb,1,&flag);
       if(flag<0) return OC_BADHEADER;

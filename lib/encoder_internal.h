@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2005                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -45,6 +45,7 @@
 /* Border is for unrestricted mv's */
 #define UMV_BORDER              16
 #define STRIDE_EXTRA            (UMV_BORDER * 2)
+
 #define Q_TABLE_SIZE            64
 
 #define BASE_FRAME              0
@@ -250,11 +251,19 @@ typedef struct HUFF_ENTRY {
 
 } HUFF_ENTRY;
 
+typedef struct qmat_range_table {
+  int startq, startqi; /* index where this range starts */
+  Q_LIST_ENTRY *qmat;  /* qmat at each this range boundary */
+} qmat_range_table;
+
 typedef struct codec_setup_info {
   ogg_uint32_t QThreshTable[Q_TABLE_SIZE];
   Q_LIST_ENTRY DcScaleFactorTable[Q_TABLE_SIZE];
+
   int MaxQMatrixIndex;
   Q_LIST_ENTRY *qmats;
+  qmat_range_table *range_table[6];
+
   Q_LIST_ENTRY Y_coeffs[64];
   Q_LIST_ENTRY UV_coeffs[64];
   Q_LIST_ENTRY Inter_coeffs[64];
