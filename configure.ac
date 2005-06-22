@@ -157,7 +157,7 @@ dnl Configuration option for building of floating point code.
 ac_enable_float=yes
 AC_ARG_ENABLE(float,
      [  --disable-float         disable use of floating point code ],
-     [ ac_enable_float=no ], [ ac_enable_float=yes] )
+     [ ac_enable_float=$enableval ], [ ac_enable_float=yes] )
 
 if test "x${ac_enable_float}" = xyes ; then
     AC_DEFINE(THEORA_SUPPORT_FLOAT, [1], [Build floating point code])
@@ -171,7 +171,7 @@ dnl Configuration option for building of encoding support.
 ac_enable_encode=yes
 AC_ARG_ENABLE(encode,
      [  --disable-encode        disable encoding support ],
-     [ ac_enable_encode=no ], [ ac_enable_encode=yes] )
+     [ ac_enable_encode=$enableval ], [ ac_enable_encode=yes] )
 
 if test "x${ac_enable_encode}" = xyes ; then
     if test x$HAVE_VORBIS = xyes; then
