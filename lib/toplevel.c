@@ -440,6 +440,12 @@ int theora_packet_iskeyframe(ogg_packet *op)
   return (op->packet[0] & 0x40) ? 0 : 1; /* inter or intra */
 }
 
+/* returns the shift radix used to split the granulepos into two fields */
+int theora_granule_shift(theora_info *ti)
+{
+  return _ilog(ti->keyframe_frequency_force - 1);
+}
+
 /* returns frame number of current packet in given logical stream */
 ogg_int64_t theora_granule_frame(theora_state *th,ogg_int64_t granulepos){
   CP_INSTANCE *cpi=(CP_INSTANCE *)(th->internal_encode);

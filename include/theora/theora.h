@@ -387,6 +387,33 @@ extern int theora_packet_isheader(ogg_packet *op);
 extern int theora_packet_iskeyframe(ogg_packet *op);
 
 /**
+ * Report the granulepos shift radix
+ *
+ * When embedded in Ogg, Theora uses a two-part granulepos, 
+ * splitting the 64-bit field into two pieces. The more-significant
+ * section represents the frame count at the last keyframe,
+ * and the less-significant section represents the count of
+ * frames since the last keyframe. In this way the overall
+ * field is still non-decreasing with time, but usefully encodes
+ * a pointer to the last keyframe, which is necessary for
+ * correctly restarting decode after a seek. 
+ *
+ * This function reports the number of bits used to represent
+ * the distance to the last keyframe, and thus how the granulepos
+ * field must be shifted or masked to obtain the two parts.
+ * 
+ * Since libtheora returns compressed data in an ogg_packet
+ * structure, this may be generally useful even if the Theora
+ * packets are not being used in an Ogg container. 
+ *
+ * \param ti A previously initialized theora_info struct
+ * \returns The bit shift dividing the two granulepos fields
+ *
+ * This function was added inthe 1.0alpha5 release.
+ */
+int theora_granule_shift(theora_info *ti);
+
+/**
  * Convert a granulepos to an absolute frame number. The granulepos is
  * interpreted in the context of a given theora_state handle.
  *
