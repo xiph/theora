@@ -228,8 +228,8 @@ static void SetupKeyFrame(CP_INSTANCE *cpi) {
   memset( cpi->pb.display_fragments, 1, cpi->pb.UnitFragments );
   memset( cpi->extra_fragments, 1, cpi->pb.UnitFragments );
 
-  /* Set up for a BASE/KEY FRAME */
-  SetFrameType( &cpi->pb,BASE_FRAME );
+  /* Set up for a KEY FRAME */
+  SetFrameType( &cpi->pb,KEY_FRAME );
 }
 
 static void AdjustKeyFrameContext(CP_INSTANCE *cpi) {
@@ -326,7 +326,7 @@ static void UpdateFrame(CP_INSTANCE *cpi){
   EncodeData(cpi);
 
   /* Adjust drop frame trigger. */
-  if ( GetFrameType(&cpi->pb) != BASE_FRAME ) {
+  if ( GetFrameType(&cpi->pb) != KEY_FRAME ) {
     /* Apply decay factor then add in the last frame size. */
     cpi->DropFrameTriggerBytes =
       ((cpi->DropFrameTriggerBytes * (DF_CANDIDATE_WINDOW-1)) /
@@ -359,7 +359,7 @@ static void UpdateFrame(CP_INSTANCE *cpi){
 
   /* Update the BpbCorrectionFactor variable according to whether or
      not we were close enough with our selection of DCT quantiser.  */
-  if ( GetFrameType(&cpi->pb) != BASE_FRAME ) {
+  if ( GetFrameType(&cpi->pb) != KEY_FRAME ) {
     /* Work out a size correction factor. */
     CorrectionFactor = (double)oggpackB_bytes(cpi->oggbuffer) /
       (double)cpi->ThisFrameTargetBytes;
@@ -391,7 +391,7 @@ static void UpdateFrame(CP_INSTANCE *cpi){
   }
 
   /* Adjust carry over and or key frame context. */
-  if ( GetFrameType(&cpi->pb) == BASE_FRAME ) {
+  if ( GetFrameType(&cpi->pb) == KEY_FRAME ) {
     /* Adjust the key frame context unless the key frame was very small */
     AdjustKeyFrameContext(cpi);
   } else {
@@ -542,8 +542,8 @@ static void CompressFrame( CP_INSTANCE *cpi) {
     cpi->pb.FragMVect[i].y = 0;
   }
 
-  /* Default to normal frames. */
-  SetFrameType( &cpi->pb, NORMAL_FRAME );
+  /* Default to delta frames. */
+  SetFrameType( &cpi->pb, DELTA_FRAME );
 
   /* Clear down the difference arrays for the current frame. */
   memset( cpi->pb.display_fragments, 0, cpi->pb.UnitFragments );

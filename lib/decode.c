@@ -76,7 +76,7 @@ static int LoadFrameHeader(PB_INSTANCE *pbi){
   theora_read(pbi->opb,1,&ret);
   SpareBits = (unsigned char)ret;
 
-  if ( (pbi->FrameType == BASE_FRAME) ){
+  if ( (pbi->FrameType == KEY_FRAME) ){
     /* Read the type / coding method for the key frame. */
     theora_read(pbi->opb,1,&ret);
     pbi->KeyFrameType = (unsigned char)ret;
@@ -96,7 +96,7 @@ void SetFrameType( PB_INSTANCE *pbi,unsigned char FrType ){
   /* Set the appropriate frame type according to the request. */
   switch ( FrType ){
 
-  case BASE_FRAME:
+  case KEY_FRAME:
     pbi->FrameType = FrType;
     break;
 
@@ -140,7 +140,7 @@ static void DecodeModes (PB_INSTANCE *pbi,
   ogg_uint32_t  i;
 
   /* If the frame is an intra frame then all blocks have mode intra. */
-  if ( GetFrameType(pbi) == BASE_FRAME ){
+  if ( GetFrameType(pbi) == KEY_FRAME ){
     for ( i = 0; i < pbi->UnitFragments; i++ ){
       pbi->FragCodingMethod[i] = CODE_INTRA;
     }
@@ -322,7 +322,7 @@ static void DecodeMVectors ( PB_INSTANCE *pbi,
   ogg_uint32_t  MBListIndex = 0;
 
   /* Should not be decoding motion vectors if in INTRA only mode. */
-  if ( GetFrameType(pbi) == BASE_FRAME ){
+  if ( GetFrameType(pbi) == KEY_FRAME ){
     return;
   }
 

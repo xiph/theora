@@ -48,8 +48,8 @@
 
 #define Q_TABLE_SIZE            64
 
-#define BASE_FRAME              0
-#define NORMAL_FRAME            1
+#define KEY_FRAME              0
+#define DELTA_FRAME            1
 
 #define MAX_MODES               8
 #define MODE_BITS               3
@@ -253,7 +253,7 @@ typedef struct HUFF_ENTRY {
 
 typedef struct qmat_range_table {
   int startq, startqi; /* index where this range starts */
-  Q_LIST_ENTRY *qmat;  /* qmat at each this range boundary */
+  Q_LIST_ENTRY *qmat;  /* qmat at this range boundary */
 } qmat_range_table;
 
 typedef struct codec_setup_info {
@@ -622,7 +622,7 @@ typedef struct CP_INSTANCE {
 
   ogg_uint32_t      RunLength;
   ogg_uint32_t      MaxBitTarget;     /* Cut off target for rate capping */
-  double            BitRateCapFactor; /* Factor relating normal frame target
+  double            BitRateCapFactor; /* Factor relating delta frame target
                                          to cut off target. */
 
   unsigned char     MBCodingMode;     /* Coding mode flags */

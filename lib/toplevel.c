@@ -357,7 +357,7 @@ int theora_decode_packetin(theora_state *th,ogg_packet *op){
       if(th->granulepos==-1){
         th->granulepos=0;
       }else{
-        if(pbi->FrameType==BASE_FRAME){
+        if(pbi->FrameType==KEY_FRAME){
           long frames= th->granulepos & ((1<<pbi->keyframe_granule_shift)-1);
           th->granulepos>>=pbi->keyframe_granule_shift;
           th->granulepos+=frames+1;

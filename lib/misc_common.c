@@ -59,7 +59,7 @@ double GetEstimatedBpb( CP_INSTANCE *cpi, ogg_uint32_t TargetQ ){
   }
 
   /* Adjust according to Q shift and type of frame */
-  if ( GetFrameType(&cpi->pb) == BASE_FRAME ) {
+  if ( GetFrameType(&cpi->pb) == KEY_FRAME ) {
     /* Get primary prediction */
     BytesPerBlock = KfBpbTable[ThreshTableIndex];
   } else {
@@ -258,7 +258,7 @@ void RegulateQ( CP_INSTANCE *cpi, ogg_int32_t UpdateScore ) {
   cpi->pb.ThisFrameQualityValue = cpi->pb.QThreshTable[QIndex];
 
   /* Apply range restrictions for key frames. */
-  if ( GetFrameType(&cpi->pb) == BASE_FRAME ) {
+  if ( GetFrameType(&cpi->pb) == KEY_FRAME ) {
     if ( cpi->pb.ThisFrameQualityValue > cpi->pb.QThreshTable[20] )
       cpi->pb.ThisFrameQualityValue = cpi->pb.QThreshTable[20];
     else if ( cpi->pb.ThisFrameQualityValue < cpi->pb.QThreshTable[50] )
@@ -273,7 +273,7 @@ void RegulateQ( CP_INSTANCE *cpi, ogg_int32_t UpdateScore ) {
   }
 
   if(cpi->FixedQ) {
-    if ( GetFrameType(&cpi->pb) == BASE_FRAME ) {
+    if ( GetFrameType(&cpi->pb) == KEY_FRAME ) {
       cpi->pb.ThisFrameQualityValue = cpi->pb.QThreshTable[43];
       cpi->pb.ThisFrameQualityValue = cpi->FixedQ;
     } else {
