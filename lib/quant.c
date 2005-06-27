@@ -15,7 +15,6 @@
 
  ********************************************************************/
 
-//#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "encoder_internal.h"
@@ -179,17 +178,14 @@ static int _read_qtable_range(codec_setup_info *ci, oggpack_buffer* opb,
   theora_read(opb,_ilog(N-1),&index); /* qi=0 index */
   table[count].startqi = 0;
   table[count++].qmat = ci->qmats + index * Q_TABLE_SIZE;
-  //fprintf(stderr, " [%d]",index);
   while(qi<63) {
     theora_read(opb,_ilog(62-qi),&range); /* range to next code q matrix */
     range++;
-    //fprintf(stderr," %d",range);
     if(range<=0) return OC_BADHEADER;
     qi+=range;
     theora_read(opb,_ilog(N-1),&index); /* next index */
     table[count].startqi = qi;
     table[count++].qmat = ci->qmats + index * Q_TABLE_SIZE;
-    //fprintf(stderr, " [%d]",index);
   }
 
   ci->range_table[type] = _ogg_malloc(count * sizeof(qmat_range_table));
@@ -204,7 +200,7 @@ static int _read_qtable_range(codec_setup_info *ci, oggpack_buffer* opb,
 int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
   long bits,value;
   int x,y, N;
-  //fprintf(stderr, "Reading Q tables...\n");
+
   /* AC scale table */
   theora_read(opb,4,&bits); bits++;
   for(x=0; x<Q_TABLE_SIZE; x++) {
@@ -221,20 +217,15 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
   }
   /* base matricies */
   theora_read(opb,9,&N); N++;
-  //fprintf(stderr, "  max q matrix index %d\n", N);
   if(N!=3)return OC_BADHEADER; /* we only support the VP3 config */
   ci->qmats=_ogg_malloc(N*64*sizeof(Q_LIST_ENTRY));
   ci->MaxQMatrixIndex = N;
   for(y=0; y<N; y++) {
-    //fprintf(stderr," q matrix %d:\n  ", y);
     for(x=0; x<64; x++) {
       theora_read(opb,8,&value);
       if(bits<0)return OC_BADHEADER;
       ci->qmats[(y<<6)+x]=(Q_LIST_ENTRY)value;
-      //fprintf(stderr," %03d", (Q_LIST_ENTRY)value);
-      //if((x+1)%8==0)fprintf(stderr,"\n  ");
     }
-    //fprintf(stderr,"\n");
   }
   /* table mapping */
   for(x=0; x<6; x++) {
@@ -243,10 +234,8 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
   {
     int flag, ret;
     /* intra Y */
-    //fprintf(stderr,"\n Intra Y:");
     if((ret=_read_qtable_range(ci,opb,N,0))<0) return ret;
     /* intra U */
-    //fprintf(stderr, "\n Intra U:");
     theora_read(opb,1,&flag);
     if(flag<0) return OC_BADHEADER;
     if(flag) {
@@ -254,10 +243,8 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
       if((ret=_read_qtable_range(ci,opb,N,1))<0) return ret;
     } else {
       /* same as previous */
-      //fprintf(stderr," same as above");
     }
     /* intra V */
-    //fprintf(stderr,"\n Intra V:");
     theora_read(opb,1,&flag);
     if(flag<0) return OC_BADHEADER;
     if(flag) {
@@ -265,10 +252,8 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
       if((ret=_read_qtable_range(ci,opb,N,2))<0) return ret;
     } else {
        /* same as previous */
-      //fprintf(stderr," same as above");
     }
     /* inter Y */
-    //fprintf(stderr,"\n Inter Y:");
     theora_read(opb,1,&flag);
     if(flag<0) return OC_BADHEADER;
     if(flag) {
@@ -279,14 +264,11 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
       if(flag<0) return OC_BADHEADER;
       if(flag) {
         /* same as corresponding intra */
-        //fprintf(stderr," same as intra");
       } else {
         /* same as previous */
-        //fprintf(stderr," same as above");
       }
     }
     /* inter U */
-    //fprintf(stderr,"\n Inter U:");
     theora_read(opb,1,&flag);
     if(flag<0) return OC_BADHEADER;
     if(flag) {
@@ -297,14 +279,11 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
       if(flag<0) return OC_BADHEADER;
       if(flag) {
         /* same as corresponding intra */
-        //fprintf(stderr," same as intra");
       } else {
         /* same as previous */
-        //fprintf(stderr," same as above");
       }
     }
     /* inter V */
-    //fprintf(stderr,"\n Inter V:");
     theora_read(opb,1,&flag);
     if(flag<0) return OC_BADHEADER;
     if(flag) {
@@ -315,13 +294,10 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
       if(flag<0) return OC_BADHEADER;
       if(flag) {
         /* same as corresponding intra */
-        //fprintf(stderr," same as intra");
       } else {
         /* same as previous */
-        //fprintf(stderr," same as above");
       }
     }
-    //fprintf(stderr,"\n");
   }
   
   /* ignore the range table and reference the matricies we use */
