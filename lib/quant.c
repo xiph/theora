@@ -20,6 +20,8 @@
 #include "encoder_internal.h"
 #include "quant_lookup.h"
 
+/* the *V1 tables are the originals used by the VP3 codec */
+
 static const ogg_uint32_t QThreshTableV1[Q_TABLE_SIZE] = {
   500,  450,  400,  370,  340,  310, 285, 265,
   245,  225,  210,  195,  185,  180, 170, 160,
@@ -69,7 +71,6 @@ static const Q_LIST_ENTRY UV_coeffsV1[64] =
         99,     99,     99,     99,     99,     99,     99,     99
 };
 
-/* Different matrices for different encoder versions */
 static const Q_LIST_ENTRY Inter_coeffsV1[64] =
 {
         12, 16,  16,  16,  20,  20,  20,  20,
@@ -106,7 +107,6 @@ static const Q_LIST_ENTRY UV_coeffsV1[64] ={
   99,   99,     99,     99,     99,     99,     99,     99
 };
 
-/* Different matrices for different encoder versions */
 static const Q_LIST_ENTRY Inter_coeffsV1[64] ={
   16,  16,  16,  20,  24,  28,  32,  40,
   16,  16,  20,  24,  28,  32,  40,  48,
@@ -319,7 +319,7 @@ void CopyQTables(PB_INSTANCE *pbi, codec_setup_info *ci) {
 
 /* Initialize custom qtables using the VP31 values.
    Someday we can change the quant tables to be adaptive, or just plain
-    better.*/
+    better. */
 void InitQTables( PB_INSTANCE *pbi ){
   memcpy(pbi->QThreshTable, QThreshTableV1, sizeof(pbi->QThreshTable));
   memcpy(pbi->DcScaleFactorTable, DcScaleFactorTableV1,
