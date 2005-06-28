@@ -159,12 +159,11 @@ AC_ARG_ENABLE(float,
      [  --disable-float         disable use of floating point code ],
      [ ac_enable_float=$enableval ], [ ac_enable_float=yes] )
 
-if test "x${ac_enable_float}" = xyes ; then
-    AC_DEFINE(THEORA_SUPPORT_FLOAT, [1], [Build floating point code])
-else
-    AC_DEFINE(THEORA_SUPPORT_FLOAT, [0], [Do not build floating point code])
+if test "x${ac_enable_float}" != xyes ; then
+    AC_DEFINE([THEORA_DISABLE_FLOAT], [], 
+	[Define to exclude floating point code from the build])
 fi
-AM_CONDITIONAL(THEORA_SUPPORT_FLOAT, [test "x${ac_enable_float}" = "xyes"])
+AM_CONDITIONAL(THEORA_DISABLE_FLOAT, [test "x${ac_enable_float}" != xyes])
 
 dnl Configuration option for building of encoding support.
 
@@ -173,17 +172,17 @@ AC_ARG_ENABLE(encode,
      [  --disable-encode        disable encoding support ],
      [ ac_enable_encode=$enableval ], [ ac_enable_encode=yes] )
 
-if test "x${ac_enable_encode}" = xyes ; then
+if test "x${ac_enable_encode}" != xyes ; then
+    AC_DEFINE([THEORA_DISABLE_ENCODE], [],
+	[Define to exclude encode support from the build])
+else
     if test x$HAVE_VORBIS = xyes; then
       BUILDABLE_EXAMPLES="$BUILDABLE_EXAMPLES encoder_example"
     else
       AC_MSG_NOTICE([Vorbis missing, cannot build example encoder])
     fi
-    AC_DEFINE(THEORA_SUPPORT_ENCODE, [1], [Build encoding support])
-else
-    AC_DEFINE(THEORA_SUPPORT_ENCODE, [0], [Do not build encoding support])
 fi
-AM_CONDITIONAL(THEORA_SUPPORT_ENCODE, [test "x${ac_enable_encode}" = "xyes"])
+AM_CONDITIONAL(THEORA_DISABLE_ENCODE, [test "x${ac_enable_encode}" != xyes])
 
 dnl --------------------------------------------------
 dnl Check for headers

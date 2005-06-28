@@ -2,10 +2,10 @@ INCLUDES = -I$(top_srcdir)/include
 
 lib_LTLIBRARIES = libtheora.la
 
-if THEORA_SUPPORT_ENCODE
-encoder_sources = dct_encode.c encode.c encoder_toplevel.c
-else
+if THEORA_DISABLE_ENCODE
 encoder_sources = encoder_disabled.c
+else
+encoder_sources = dct_encode.c encode.c encoder_toplevel.c
 endif
 
 libtheora_la_SOURCES = \
