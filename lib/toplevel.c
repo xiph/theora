@@ -164,9 +164,9 @@ static int _theora_unpack_info(theora_info *ci, oggpack_buffer *opb){
 
 static int _theora_unpack_comment(theora_comment *tc, oggpack_buffer *opb){
   int i;
-  int len;
+  long len;
 
-   _tp_readlsbint(opb,(long *) &len);
+   _tp_readlsbint(opb,&len);
   if(len<0)return(OC_BADHEADER);
   tc->vendor=_ogg_calloc(1,len+1);
   _tp_readbuffer(opb,tc->vendor, len);
@@ -177,7 +177,7 @@ static int _theora_unpack_comment(theora_comment *tc, oggpack_buffer *opb){
   tc->user_comments=_ogg_calloc(tc->comments,sizeof(*tc->user_comments));
   tc->comment_lengths=_ogg_calloc(tc->comments,sizeof(*tc->comment_lengths));
   for(i=0;i<tc->comments;i++){
-    _tp_readlsbint(opb,(long *)&len);
+    _tp_readlsbint(opb,&len);
     if(len<0)goto parse_err;
     tc->user_comments[i]=_ogg_calloc(1,len+1);
     _tp_readbuffer(opb,tc->user_comments[i],len);
