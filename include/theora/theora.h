@@ -420,7 +420,7 @@ int theora_granule_shift(theora_info *ti);
  * \param th A previously initialized theora_state handle (encode or decode)
  * \param granulepos The granulepos to convert.
  * \returns The frame number corresponding to \a granulepos.
- * \retval -1 The given granulepos is invalid (ie. negative)
+ * \retval -1 The given granulepos is undefined (i.e. negative)
  *
  * Thus function was added in the 1.0alpha4 release.
  */
@@ -432,7 +432,9 @@ extern ogg_int64_t theora_granule_frame(theora_state *th,ogg_int64_t granulepos)
  * \param th A previously initialized theora_state handle (encode or decode)
  * \param granulepos The granulepos to convert.
  * \returns The absolute time in seconds corresponding to \a granulepos.
- * \retval -1 The given granulepos is invalid (ie. negative)
+ * \retval -1. The given granulepos is undefined (i.e. negative), or
+ * \retval -1. The function has been disabled because floating 
+ *		point support is not available.
  */
 extern double theora_granule_time(theora_state *th,ogg_int64_t granulepos);
 
