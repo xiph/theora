@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2005                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -15,11 +15,12 @@
 
  ********************************************************************/
 
-//#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "encoder_internal.h"
 #include "quant_lookup.h"
+
+/* the *V1 tables are the originals used by the VP3 codec */
 
 static const ogg_uint32_t QThreshTableV1[Q_TABLE_SIZE] = {
   500,  450,  400,  370,  340,  310, 285, 265,
@@ -70,7 +71,6 @@ static const Q_LIST_ENTRY UV_coeffsV1[64] =
         99,     99,     99,     99,     99,     99,     99,     99
 };
 
-/* Different matrices for different encoder versions */
 static const Q_LIST_ENTRY Inter_coeffsV1[64] =
 {
         12, 16,  16,  16,  20,  20,  20,  20,
@@ -107,7 +107,6 @@ static const Q_LIST_ENTRY UV_coeffsV1[64] ={
   99,   99,     99,     99,     99,     99,     99,     99
 };
 
-/* Different matrices for different encoder versions */
 static const Q_LIST_ENTRY Inter_coeffsV1[64] ={
   16,  16,  16,  20,  24,  28,  32,  40,
   16,  16,  20,  24,  28,  32,  40,  48,
@@ -168,30 +167,40 @@ void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer* opb) {
   oggpackB_write(opb, 0, 2);  /* inter V the same */
 }
 
-static int _read_qtable_range(codec_setup_info *ci, oggpack_buffer* opb, int N) 
+static int _read_qtable_range(codec_setup_info *ci, oggpack_buffer* opb,
+	 int N, int type) 
 {
   int index, range;
   int qi = 0;
+  int count = 0;
+  qmat_range_table table[65];
 
   theora_read(opb,_ilog(N-1),&index); /* qi=0 index */
-  //fprintf(stderr, " [%d]",index);
+  table[count].startqi = 0;
+  table[count++].qmat = ci->qmats + index * Q_TABLE_SIZE;
   while(qi<63) {
     theora_read(opb,_ilog(62-qi),&range); /* range to next code q matrix */
     range++;
-    //fprintf(stderr," %d",range);
     if(range<=0) return OC_BADHEADER;
     qi+=range;
     theora_read(opb,_ilog(N-1),&index); /* next index */
-    //fprintf(stderr, " [%d]",index);
+    table[count].startqi = qi;
+    table[count++].qmat = ci->qmats + index * Q_TABLE_SIZE;
   }
 
-  return 0;
+  ci->range_table[type] = _ogg_malloc(count * sizeof(qmat_range_table));
+  if (ci->range_table[type] != NULL) {
+    memcpy(&ci->range_table[type], table, count * sizeof(qmat_range_table)); 
+    return 0;
+  }
+  
+  return OC_FAULT; /* allocation failed */
 }
 
 int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
   long bits,value;
   int x,y, N;
-  //fprintf(stderr, "Reading Q tables...\n");
+
   /* AC scale table */
   theora_read(opb,4,&bits); bits++;
   for(x=0; x<Q_TABLE_SIZE; x++) {
@@ -208,104 +217,87 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
   }
   /* base matricies */
   theora_read(opb,9,&N); N++;
-  //fprintf(stderr, "  max q matrix index %d\n", N);
   if(N!=3)return OC_BADHEADER; /* we only support the VP3 config */
   ci->qmats=_ogg_malloc(N*64*sizeof(Q_LIST_ENTRY));
   ci->MaxQMatrixIndex = N;
   for(y=0; y<N; y++) {
-    //fprintf(stderr," q matrix %d:\n  ", y);
     for(x=0; x<64; x++) {
       theora_read(opb,8,&value);
       if(bits<0)return OC_BADHEADER;
       ci->qmats[(y<<6)+x]=(Q_LIST_ENTRY)value;
-      //fprintf(stderr," %03d", (Q_LIST_ENTRY)value);
-      //if((x+1)%8==0)fprintf(stderr,"\n  ");
     }
-    //fprintf(stderr,"\n");
   }
   /* table mapping */
+  for(x=0; x<6; x++) {
+    ci->range_table[x] = NULL;
+  }
   {
     int flag, ret;
     /* intra Y */
-    //fprintf(stderr,"\n Intra Y:");
-    if((ret=_read_qtable_range(ci,opb,N))<0) return ret;
+    if((ret=_read_qtable_range(ci,opb,N,0))<0) return ret;
     /* intra U */
-    //fprintf(stderr, "\n Intra U:");
     theora_read(opb,1,&flag);
     if(flag<0) return OC_BADHEADER;
     if(flag) {
       /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N))<0) return ret;
+      if((ret=_read_qtable_range(ci,opb,N,1))<0) return ret;
     } else {
       /* same as previous */
-      //fprintf(stderr," same as above");
     }
     /* intra V */
-    //fprintf(stderr,"\n Intra V:");
     theora_read(opb,1,&flag);
     if(flag<0) return OC_BADHEADER;
     if(flag) {
       /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N))<0) return ret;
+      if((ret=_read_qtable_range(ci,opb,N,2))<0) return ret;
     } else {
        /* same as previous */
-      //fprintf(stderr," same as above");
     }
     /* inter Y */
-    //fprintf(stderr,"\n Inter Y:");
     theora_read(opb,1,&flag);
     if(flag<0) return OC_BADHEADER;
     if(flag) {
       /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N))<0) return ret;
+      if((ret=_read_qtable_range(ci,opb,N,3))<0) return ret;
     } else {
       theora_read(opb,1,&flag);
       if(flag<0) return OC_BADHEADER;
       if(flag) {
         /* same as corresponding intra */
-        //fprintf(stderr," same as intra");
       } else {
         /* same as previous */
-        //fprintf(stderr," same as above");
       }
     }
     /* inter U */
-    //fprintf(stderr,"\n Inter U:");
     theora_read(opb,1,&flag);
     if(flag<0) return OC_BADHEADER;
     if(flag) {
       /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N))<0) return ret;
+      if((ret=_read_qtable_range(ci,opb,N,4))<0) return ret;
     } else {
       theora_read(opb,1,&flag);
       if(flag<0) return OC_BADHEADER;
       if(flag) {
         /* same as corresponding intra */
-        //fprintf(stderr," same as intra");
       } else {
         /* same as previous */
-        //fprintf(stderr," same as above");
       }
     }
     /* inter V */
-    //fprintf(stderr,"\n Inter V:");
     theora_read(opb,1,&flag);
     if(flag<0) return OC_BADHEADER;
     if(flag) {
       /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N))<0) return ret;
+      if((ret=_read_qtable_range(ci,opb,N,5))<0) return ret;
     } else {
       theora_read(opb,1,&flag);
       if(flag<0) return OC_BADHEADER;
       if(flag) {
         /* same as corresponding intra */
-        //fprintf(stderr," same as intra");
       } else {
         /* same as previous */
-        //fprintf(stderr," same as above");
       }
     }
-    //fprintf(stderr,"\n");
   }
   
   /* ignore the range table and reference the matricies we use */
@@ -327,7 +319,7 @@ void CopyQTables(PB_INSTANCE *pbi, codec_setup_info *ci) {
 
 /* Initialize custom qtables using the VP31 values.
    Someday we can change the quant tables to be adaptive, or just plain
-    better.*/
+    better. */
 void InitQTables( PB_INSTANCE *pbi ){
   memcpy(pbi->QThreshTable, QThreshTableV1, sizeof(pbi->QThreshTable));
   memcpy(pbi->DcScaleFactorTable, DcScaleFactorTableV1,

@@ -44,23 +44,22 @@ dist-hook:
 
 
 install-data-local: doxygen-build.stamp
-	$(mkinstalldirs) $(docdir)
+	$(mkinstalldirs) $(DESTDIR)$(docdir)
 	if test -d libtheora; then \
 	  for dir in libtheora/*; do \
 	    if test -d $$dir; then \
 	      b=`basename $$dir`; \
-	      $(mkinstalldirs) $(docdir)/$$b; \
+	      $(mkinstalldirs) $(DESTDIR)$(docdir)/$$b; \
 	      for f in $$dir/*; do \
-		$(INSTALL_DATA) $$f $(docdir)/$$b; \
+		$(INSTALL_DATA) $$f $(DESTDIR)$(docdir)/$$b; \
 	      done \
 	    fi \
 	  done \
 	fi
 
 uninstall-local:
-	rm -rf $(docdir)
+	rm -rf $(DESTDIR)$(docdir)
 
 clean-local:
 	if test -d libtheora; then rm -rf libtheora; fi
 	if test -f doxygen-build.stamp; then rm -f doxygen-build.stamp; fi
-

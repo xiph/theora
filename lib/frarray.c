@@ -456,7 +456,7 @@ void QuadDecodeDisplayFragments ( PB_INSTANCE *pbi ){
 
   /* For "Key frames" mark all blocks as coded and return. */
   /* Else initialise the ArrayPtr array to 0 (all blocks uncoded by default) */
-  if ( GetFrameType(pbi) == BASE_FRAME ) {
+  if ( GetFrameType(pbi) == KEY_FRAME ) {
     memset( pbi->SBFullyFlags, 1, pbi->SuperBlocks );
     memset( pbi->SBCodedFlags, 1, pbi->SuperBlocks );
         memset( pbi->MBCodedFlags, 0, pbi->MacroBlocks );

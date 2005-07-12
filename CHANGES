@@ -1,3 +1,9 @@
+libtheora 1.0alpha5 (unreleased)
+
+ * Fixed bitrate management bugs that caused popping and encode
+   errors
+ * new theora_granule_shift() utility function
+
 libtheora 1.0alpha4 (2004 December 15)
 
  * first draft of the Theora I Format Specification

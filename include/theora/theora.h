@@ -347,6 +347,7 @@ extern int theora_decode_init(theora_state *th, theora_info *c);
  * Input a packet containing encoded data into the theora decoder.
  * \param th A theora_state handle previously initialized for decoding.
  * \param op An ogg_packet containing encoded theora data.
+ * \retval 0 Success
  * \retval OC_BADPACKET \a op does not contain encoded video data
  */
 extern int theora_decode_packetin(theora_state *th,ogg_packet *op);
@@ -386,13 +387,40 @@ extern int theora_packet_isheader(ogg_packet *op);
 extern int theora_packet_iskeyframe(ogg_packet *op);
 
 /**
+ * Report the granulepos shift radix
+ *
+ * When embedded in Ogg, Theora uses a two-part granulepos, 
+ * splitting the 64-bit field into two pieces. The more-significant
+ * section represents the frame count at the last keyframe,
+ * and the less-significant section represents the count of
+ * frames since the last keyframe. In this way the overall
+ * field is still non-decreasing with time, but usefully encodes
+ * a pointer to the last keyframe, which is necessary for
+ * correctly restarting decode after a seek. 
+ *
+ * This function reports the number of bits used to represent
+ * the distance to the last keyframe, and thus how the granulepos
+ * field must be shifted or masked to obtain the two parts.
+ * 
+ * Since libtheora returns compressed data in an ogg_packet
+ * structure, this may be generally useful even if the Theora
+ * packets are not being used in an Ogg container. 
+ *
+ * \param ti A previously initialized theora_info struct
+ * \returns The bit shift dividing the two granulepos fields
+ *
+ * This function was added inthe 1.0alpha5 release.
+ */
+int theora_granule_shift(theora_info *ti);
+
+/**
  * Convert a granulepos to an absolute frame number. The granulepos is
  * interpreted in the context of a given theora_state handle.
  *
  * \param th A previously initialized theora_state handle (encode or decode)
  * \param granulepos The granulepos to convert.
  * \returns The frame number corresponding to \a granulepos.
- * \retval -1 The given granulepos is invalid (ie. negative)
+ * \retval -1 The given granulepos is undefined (i.e. negative)
  *
  * Thus function was added in the 1.0alpha4 release.
  */
@@ -404,7 +432,9 @@ extern ogg_int64_t theora_granule_frame(theora_state *th,ogg_int64_t granulepos)
  * \param th A previously initialized theora_state handle (encode or decode)
  * \param granulepos The granulepos to convert.
  * \returns The absolute time in seconds corresponding to \a granulepos.
- * \retval -1 The given granulepos is invalid (ie. negative)
+ * \retval -1. The given granulepos is undefined (i.e. negative), or
+ * \retval -1. The function has been disabled because floating 
+ *		point support is not available.
  */
 extern double theora_granule_time(theora_state *th,ogg_int64_t granulepos);
 
