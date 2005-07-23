@@ -16,7 +16,7 @@
  ********************************************************************/
 
 #include <stdlib.h>
-#include "encoder_internal.h"
+#include "codec_internal.h"
 
 
 void InitializeFragCoordinates(PB_INSTANCE *pbi){

@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "encoder_internal.h"
+#include "codec_internal.h"
 
 void theora_comment_init(theora_comment *tc){
   memset(tc,0,sizeof(*tc));

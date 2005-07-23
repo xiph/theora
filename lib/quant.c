@@ -17,7 +17,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "encoder_internal.h"
+#include "codec_internal.h"
 #include "quant_lookup.h"
 
 /* the *V1 tables are the originals used by the VP3 codec */

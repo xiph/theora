@@ -30,7 +30,7 @@ libtheora_la_SOURCES = \
 
 noinst_HEADERS = \
 	block_inline.h \
-	encoder_internal.h \
+	codec_internal.h \
 	encoder_lookup.h \
 	huffman.h \
 	hufftables.h \

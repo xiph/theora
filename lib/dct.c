@@ -15,7 +15,7 @@
 
  ********************************************************************/
 
-#include "encoder_internal.h"
+#include "codec_internal.h"
 
 static ogg_int32_t xC1S7 = 64277;
 static ogg_int32_t xC2S6 = 60547;

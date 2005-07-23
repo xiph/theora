@@ -16,7 +16,7 @@
  ********************************************************************/
 
 #include <string.h>
-#include "encoder_internal.h"
+#include "codec_internal.h"
 #include "block_inline.h"
 
 static const CODING_MODE  ModeAlphabet[MODE_METHODS-2][MAX_MODES] = {

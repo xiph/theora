@@ -16,7 +16,7 @@
  ********************************************************************/
 
 #include <string.h>
-#include "encoder_internal.h"
+#include "codec_internal.h"
 #include "block_inline.h"
 
 #define FIXED_Q                 150

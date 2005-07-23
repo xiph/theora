@@ -15,7 +15,7 @@
 
  ********************************************************************/
 
-#include "encoder_internal.h"
+#include "codec_internal.h"
 
 void ReconIntra( PB_INSTANCE *pbi, unsigned char * ReconPtr,
                  ogg_int16_t * ChangePtr, ogg_uint32_t LineStep ) {

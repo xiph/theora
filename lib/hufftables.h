@@ -16,7 +16,7 @@
  ********************************************************************/
 
 #include "huffman.h"
-#include "encoder_internal.h"
+#include "codec_internal.h"
 
 const unsigned char ExtraBitLengths_VP31[MAX_ENTROPY_TOKENS] = {
   0, 0, 0, 2, 3, 4, 12,3, 6,                 /* EOB and Zero-run tokens. */

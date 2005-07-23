@@ -15,7 +15,7 @@
 
  ********************************************************************/
 
-#include "encoder_internal.h"
+#include "codec_internal.h"
 
 static void CreateMapping ( ogg_int32_t (*BlockMap)[4][4],
                             ogg_uint32_t FirstSB,

@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include "encoder_internal.h"
+#include "codec_internal.h"
 
 #define MAX_SEARCH_LINE_LEN                   7
 

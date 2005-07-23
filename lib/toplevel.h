@@ -19,7 +19,7 @@
 # include "config.h"
 #endif
 
-#include "encoder_internal.h"
+#include "codec_internal.h"
 
 #define VERSION_MAJOR 3
 #define VERSION_MINOR 2

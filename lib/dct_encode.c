@@ -16,7 +16,7 @@
  ********************************************************************/
 
 #include <stdlib.h>
-#include "encoder_internal.h"
+#include "codec_internal.h"
 
 static int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };
 

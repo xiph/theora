@@ -15,7 +15,7 @@
 
  ********************************************************************/
 
-#include "encoder_internal.h"
+#include "codec_internal.h"
 
 /* the Roundup32 silliness is dangerous on non-Intel processors and
    will also choke some C compilers.  Find a non dangerous way later.

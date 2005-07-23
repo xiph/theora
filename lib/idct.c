@@ -16,7 +16,7 @@
  ********************************************************************/
 
 #include <string.h>
-#include "encoder_internal.h"
+#include "codec_internal.h"
 #include "quant_lookup.h"
 
 #define IdctAdjustBeforeShift 8

@@ -17,7 +17,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "encoder_internal.h"
+#include "codec_internal.h"
 
 void ClearTmpBuffers(PB_INSTANCE * pbi){
 
