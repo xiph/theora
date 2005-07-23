@@ -112,8 +112,10 @@ typedef struct{
 
 typedef MOTION_VECTOR COORDINATE;
 
+/** Quantizer matrix entry */
 typedef ogg_int16_t     Q_LIST_ENTRY;
 
+/** Decode Post-Processor instance */
 typedef struct PP_INSTANCE {
   ogg_uint32_t  PrevFrameLimit;
 
@@ -227,7 +229,7 @@ typedef struct PP_INSTANCE {
 
 } PP_INSTANCE;
 
-
+/** block coding modes */
 typedef enum{
   CODE_INTER_NO_MV        = 0x0, /* INTER prediction, (0,0) motion
                                     vector implied.  */
@@ -241,6 +243,7 @@ typedef enum{
     CODE_INTER_FOURMV     = 0x7  /* Inter prediction 4MV per macro block. */
 } CODING_MODE;
 
+/** Huffman table entry */
 typedef struct HUFF_ENTRY {
   struct HUFF_ENTRY *ZeroChild;
   struct HUFF_ENTRY *OneChild;
@@ -256,6 +259,7 @@ typedef struct qmat_range_table {
   Q_LIST_ENTRY *qmat;  /* qmat at this range boundary */
 } qmat_range_table;
 
+/** codec setup data, maps to the third bitstream header */
 typedef struct codec_setup_info {
   ogg_uint32_t QThreshTable[Q_TABLE_SIZE];
   Q_LIST_ENTRY DcScaleFactorTable[Q_TABLE_SIZE];
@@ -273,6 +277,7 @@ typedef struct codec_setup_info {
   unsigned char LoopFilterLimitValues[Q_TABLE_SIZE];
 } codec_setup_info;
 
+/** Decoder (Playback) instance -- installed in a theora_state */
 typedef struct PB_INSTANCE {
   oggpack_buffer *opb;
   theora_info     info;
@@ -488,6 +493,7 @@ typedef struct PB_INSTANCE {
 
 } PB_INSTANCE;
 
+/* Encoder (Compressor) instance -- installed in a theora_state */
 typedef struct CP_INSTANCE {
 
   /* Compressor Configuration */
@@ -807,6 +813,7 @@ extern void UpRegulateDataStream (CP_INSTANCE *cpi, ogg_uint32_t RegulationQ,
                                   ogg_int32_t RecoveryBlocks ) ;
 extern void RegulateQ( CP_INSTANCE *cpi, ogg_int32_t UpdateScore );
 extern void CopyBackExtraFrags(CP_INSTANCE *cpi);
+
 extern void UpdateUMVBorder( PB_INSTANCE *pbi,
                              unsigned char * DestReconPtr );
 extern void PInitFrameInfo(PP_INSTANCE * ppi);
@@ -818,4 +825,5 @@ extern void InitTmpBuffers(PB_INSTANCE * pbi);
 extern void ScanYUVInit( PP_INSTANCE *  ppi,
                          SCAN_CONFIG_DATA * ScanConfigPtr);
 extern int LoadAndDecode(PB_INSTANCE *pbi);
-#endif
+
+#endif /* ENCODER_INTERNAL_H */
