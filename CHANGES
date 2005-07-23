@@ -25,7 +25,7 @@ libtheora 1.0alpha3 (2004 March 20)
 
  UPDATE: on 2004 July 1 the Theora I bitstream format was frozen. Files
  produced by the libtheora 1.0alpha3 reference encoder will always be
- decodably by the Theora I spec.
+ decodable by the Theora I spec.
 
  * Bitstream info header FORMAT CHANGES:
    - move the granulepos shift field to maintain byte alignment longer.
@@ -63,5 +63,4 @@ libtheora 1.0alpha1 (2002 September 25)
  * First release of the theora reference implementation
  * Port of the newly opened VP3 code to the Ogg container
  * Rewrite of the code for portability and to use the libogg bitpacker
-
 
