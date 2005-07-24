@@ -17,7 +17,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "encoder_internal.h"
+#include "codec_internal.h"
 #include "hufftables.h"
 
 static void CreateHuffmanList(HUFF_ENTRY ** HuffRoot,

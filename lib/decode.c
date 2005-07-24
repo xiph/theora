@@ -16,7 +16,7 @@
  ********************************************************************/
 
 #include <string.h>
-#include "encoder_internal.h"
+#include "codec_internal.h"
 #include "block_inline.h"
 
 static const CODING_MODE  ModeAlphabet[MODE_METHODS-2][MAX_MODES] = {
@@ -61,7 +61,7 @@ int GetFrameType(PB_INSTANCE *pbi){
 
 static int LoadFrameHeader(PB_INSTANCE *pbi){
   long ret;
-  unsigned char  DctQMask;
+  unsigned char  DctQIndex;
   unsigned char  SpareBits;       /* Spare cfg bits */
 
   /* Is the frame and inter frame or a key frame */
@@ -70,11 +70,13 @@ static int LoadFrameHeader(PB_INSTANCE *pbi){
 
   /* Quality (Q) index */
   theora_read(pbi->opb,6,&ret);
-  DctQMask = (unsigned char)ret;
+  DctQIndex = (unsigned char)ret;
 
   /* spare bit for possible additional Q indicies - should be 0 */
   theora_read(pbi->opb,1,&ret);
   SpareBits = (unsigned char)ret;
+  /* todo: properly handle additional Q indicies */
+  if (SpareBits != 0) return OC_IMPL;
 
   if ( (pbi->FrameType == KEY_FRAME) ){
     /* Read the type / coding method for the key frame. */
@@ -84,10 +86,11 @@ static int LoadFrameHeader(PB_INSTANCE *pbi){
     theora_read(pbi->opb,2,&ret);
     SpareBits = (unsigned char)ret;
 
+    if (pbi->KeyFrameType || SpareBits) return OC_BADPACKET;
   }
 
-  /* Set this frame quality value from Q Index */
-  pbi->ThisFrameQualityValue = pbi->QThreshTable[DctQMask];
+  /* Set this frame quality value and tables from the coded Q Index */
+  UpdateQ(pbi, DctQIndex);
 
   return 1;
 }
@@ -793,7 +796,7 @@ static void DecodeData(PB_INSTANCE *pbi){
   /* Zero Decoder EOB run count */
   pbi->EOB_Run = 0;
 
-  /* Make a not of the number of coded blocks this frame */
+  /* Make a note of the number of coded blocks this frame */
   pbi->CodedBlocksThisFrame = pbi->CodedBlockIndex;
 
   /* Decode the modes data */
@@ -824,12 +827,7 @@ int LoadAndDecode(PB_INSTANCE *pbi){
   LoadFrameOK = LoadFrame(pbi);
 
   if ( LoadFrameOK ){
-    if ( (pbi->ThisFrameQualityValue != pbi->LastFrameQualityValue) ){
-      /* Initialise DCT tables. */
-      UpdateQ( pbi, pbi->ThisFrameQualityValue );
-      pbi->LastFrameQualityValue = pbi->ThisFrameQualityValue;
-    }
-
+    pbi->LastFrameQualityValue = pbi->ThisFrameQualityValue;
 
     /* Decode the data into the fragment buffer. */
     DecodeData(pbi);

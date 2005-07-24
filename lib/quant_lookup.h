@@ -15,7 +15,7 @@
 
  ********************************************************************/
 
-#include "encoder_internal.h"
+#include "codec_internal.h"
 
 #define MIN16 ((1<<16)-1)
 #define SHIFT16 (1<<16)

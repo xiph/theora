@@ -15,7 +15,7 @@
 
  ********************************************************************/
 
-#include "encoder_internal.h"
+#include "codec_internal.h"
 
 const ogg_uint32_t PriorKeyFrameWeight[KEY_FRAME_CONTEXT] = { 1,2,3,4,5 };
 

@@ -17,7 +17,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "encoder_internal.h"
+#include "codec_internal.h"
 #include "dsp.h"
 
 
@@ -658,7 +658,7 @@ void ClearDownQFragData(PB_INSTANCE *pbi){
   for ( i = 0; i < pbi->CodedBlockIndex; i++ ) {
     /* Get the linear index for the current fragment. */
     QFragPtr = pbi->QFragData[pbi->CodedBlockList[i]];
-    for ( j = 0; j < 64; j++ ) QFragPtr[j]  = 0;
+    memset(QFragPtr, 0, 64*sizeof(Q_LIST_ENTRY));
   }
 }
 

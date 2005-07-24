@@ -15,7 +15,7 @@
 
  ********************************************************************/
 
-#include "encoder_internal.h"
+#include "codec_internal.h"
 
 ogg_uint32_t MvPattern[(MAX_MV_EXTENT * 2) + 1] = {
   0x000000ff, 0x000000fd, 0x000000fb, 0x000000f9,

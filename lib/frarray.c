@@ -16,7 +16,7 @@
  ********************************************************************/
 
 #include <string.h>
-#include "encoder_internal.h"
+#include "codec_internal.h"
 #include "block_inline.h"
 
 static ogg_uint32_t FrArrayCodeSBRun( CP_INSTANCE *cpi, ogg_uint32_t value ){
