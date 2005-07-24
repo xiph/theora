@@ -355,7 +355,6 @@ static void init_quantizer ( CP_INSTANCE *cpi,
     const Q_LIST_ENTRY * Y_coeffs;
     const Q_LIST_ENTRY * UV_coeffs;
     const Q_LIST_ENTRY * DcScaleFactorTable;
-    const Q_LIST_ENTRY * UVDcScaleFactorTable;
 
     /* Notes on setup of quantisers.  The initial multiplication by
      the scale factor is done in the ogg_int32_t domain to insure that the
@@ -368,7 +367,6 @@ static void init_quantizer ( CP_INSTANCE *cpi,
     Y_coeffs = Y_coeffsV1;
     UV_coeffs = UV_coeffsV1;
     DcScaleFactorTable = DcScaleFactorTableV1;
-    UVDcScaleFactorTable = DcScaleFactorTableV1;
     ZBinFactor = 0.9;
 
     switch(cpi->pb.info.sharpness){
@@ -413,7 +411,7 @@ static void init_quantizer ( CP_INSTANCE *cpi,
 
     /* Intra UV */
     temp_fp_quant_coeffs =
-      (((ogg_uint32_t)(UVDcScaleFactorTable[QIndex] * UV_coeffs[0])/100) << 2);
+      (((ogg_uint32_t)(DcScaleFactorTable[QIndex] * UV_coeffs[0])/100) << 2);
     if ( temp_fp_quant_coeffs < MIN_LEGAL_QUANT_ENTRY * 2)
       temp_fp_quant_coeffs = MIN_LEGAL_QUANT_ENTRY * 2;
 
@@ -443,7 +441,7 @@ static void init_quantizer ( CP_INSTANCE *cpi,
 
     /* Inter UV */
     temp_fp_quant_coeffs =
-      (((ogg_uint32_t)(UVDcScaleFactorTable[QIndex] * Inter_coeffs[0])/100) << 2);
+      (((ogg_uint32_t)(DcScaleFactorTable[QIndex] * Inter_coeffs[0])/100) << 2);
     if ( temp_fp_quant_coeffs < MIN_LEGAL_QUANT_ENTRY * 4)
       temp_fp_quant_coeffs = MIN_LEGAL_QUANT_ENTRY * 4;
 
@@ -687,13 +685,11 @@ static void init_dequantizer ( PB_INSTANCE *pbi,
   Q_LIST_ENTRY * Y_coeffs;
   Q_LIST_ENTRY * UV_coeffs;
   Q_LIST_ENTRY * DcScaleFactorTable;
-  Q_LIST_ENTRY * UVDcScaleFactorTable;
 
   Inter_coeffs = pbi->Inter_coeffs;
   Y_coeffs = pbi->Y_coeffs;
   UV_coeffs = pbi->UV_coeffs;
   DcScaleFactorTable = pbi->DcScaleFactorTable;
-  UVDcScaleFactorTable = pbi->DcScaleFactorTable;
 
   /* invert the dequant index into the quant index
      the dxer has a different order than the cxer. */
@@ -727,7 +723,7 @@ static void init_dequantizer ( PB_INSTANCE *pbi,
 
   /* Intra UV */
   pbi->dequant_UV_coeffs[0] =
-    ((UVDcScaleFactorTable[QIndex] * pbi->dequant_UV_coeffs[0])/100);
+    ((DcScaleFactorTable[QIndex] * pbi->dequant_UV_coeffs[0])/100);
   if ( pbi->dequant_UV_coeffs[0] < MIN_DEQUANT_VAL * 2 )
     pbi->dequant_UV_coeffs[0] = MIN_DEQUANT_VAL * 2;
   pbi->dequant_UV_coeffs[0] =
@@ -743,7 +739,7 @@ static void init_dequantizer ( PB_INSTANCE *pbi,
 
   /* Inter UV */
   pbi->dequant_InterUV_coeffs[0] =
-    ((UVDcScaleFactorTable[QIndex] * pbi->dequant_InterUV_coeffs[0])/100);
+    ((DcScaleFactorTable[QIndex] * pbi->dequant_InterUV_coeffs[0])/100);
   if ( pbi->dequant_InterUV_coeffs[0] < MIN_DEQUANT_VAL * 4 )
     pbi->dequant_InterUV_coeffs[0] = MIN_DEQUANT_VAL * 4;
   pbi->dequant_InterUV_coeffs[0] =
@@ -818,7 +814,7 @@ void UpdateQC( CP_INSTANCE *cpi, ogg_uint32_t NewQ ){
     pbi->FrameQIndex --;
   }
 
-  /* Re-initialise the q tables for forward and reverse transforms. */
+  /* Re-initialise the Q tables for forward and reverse transforms. */
   init_quantizer ( cpi, qscale, (unsigned char) pbi->FrameQIndex );
   init_dequantizer ( pbi, qscale, (unsigned char) pbi->FrameQIndex );
 }
