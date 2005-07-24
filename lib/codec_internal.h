@@ -734,7 +734,7 @@ extern void select_InterUV_quantiser ( PB_INSTANCE *pbi );
 extern void quantize( PB_INSTANCE *pbi,
                       ogg_int16_t * DCT_block,
                       Q_LIST_ENTRY * quantized_list);
-extern void UpdateQ( PB_INSTANCE *pbi, ogg_uint32_t NewQ );
+extern void UpdateQ( PB_INSTANCE *pbi, int NewQIndex );
 extern void UpdateQC( CP_INSTANCE *cpi, ogg_uint32_t NewQ );
 extern void fdct_short ( ogg_int16_t * InputData, ogg_int16_t * OutputData );
 extern ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi,

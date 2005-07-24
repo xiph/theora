@@ -783,26 +783,18 @@ static void init_dequantizer ( PB_INSTANCE *pbi,
   pbi->dequant_coeffs = pbi->dequant_Y_coeffs;
 }
 
-void UpdateQ( PB_INSTANCE *pbi, ogg_uint32_t NewQ ){
+void UpdateQ( PB_INSTANCE *pbi, int NewQIndex ){
   ogg_uint32_t qscale;
 
-  /* Do bounds checking and convert to a float. */
-  qscale = NewQ;
-  if ( qscale < pbi->QThreshTable[Q_TABLE_SIZE-1] )
-    qscale = pbi->QThreshTable[Q_TABLE_SIZE-1];
-  else if ( qscale > pbi->QThreshTable[0] )
-    qscale = pbi->QThreshTable[0];
+  /* clamp to legal bounds */
+  if (NewQIndex >= Q_TABLE_SIZE) NewQIndex = Q_TABLE_SIZE - 1;
+  else if (NewQIndex < 0) NewQIndex = 0;
 
-  /* Set the inter/intra descision control variables. */
-  pbi->FrameQIndex = Q_TABLE_SIZE - 1;
-  while ( (ogg_int32_t) pbi->FrameQIndex >= 0 ) {
-    if ( (pbi->FrameQIndex == 0) ||
-         ( pbi->QThreshTable[pbi->FrameQIndex] >= NewQ) )
-      break;
-    pbi->FrameQIndex --;
-  }
+  pbi->FrameQIndex = NewQIndex;
+  qscale = pbi->QThreshTable[NewQIndex];
+  pbi->ThisFrameQualityValue = qscale;
 
-  /* Re-initialise the q tables for forward and reverse transforms. */
+  /* Re-initialise the Q tables for forward and reverse transforms. */
   init_dequantizer ( pbi, qscale, (unsigned char) pbi->FrameQIndex );
 }
 
