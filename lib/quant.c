@@ -190,7 +190,7 @@ static int _read_qtable_range(codec_setup_info *ci, oggpack_buffer* opb,
 
   ci->range_table[type] = _ogg_malloc(count * sizeof(qmat_range_table));
   if (ci->range_table[type] != NULL) {
-    memcpy(&ci->range_table[type], table, count * sizeof(qmat_range_table)); 
+    memcpy(ci->range_table[type], table, count * sizeof(qmat_range_table)); 
     return 0;
   }
   
