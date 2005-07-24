@@ -25,7 +25,8 @@
 #define IDCT_SCALE_FACTOR     2 /* Shift left bits to improve IDCT precision */
 #define OLD_SCHEME            1
 
-static const ogg_uint32_t dequant_index[64] = {
+/* lookup table for DCT coefficient zig-zag ordering */
+static const ogg_uint32_t dezigzag_index[64] = {
   0,  1,  8,  16,  9,  2,  3, 10,
   17, 24, 32, 25, 18, 11,  4,  5,
   12, 19, 26, 33, 40, 48, 41, 34,

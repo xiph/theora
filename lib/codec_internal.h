@@ -456,7 +456,7 @@ typedef struct PB_INSTANCE {
   Q_LIST_ENTRY   UV_coeffs[64];
   Q_LIST_ENTRY   Inter_coeffs[64];
   Q_LIST_ENTRY  *dequant_InterUV_coeffs;
-  unsigned int   quant_index[64];
+  unsigned int   zigzag_index[64];
   ogg_int32_t    quant_Y_coeffs[64];
   ogg_int32_t    quant_UV_coeffs[64];
   ogg_int32_t    fp_quant_Y_coeffs[64]; /* used in reiniting quantizers */
