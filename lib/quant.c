@@ -329,10 +329,10 @@ void InitQTables( PB_INSTANCE *pbi ){
   memcpy(pbi->Inter_coeffs, Inter_coeffsV1, sizeof(pbi->Inter_coeffs));
 }
 
-static void BuildQuantIndex_Generic(PB_INSTANCE *pbi){
+static void BuildZigZagIndex(PB_INSTANCE *pbi){
   ogg_int32_t i,j;
 
-  /* invert the dequant index into the quant index */
+  /* invert the row to zigzag coeffient order lookup table */
   for ( i = 0; i < BLOCK_SIZE; i++ ){
     j = dezigzag_index[i];
     pbi->zigzag_index[j] = i;
@@ -697,7 +697,7 @@ static void init_dequantizer ( PB_INSTANCE *pbi,
 
   /* invert the dequant index into the quant index
      the dxer has a different order than the cxer. */
-  BuildQuantIndex_Generic(pbi);
+  BuildZigZagIndex(pbi);
 
   /* Reorder dequantisation coefficients into dct zigzag order. */
   for ( i = 0; i < BLOCK_SIZE; i++ ) {

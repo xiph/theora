@@ -317,7 +317,7 @@ int theora_decode_init(theora_state *th, theora_info *c){
   /* Clear down the YUVtoRGB conversion skipped list. */
   memset(pbi->skipped_display_fragments, 0, pbi->UnitFragments );
 
-  /* Initialise version specific quantiser and in-loop filter values */
+  /* Initialise quantiser and in-loop filter */
   CopyQTables(pbi, ci);
   CopyFilterTables(pbi, ci);
 
