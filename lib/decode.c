@@ -796,7 +796,7 @@ static void DecodeData(PB_INSTANCE *pbi){
   /* Zero Decoder EOB run count */
   pbi->EOB_Run = 0;
 
-  /* Make a not of the number of coded blocks this frame */
+  /* Make a note of the number of coded blocks this frame */
   pbi->CodedBlocksThisFrame = pbi->CodedBlockIndex;
 
   /* Decode the modes data */
