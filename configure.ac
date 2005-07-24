@@ -4,7 +4,7 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT(libtheora,[1.0alpha4-mmx])
+AC_INIT(libtheora-mmx,[1.0alpha4])
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
@@ -33,7 +33,6 @@ cflags_save="$CFLAGS"
 AC_PROG_CC
 AC_PROG_CPP
 CFLAGS="$cflags_save"
-CFLAGS="$CFLAGS -O2 -fforce-addr -fomit-frame-pointer -finline-functions -funroll-loops"
 
 AM_PROG_LIBTOOL
 
@@ -68,8 +67,8 @@ else
         case $host in 
         *)
                 DEBUG="-g -W -D__NO_MATH_INLINES"
-                CFLAGS="-O2 -Wall"
-                PROFILE="-W -pg -g -O2 -fno-inline-functions";;
+                CFLAGS="-Wall -O3 -fforce-addr -fomit-frame-pointer -finline-functions -funroll-loops"
+                PROFILE="-W -pg -g -O3 -fno-inline-functions";;
         esac
 fi
 CFLAGS="$CFLAGS $cflags_save"
