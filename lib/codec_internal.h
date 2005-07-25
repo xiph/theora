@@ -268,10 +268,6 @@ typedef struct codec_setup_info {
   Q_LIST_ENTRY *qmats;
   qmat_range_table *range_table[6];
 
-  Q_LIST_ENTRY Y_coeffs[64];
-  Q_LIST_ENTRY UV_coeffs[64];
-  Q_LIST_ENTRY Inter_coeffs[64];
-
   HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES];
 
   unsigned char LoopFilterLimitValues[Q_TABLE_SIZE];
@@ -455,7 +451,11 @@ typedef struct PB_INSTANCE {
   Q_LIST_ENTRY   Y_coeffs[64];
   Q_LIST_ENTRY   UV_coeffs[64];
   Q_LIST_ENTRY   Inter_coeffs[64];
+  Q_LIST_ENTRY  *dequant_Y_coeffs;
+  Q_LIST_ENTRY  *dequant_UV_coeffs;
+  Q_LIST_ENTRY  *dequant_Inter_coeffs;
   Q_LIST_ENTRY  *dequant_InterUV_coeffs;
+  Q_LIST_ENTRY  *dequant_coeffs;
   unsigned int   zigzag_index[64];
   ogg_int32_t    quant_Y_coeffs[64];
   ogg_int32_t    quant_UV_coeffs[64];
@@ -478,10 +478,6 @@ typedef struct PB_INSTANCE {
   ogg_int32_t   *fquant_coeffs;
   ogg_int32_t   *fquant_round;
   ogg_int32_t   *fquant_ZbSize;
-  Q_LIST_ENTRY  *dequant_Y_coeffs;
-  Q_LIST_ENTRY  *dequant_UV_coeffs;
-  Q_LIST_ENTRY  *dequant_Inter_coeffs;
-  Q_LIST_ENTRY  *dequant_coeffs;
 
   /* Predictor used in choosing entropy table for decoding block patterns. */
   unsigned char  BlockPatternPredictor;

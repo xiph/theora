@@ -300,21 +300,27 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
     }
   }
   
-  /* ignore the range table and reference the matricies we use */
-  memcpy(ci->Y_coeffs, &ci->qmats[0], sizeof(ci->Y_coeffs));
-  memcpy(ci->UV_coeffs, &ci->qmats[64], sizeof(ci->UV_coeffs));
-  memcpy(ci->Inter_coeffs, &ci->qmats[2*64], sizeof(ci->Inter_coeffs));
-
   return 0;
 }
 
 void CopyQTables(PB_INSTANCE *pbi, codec_setup_info *ci) {
+  Q_LIST_ENTRY *qmat;
+
   memcpy(pbi->QThreshTable, ci->QThreshTable, sizeof(pbi->QThreshTable));
   memcpy(pbi->DcScaleFactorTable, ci->DcScaleFactorTable,
          sizeof(pbi->DcScaleFactorTable));
-  memcpy(pbi->Y_coeffs, ci->Y_coeffs, sizeof(pbi->Y_coeffs));
-  memcpy(pbi->UV_coeffs, ci->UV_coeffs, sizeof(pbi->UV_coeffs));
-  memcpy(pbi->Inter_coeffs, ci->Inter_coeffs, sizeof(pbi->Inter_coeffs));
+
+  /* the decoder only supports 3 different base matricies; do the
+     best we can with the range table. We assume the first range
+     entry for Intra U is also good for V, and that the first 
+     Inter Y is good for all the Inter channels. A NULL range 
+     table entry indicates we fall back to the previous value. */
+  qmat = ci->range_table[0]->qmat;
+  memcpy(pbi->Y_coeffs, qmat, sizeof(pbi->Y_coeffs));
+  if (ci->range_table[1]) qmat = ci->range_table[1]->qmat;
+  memcpy(pbi->UV_coeffs, qmat, sizeof(pbi->UV_coeffs));
+  if (ci->range_table[3]) qmat = ci->range_table[3]->qmat;
+  memcpy(pbi->Inter_coeffs, qmat, sizeof(pbi->Inter_coeffs));
 }
 
 /* Initialize custom qtables using the VP31 values.
