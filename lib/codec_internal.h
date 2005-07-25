@@ -449,13 +449,18 @@ typedef struct PB_INSTANCE {
   ogg_uint32_t   QThreshTable[Q_TABLE_SIZE];
   Q_LIST_ENTRY   DcScaleFactorTable[Q_TABLE_SIZE];
   Q_LIST_ENTRY   Y_coeffs[64];
-  Q_LIST_ENTRY   UV_coeffs[64];
-  Q_LIST_ENTRY   Inter_coeffs[64];
+  Q_LIST_ENTRY   U_coeffs[64];
+  Q_LIST_ENTRY   V_coeffs[64];
+  Q_LIST_ENTRY   InterY_coeffs[64];
+  Q_LIST_ENTRY   InterU_coeffs[64];
+  Q_LIST_ENTRY   InterV_coeffs[64];
   Q_LIST_ENTRY  *dequant_Y_coeffs;
-  Q_LIST_ENTRY  *dequant_UV_coeffs;
-  Q_LIST_ENTRY  *dequant_Inter_coeffs;
-  Q_LIST_ENTRY  *dequant_InterUV_coeffs;
-  Q_LIST_ENTRY  *dequant_coeffs;
+  Q_LIST_ENTRY  *dequant_U_coeffs;
+  Q_LIST_ENTRY  *dequant_V_coeffs;
+  Q_LIST_ENTRY  *dequant_InterY_coeffs;
+  Q_LIST_ENTRY  *dequant_InterU_coeffs;
+  Q_LIST_ENTRY  *dequant_InterV_coeffs;
+  Q_LIST_ENTRY  *dequant_coeffs;	/* currently active quantizer */
   unsigned int   zigzag_index[64];
   ogg_int32_t    quant_Y_coeffs[64];
   ogg_int32_t    quant_UV_coeffs[64];

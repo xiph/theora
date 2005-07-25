@@ -145,10 +145,10 @@ void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer* opb) {
     oggpackB_write(opb, pbi->Y_coeffs[x],8);
   }
   for(x=0; x<64; x++) {
-    oggpackB_write(opb, pbi->UV_coeffs[x],8);
+    oggpackB_write(opb, pbi->U_coeffs[x],8);
   }
   for(x=0; x<64; x++) {
-    oggpackB_write(opb, pbi->Inter_coeffs[x],8);
+    oggpackB_write(opb, pbi->InterY_coeffs[x],8);
   }
   /* table mapping */
   oggpackB_write(opb, 0, 2);  /* matrix 0 for intra Y */
@@ -318,9 +318,15 @@ void CopyQTables(PB_INSTANCE *pbi, codec_setup_info *ci) {
   qmat = ci->range_table[0]->qmat;
   memcpy(pbi->Y_coeffs, qmat, sizeof(pbi->Y_coeffs));
   if (ci->range_table[1]) qmat = ci->range_table[1]->qmat;
-  memcpy(pbi->UV_coeffs, qmat, sizeof(pbi->UV_coeffs));
+  memcpy(pbi->U_coeffs, qmat, sizeof(pbi->U_coeffs));
+  if (ci->range_table[2]) qmat = ci->range_table[2]->qmat;
+  memcpy(pbi->V_coeffs, qmat, sizeof(pbi->V_coeffs));
   if (ci->range_table[3]) qmat = ci->range_table[3]->qmat;
-  memcpy(pbi->Inter_coeffs, qmat, sizeof(pbi->Inter_coeffs));
+  memcpy(pbi->InterY_coeffs, qmat, sizeof(pbi->InterY_coeffs));
+  if (ci->range_table[4]) qmat = ci->range_table[4]->qmat;
+  memcpy(pbi->InterU_coeffs, qmat, sizeof(pbi->InterU_coeffs));
+  if (ci->range_table[5]) qmat = ci->range_table[5]->qmat;
+  memcpy(pbi->InterV_coeffs, qmat, sizeof(pbi->InterV_coeffs));
 }
 
 /* Initialize custom qtables using the VP31 values.
@@ -331,8 +337,11 @@ void InitQTables( PB_INSTANCE *pbi ){
   memcpy(pbi->DcScaleFactorTable, DcScaleFactorTableV1,
          sizeof(pbi->DcScaleFactorTable));
   memcpy(pbi->Y_coeffs, Y_coeffsV1, sizeof(pbi->Y_coeffs));
-  memcpy(pbi->UV_coeffs, UV_coeffsV1, sizeof(pbi->UV_coeffs));
-  memcpy(pbi->Inter_coeffs, Inter_coeffsV1, sizeof(pbi->Inter_coeffs));
+  memcpy(pbi->U_coeffs, UV_coeffsV1, sizeof(pbi->U_coeffs));
+  memcpy(pbi->V_coeffs, UV_coeffsV1, sizeof(pbi->V_coeffs));
+  memcpy(pbi->InterY_coeffs, Inter_coeffsV1, sizeof(pbi->InterY_coeffs));
+  memcpy(pbi->InterU_coeffs, Inter_coeffsV1, sizeof(pbi->InterU_coeffs));
+  memcpy(pbi->InterV_coeffs, Inter_coeffsV1, sizeof(pbi->InterV_coeffs));
 }
 
 static void BuildZigZagIndex(PB_INSTANCE *pbi){
@@ -687,14 +696,20 @@ static void init_dequantizer ( PB_INSTANCE *pbi,
                         unsigned char  QIndex ){
   int i, j;
 
-  Q_LIST_ENTRY * Inter_coeffs;
+  Q_LIST_ENTRY * InterY_coeffs;
+  Q_LIST_ENTRY * InterU_coeffs;
+  Q_LIST_ENTRY * InterV_coeffs;
   Q_LIST_ENTRY * Y_coeffs;
-  Q_LIST_ENTRY * UV_coeffs;
+  Q_LIST_ENTRY * U_coeffs;
+  Q_LIST_ENTRY * V_coeffs;
   Q_LIST_ENTRY * DcScaleFactorTable;
 
-  Inter_coeffs = pbi->Inter_coeffs;
+  InterY_coeffs = pbi->InterY_coeffs;
+  InterU_coeffs = pbi->InterU_coeffs;
+  InterV_coeffs = pbi->InterV_coeffs;
   Y_coeffs = pbi->Y_coeffs;
-  UV_coeffs = pbi->UV_coeffs;
+  U_coeffs = pbi->U_coeffs;
+  V_coeffs = pbi->V_coeffs;
   DcScaleFactorTable = pbi->DcScaleFactorTable;
 
   /* invert the dequant index into the quant index
@@ -706,20 +721,28 @@ static void init_dequantizer ( PB_INSTANCE *pbi,
     j = pbi->zigzag_index[i];
     pbi->dequant_Y_coeffs[j] = Y_coeffs[i];
   }
-  for ( i = 0; i < BLOCK_SIZE; i++ ){
+  for ( i = 0; i < BLOCK_SIZE; i++ ) {
     j = pbi->zigzag_index[i];
-    pbi->dequant_Inter_coeffs[j] = Inter_coeffs[i];
+    pbi->dequant_U_coeffs[j] = U_coeffs[i];
+  }
+  for ( i = 0; i < BLOCK_SIZE; i++ ) {
+    j = pbi->zigzag_index[i];
+    pbi->dequant_V_coeffs[j] = V_coeffs[i];
   }
   for ( i = 0; i < BLOCK_SIZE; i++ ){
     j = pbi->zigzag_index[i];
-    pbi->dequant_UV_coeffs[j] = UV_coeffs[i];
+    pbi->dequant_InterY_coeffs[j] = InterY_coeffs[i];
   }
   for ( i = 0; i < BLOCK_SIZE; i++ ){
     j = pbi->zigzag_index[i];
-    pbi->dequant_InterUV_coeffs[j] = Inter_coeffs[i];
+    pbi->dequant_InterU_coeffs[j] = InterU_coeffs[i];
+  }
+  for ( i = 0; i < BLOCK_SIZE; i++ ){
+    j = pbi->zigzag_index[i];
+    pbi->dequant_InterV_coeffs[j] = InterV_coeffs[i];
   }
 
-  /* Intra Y */
+  /* Intra Y DC coeff */
   pbi->dequant_Y_coeffs[0] =
     ((DcScaleFactorTable[QIndex] * pbi->dequant_Y_coeffs[0])/100);
   if ( pbi->dequant_Y_coeffs[0] < MIN_DEQUANT_VAL * 2 )
@@ -728,30 +751,42 @@ static void init_dequantizer ( PB_INSTANCE *pbi,
     pbi->dequant_Y_coeffs[0] << IDCT_SCALE_FACTOR;
 
   /* Intra UV */
-  pbi->dequant_UV_coeffs[0] =
-    ((DcScaleFactorTable[QIndex] * pbi->dequant_UV_coeffs[0])/100);
-  if ( pbi->dequant_UV_coeffs[0] < MIN_DEQUANT_VAL * 2 )
-    pbi->dequant_UV_coeffs[0] = MIN_DEQUANT_VAL * 2;
-  pbi->dequant_UV_coeffs[0] =
-    pbi->dequant_UV_coeffs[0] << IDCT_SCALE_FACTOR;
+  pbi->dequant_U_coeffs[0] =
+    ((DcScaleFactorTable[QIndex] * pbi->dequant_U_coeffs[0])/100);
+  if ( pbi->dequant_U_coeffs[0] < MIN_DEQUANT_VAL * 2 )
+    pbi->dequant_U_coeffs[0] = MIN_DEQUANT_VAL * 2;
+  pbi->dequant_U_coeffs[0] =
+    pbi->dequant_U_coeffs[0] << IDCT_SCALE_FACTOR;
+  pbi->dequant_V_coeffs[0] =
+    ((DcScaleFactorTable[QIndex] * pbi->dequant_V_coeffs[0])/100);
+  if ( pbi->dequant_V_coeffs[0] < MIN_DEQUANT_VAL * 2 )
+    pbi->dequant_V_coeffs[0] = MIN_DEQUANT_VAL * 2;
+  pbi->dequant_V_coeffs[0] =
+    pbi->dequant_V_coeffs[0] << IDCT_SCALE_FACTOR;
 
-  /* Inter Y */
-  pbi->dequant_Inter_coeffs[0] =
-    ((DcScaleFactorTable[QIndex] * pbi->dequant_Inter_coeffs[0])/100);
-  if ( pbi->dequant_Inter_coeffs[0] < MIN_DEQUANT_VAL * 4 )
-    pbi->dequant_Inter_coeffs[0] = MIN_DEQUANT_VAL * 4;
-  pbi->dequant_Inter_coeffs[0] =
-    pbi->dequant_Inter_coeffs[0] << IDCT_SCALE_FACTOR;
+  /* Inter Y DC coeff */
+  pbi->dequant_InterY_coeffs[0] =
+    ((DcScaleFactorTable[QIndex] * pbi->dequant_InterY_coeffs[0])/100);
+  if ( pbi->dequant_InterY_coeffs[0] < MIN_DEQUANT_VAL * 4 )
+    pbi->dequant_InterY_coeffs[0] = MIN_DEQUANT_VAL * 4;
+  pbi->dequant_InterY_coeffs[0] =
+    pbi->dequant_InterY_coeffs[0] << IDCT_SCALE_FACTOR;
 
   /* Inter UV */
-  pbi->dequant_InterUV_coeffs[0] =
-    ((DcScaleFactorTable[QIndex] * pbi->dequant_InterUV_coeffs[0])/100);
-  if ( pbi->dequant_InterUV_coeffs[0] < MIN_DEQUANT_VAL * 4 )
-    pbi->dequant_InterUV_coeffs[0] = MIN_DEQUANT_VAL * 4;
-  pbi->dequant_InterUV_coeffs[0] =
-    pbi->dequant_InterUV_coeffs[0] << IDCT_SCALE_FACTOR;
+  pbi->dequant_InterU_coeffs[0] =
+    ((DcScaleFactorTable[QIndex] * pbi->dequant_InterU_coeffs[0])/100);
+  if ( pbi->dequant_InterU_coeffs[0] < MIN_DEQUANT_VAL * 4 )
+    pbi->dequant_InterU_coeffs[0] = MIN_DEQUANT_VAL * 4;
+  pbi->dequant_InterU_coeffs[0] =
+    pbi->dequant_InterU_coeffs[0] << IDCT_SCALE_FACTOR;
+  pbi->dequant_InterV_coeffs[0] =
+    ((DcScaleFactorTable[QIndex] * pbi->dequant_InterV_coeffs[0])/100);
+  if ( pbi->dequant_InterV_coeffs[0] < MIN_DEQUANT_VAL * 4 )
+    pbi->dequant_InterV_coeffs[0] = MIN_DEQUANT_VAL * 4;
+  pbi->dequant_InterV_coeffs[0] =
+    pbi->dequant_InterV_coeffs[0] << IDCT_SCALE_FACTOR;
 
-  for ( i = 1; i < 64; i++ ){
+  for ( i = 1; i < BLOCK_SIZE; i++ ){
     /* now scale coefficients by required compression factor */
     pbi->dequant_Y_coeffs[i] =
       (( scale_factor * pbi->dequant_Y_coeffs[i] ) / 100);
@@ -760,26 +795,40 @@ static void init_dequantizer ( PB_INSTANCE *pbi,
     pbi->dequant_Y_coeffs[i] =
       pbi->dequant_Y_coeffs[i] << IDCT_SCALE_FACTOR;
 
-    pbi->dequant_UV_coeffs[i] =
-      (( scale_factor * pbi->dequant_UV_coeffs[i] ) / 100);
-    if ( pbi->dequant_UV_coeffs[i] < MIN_DEQUANT_VAL )
-      pbi->dequant_UV_coeffs[i] = MIN_DEQUANT_VAL;
-    pbi->dequant_UV_coeffs[i] =
-      pbi->dequant_UV_coeffs[i] << IDCT_SCALE_FACTOR;
+    pbi->dequant_U_coeffs[i] =
+      (( scale_factor * pbi->dequant_U_coeffs[i] ) / 100);
+    if ( pbi->dequant_U_coeffs[i] < MIN_DEQUANT_VAL )
+      pbi->dequant_U_coeffs[i] = MIN_DEQUANT_VAL;
+    pbi->dequant_U_coeffs[i] =
+      pbi->dequant_U_coeffs[i] << IDCT_SCALE_FACTOR;
 
-    pbi->dequant_Inter_coeffs[i] =
-      (( scale_factor * pbi->dequant_Inter_coeffs[i] ) / 100);
-    if ( pbi->dequant_Inter_coeffs[i] < (MIN_DEQUANT_VAL * 2) )
-      pbi->dequant_Inter_coeffs[i] = MIN_DEQUANT_VAL * 2;
-    pbi->dequant_Inter_coeffs[i] =
-      pbi->dequant_Inter_coeffs[i] << IDCT_SCALE_FACTOR;
+    pbi->dequant_V_coeffs[i] =
+      (( scale_factor * pbi->dequant_V_coeffs[i] ) / 100);
+    if ( pbi->dequant_V_coeffs[i] < MIN_DEQUANT_VAL )
+      pbi->dequant_V_coeffs[i] = MIN_DEQUANT_VAL;
+    pbi->dequant_V_coeffs[i] =
+      pbi->dequant_V_coeffs[i] << IDCT_SCALE_FACTOR;
 
-    pbi->dequant_InterUV_coeffs[i] =
-      (( scale_factor * pbi->dequant_InterUV_coeffs[i] ) / 100);
-    if ( pbi->dequant_InterUV_coeffs[i] < (MIN_DEQUANT_VAL * 2) )
-      pbi->dequant_InterUV_coeffs[i] = MIN_DEQUANT_VAL * 2;
-    pbi->dequant_InterUV_coeffs[i] =
-      pbi->dequant_InterUV_coeffs[i] << IDCT_SCALE_FACTOR;
+    pbi->dequant_InterY_coeffs[i] =
+      (( scale_factor * pbi->dequant_InterY_coeffs[i] ) / 100);
+    if ( pbi->dequant_InterY_coeffs[i] < (MIN_DEQUANT_VAL * 2) )
+      pbi->dequant_InterY_coeffs[i] = MIN_DEQUANT_VAL * 2;
+    pbi->dequant_InterY_coeffs[i] =
+      pbi->dequant_InterY_coeffs[i] << IDCT_SCALE_FACTOR;
+
+    pbi->dequant_InterU_coeffs[i] =
+      (( scale_factor * pbi->dequant_InterU_coeffs[i] ) / 100);
+    if ( pbi->dequant_InterU_coeffs[i] < (MIN_DEQUANT_VAL * 2) )
+      pbi->dequant_InterU_coeffs[i] = MIN_DEQUANT_VAL * 2;
+    pbi->dequant_InterU_coeffs[i] =
+      pbi->dequant_InterU_coeffs[i] << IDCT_SCALE_FACTOR;
+
+    pbi->dequant_InterV_coeffs[i] =
+      (( scale_factor * pbi->dequant_InterV_coeffs[i] ) / 100);
+    if ( pbi->dequant_InterV_coeffs[i] < (MIN_DEQUANT_VAL * 2) )
+      pbi->dequant_InterV_coeffs[i] = MIN_DEQUANT_VAL * 2;
+    pbi->dequant_InterV_coeffs[i] =
+      pbi->dequant_InterV_coeffs[i] << IDCT_SCALE_FACTOR;
   }
 
   pbi->dequant_coeffs = pbi->dequant_Y_coeffs;

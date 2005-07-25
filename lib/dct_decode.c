@@ -136,9 +136,12 @@ static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
   if ( FragmentNumber<(ogg_int32_t)pbi->YPlaneFragments ){
     ReconPixelsPerLine = pbi->YStride;
     pbi->dequant_coeffs = pbi->dequant_Y_coeffs;
+  }else if ( FragmentNumber<(ogg_int32_t)(pbi->YPlaneFragments + pbi->UVPlaneFragments) ){
+    ReconPixelsPerLine = pbi->UVStride;
+    pbi->dequant_coeffs = pbi->dequant_U_coeffs;
   }else{
     ReconPixelsPerLine = pbi->UVStride;
-    pbi->dequant_coeffs = pbi->dequant_UV_coeffs;
+    pbi->dequant_coeffs = pbi->dequant_V_coeffs;
   }
 
   /* Set up pointer into the quantisation buffer. */
@@ -200,7 +203,7 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
     if ( pbi->CodingMode == CODE_INTRA )
       pbi->dequant_coeffs = pbi->dequant_Y_coeffs;
     else
-      pbi->dequant_coeffs = pbi->dequant_Inter_coeffs;
+      pbi->dequant_coeffs = pbi->dequant_InterY_coeffs;
   }else{
     ReconPixelsPerLine = pbi->UVStride;
     MvShift = 2;
@@ -208,9 +211,17 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
 
     /* Select appropriate dequantiser matrix. */
     if ( pbi->CodingMode == CODE_INTRA )
-      pbi->dequant_coeffs = pbi->dequant_UV_coeffs;
+      if ( FragmentNumber < 
+		(ogg_int32_t)(pbi->YPlaneFragments + pbi->UVPlaneFragments) )
+        pbi->dequant_coeffs = pbi->dequant_U_coeffs;
+      else
+        pbi->dequant_coeffs = pbi->dequant_V_coeffs;
     else
-      pbi->dequant_coeffs = pbi->dequant_Inter_coeffs;
+      if ( FragmentNumber < 
+		(ogg_int32_t)(pbi->YPlaneFragments + pbi->UVPlaneFragments) )
+        pbi->dequant_coeffs = pbi->dequant_InterU_coeffs;
+      else
+        pbi->dequant_coeffs = pbi->dequant_InterV_coeffs;
   }
 
   /* Set up pointer into the quantisation buffer. */
