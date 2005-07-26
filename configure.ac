@@ -67,7 +67,7 @@ else
         case $host in 
         *)
                 DEBUG="-g -W -D__NO_MATH_INLINES"
-                CFLAGS="-O2 -Wall"
+                CFLAGS="-g -O2 -Wall"
                 PROFILE="-W -pg -g -O2 -fno-inline-functions";;
         esac
 fi
