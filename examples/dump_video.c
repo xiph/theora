@@ -50,7 +50,7 @@
 const char *optstring = "or:";
 struct option options [] = {
   {"output",required_argument,NULL,'o'},
-  {"raw",required_argument, NULL, 'r'}, /* Output YUV4MPEG2, for encoder_example input */
+  {"raw",required_argument, NULL, 'r'}, /* Disable YUV4MPEG2 headers if set */
   {NULL,0,NULL,0}
 };
 
