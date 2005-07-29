@@ -50,6 +50,7 @@
 const char *optstring = "o:";
 struct option options [] = {
   {"output",required_argument,NULL,'o'},
+  {"yuv4mpeg2",0, NULL, 'y'}, /* Output YUV4MPEG2, for encoder_example input */
   {NULL,0,NULL,0}
 };
 
@@ -79,6 +80,7 @@ int              stateflag=0;
 int          videobuf_ready=0;
 ogg_int64_t  videobuf_granulepos=-1;
 double       videobuf_time=0;
+int          yuv4mpeg2 = 0;
 
 FILE* outfile = NULL;
 
@@ -100,6 +102,8 @@ static void video_write(void){
   yuv_buffer yuv;
   theora_decode_YUVout(&td,&yuv);
 
+  if(yuv4mpeg2)
+    fprintf(outfile, "FRAME\n");
   for(i=0;i<yuv.y_height;i++)
     fwrite(yuv.y+yuv.y_stride*i, 1, yuv.y_width, outfile);
   for(i=0;i<yuv.uv_height;i++)
@@ -172,6 +176,9 @@ int main(int argc,char *argv[]){
         fprintf(stderr,"Unable to open output file '%s'\n", optarg);
         exit(1);
       }
+      break;
+      case 'y':
+      yuv4mpeg2 = 1;
       break;
 
       default:
@@ -296,6 +303,11 @@ int main(int argc,char *argv[]){
 
   /* open video */
   if(theora_p)open_video();
+
+  if(yuv4mpeg2)
+    fprintf(outfile, "YUV4MPEG2 W%d H%d F%d:%d I%c A%d:%d\n",
+          ti.width, ti.height, ti.fps_numerator, ti.fps_denominator, 'p', 
+          ti.aspect_numerator, ti.aspect_denominator);
 
   /* install signal handler */
   signal (SIGINT, sigint_handler);
