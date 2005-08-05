@@ -39,6 +39,9 @@ CFLAGS="$cflags_save"
 
 AM_PROG_LIBTOOL
 
+dnl Add parameters for aclocal
+AC_SUBST(ACLOCAL_AMFLAGS, "-I m4")
+
 dnl Check for doxygen
 AC_CHECK_PROG(HAVE_DOXYGEN, doxygen, true, false)
 AM_CONDITIONAL(HAVE_DOXYGEN,$HAVE_DOXYGEN)
@@ -267,3 +270,36 @@ AC_OUTPUT([
   theora.pc
   theora-uninstalled.pc
 ])
+
+AS_AC_EXPAND(LIBDIR, ${libdir})
+AS_AC_EXPAND(INCLUDEDIR, ${includedir})
+AS_AC_EXPAND(BINDIR, ${bindir})
+AS_AC_EXPAND(DOCDIR, ${datadir}/doc)
+
+AC_MSG_RESULT([
+------------------------------------------------------------------------
+  $PACKAGE $VERSION:  Automatic configuration OK.
+
+  General configuration:
+
+    Encoding support: ............ ${ac_enable_encode}
+    Floating point support: ...... ${ac_enable_float}
+
+  Installation paths:
+
+    libtheora: ................... ${LIBDIR}
+    C header files: .............. ${INCLUDEDIR}/theora
+    Documentation: ............... ${DOCDIR}/$PACKAGE
+
+  Building:
+
+    Type 'make' to compile $PACKAGE.
+
+    Type 'make install' to install $PACKAGE.
+
+    ${TESTS_INFO}
+
+  Example programs will be built but not installed.
+------------------------------------------------------------------------
+])
+
