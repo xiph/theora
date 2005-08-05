@@ -1,5 +1,7 @@
 INCLUDES = -I$(top_srcdir)/include
 
+EXTRA_DIST = Version_script.in
+
 lib_LTLIBRARIES = libtheora.la
 
 if THEORA_DISABLE_ENCODE
@@ -40,7 +42,7 @@ noinst_HEADERS = \
 	toplevel_lookup.h
 
 libtheora_la_CFLAGS = $(OGG_CFLAGS)
-libtheora_la_LDFLAGS = -version-info @V_LIB_CURRENT@:@V_LIB_REVISION@:@V_LIB_AGE@
+libtheora_la_LDFLAGS = -version-info @V_LIB_CURRENT@:@V_LIB_REVISION@:@V_LIB_AGE@ @SHLIB_VERSION_ARG@
 libtheora_la_LIBS = $(OGG_LIBS)
 
 debug:

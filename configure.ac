@@ -23,6 +23,9 @@ AC_SUBST(V_LIB_CURRENT)
 AC_SUBST(V_LIB_REVISION)
 AC_SUBST(V_LIB_AGE)
 
+dnl Extra linker options (for version script)
+SHLIB_VERSION_ARG=""
+
 dnl --------------------------------------------------  
 dnl Check for programs
 dnl --------------------------------------------------  
@@ -73,6 +76,16 @@ else
 fi
 CFLAGS="$CFLAGS $cflags_save"
 LDFLAGS="$LDFLAGS $ldflags_save"
+
+dnl Set extra linker options
+case "$target_os" in
+	linux* | solaris* )
+		SHLIB_VERSION_ARG="-Wl,--version-script=Version_script"
+		;;
+	*)
+		;;
+esac
+AC_SUBST(SHLIB_VERSION_ARG)
 
 dnl --------------------------------------------------
 dnl Checks for support libraries and headers
@@ -224,6 +237,7 @@ AC_OUTPUT([
   examples/Makefile
   doc/Makefile doc/Doxyfile
   debian/Makefile
+  lib/Version_script
   libtheora.spec
   theora.pc
   theora-uninstalled.pc
