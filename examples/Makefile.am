@@ -7,8 +7,8 @@ noinst_PROGRAMS = dump_video $(BUILDABLE_EXAMPLES)
 # possible contents of BUILDABLE_EXAMPLES:
 EXTRA_PROGRAMS = player_example encoder_example
 
-AM_CFLAGS = $(SDL_CFLAGS) $(OGG_CFLAGS)
-LDADD = ../lib/libtheora.la $(OGG_LIBS)
+AM_CFLAGS = $(SDL_CFLAGS) $(OGG_CFLAGS) $(LIBOIL_CFLAGS)
+LDADD = ../lib/libtheora.la $(OGG_LIBS) $(LIBOIL_LIBS)
 
 dump_video_SOURCES = dump_video.c
 dump_video_LDADD = $(LDADD)

@@ -513,8 +513,8 @@ int main(int argc,char *argv[]){
         fprintf(stderr,"Error parsing Theora stream headers; corrupt stream?\n");
         exit(1);
       }
-      if(theora_decode_header(&ti,&tc,&op)){
-        printf("Error parsing Theora stream headers; corrupt stream?\n");
+      if(ret = theora_decode_header(&ti,&tc,&op)){
+        printf("Error parsing Theora stream headers; corrupt stream?(theora_decode_header) fuck: %d\n",ret);
         exit(1);
       }
       theora_p++;

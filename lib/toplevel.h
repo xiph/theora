@@ -15,10 +15,6 @@
 
  ********************************************************************/
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "codec_internal.h"
 
 #define VERSION_MAJOR 3

@@ -15,14 +15,13 @@
 
  ********************************************************************/
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include <stdlib.h>
 #include <string.h>
 #include <theora/theora.h>
 #include "toplevel.h"
+#ifdef USE_LIBOIL
+#include <liboil/liboil.h>
+#endif
 
 static int _ilog(unsigned int v){
   int ret=0;
@@ -295,6 +294,10 @@ int theora_decode_header(theora_info *ci, theora_comment *cc, ogg_packet *op){
 int theora_decode_init(theora_state *th, theora_info *c){
   PB_INSTANCE *pbi;
   codec_setup_info *ci;
+
+#ifdef USE_LIBOIL
+  oil_init();
+#endif
 
   ci=(codec_setup_info *)c->codec_setup;
   memset(th, 0, sizeof(*th));

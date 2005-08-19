@@ -19,6 +19,27 @@
 #include <stdio.h>
 #include "codec_internal.h"
 
+#ifdef USE_LIBOIL
+#include <liboil/liboil.h>
+/* redirect some functions to liboil */
+#define SadTemp uint32_t _sad_tmp;
+
+#define GetSumAbsDiffs(NewDataPtr, RefDataPtr, PixelsPerLine, ErrorSoFar) \
+        (oil_sad8x8_u8 (&_sad_tmp, NewDataPtr, PixelsPerLine, RefDataPtr, \
+                        PixelsPerLine+STRIDE_EXTRA), ErrorSoFar+_sad_tmp)
+
+#define GetNextSumAbsDiffs(NewDataPtr, RefDataPtr, PixelsPerLine, \
+                           ErrorSoFar, BestSoFar) \
+        (oil_sad8x8_u8(&_sad_tmp, NewDataPtr, PixelsPerLine, \
+                  RefDataPtr, PixelsPerLine+STRIDE_EXTRA), ErrorSoFar+_sad_tmp)
+
+#define GetIntraError(DataPtr,PixelsPerLine) \
+        (oil_err_intra8x8_u8 (&_sad_tmp,DataPtr, PixelsPerLine),_sad_tmp)
+
+#else
+#define SadTemp
+#endif
+
 /* Initialises motion compentsation. */
 void InitMotionCompensation ( CP_INSTANCE *cpi ){
   int i;
@@ -100,15 +121,21 @@ static ogg_uint32_t GetInterErr (unsigned char * NewDataPtr,
                           unsigned char * RefDataPtr1,
                           unsigned char * RefDataPtr2,
                           ogg_uint32_t PixelsPerLine ) {
-  ogg_uint32_t  i;
-  ogg_int32_t   XSum=0;
-  ogg_int32_t   XXSum=0;
-  ogg_int32_t   DiffVal;
   ogg_int32_t   AbsRefOffset = abs((int)(RefDataPtr1 - RefDataPtr2));
+  ogg_uint32_t  Result;
 
   /* Mode of interpolation chosen based upon on the offset of the
      second reference pointer */
   if ( AbsRefOffset == 0 ) {
+#ifdef USE_LIBOIL
+    oil_err_inter8x8_u8 (&Result, NewDataPtr, PixelsPerLine,
+		    RefDataPtr1, STRIDE_EXTRA+PixelsPerLine);
+#else
+    ogg_uint32_t  i;
+    ogg_int32_t   XSum=0;
+    ogg_int32_t   XXSum=0;
+    ogg_int32_t   DiffVal;
+
     for ( i=0; i<BLOCK_HEIGHT_WIDTH; i++ ) {
       DiffVal = ((int)NewDataPtr[0]) - (int)RefDataPtr1[0];
       XSum += DiffVal;
@@ -148,8 +175,19 @@ static ogg_uint32_t GetInterErr (unsigned char * NewDataPtr,
       NewDataPtr += PixelsPerLine;
       RefDataPtr1 += STRIDE_EXTRA + PixelsPerLine;
     }
+    /* Compute and return population variance as mis-match metric. */
+    Result = (( (XXSum<<6) - XSum*XSum ));
+#endif
 
   }else{
+#ifdef USE_LIBOIL
+    oil_err_inter8x8_u8_avg (&Result, NewDataPtr, PixelsPerLine,
+		    RefDataPtr1, RefDataPtr2, STRIDE_EXTRA+PixelsPerLine);
+#else
+    ogg_uint32_t  i;
+    ogg_int32_t   XSum=0;
+    ogg_int32_t   XXSum=0;
+    ogg_int32_t   DiffVal;
 
     /* Simple two reference interpolation */
     for ( i=0; i<BLOCK_HEIGHT_WIDTH; i++ ) {
@@ -198,12 +236,15 @@ static ogg_uint32_t GetInterErr (unsigned char * NewDataPtr,
       RefDataPtr1 += STRIDE_EXTRA+PixelsPerLine;
       RefDataPtr2 += STRIDE_EXTRA+PixelsPerLine;
     }
+    /* Compute and return population variance as mis-match metric. */
+    Result = (( (XXSum<<6) - XSum*XSum ));
+#endif
   }
 
-  /* Compute and return population variance as mis-match metric. */
-  return (( (XXSum<<6) - XSum*XSum ));
+  return Result;
 }
 
+#ifndef USE_LIBOIL
 static ogg_uint32_t GetSumAbsDiffs  (unsigned char * NewDataPtr,
                               unsigned char  * RefDataPtr,
                               ogg_uint32_t PixelsPerLine,
@@ -257,6 +298,7 @@ static ogg_uint32_t GetNextSumAbsDiffs (unsigned char * NewDataPtr,
 
   return DiffVal;
 }
+#endif
 
 static ogg_uint32_t GetHalfPixelSumAbsDiffs (unsigned char * SrcData,
                                       unsigned char * RefDataPtr1,
@@ -265,16 +307,24 @@ static ogg_uint32_t GetHalfPixelSumAbsDiffs (unsigned char * SrcData,
                                       ogg_uint32_t ErrorSoFar,
                                       ogg_uint32_t BestSoFar ) {
 
-  ogg_uint32_t  i;
   ogg_uint32_t  DiffVal = ErrorSoFar;
   ogg_int32_t   RefOffset = (int)(RefDataPtr1 - RefDataPtr2);
   ogg_uint32_t  RefPixelsPerLine = PixelsPerLine + STRIDE_EXTRA;
+  SadTemp;
 
   if ( RefOffset == 0 ) {
     /* Simple case as for non 0.5 pixel */
     DiffVal += GetSumAbsDiffs( SrcData, RefDataPtr1, PixelsPerLine,
                                0);
   } else  {
+#ifdef USE_LIBOIL
+    ogg_uint32_t temp;
+    oil_sad8x8_u8_avg (&temp, SrcData, PixelsPerLine, RefDataPtr1, 
+		    RefDataPtr2, RefPixelsPerLine);
+    DiffVal += temp;
+#else
+    ogg_uint32_t  i;
+
     for ( i=0; i < BLOCK_HEIGHT_WIDTH; i++ ) {
       DiffVal += abs( ((int)SrcData[0]) - (((int)RefDataPtr1[0] +
                                             (int)RefDataPtr2[0]) / 2) );
@@ -300,11 +350,13 @@ static ogg_uint32_t GetHalfPixelSumAbsDiffs (unsigned char * SrcData,
       RefDataPtr1 += RefPixelsPerLine;
       RefDataPtr2 += RefPixelsPerLine;
     }
+#endif
   }
 
   return DiffVal;
 }
 
+#ifndef USE_LIBOIL
 static ogg_uint32_t GetIntraError (unsigned char * DataPtr,
                             ogg_uint32_t PixelsPerLine ) {
   ogg_uint32_t  i;
@@ -342,11 +394,13 @@ static ogg_uint32_t GetIntraError (unsigned char * DataPtr,
   /* Compute population variance as mis-match metric. */
   return (( (XXSum<<6) - XSum*XSum ) );
 }
+#endif
 
 ogg_uint32_t GetMBIntraError (CP_INSTANCE *cpi, ogg_uint32_t FragIndex,
                               ogg_uint32_t PixelsPerLine ) {
   ogg_uint32_t  LocalFragIndex = FragIndex;
   ogg_uint32_t  IntraError = 0;
+  SadTemp;
 
   /* Add together the intra errors for those blocks in the macro block
      that are coded (Y only) */
@@ -479,6 +533,7 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
   ogg_int32_t   x=0, y=0;
   ogg_int32_t   step;
   ogg_int32_t   SearchSite=0;
+  SadTemp;
 
   unsigned char *SrcPtr[4] = {NULL,NULL,NULL,NULL};
   unsigned char *RefPtr=NULL;
@@ -683,6 +738,7 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
   unsigned char   BestHalfOffset;
   unsigned char * RefDataPtr1;
   unsigned char * RefDataPtr2;
+  SadTemp;
 
   /* Note which of the four blocks in the macro block are to be
      included in the search. */
@@ -834,6 +890,7 @@ static ogg_uint32_t GetBMVExhaustiveSearch (CP_INSTANCE *cpi,
   ogg_int32_t   BestHalfPixelError;
   unsigned char   BestHalfOffset;
   unsigned char * RefDataPtr2;
+  SadTemp;
 
   /* Set up the source pointer for the block. */
   SrcPtr = &cpi->

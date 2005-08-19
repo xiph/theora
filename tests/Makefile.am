@@ -1,7 +1,9 @@
 INCLUDES = -I$(top_srcdir)/include
 
+noinst_HEADERS = tests.h
+
 THEORADIR = ../lib
-THEORA_LIBS = $(THEORADIR)/libtheora.la $(OGG_LIBS)
+THEORA_LIBS = $(THEORADIR)/libtheora.la $(OGG_LIBS) $(LIBOIL_LIBS)
 
 test: check
 

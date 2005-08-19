@@ -19,6 +19,24 @@
 #include <string.h>
 #include "codec_internal.h"
 
+#ifdef USE_LIBOIL
+#include <liboil/liboil.h>
+/* redirect some functions to liboil */
+#define ReconIntra(pbi, ReconPtr, ChangePtr, LineStep) \
+        oil_recon8x8_intra(ReconPtr, LineStep, ChangePtr)
+
+#define ReconInter(pbi, ReconPtr, RefPtr, ChangePtr, LineStep) \
+        oil_recon8x8_inter(ReconPtr, LineStep, RefPtr, LineStep, ChangePtr)
+
+#define ReconInterHalfPixel2(pbi, ReconPtr, RefPtr1, RefPtr2, \
+                             ChangePtr, LineStep) \
+        oil_recon8x8_inter2(ReconPtr, LineStep, RefPtr1, LineStep, \
+                            RefPtr2, LineStep, ChangePtr)
+
+#define CopyBlock(src, dest, srcstride) \
+        oil_copy8x8_u8(dest, srcstride, src, srcstride)
+
+#endif
 
 #define GOLDEN_FRAME_THRESH_Q   50
 #define PUR 8
@@ -112,6 +130,7 @@ void SetupLoopFilter(PB_INSTANCE *pbi){
   SetupBoundingValueArray_Generic(pbi, FLimit);
 }
 
+#ifndef USE_LIBOIL
 void CopyBlock(unsigned char *src,
                unsigned char *dest,
                unsigned int srcstride){
@@ -127,6 +146,7 @@ void CopyBlock(unsigned char *src,
     d+=stride;
   }
 }
+#endif
 
 static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
   ogg_uint32_t ReconPixelsPerLine;
@@ -165,7 +185,6 @@ static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
   /* Get the pixel index for the first pixel in the fragment. */
   ReconIntra( pbi, (unsigned char *)(&pbi->ThisFrameRecon[ReconPixelIndex]),
               (ogg_int16_t *)pbi->ReconDataBuffer, ReconPixelsPerLine );
-
 }
 
 static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
@@ -251,7 +270,6 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
     ReconInter( pbi, &pbi->ThisFrameRecon[ReconPixelIndex],
                 &pbi->LastFrameRecon[ReconPixelIndex],
                 pbi->ReconDataBuffer, ReconPixelsPerLine );
-
   }else if ( ModeUsesMC[pbi->CodingMode] ) {
     /* The mode uses a motion vector. */
     /* Get vector from list */
@@ -678,7 +696,7 @@ void ExpandToken( Q_LIST_ENTRY * ExpandedBlock,
 }
 
 void ClearDownQFragData(PB_INSTANCE *pbi){
-  ogg_int32_t       i,j;
+  ogg_int32_t       i;
   Q_LIST_ENTRY *    QFragPtr;
 
   for ( i = 0; i < pbi->CodedBlockIndex; i++ ) {

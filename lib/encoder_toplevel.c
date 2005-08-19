@@ -15,14 +15,13 @@
 
  ********************************************************************/
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include <stdlib.h>
 #include <string.h>
 #include "toplevel_lookup.h"
 #include "toplevel.h"
+#ifdef USE_LIBOIL
+#include <liboil/liboil.h>
+#endif
 
 #define A_TABLE_SIZE        29
 #define DF_CANDIDATE_WINDOW 5
@@ -775,6 +774,10 @@ int theora_encode_init(theora_state *th, theora_info *c){
   int i;
 
   CP_INSTANCE *cpi;
+
+#ifdef USE_LIBOIL
+  oil_init();
+#endif
 
   memset(th, 0, sizeof(*th));
   th->internal_encode=cpi=_ogg_calloc(1,sizeof(*cpi));

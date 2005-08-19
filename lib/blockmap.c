@@ -32,8 +32,8 @@ static void CreateMapping ( ogg_int32_t (*BlockMap)[4][4],
   ogg_uint32_t FragIndex=FirstFrag;
 
   /* Set Super-Block dimensions */
-  SBRows = VFrags/4 + ( VFrags%4 ? 1 : 0 );
-  SBCols = HFrags/4 + ( HFrags%4 ? 1 : 0 );
+  SBRows = (VFrags>>2) + ( VFrags&0x03 ? 1 : 0 );
+  SBCols = (HFrags>>2) + ( HFrags&0x03 ? 1 : 0 );
 
   /* Map each Super-Block */
   for ( SBrow=0; SBrow<SBRows; SBrow++ ){
@@ -47,17 +47,8 @@ static void CreateMapping ( ogg_int32_t (*BlockMap)[4][4],
         xpos = SBcol<<2;
 
         for ( j=0; (j<4) && (xpos<HFrags); j++, xpos++ ){
-          if ( i<2 ){
-            MB = ( j<2 ? 0 : 1 );
-          }else{
-            MB = ( j<2 ? 2 : 3 );
-          }
-
-          if ( i%2 ){
-            B = ( j%2 ? 3 : 2 );
-          }else{
-            B = ( j%2 ? 1 : 0 );
-          }
+          MB = (i & 2) + ((j & 2) >> 1);
+          B = ((i & 1) << 1) + (j & 1);
 
           /* Set mapping and move to next fragment */
           BlockMap[SB][MB][B] = FragIndex++;

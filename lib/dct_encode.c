@@ -18,8 +18,33 @@
 #include <stdlib.h>
 #include "codec_internal.h"
 
+#ifdef USE_LIBOIL
+#include <liboil/liboil.h>
+/* redirect some functions to liboil */
+#define Sub8(FiltPtr, ReconPtr, DctInputPtr, \
+             old_ptr1, new_ptr1, PixelsPerLine, ReconPixelsPerLine)  \
+        oil_diff8x8_s16_u8(DctInputPtr, FiltPtr, PixelsPerLine, \
+                                        ReconPtr, ReconPixelsPerLine); \
+        oil_copy8x8_u8(old_ptr1, PixelsPerLine, new_ptr1, PixelsPerLine)
+
+#define Sub8_128(FiltPtr, DctInputPtr, old_ptr1, new_ptr1, PixelsPerLine) \
+        oil_diff8x8_const128_s16_u8(DctInputPtr, FiltPtr, PixelsPerLine); \
+        oil_copy8x8_u8(old_ptr1, PixelsPerLine, new_ptr1, PixelsPerLine)
+
+#define Sub8Av2(FiltPtr, ReconPtr1, ReconPtr2, DctInputPtr, \
+                     old_ptr1, new_ptr1, PixelsPerLine, ReconPixelsPerLine) \
+        oil_diff8x8_average_s16_u8(DctInputPtr, FiltPtr, PixelsPerLine, \
+               ReconPtr1, ReconPixelsPerLine, ReconPtr2, ReconPixelsPerLine); \
+        oil_copy8x8_u8(old_ptr1, PixelsPerLine, new_ptr1, PixelsPerLine)
+
+#define fdct_short(InputData, OutputData)  \
+        oil_fdct8x8theora(InputData, OutputData)
+
+#endif
+
 static int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };
 
+#ifndef USE_LIBOIL
 static void Sub8 (unsigned char *FiltPtr, unsigned char *ReconPtr,
                   ogg_int16_t *DctInputPtr, unsigned char *old_ptr1,
                   unsigned char *new_ptr1, ogg_uint32_t PixelsPerLine,
@@ -120,6 +145,7 @@ static void Sub8Av2 (unsigned char *FiltPtr, unsigned char *ReconPtr1,
     DctInputPtr += BLOCK_HEIGHT_WIDTH;
   }
 }
+#endif
 
 static unsigned char TokenizeDctValue (ogg_int16_t DataValue,
                                        ogg_uint32_t * TokenListPtr ){

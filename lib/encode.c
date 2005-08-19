@@ -27,6 +27,13 @@
 #define PL 1
 #define HIGHBITDUPPED(X) (((ogg_int16_t) X)  >> 15)
 
+#ifdef USE_LIBOIL
+#include <liboil/liboil.h>
+/* redirect some functions to liboil */
+#define fdct_short(InputData, OutputData) \
+        oil_fdct8x8theora(InputData, OutputData)
+#endif
+
 static ogg_uint32_t QuadCodeComponent ( CP_INSTANCE *cpi,
                                  ogg_uint32_t FirstSB,
                                  ogg_uint32_t SBRows,
@@ -531,7 +538,9 @@ static void PackToken ( CP_INSTANCE *cpi, ogg_int32_t FragmentNumber,
 
 static ogg_uint32_t GetBlockReconErrorSlow( CP_INSTANCE *cpi,
                                      ogg_int32_t BlockIndex ) {
+#ifndef USE_LIBOIL
   ogg_uint32_t  i;
+#endif
   ogg_uint32_t  ErrorVal = 0;
 
   unsigned char * SrcDataPtr =
@@ -550,7 +559,9 @@ static ogg_uint32_t GetBlockReconErrorSlow( CP_INSTANCE *cpi,
     RecStride = cpi->pb.UVStride;
   }
 
-
+#ifdef USE_LIBOIL
+  oil_sad8x8_u8 (&ErrorVal, SrcDataPtr, SrcStride, RecDataPtr, RecStride);
+#else
   /* Decide on standard or MMX implementation */
   for ( i=0; i < BLOCK_HEIGHT_WIDTH; i++ ) {
     ErrorVal += abs( ((int)SrcDataPtr[0]) - ((int)RecDataPtr[0]) );
@@ -565,6 +576,7 @@ static ogg_uint32_t GetBlockReconErrorSlow( CP_INSTANCE *cpi,
     SrcDataPtr += SrcStride;
     RecDataPtr += RecStride;
   }
+#endif
   return ErrorVal;
 }
 

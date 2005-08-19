@@ -20,7 +20,32 @@
 #include <string.h>
 #include "codec_internal.h"
 
+#ifdef USE_LIBOIL
+#include <liboil/liboil.h>
+/* redirect some functions to liboil */
+#define SadTemp uint32_t _sad_tmp;
+
+#define ScalarRowSAD(Src1, Src2)       \
+        (oil_rowsad8x8_u8 (&_sad_tmp, Src1, Src2), _sad_tmp)
+
+#define ScalarColSAD(ppi, Src1, Src2) \
+        (oil_colsad8x8_u8 (&_sad_tmp, Src1, ppi->PlaneStride, \
+                                      Src2, ppi->PlaneStride), _sad_tmp)
+#else
+#define SadTemp 
+#endif
+
 #define MAX_SEARCH_LINE_LEN                   7
+
+#define SET8_0(ptr) \
+  ((ogg_uint32_t *)ptr)[0] = 0x00000000; \
+  ((ogg_uint32_t *)ptr)[1] = 0x00000000;
+#define SET8_1(ptr) \
+  ((ogg_uint32_t *)ptr)[0] = 0x01010101; \
+  ((ogg_uint32_t *)ptr)[1] = 0x01010101;
+#define SET8_8(ptr) \
+  ((ogg_uint32_t *)ptr)[0] = 0x08080808; \
+  ((ogg_uint32_t *)ptr)[1] = 0x08080808;
 
 static ogg_uint32_t LineLengthScores[ MAX_SEARCH_LINE_LEN + 1 ] = {
   0, 0, 0, 0, 2, 4, 12, 24
@@ -384,6 +409,7 @@ static void CreateOutputDisplayMap( PP_INSTANCE *ppi,
   ppi->KFIndicator = ((ppi->KFIndicator*100)/((ppi->ScanYPlaneFragments*3)/4));
 }
 
+#ifndef USE_LIBOIL
 static ogg_uint32_t ScalarRowSAD( unsigned char * Src1,
                                   unsigned char * Src2 ){
   ogg_uint32_t SadValue;
@@ -445,6 +471,7 @@ static ogg_uint32_t ScalarColSAD( PP_INSTANCE *ppi,
 
   return MaxSad;
 }
+#endif
 
 
 static int RowSadScan( PP_INSTANCE *ppi,
@@ -460,6 +487,7 @@ static int RowSadScan( PP_INSTANCE *ppi,
   unsigned char *LocalYuvPtr2;
 
   int           InterestingBlocksInRow = 0;
+  SadTemp;
 
   /* For each row of pixels in the row of blocks */
   for ( j = 0; j < VFRAGPIXELS; j++ ){
@@ -519,6 +547,7 @@ static int ColSadScan( PP_INSTANCE *ppi,
   unsigned char * LocalYuvPtr2;
 
   int     InterestingBlocksInRow = 0;
+  SadTemp;
 
   /* Set the local pixel data pointers for this row. */
   LocalYuvPtr1 = YuvPtr1;
@@ -758,7 +787,7 @@ static void RowDiffScan( PP_INSTANCE *ppi,
       if (*DispFragPtr == CANDIDATE_BLOCK){
 
         /* Clear down entries in changed locals array */
-        memset(ChLocalsPtr,0,8);
+        SET8_0(ChLocalsPtr);
 
         for ( j = 0; j < HFRAGPIXELS; j++ ){
           /* Take a local copy of the measured difference. */
@@ -777,10 +806,10 @@ static void RowDiffScan( PP_INSTANCE *ppi,
       }else{
         /* If we are breaking out here mark all pixels as changed. */
         if ( *DispFragPtr > BLOCK_NOT_CODED ){
-          memset(bits_map_ptr,1,8);
-          memset(ChLocalsPtr,8,8);
+          SET8_1(bits_map_ptr);
+          SET8_8(ChLocalsPtr);
         }else{
-          memset(ChLocalsPtr,0,8);
+          SET8_0(ChLocalsPtr);
         }
       }
 
@@ -816,7 +845,7 @@ static void RowDiffScan( PP_INSTANCE *ppi,
     /* Test for break out conditions to save time. */
     if (*DispFragPtr == CANDIDATE_BLOCK){
       /* Clear down entries in changed locals array */
-      memset(ChLocalsPtr,0,8);
+      SET8_0(ChLocalsPtr);
 
       for ( j = 0; j < HFRAGPIXELS; j++ ){
         /* Take a local copy of the measured difference. */
@@ -839,10 +868,10 @@ static void RowDiffScan( PP_INSTANCE *ppi,
     }else{
       /* If we are breaking out here mark all pixels as changed. */
       if ( *DispFragPtr > BLOCK_NOT_CODED ){
-        memset(bits_map_ptr,1,8);
-        memset(ChLocalsPtr,8,8);
+        SET8_1(bits_map_ptr);
+        SET8_8(ChLocalsPtr);
       }else{
-        memset(ChLocalsPtr,0,8);
+        SET8_0(ChLocalsPtr);
       }
     }
 
@@ -876,7 +905,7 @@ static void RowDiffScan( PP_INSTANCE *ppi,
       /* Test for break out conditions to save time. */
       if (*DispFragPtr == CANDIDATE_BLOCK){
         /* Clear down entries in changed locals array */
-        memset(ChLocalsPtr,0,8);
+        SET8_0(ChLocalsPtr);
         for ( j = 0; j < HFRAGPIXELS; j++ ){
           /* Take a local copy of the measured difference. */
           Diff = (int)YuvPtr1[j] - (int)YuvPtr2[j];
@@ -899,10 +928,10 @@ static void RowDiffScan( PP_INSTANCE *ppi,
       }else{
         /* If we are breaking out here mark all pixels as changed. */
         if ( *DispFragPtr > BLOCK_NOT_CODED ){
-          memset(bits_map_ptr,1,8);
-          memset(ChLocalsPtr,8,8);
+          SET8_1(bits_map_ptr);
+          SET8_8(ChLocalsPtr);
         }else{
-          memset(ChLocalsPtr,0,8);
+          SET8_0(ChLocalsPtr);
         }
       }
 
@@ -935,7 +964,7 @@ static void RowDiffScan( PP_INSTANCE *ppi,
     /* Test for break out conditions to save time. */
     if (*DispFragPtr == CANDIDATE_BLOCK){
       /* Clear down entries in changed locals array */
-      memset(ChLocalsPtr,0,8);
+      SET8_0(ChLocalsPtr);
 
       for ( j = 0; j < HFRAGPIXELS; j++ ){
         /* Take a local copy of the measured difference. */
@@ -959,10 +988,10 @@ static void RowDiffScan( PP_INSTANCE *ppi,
     }else{
       /* If we are breaking out here mark all pixels as changed.*/
       if ( *DispFragPtr > BLOCK_NOT_CODED ) {
-          memset(bits_map_ptr,1,8);
-          memset(ChLocalsPtr,8,8);
+          SET8_1(bits_map_ptr);
+          SET8_8(ChLocalsPtr);
         }else{
-          memset(ChLocalsPtr,0,8);
+          SET8_0(ChLocalsPtr);
         }
     }
     /* If we have a lot of changed pixels for this fragment on this
@@ -1071,7 +1100,7 @@ static void RowChangedLocalsScan( PP_INSTANCE *ppi,
         }
       }else{
         if ( *DispFragPtr > BLOCK_NOT_CODED )
-          memset(ChLocalsPtr,0,8);
+          SET8_0(ChLocalsPtr);
 
         /* Step pointers */
         ChLocalsPtr += HFRAGPIXELS;
@@ -1133,7 +1162,7 @@ static void RowChangedLocalsScan( PP_INSTANCE *ppi,
         }
       }else{
         if ( *DispFragPtr > BLOCK_NOT_CODED )
-          memset(ChLocalsPtr,0,8);
+          SET8_0(ChLocalsPtr);
 
         /* Step pointers */
         ChLocalsPtr += HFRAGPIXELS;

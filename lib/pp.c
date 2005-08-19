@@ -20,6 +20,12 @@
 #include "codec_internal.h"
 #include "pp.h"
 
+#ifdef USE_LIBOIL
+#include <liboil/liboil.h>
+#define CopyBlock(src, dest, srcstride) \
+        oil_copy8x8_u8(src, srcstride, dest, srcstride)
+#endif
+
 #define MAX(a, b) ((a>b)?a:b)
 #define MIN(a, b) ((a<b)?a:b)
 #define PP_QUALITY_THRESH   49

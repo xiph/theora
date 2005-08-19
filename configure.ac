@@ -169,6 +169,26 @@ then
   XIPH_PATH_VORBIS(HAVE_VORBIS=yes, HAVE_VORBIS=no)
 fi
 
+dnl check for liboil
+ac_enable_liboil=yes
+AC_ARG_ENABLE(liboil,
+     [  --disable-liboil        disable liboil optimisazion ],
+     [ ac_enable_liboil=$enableval ], [ ac_enable_liboil=yes] )
+
+if test "x${ac_enable_liboil}" = xyes ; then
+  PKG_CHECK_MODULES(LIBOIL, liboil-0.3 >= 0.3.2.1, HAVE_LIBOIL=yes, HAVE_LIBOIL=no)
+  AC_SUBST(LIBOIL_LIBS)
+  AC_SUBST(LIBOIL_CFLAGS)
+  if test "$HAVE_LIBOIL" = "no"; then
+    AC_MSG_WARN([cannot find liboil-0.3, no optimization will be enabled])
+    ac_enable_liboil=no
+  else
+    AC_DEFINE_UNQUOTED(USE_LIBOIL, 1, [Defined if liboil should be used])
+    LIBOILPC=", liboil-0.3"
+  fi
+fi
+AC_SUBST(LIBOILPC)
+
 dnl check for SDL
 HAVE_SDL=no
 
@@ -284,6 +304,7 @@ AC_MSG_RESULT([
 
     Encoding support: ............ ${ac_enable_encode}
     Floating point support: ...... ${ac_enable_float}
+    Liboil optimization: ......... ${ac_enable_liboil}
 
   Installation paths:
 
