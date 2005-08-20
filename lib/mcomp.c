@@ -21,23 +21,6 @@
 
 #ifdef USE_LIBOIL
 #include <liboil/liboil.h>
-/* redirect some functions to liboil */
-#define SadTemp uint32_t _sad_tmp;
-
-#define GetSumAbsDiffs(NewDataPtr, RefDataPtr, PixelsPerLine, ErrorSoFar) \
-        (oil_sad8x8_u8 (&_sad_tmp, NewDataPtr, PixelsPerLine, RefDataPtr, \
-                        PixelsPerLine+STRIDE_EXTRA), ErrorSoFar+_sad_tmp)
-
-#define GetNextSumAbsDiffs(NewDataPtr, RefDataPtr, PixelsPerLine, \
-                           ErrorSoFar, BestSoFar) \
-        (oil_sad8x8_u8(&_sad_tmp, NewDataPtr, PixelsPerLine, \
-                  RefDataPtr, PixelsPerLine+STRIDE_EXTRA), ErrorSoFar+_sad_tmp)
-
-#define GetIntraError(DataPtr,PixelsPerLine) \
-        (oil_err_intra8x8_u8 (&_sad_tmp,DataPtr, PixelsPerLine),_sad_tmp)
-
-#else
-#define SadTemp
 #endif
 
 /* Initialises motion compentsation. */
@@ -244,7 +227,32 @@ static ogg_uint32_t GetInterErr (unsigned char * NewDataPtr,
   return Result;
 }
 
-#ifndef USE_LIBOIL
+#ifdef USE_LIBOIL
+inline static ogg_uint32_t GetSumAbsDiffs  (unsigned char * NewDataPtr,
+                              unsigned char  * RefDataPtr,
+                              ogg_uint32_t PixelsPerLine,
+                              ogg_uint32_t ErrorSoFar) {
+  uint32_t _sad_tmp;
+  return (oil_sad8x8_u8 (&_sad_tmp, NewDataPtr, PixelsPerLine, RefDataPtr, PixelsPerLine+STRIDE_EXTRA), ErrorSoFar+_sad_tmp);
+
+}
+
+inline static ogg_uint32_t GetNextSumAbsDiffs (unsigned char * NewDataPtr,
+                                 unsigned char * RefDataPtr,
+                                 ogg_uint32_t PixelsPerLine,
+                                 ogg_uint32_t ErrorSoFar,
+                                 ogg_uint32_t BestSoFar ) {
+  uint32_t _sad_tmp;
+  return    (oil_sad8x8_u8(&_sad_tmp, NewDataPtr, PixelsPerLine, \
+                  RefDataPtr, PixelsPerLine+STRIDE_EXTRA), ErrorSoFar+_sad_tmp);
+}
+
+static ogg_uint32_t GetIntraError (unsigned char * DataPtr,
+                            ogg_uint32_t PixelsPerLine ) {
+  uint32_t _sad_tmp;
+  return (oil_err_intra8x8_u8 (&_sad_tmp,DataPtr, PixelsPerLine),_sad_tmp);
+}
+#else
 static ogg_uint32_t GetSumAbsDiffs  (unsigned char * NewDataPtr,
                               unsigned char  * RefDataPtr,
                               ogg_uint32_t PixelsPerLine,
@@ -310,7 +318,6 @@ static ogg_uint32_t GetHalfPixelSumAbsDiffs (unsigned char * SrcData,
   ogg_uint32_t  DiffVal = ErrorSoFar;
   ogg_int32_t   RefOffset = (int)(RefDataPtr1 - RefDataPtr2);
   ogg_uint32_t  RefPixelsPerLine = PixelsPerLine + STRIDE_EXTRA;
-  SadTemp;
 
   if ( RefOffset == 0 ) {
     /* Simple case as for non 0.5 pixel */
@@ -400,7 +407,6 @@ ogg_uint32_t GetMBIntraError (CP_INSTANCE *cpi, ogg_uint32_t FragIndex,
                               ogg_uint32_t PixelsPerLine ) {
   ogg_uint32_t  LocalFragIndex = FragIndex;
   ogg_uint32_t  IntraError = 0;
-  SadTemp;
 
   /* Add together the intra errors for those blocks in the macro block
      that are coded (Y only) */
@@ -533,7 +539,6 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
   ogg_int32_t   x=0, y=0;
   ogg_int32_t   step;
   ogg_int32_t   SearchSite=0;
-  SadTemp;
 
   unsigned char *SrcPtr[4] = {NULL,NULL,NULL,NULL};
   unsigned char *RefPtr=NULL;
@@ -738,7 +743,6 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
   unsigned char   BestHalfOffset;
   unsigned char * RefDataPtr1;
   unsigned char * RefDataPtr2;
-  SadTemp;
 
   /* Note which of the four blocks in the macro block are to be
      included in the search. */
@@ -890,7 +894,6 @@ static ogg_uint32_t GetBMVExhaustiveSearch (CP_INSTANCE *cpi,
   ogg_int32_t   BestHalfPixelError;
   unsigned char   BestHalfOffset;
   unsigned char * RefDataPtr2;
-  SadTemp;
 
   /* Set up the source pointer for the block. */
   SrcPtr = &cpi->

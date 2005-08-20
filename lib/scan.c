@@ -22,17 +22,6 @@
 
 #ifdef USE_LIBOIL
 #include <liboil/liboil.h>
-/* redirect some functions to liboil */
-#define SadTemp uint32_t _sad_tmp;
-
-#define ScalarRowSAD(Src1, Src2)       \
-        (oil_rowsad8x8_u8 (&_sad_tmp, Src1, Src2), _sad_tmp)
-
-#define ScalarColSAD(ppi, Src1, Src2) \
-        (oil_colsad8x8_u8 (&_sad_tmp, Src1, ppi->PlaneStride, \
-                                      Src2, ppi->PlaneStride), _sad_tmp)
-#else
-#define SadTemp 
 #endif
 
 #define MAX_SEARCH_LINE_LEN                   7
@@ -409,7 +398,22 @@ static void CreateOutputDisplayMap( PP_INSTANCE *ppi,
   ppi->KFIndicator = ((ppi->KFIndicator*100)/((ppi->ScanYPlaneFragments*3)/4));
 }
 
-#ifndef USE_LIBOIL
+#ifdef USE_LIBOIL
+inline static ogg_uint32_t ScalarRowSAD( unsigned char * Src1,
+                                         unsigned char * Src2 ){
+  uint32_t _sad_tmp;
+  return (oil_rowsad8x8_u8 (&_sad_tmp, Src1, Src2), _sad_tmp);
+}
+
+inline static ogg_uint32_t ScalarColSAD( PP_INSTANCE *ppi,
+                           unsigned char * Src1,
+                           unsigned char * Src2 ){
+
+    uint32_t _sad_tmp;
+    return (oil_colsad8x8_u8 (&_sad_tmp, Src1, ppi->PlaneStride,
+                                      Src2, ppi->PlaneStride), _sad_tmp);
+}
+#else
 static ogg_uint32_t ScalarRowSAD( unsigned char * Src1,
                                   unsigned char * Src2 ){
   ogg_uint32_t SadValue;
@@ -487,7 +491,6 @@ static int RowSadScan( PP_INSTANCE *ppi,
   unsigned char *LocalYuvPtr2;
 
   int           InterestingBlocksInRow = 0;
-  SadTemp;
 
   /* For each row of pixels in the row of blocks */
   for ( j = 0; j < VFRAGPIXELS; j++ ){
@@ -547,7 +550,6 @@ static int ColSadScan( PP_INSTANCE *ppi,
   unsigned char * LocalYuvPtr2;
 
   int     InterestingBlocksInRow = 0;
-  SadTemp;
 
   /* Set the local pixel data pointers for this row. */
   LocalYuvPtr1 = YuvPtr1;
