@@ -217,7 +217,6 @@ int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
   }
   /* base matricies */
   theora_read(opb,9,&N); N++;
-  if(N!=3)return OC_BADHEADER; /* we only support the VP3 config */
   ci->qmats=_ogg_malloc(N*64*sizeof(Q_LIST_ENTRY));
   ci->MaxQMatrixIndex = N;
   for(y=0; y<N; y++) {
@@ -310,11 +309,10 @@ void CopyQTables(PB_INSTANCE *pbi, codec_setup_info *ci) {
   memcpy(pbi->DcScaleFactorTable, ci->DcScaleFactorTable,
          sizeof(pbi->DcScaleFactorTable));
 
-  /* the decoder only supports 3 different base matricies; do the
+  /* the decoder only supports 6 different base matricies; do the
      best we can with the range table. We assume the first range
-     entry for Intra U is also good for V, and that the first 
-     Inter Y is good for all the Inter channels. A NULL range 
-     table entry indicates we fall back to the previous value. */
+     entry is good for all qi values. A NULL range table entry 
+     indicates we fall back to the previous value. */
   qmat = ci->range_table[0]->qmat;
   memcpy(pbi->Y_coeffs, qmat, sizeof(pbi->Y_coeffs));
   if (ci->range_table[1]) qmat = ci->range_table[1]->qmat;

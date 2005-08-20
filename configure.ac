@@ -4,7 +4,7 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT(libtheora,[1.0alpha4])
+AC_INIT(libtheora,[1.0alpha6-svn])
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
@@ -16,9 +16,9 @@ AM_MAINTAINER_MODE
 
 dnl Library versioning
 
-V_LIB_CURRENT=1
+V_LIB_CURRENT=2
 V_LIB_REVISION=0
-V_LIB_AGE=1
+V_LIB_AGE=2
 AC_SUBST(V_LIB_CURRENT)
 AC_SUBST(V_LIB_REVISION)
 AC_SUBST(V_LIB_AGE)
@@ -142,7 +142,7 @@ then
   CFLAGS="$CFLAGS $OGG_CFLAGS"
   LIBS="$LIBS $OGG_LIBS"
   AC_CHECK_FUNC(oggpackB_read, , [
-    AC_MSG_ERROR([newer libogg version (>1.0) required])
+    AC_MSG_ERROR([newer libogg version (1.1 or later) required])
   ])
   CFLAGS=$cflags_save
   LIBS=$libs_save

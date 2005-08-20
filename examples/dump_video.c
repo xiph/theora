@@ -47,10 +47,10 @@
 
 
 
-const char *optstring = "or:";
+const char *optstring = "o:r";
 struct option options [] = {
   {"output",required_argument,NULL,'o'},
-  {"raw",required_argument, NULL, 'r'}, /* Disable YUV4MPEG2 headers if set */
+  {"raw",no_argument, NULL, 'r'}, /* Disable YUV4MPEG2 headers if set */
   {NULL,0,NULL,0}
 };
 
@@ -177,12 +177,9 @@ int main(int argc,char *argv[]){
         exit(1);
       }
       break;
-      case 'r':
-      if(sscanf(optarg, "%u", &raw) != 1) {
-          fprintf(stderr, "Invalid option, assuming YUV4MPEG4 output\n");
-          raw = 0;
-      }
 
+      case 'r':
+      raw = 1;
       break;
 
       default:
@@ -297,7 +294,8 @@ int main(int argc,char *argv[]){
   if(theora_p){
     theora_decode_init(&td,&ti);
     fprintf(stderr,"Ogg logical stream %x is Theora %dx%d %.02f fps video\nEncoded frame content is %dx%d with %dx%d offset\n",
-            to.serialno,ti.width,ti.height, (double)ti.fps_numerator/ti.fps_denominator,
+            (unsigned int)to.serialno,ti.width,ti.height, 
+	    (double)ti.fps_numerator/ti.fps_denominator,
             ti.frame_width, ti.frame_height, ti.offset_x, ti.offset_y);
   }else{
     /* tear down the partial theora setup */
@@ -362,7 +360,7 @@ int main(int argc,char *argv[]){
 
     if(!videobuf_ready){
       /* no data yet for somebody.  Grab another page */
-      int ret=buffer_data(infile,&oy);
+      buffer_data(infile,&oy);
       while(ogg_sync_pageout(&oy,&og)>0){
         queue_page(&og);
       }
