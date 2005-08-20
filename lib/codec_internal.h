@@ -269,10 +269,6 @@ typedef struct codec_setup_info {
   Q_LIST_ENTRY *qmats;
   qmat_range_table *range_table[6];
 
-  Q_LIST_ENTRY Y_coeffs[64];
-  Q_LIST_ENTRY UV_coeffs[64];
-  Q_LIST_ENTRY Inter_coeffs[64];
-
   HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES];
 
   unsigned char LoopFilterLimitValues[Q_TABLE_SIZE];
@@ -454,10 +450,19 @@ typedef struct PB_INSTANCE {
   ogg_uint32_t   QThreshTable[Q_TABLE_SIZE];
   Q_LIST_ENTRY   DcScaleFactorTable[Q_TABLE_SIZE];
   Q_LIST_ENTRY   Y_coeffs[64];
-  Q_LIST_ENTRY   UV_coeffs[64];
-  Q_LIST_ENTRY   Inter_coeffs[64];
-  Q_LIST_ENTRY  *dequant_InterUV_coeffs;
-  unsigned int   quant_index[64];
+  Q_LIST_ENTRY   U_coeffs[64];
+  Q_LIST_ENTRY   V_coeffs[64];
+  Q_LIST_ENTRY   InterY_coeffs[64];
+  Q_LIST_ENTRY   InterU_coeffs[64];
+  Q_LIST_ENTRY   InterV_coeffs[64];
+  Q_LIST_ENTRY  *dequant_Y_coeffs;
+  Q_LIST_ENTRY  *dequant_U_coeffs;
+  Q_LIST_ENTRY  *dequant_V_coeffs;
+  Q_LIST_ENTRY  *dequant_InterY_coeffs;
+  Q_LIST_ENTRY  *dequant_InterU_coeffs;
+  Q_LIST_ENTRY  *dequant_InterV_coeffs;
+  Q_LIST_ENTRY  *dequant_coeffs;	/* currently active quantizer */
+  unsigned int   zigzag_index[64];
   ogg_int32_t    quant_Y_coeffs[64];
   ogg_int32_t    quant_UV_coeffs[64];
   ogg_int32_t    fp_quant_Y_coeffs[64]; /* used in reiniting quantizers */
@@ -479,10 +484,6 @@ typedef struct PB_INSTANCE {
   ogg_int32_t   *fquant_coeffs;
   ogg_int32_t   *fquant_round;
   ogg_int32_t   *fquant_ZbSize;
-  Q_LIST_ENTRY  *dequant_Y_coeffs;
-  Q_LIST_ENTRY  *dequant_UV_coeffs;
-  Q_LIST_ENTRY  *dequant_Inter_coeffs;
-  Q_LIST_ENTRY  *dequant_coeffs;
 
   /* Predictor used in choosing entropy table for decoding block patterns. */
   unsigned char  BlockPatternPredictor;

@@ -47,9 +47,10 @@
 
 
 
-const char *optstring = "o:";
+const char *optstring = "o:r";
 struct option options [] = {
   {"output",required_argument,NULL,'o'},
+  {"raw",no_argument, NULL, 'r'}, /* Disable YUV4MPEG2 headers if set */
   {NULL,0,NULL,0}
 };
 
@@ -79,6 +80,7 @@ int              stateflag=0;
 int          videobuf_ready=0;
 ogg_int64_t  videobuf_granulepos=-1;
 double       videobuf_time=0;
+int          raw = 0;
 
 FILE* outfile = NULL;
 
@@ -100,6 +102,8 @@ static void video_write(void){
   yuv_buffer yuv;
   theora_decode_YUVout(&td,&yuv);
 
+  if(!raw)
+    fprintf(outfile, "FRAME\n");
   for(i=0;i<yuv.y_height;i++)
     fwrite(yuv.y+yuv.y_stride*i, 1, yuv.y_width, outfile);
   for(i=0;i<yuv.uv_height;i++)
@@ -172,6 +176,10 @@ int main(int argc,char *argv[]){
         fprintf(stderr,"Unable to open output file '%s'\n", optarg);
         exit(1);
       }
+      break;
+
+      case 'r':
+      raw = 1;
       break;
 
       default:
@@ -286,7 +294,8 @@ int main(int argc,char *argv[]){
   if(theora_p){
     theora_decode_init(&td,&ti);
     fprintf(stderr,"Ogg logical stream %x is Theora %dx%d %.02f fps video\nEncoded frame content is %dx%d with %dx%d offset\n",
-            to.serialno,ti.width,ti.height, (double)ti.fps_numerator/ti.fps_denominator,
+            (unsigned int)to.serialno,ti.width,ti.height, 
+	    (double)ti.fps_numerator/ti.fps_denominator,
             ti.frame_width, ti.frame_height, ti.offset_x, ti.offset_y);
   }else{
     /* tear down the partial theora setup */
@@ -296,6 +305,11 @@ int main(int argc,char *argv[]){
 
   /* open video */
   if(theora_p)open_video();
+
+  if(!raw)
+    fprintf(outfile, "YUV4MPEG2 W%d H%d F%d:%d I%c A%d:%d\n",
+          ti.width, ti.height, ti.fps_numerator, ti.fps_denominator, 'p', 
+          ti.aspect_numerator, ti.aspect_denominator);
 
   /* install signal handler */
   signal (SIGINT, sigint_handler);
@@ -346,7 +360,7 @@ int main(int argc,char *argv[]){
 
     if(!videobuf_ready){
       /* no data yet for somebody.  Grab another page */
-      int ret=buffer_data(infile,&oy);
+      buffer_data(infile,&oy);
       while(ogg_sync_pageout(&oy,&og)>0){
         queue_page(&og);
       }

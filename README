@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------
-          The Xiph.org Foundation's libtheora 1.0alpha4 release
+          The Xiph.org Foundation's libtheora 1.0alpha5 release
 -------------------------------------------------------------------------
 
 *** What is Theora?
@@ -26,14 +26,13 @@ according to the Theora I specification.
 
 Traditionally alpha mean proof of concept, not a production-ready 
 release. However the code is very robust, ready for and indeed
-in general use. But WE DO INTEND TO MAKE INCOMPATIBLE API changes 
-before stable beta release however, particularly on the encoding side.
+in general use. 
 
 The purpose of this release is to provide an updated testing base for 
 those interested in theora and to dissiminate more widely the changes
 we've made since the last alpha release. These include some helper
-utility functions, a draft format specification and rough api 
-documentation located in the doc directory.
+utility functions, a draft format specification and api documentation 
+located in the doc directory.
 
 -------------------------------------------------------------------------
 Getting started with the code

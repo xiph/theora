@@ -4,7 +4,7 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT(libtheora-mmx,[1.0alpha4])
+AC_INIT(libtheora-mmx,[1.0alpha5])
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
@@ -16,12 +16,15 @@ AM_MAINTAINER_MODE
 
 dnl Library versioning
 
-V_LIB_CURRENT=1
+V_LIB_CURRENT=2
 V_LIB_REVISION=0
-V_LIB_AGE=1
+V_LIB_AGE=2
 AC_SUBST(V_LIB_CURRENT)
 AC_SUBST(V_LIB_REVISION)
 AC_SUBST(V_LIB_AGE)
+
+dnl Extra linker options (for version script)
+SHLIB_VERSION_ARG=""
 
 dnl --------------------------------------------------  
 dnl Check for programs
@@ -36,6 +39,9 @@ CFLAGS="$cflags_save"
 
 AM_PROG_LIBTOOL
 
+dnl Add parameters for aclocal
+AC_SUBST(ACLOCAL_AMFLAGS, "-I m4")
+
 dnl Check for doxygen
 AC_CHECK_PROG(HAVE_DOXYGEN, doxygen, true, false)
 AM_CONDITIONAL(HAVE_DOXYGEN,$HAVE_DOXYGEN)
@@ -46,6 +52,30 @@ fi
 dnl Check for python
 AC_CHECK_PROG(HAVE_PYTHON, python, true, false)
 AM_CONDITIONAL(HAVE_PYTHON,$HAVE_PYTHON)
+
+dnl Check for valgrind
+VALGRIND_ENVIRONMENT=""
+ac_enable_valgrind=no
+AC_ARG_ENABLE(valgrind-testing,
+     [  --enable-valgrind-testing     enable running of tests inside Valgrind ],     [ ac_enable_valgrind=yes ], [ ac_enable_valgrind=no] )
+
+if test "x${ac_enable_valgrind}" = xyes ; then
+  if test "x${enable_shared}" = xyes ; then
+    VALGRIND_ENVIRONMENT="libtool --mode=execute "
+  fi
+
+  AC_CHECK_PROG(HAVE_VALGRIND, valgrind, yes, no)
+  if test "x$HAVE_VALGRIND" = xyes ; then
+    VALGRIND_ENVIRONMENT="$VALGRIND_ENVIRONMENT valgrind -q --leak-check=yes --show-reachable=yes --num-callers=100"
+    AC_SUBST(VALGRIND_ENVIRONMENT)
+    TESTS_INFO="Type 'make check' to run test suite. Tests will be run under:
+  ${VALGRIND_ENVIRONMENT}"
+  else
+    TESTS_INFO="Type 'make check' to run test suite (Valgrind not found)"
+  fi
+else
+  TESTS_INFO="Type 'make check' to run test suite (Valgrind testing not enabled)"
+fi
 
 dnl --------------------------------------------------
 dnl Set build flags based on environment
@@ -73,6 +103,16 @@ else
 fi
 CFLAGS="$CFLAGS $cflags_save"
 LDFLAGS="$LDFLAGS $ldflags_save"
+
+dnl Set extra linker options
+case "$target_os" in
+	linux* | solaris* )
+		SHLIB_VERSION_ARG="-Wl,--version-script=Version_script"
+		;;
+	*)
+		;;
+esac
+AC_SUBST(SHLIB_VERSION_ARG)
 
 dnl --------------------------------------------------
 dnl Checks for support libraries and headers
@@ -102,7 +142,7 @@ then
   CFLAGS="$CFLAGS $OGG_CFLAGS"
   LIBS="$LIBS $OGG_LIBS"
   AC_CHECK_FUNC(oggpackB_read, , [
-    AC_MSG_ERROR([newer libogg version (>1.0) required])
+    AC_MSG_ERROR([newer libogg version (1.1 or later) required])
   ])
   CFLAGS=$cflags_save
   LIBS=$libs_save
@@ -224,7 +264,42 @@ AC_OUTPUT([
   examples/Makefile
   doc/Makefile doc/Doxyfile
   debian/Makefile
+  tests/Makefile
+  lib/Version_script
   libtheora.spec
   theora.pc
   theora-uninstalled.pc
 ])
+
+AS_AC_EXPAND(LIBDIR, ${libdir})
+AS_AC_EXPAND(INCLUDEDIR, ${includedir})
+AS_AC_EXPAND(BINDIR, ${bindir})
+AS_AC_EXPAND(DOCDIR, ${datadir}/doc)
+
+AC_MSG_RESULT([
+------------------------------------------------------------------------
+  $PACKAGE $VERSION:  Automatic configuration OK.
+
+  General configuration:
+
+    Encoding support: ............ ${ac_enable_encode}
+    Floating point support: ...... ${ac_enable_float}
+
+  Installation paths:
+
+    libtheora: ................... ${LIBDIR}
+    C header files: .............. ${INCLUDEDIR}/theora
+    Documentation: ............... ${DOCDIR}/$PACKAGE
+
+  Building:
+
+    Type 'make' to compile $PACKAGE.
+
+    Type 'make install' to install $PACKAGE.
+
+    ${TESTS_INFO}
+
+  Example programs will be built but not installed.
+------------------------------------------------------------------------
+])
+

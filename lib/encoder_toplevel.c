@@ -1190,6 +1190,7 @@ void theora_encoder_clear (CP_INSTANCE * cpi){
     ClearTmpBuffers(&cpi->pb);
     ClearPPInstance(&cpi->pp);
     
+    oggpackB_writeclear(cpi->oggbuffer);
     _ogg_free(cpi->oggbuffer);
     _ogg_free(cpi);
   }

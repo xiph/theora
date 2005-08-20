@@ -33,7 +33,7 @@ static void dequant_slow( ogg_int16_t * dequant_coeffs,
                    ogg_int32_t * DCT_block) {
   int i;
   for(i=0;i<64;i++)
-    DCT_block[dequant_index[i]] = quantized_list[i] * dequant_coeffs[i];
+    DCT_block[dezigzag_index[i]] = quantized_list[i] * dequant_coeffs[i];
 }
 
 void IDctSlow(  Q_LIST_ENTRY * InputData,
@@ -261,7 +261,7 @@ static void dequant_slow10( ogg_int16_t * dequant_coeffs,
   int i;
   memset(DCT_block,0, 128);
   for(i=0;i<10;i++)
-    DCT_block[dequant_index[i]] = quantized_list[i] * dequant_coeffs[i];
+    DCT_block[dezigzag_index[i]] = quantized_list[i] * dequant_coeffs[i];
 
 }
 

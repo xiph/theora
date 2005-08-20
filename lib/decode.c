@@ -61,7 +61,8 @@ int GetFrameType(PB_INSTANCE *pbi){
 
 static int LoadFrameHeader(PB_INSTANCE *pbi){
   long ret;
-  unsigned char  DctQIndex;
+  int NQIndex;
+  unsigned char  DctQIndex[3];
   unsigned char  SpareBits;       /* Spare cfg bits */
 
   /* Is the frame and inter frame or a key frame */
@@ -69,14 +70,24 @@ static int LoadFrameHeader(PB_INSTANCE *pbi){
   pbi->FrameType = (unsigned char)ret;
 
   /* Quality (Q) index */
+  NQIndex = 0;
   theora_read(pbi->opb,6,&ret);
-  DctQIndex = (unsigned char)ret;
+  DctQIndex[NQIndex++] = (unsigned char)ret;
 
-  /* spare bit for possible additional Q indicies - should be 0 */
   theora_read(pbi->opb,1,&ret);
   SpareBits = (unsigned char)ret;
-  /* todo: properly handle additional Q indicies */
-  if (SpareBits != 0) return OC_IMPL;
+  if (SpareBits) {
+    theora_read(pbi->opb,6,&ret);
+    DctQIndex[NQIndex++] = (unsigned char)ret;
+    theora_read(pbi->opb,1,&ret);
+    SpareBits = (unsigned char)ret;
+    if (SpareBits) {
+      theora_read(pbi->opb,6,&ret);
+      DctQIndex[NQIndex++] = (unsigned char)ret;
+    }
+  }
+
+  if (NQIndex != 1) return OC_IMPL;
 
   if ( (pbi->FrameType == KEY_FRAME) ){
     /* Read the type / coding method for the key frame. */
@@ -90,7 +101,7 @@ static int LoadFrameHeader(PB_INSTANCE *pbi){
   }
 
   /* Set this frame quality value and tables from the coded Q Index */
-  UpdateQ(pbi, DctQIndex);
+  UpdateQ(pbi, DctQIndex[0]);
 
   return 1;
 }
