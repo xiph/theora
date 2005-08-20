@@ -142,7 +142,7 @@ then
   CFLAGS="$CFLAGS $OGG_CFLAGS"
   LIBS="$LIBS $OGG_LIBS"
   AC_CHECK_FUNC(oggpackB_read, , [
-    AC_MSG_ERROR([newer libogg version (>1.0) required])
+    AC_MSG_ERROR([newer libogg version (1.1 or later) required])
   ])
   CFLAGS=$cflags_save
   LIBS=$libs_save
