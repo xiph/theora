@@ -409,7 +409,7 @@ extern int theora_packet_iskeyframe(ogg_packet *op);
  * \param ti A previously initialized theora_info struct
  * \returns The bit shift dividing the two granulepos fields
  *
- * This function was added inthe 1.0alpha5 release.
+ * This function was added in the 1.0alpha5 release.
  */
 int theora_granule_shift(theora_info *ti);
 
