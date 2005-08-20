@@ -1,8 +1,17 @@
-libtheora 1.0alpha5 (unreleased)
+libtheora 1.0alpha5 (2005 August 20)
 
  * Fixed bitrate management bugs that caused popping and encode
    errors
- * new theora_granule_shift() utility function
+ * Fixed a crash problem with the theora_state internals not
+   being intialized properly.
+ * new utility function:
+   - theora_granule_shift()
+ * dump_video example now makes YUV4MPEG files by default, so
+   the results can be fed back to encoder_example and similar
+   tools. The old behavior is restored through the '-r' switch.
+ * ./configure now prints a summary
+ * simple unit test of the comment api under 'make check'
+ * misc code cleanup, warning and leak fixes
 
 libtheora 1.0alpha4 (2004 December 15)
 
