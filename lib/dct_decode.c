@@ -134,16 +134,12 @@ void SetupLoopFilter(PB_INSTANCE *pbi){
 void CopyBlock(unsigned char *src,
                unsigned char *dest,
                unsigned int srcstride){
-  unsigned char *s = src;
-  unsigned char *d = dest;
-  unsigned int stride = srcstride;
-
   int j;
   for ( j = 0; j < 8; j++ ){
-    ((ogg_uint32_t*)d)[0] = ((ogg_uint32_t*)s)[0];
-    ((ogg_uint32_t*)d)[1] = ((ogg_uint32_t*)s)[1];
-    s+=stride;
-    d+=stride;
+    ((ogg_uint32_t*)dest)[0] = ((ogg_uint32_t*)src)[0];
+    ((ogg_uint32_t*)dest)[1] = ((ogg_uint32_t*)src)[1];
+    src+=srcstride;
+    dest+=srcstride;
   }
 }
 #endif
@@ -480,9 +476,6 @@ static void CopyRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
   ogg_uint32_t  PlaneLineStep; /* Pixels per line */
   ogg_uint32_t  PixelIndex;
 
-  unsigned char  *SrcPtr;      /* Pointer to line of source image data */
-  unsigned char  *DestPtr;     /* Pointer to line of destination image data */
-
   /* Copy over only updated blocks.*/
 
   /* First Y plane */
@@ -490,10 +483,7 @@ static void CopyRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
   for ( i = 0; i < pbi->YPlaneFragments; i++ ) {
     if ( pbi->display_fragments[i] ) {
       PixelIndex = pbi->recon_pixel_index_table[i];
-      SrcPtr = &SrcReconPtr[ PixelIndex ];
-      DestPtr = &DestReconPtr[ PixelIndex ];
-
-      CopyBlock(SrcPtr, DestPtr, PlaneLineStep);
+      CopyBlock(&SrcReconPtr[ PixelIndex ], &DestReconPtr[ PixelIndex ], PlaneLineStep);
     }
   }
 
@@ -502,11 +492,7 @@ static void CopyRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
   for ( i = pbi->YPlaneFragments; i < pbi->UnitFragments; i++ ) {
     if ( pbi->display_fragments[i] ) {
       PixelIndex = pbi->recon_pixel_index_table[i];
-      SrcPtr = &SrcReconPtr[ PixelIndex ];
-      DestPtr = &DestReconPtr[ PixelIndex ];
-
-      CopyBlock(SrcPtr, DestPtr, PlaneLineStep);
-
+      CopyBlock(&SrcReconPtr[ PixelIndex ], &DestReconPtr[ PixelIndex ], PlaneLineStep);
     }
   }
 }
@@ -517,9 +503,6 @@ static void CopyNotRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
   ogg_uint32_t  PlaneLineStep; /* Pixels per line */
   ogg_uint32_t  PixelIndex;
 
-  unsigned char  *SrcPtr;      /* Pointer to line of source image data */
-  unsigned char  *DestPtr;     /* Pointer to line of destination image data*/
-
   /* Copy over only updated blocks. */
 
   /* First Y plane */
@@ -527,10 +510,7 @@ static void CopyNotRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
   for ( i = 0; i < pbi->YPlaneFragments; i++ ) {
     if ( !pbi->display_fragments[i] ) {
       PixelIndex = pbi->recon_pixel_index_table[i];
-      SrcPtr = &SrcReconPtr[ PixelIndex ];
-      DestPtr = &DestReconPtr[ PixelIndex ];
-
-      CopyBlock(SrcPtr, DestPtr, PlaneLineStep);
+      CopyBlock(&SrcReconPtr[ PixelIndex ], &DestReconPtr[ PixelIndex ], PlaneLineStep);
     }
   }
 
@@ -539,11 +519,7 @@ static void CopyNotRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
   for ( i = pbi->YPlaneFragments; i < pbi->UnitFragments; i++ ) {
     if ( !pbi->display_fragments[i] ) {
       PixelIndex = pbi->recon_pixel_index_table[i];
-      SrcPtr = &SrcReconPtr[ PixelIndex ];
-      DestPtr = &DestReconPtr[ PixelIndex ];
-
-      CopyBlock(SrcPtr, DestPtr, PlaneLineStep);
-
+      CopyBlock(&SrcReconPtr[ PixelIndex ], &DestReconPtr[ PixelIndex ], PlaneLineStep);
     }
   }
 }
