@@ -717,10 +717,11 @@ static void FilterVert(unsigned char * PixelPtr,
   PixelPtr -= 2*LineLength;
 
   for ( j = 0; j < 8; j++ ) {
-    FiltVal = ( (ogg_int32_t)PixelPtr[0] ) -
-      ( (ogg_int32_t)PixelPtr[LineLength] * 3 ) +
-      ( (ogg_int32_t)PixelPtr[2 * LineLength] * 3 ) -
-      ( (ogg_int32_t)PixelPtr[3 * LineLength] );
+    FiltVal = 
+      ( PixelPtr[0] ) -
+      ( PixelPtr[LineLength] * 3 ) +
+      ( PixelPtr[2 * LineLength] * 3 ) -
+      ( PixelPtr[3 * LineLength] );
 
     FiltVal = *(BoundingValuePtr+((FiltVal + 4) >> 3));
 
