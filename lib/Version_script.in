@@ -5,7 +5,7 @@
 # applications linking to libtheora.
 #
 
-@PACKAGE@.so.1.0
+libtheora.so.1.0
 {
 	global:
 		theora_version_string;
