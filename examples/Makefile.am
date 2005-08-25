@@ -11,7 +11,9 @@ AM_CFLAGS = $(SDL_CFLAGS) $(OGG_CFLAGS)
 LDADD = ../lib/libtheora.la $(OGG_LIBS)
 
 dump_video_SOURCES = dump_video.c
-dump_video_LDADD = $(LDADD)
+EXTRA_dump_video_SOURCES = getopt.c getopt1.c getopt.h
+dump_video_LDADD = $(GETOPT_OBJS) $(LDADD)
+dump_video_DEPENDENCIES = $(GETOPT_OBJS)
 
 player_example_SOURCES = player_example.c
 player_example_LDADD = $(LDADD) $(SDL_LIBS) $(VORBIS_LIBS)
