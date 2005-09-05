@@ -266,6 +266,7 @@ AC_OUTPUT([
   debian/Makefile
   tests/Makefile
   lib/Version_script
+  m4/Makefile
   libtheora.spec
   theora.pc
   theora-uninstalled.pc

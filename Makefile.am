@@ -2,7 +2,7 @@
 
 AUTOMAKE_OPTIONS = foreign 1.6 dist-zip dist-bzip2
 
-SUBDIRS = lib include doc examples debian tests
+SUBDIRS = lib include doc examples debian tests m4
 
 EXTRA_DIST = COPYING autogen.sh win32 libtheora.spec libtheora.spec.in \
 	theora-uninstalled.pc.in
