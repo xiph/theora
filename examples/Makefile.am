@@ -16,6 +16,7 @@ dump_video_LDADD = $(GETOPT_OBJS) $(LDADD)
 dump_video_DEPENDENCIES = $(GETOPT_OBJS)
 
 player_example_SOURCES = player_example.c
+player_example_CFLAGS = $(SDL_CFLAGS) $(OGG_CFLAGS)
 player_example_LDADD = $(LDADD) $(SDL_LIBS) $(VORBIS_LIBS)
 
 encoder_example_SOURCES = encoder_example.c
