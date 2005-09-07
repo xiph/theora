@@ -217,7 +217,7 @@ if test "x${ac_enable_encode}" != xyes ; then
 	[Define to exclude encode support from the build])
 else
     if test x$HAVE_VORBIS = xyes; then
-      BUILDABLE_EXAMPLES="$BUILDABLE_EXAMPLES encoder_example"
+      BUILDABLE_EXAMPLES="$BUILDABLE_EXAMPLES encoder_example\$(EXEEXT)"
     else
       AC_MSG_NOTICE([Vorbis missing, cannot build example encoder])
     fi

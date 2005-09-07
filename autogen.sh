@@ -117,7 +117,8 @@ autoconf || exit 1
 # this search and replace hack is specifically for MacOSX where automake
 # picks up changelog in debian/ because of filesystem
 # case-not-quite-sensitivity breaking make distcheck
-perl -i -p -e 's/DIST_COMMON = ChangeLog/DIST_COMMON =/g' debian/Makefile.in
+perl -i.bak -p -e 's/DIST_COMMON = ChangeLog/DIST_COMMON =/g' debian/Makefile.in
+rm debian/Makefile.in.bak
 
 cd 
 cd $olddir
