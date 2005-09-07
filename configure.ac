@@ -263,7 +263,6 @@ AC_OUTPUT([
   include/Makefile include/theora/Makefile
   examples/Makefile
   doc/Makefile doc/Doxyfile
-  debian/Makefile
   tests/Makefile
   lib/Version_script
   m4/Makefile
