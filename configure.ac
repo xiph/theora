@@ -104,14 +104,22 @@ fi
 CFLAGS="$CFLAGS $cflags_save"
 LDFLAGS="$LDFLAGS $ldflags_save"
 
-dnl Set extra linker options
-case "$target_os" in
+# Test whenever ld supports -version-script
+AC_PROG_LD
+AC_PROG_LD_GNU
+if test "x$lt_cv_prog_gnu_ld" = "xyes"; then
+   SHLIB_VERSION_ARG="Wl,--version-script=Version_script"
+
+   dnl Set extra linker options
+   case "$target_os" in
 	linux* | solaris* )
 		SHLIB_VERSION_ARG="-Wl,--version-script=Version_script"
 		;;
 	*)
 		;;
-esac
+   esac
+fi
+
 AC_SUBST(SHLIB_VERSION_ARG)
 
 dnl --------------------------------------------------
