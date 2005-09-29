@@ -17,6 +17,8 @@ noinst_PROGRAMS = $(TESTS)
 
 noop_SOURCES = noop.c
 noop_LDADD = $(THEORA_LIBS)
+noop_CFLAGS = $(OGG_CFLAGS)
 
 comment_test_SOURCES = comment-test.c
 comment_test_LDADD = $(THEORA_LIBS)
+comment_test_CFLAGS = $(OGG_CFLAGS)
