@@ -4099,7 +4099,7 @@ Otherwise, if $\bitvar{MBMODES}[\locvar{\mbi}]$ is 6 (INTER\_GOLDEN\_MV),
 Otherwise, if $\bitvar{MBMODES}[\locvar{\mbi}]$ is 4 (INTER\_MV\_LAST2):
 \begin{enumerate}
 \item
-Assign $(\locvar{MVX},\locvar{MVY}$ the value \locvar{LAST2}.
+Assign $(\locvar{MVX},\locvar{MVY})$ the value \locvar{LAST2}.
 \item
 Assign \locvar{LAST2} the value \locvar{LAST1}.
 \item
@@ -4120,8 +4120,9 @@ Assign \locvar{LAST2} the value \locvar{LAST1}.
 Assign \locvar{LAST1} the value $(\locvar{MVX},\locvar{MVY})$.
 \end{enumerate}
 \item
-Otherwise (5:~INTER\_GOLDEN\_NOMV, 1:~INTRA, or \\
- 0:~INTER\_NOMV), assign \locvar{MVX} and \locvar{MVY} the value zero.
+Otherwise ($\bitvar{MBMODES}[\locvar{\mbi}]$ is 5:~INTER\_GOLDEN\_NOMV,
+ 1:~INTRA, or 0:~INTER\_NOMV), assign \locvar{MVX} and \locvar{MVY} the value
+ zero.
 \item
 If $\bitvar{MBMODES}[\locvar{\mbi}]$ is not 7 (not INTER\_MV\_FOUR), then for
  each coded block \locvar{\bi} in macro block \locvar{\mbi}:
@@ -4206,13 +4207,12 @@ DC coefficients all use the same \qi\ value, so as to avoid interference with
 
 The value is actually represented by an index \locvar{\qii} into the list of
  \qi\ values defined for the frame.
-It makes multiple passes through the list of coded blocks, one for each \qi\
- value except the last one.
+The decoder makes multiple passes through the list of coded blocks, one for
+ each \qi\ value except the last one.
 In each pass, an RLE-coded bitmask is decoded to divide the blocks into two
- groups: those that use a value of \qi\ from later in the list, and those that
- do not.
-Each block in the second group is assigned the current \qi\ value.
-Each subsequent pass is restricted to the blocks in the first group.
+ groups: those that use the current \qi\ value in the list, and those that use
+ a value from later in the list.
+Each subsequent pass is restricted to the blocks in the second group.
 
 \begin{enumerate}
 \item
@@ -4244,9 +4244,9 @@ Remove the bit at the head of the string \locvar{BITS} and add its value to
 \paragraph{VP3 Compatibility}
 
 For VP3 compatible streams, only one \qi\ value can be specified in the frame
- header, so the main loop of the above procedure, which goes to
- $\bitvar{NQIIS}-2$ instead of $\bitvar{NQIIS}-1$, is never executed.
-Thus, no bits are read and each block uses the one \qi\ value defined for the
+ header, so the main loop of the above procedure, which would iterate from $0$
+ to $-1$, is never executed.
+Thus, no bits are read, and each block uses the one \qi\ value defined for the
  frame.
 
 \cleardoublepage
