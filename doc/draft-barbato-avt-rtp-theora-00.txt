@@ -78,12 +78,12 @@ Table of Contents
    3.  Configuration Headers  . . . . . . . . . . . . . . . . . . . .  8
      3.1.  In-band Header Transmission  . . . . . . . . . . . . . . .  9
        3.1.1.  Packed Configuration . . . . . . . . . . . . . . . . .  9
-     3.2.  Packed Headers Delivery  . . . . . . . . . . . . . . . . . 10
-       3.2.1.  Packed Headers IANA Considerations . . . . . . . . . . 11
+     3.2.  Out of Band Transmission . . . . . . . . . . . . . . . . . 10
+       3.2.1.  Packed Headers . . . . . . . . . . . . . . . . . . . . 10
      3.3.  Loss of Configuration Headers  . . . . . . . . . . . . . . 12
    4.  Comment Headers  . . . . . . . . . . . . . . . . . . . . . . . 12
    5.  Frame Packetizing  . . . . . . . . . . . . . . . . . . . . . . 13
-     5.1.  Example Fragmented Theora Packet . . . . . . . . . . . . . 13
+     5.1.  Example Fragmented Theora Packet . . . . . . . . . . . . . 14
      5.2.  Packet Loss  . . . . . . . . . . . . . . . . . . . . . . . 16
    6.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 17
      6.1.  Mapping MIME Parameters into SDP . . . . . . . . . . . . . 18
@@ -481,7 +481,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       |                             Ident             | 0 | 1 |      1|
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      |          Setup length         |          Identification      ..
+      |             length            |          Identification      ..
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       ..                        Identification                       ..
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -489,14 +489,14 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       ..                        Identification                        |
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      ..              |              Setup                           ..
+      ..              |                      Setup                   ..
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       ..                            Setup                            ..
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       ..                            Setup                             |
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-   Figure 6: Setup Header
+   Figure 6: Packed Configuration Figure
 
 
 
@@ -511,7 +511,15 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    set to 0 since the packet bears the full Packed configuration, the
    number of packet is set to 1.
 
-3.2.  Packed Headers Delivery
+3.2.  Out of Band Transmission
+
+   This section, as stated before, won't cover all the possible out-of-
+   band delivery methods since they rely to different protocols and be
+   linked to a specific application.  The following packet definition
+   SHOULD be used in out-of-band delivery and MUST be used when
+   Configuration is inlined in the SDP.
+
+3.2.1.  Packed Headers
 
    As mentioned above the RECOMMENDED delivery vector for Theora
    configuration data is via a retrieval method that can be performed
@@ -535,8 +543,24 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    Figure 7: Packed Headers Overview
 
    Since the Configuration Ident and the Identification Header are fixed
-   lenght there is only a 2 byte Setup Lenght tag to define the lenght
-   of the Setup header.
+   lenght there is only a 2 byte Lenght tag to define the lenght of the
+   packed headers.
+
+
+
+
+
+
+
+
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 10]
+
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
+
 
        0                   1                   2                   3
        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -554,18 +578,10 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
    Figure 8: Packed Headers Detail
 
-
-
-
-Barbato                  Expires April 18, 2006                [Page 10]
-
-Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
-
-
    The key difference between the in-band format is there is no need for
    the payload header octet.
 
-3.2.1.  Packed Headers IANA Considerations
+3.2.1.1.  Packed Headers IANA Considerations
 
    The following IANA considerations MUST only be applied to the packed
    headers.
@@ -595,6 +611,13 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
    Published specification:
 
+
+
+Barbato                  Expires April 18, 2006                [Page 11]
+
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
+
+
    See RFC XXXX for details.
 
    Applications which use this media type:
@@ -610,13 +633,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    Intended usage: COMMON
 
    Author/Change controller:
-
-
-
-Barbato                  Expires April 18, 2006                [Page 11]
-
-Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
-
 
    Author: Luca Barbato
 
@@ -642,6 +658,22 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    completely.  The details on the format of the comments can be found
    in the Theora documentation [12].
 
+
+
+
+
+
+
+
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 12]
+
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
+
+
        0                   1                   2                   3
        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -665,14 +697,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    Figure 9: Comment Packet
-
-
-
-
-Barbato                  Expires April 18, 2006                [Page 12]
-
-Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
-
 
    The 2 bytes length field is necessary since this packet could be
    fragmented.
@@ -698,30 +722,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    correct sequence for fragmented packet reception the timestamp field
    of fragmented packets MUST be the same as the first packet sent, with
    the sequence number incremented as normal for the subsequent RTP
-   packets.
-
-5.1.  Example Fragmented Theora Packet
-
-   Here is an example fragmented Theora packet split over three RTP
-   packets.  Each packet contains the standard RTP headers as well as
-   the 4 octet Theora headers.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -729,6 +729,14 @@ Barbato                  Expires April 18, 2006                [Page 13]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
+
+   packets.
+
+5.1.  Example Fragmented Theora Packet
+
+   Here is an example fragmented Theora packet split over three RTP
+   packets.  Each packet contains the standard RTP headers as well as
+   the 4 octet Theora headers.
 
       Packet 1:
 
@@ -759,14 +767,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    the start packet of a serie of fragments.  The number of packets
    field is set to 0, and as the payload is raw Theora data the Theora
    payload type field is set to 0.
-
-
-
-
-
-
-
-
 
 
 
@@ -921,7 +921,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    values are:inline, in_band, out_band/specific-method
 
    configuration: the base16 [15] (hexadecimal) representation of the
-   Packed Headers (Section 3.2).
+   Packed Headers (Section 3.2.1).
 
    Optional Parameters:
 
@@ -1001,7 +1001,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    location where all of the Configuration Packets needed for the life
    of the session reside.
 
-   Example:
+   The answer to any offer, [5], MUST NOT change the URI specified in
 
 
 
@@ -1010,15 +1010,16 @@ Barbato                  Expires April 18, 2006                [Page 18]
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
+   the configuration-uri attribute.  The Configuration inlined in the
+   configuration parameter COULD change.
+
+   Example:
+
       c=IN IP4/6
       m=video RTP/AVP 98
       a=rtpmap:98 theora/90000
       a=fmtp:98 sampling=YCbCr-4:2:2; width=1280; height=720; delivery-
       method=inline; configuration=base16string1;
-
-   The answer to any offer, [5], MUST NOT change the URI specified in
-   the configuration-uri attribute.  The Configuration inlined in the
-   configuration parameter COULD change.
 
 
 7.  Security Considerations
@@ -1057,7 +1058,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
          RFC 3550.
 
    [4]   Schulzrinne, H. and S. Casner, "RTP Profile for video and Video
-         Conferences with Minimal Control.", RFC 3551.
 
 
 
@@ -1065,6 +1065,8 @@ Barbato                  Expires April 18, 2006                [Page 19]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
+
+         Conferences with Minimal Control.", RFC 3551.
 
    [5]   Rosenberg, J. and H. Schulzrinne, "An Offer/Answer Model with
          Session Description Protocol (SDP)", RFC 3264.
@@ -1106,8 +1108,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
    [15]  Josefsson, S., "The Base16, Base32, and Base64 Data Encodings",
          RFC 3548.
-
-
 
 
 

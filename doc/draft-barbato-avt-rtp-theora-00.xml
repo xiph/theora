@@ -341,7 +341,7 @@ The <xref target="Packed Configuration">Packed Configuration</xref> Payload is s
 A Theora Packed Configuration is indicated with the payload type field set to 1. Of the three headers, defined in the <xref target="theora-spec-ref">Theora I specification</xref>, the identification and the setup will be packed together, the comment header is completely suppressed. Is up to the client provide a minimal size comment header to the decoder if required by the implementation.
 </t>
 
-<figure anchor="Setup Header Figure" title="Setup Header">
+<figure anchor="Packed Configuration Figure" title="Packed Configuration Figure">
 <artwork><![CDATA[
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -358,7 +358,7 @@ A Theora Packed Configuration is indicated with the payload type field set to 1.
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                             Ident             | 0 | 1 |      1|
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |          Setup length         |          Identification      ..
+   |             length            |          Identification      ..
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    ..                        Identification                       ..
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -366,7 +366,7 @@ A Theora Packed Configuration is indicated with the payload type field set to 1.
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    ..                        Identification                        |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   ..              |              Setup                           ..
+   ..              |                      Setup                   ..
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    ..                            Setup                            ..
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -382,7 +382,14 @@ A Theora Packed Configuration is indicated with the payload type field set to 1.
 
 </section>
 
-<section anchor="Packed Headers Delivery" title="Packed Headers Delivery"> 
+
+<section anchor="Out of Band Transmission" title="Out of Band Transmission">
+
+<t>
+This section, as stated before, won't cover all the possible out-of-band delivery methods since they rely to different protocols and be linked to a specific application. The following packet definition SHOULD be used in out-of-band delivery and MUST be used when Configuration is inlined in the SDP.
+</t>
+
+<section anchor="Packed Headers" title="Packed Headers"> 
 
 <t>
 As mentioned above the RECOMMENDED delivery vector for Theora configuration data is via a retrieval method that can be performed using a reliable transport protocol. As the RTP headers are not required for this method of delivery the structure of the configuration data is slightly different. The packed header starts with a 32 bit count field which details the number of packed headers that are contained in the bundle. Next is the Packed header payload for each chained Theora stream.
@@ -403,7 +410,7 @@ As mentioned above the RECOMMENDED delivery vector for Theora configuration data
 </figure>
 
 <t>
-Since the Configuration Ident and the Identification Header are fixed lenght there is only a 2 byte Setup Lenght tag to define the lenght of the Setup header.
+Since the Configuration Ident and the Identification Header are fixed lenght there is only a 2 byte Lenght tag to define the lenght of the packed headers.
 </t>
 
 <figure anchor="Packed Headers Detail Figure" title="Packed Headers Detail">
@@ -490,6 +497,7 @@ Intended usage: COMMON
 <t>Change controller: IETF AVT Working Group</t>
 
 
+</section>
 </section>
 </section>
 
@@ -690,7 +698,7 @@ height: Determines the number of lines per frame. This is an integer between 1 a
 delivery-method: indicates the delivery methods in use, the possible values are:inline, in_band, out_band/specific-method
 </t>
 <t>
-configuration: the <xref target="rfc3548">base16</xref> (hexadecimal) representation of the <xref target="Packed Headers Delivery">Packed Headers</xref>.
+configuration: the <xref target="rfc3548">base16</xref> (hexadecimal) representation of the <xref target="Packed Headers">Packed Headers</xref>.
 </t>
 
 <t>
@@ -771,6 +779,9 @@ If the stream comprises chained Theora files and all of them are known in advanc
 The URI specified in the configuration-uri attribute MUST point to a location where all of the Configuration Packets needed for the life of the session reside.
 </t>
 
+<t>
+The answer to any offer, <xref target="rfc3264"></xref>, MUST NOT change the URI specified in the configuration-uri attribute. The Configuration inlined in the configuration parameter COULD change.
+</t>
 <t>Example:</t>
 
 <vspace blankLines="1" />
@@ -782,9 +793,6 @@ The URI specified in the configuration-uri attribute MUST point to a location wh
 <t>a=fmtp:98 sampling=YCbCr-4:2:2; width=1280; height=720; delivery-method=inline; configuration=base16string1;</t>
 </list>
 
-<t>
-The answer to any offer, <xref target="rfc3264"></xref>, MUST NOT change the URI specified in the configuration-uri attribute. The Configuration inlined in the configuration parameter COULD change.
-</t>
 
 </section> 
 </section>
