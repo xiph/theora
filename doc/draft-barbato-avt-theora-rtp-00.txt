@@ -1,0 +1,1234 @@
+
+
+
+
+AVT Working Group                                             L. Barbato
+Internet-Draft                                                  Xiph.Org
+Expires: April 18, 2006                                 October 15, 2005
+
+
+                    draft-barbato-avt-theora-rtp-00
+              RTP Payload Format for Theora Encoded Video
+
+Status of this Memo
+
+   This document is an Internet-Draft and is subject to all provisions
+   of Section 3 of RFC 3667.  By submitting this Internet-Draft, each
+   author represents that any applicable patent or other IPR claims of
+   which he or she is aware have been or will be disclosed, and any of
+   which he or she become aware will be disclosed, in accordance with
+   RFC 3668.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF), its areas, and its working groups.  Note that
+   other groups may also distribute working documents as Internet-
+   Drafts.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   The list of current Internet-Drafts can be accessed at
+   http://www.ietf.org/ietf/1id-abstracts.txt.
+
+   The list of Internet-Draft Shadow Directories can be accessed at
+   http://www.ietf.org/shadow.html.
+
+   This Internet-Draft will expire on April 18, 2006.
+
+Copyright Notice
+
+   Copyright (C) The Internet Society (2005).
+
+Abstract
+
+   This document describes a RTP payload format for transporting Theora
+   encoded video.  It details the RTP encapsulation mechanism for raw
+   Theora data and configuration headers consisting of the quantization
+   matrices and the Huffman codebooks for the DCT coefficients, and a
+   table of limit values for the deblocking filter.
+
+   Also included within the document are the necessary details for the
+
+
+
+Barbato                  Expires April 18, 2006                 [Page 1]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+   use of Theora with MIME and Session Description Protocol (SDP).
+
+Editors Note
+
+   All references to RFC XXXX are to be replaced by references to the
+   RFC number of this memo, when published.
+
+
+Table of Contents
+
+   1.  Introduction . . . . . . . . . . . . . . . . . . . . . . . . .  3
+     1.1.  Terminology  . . . . . . . . . . . . . . . . . . . . . . .  3
+   2.  Payload Format . . . . . . . . . . . . . . . . . . . . . . . .  4
+     2.1.  RTP Header . . . . . . . . . . . . . . . . . . . . . . . .  4
+     2.2.  Payload Header . . . . . . . . . . . . . . . . . . . . . .  5
+     2.3.  Payload Data . . . . . . . . . . . . . . . . . . . . . . .  6
+     2.4.  Example RTP Packet . . . . . . . . . . . . . . . . . . . .  7
+   3.  Configuration Headers  . . . . . . . . . . . . . . . . . . . .  8
+     3.1.  In-band Header Transmission  . . . . . . . . . . . . . . .  9
+       3.1.1.  Packed Configuration . . . . . . . . . . . . . . . . .  9
+     3.2.  Packed Headers Delivery  . . . . . . . . . . . . . . . . . 10
+       3.2.1.  Packed Headers IANA Considerations . . . . . . . . . . 11
+     3.3.  Loss of Configuration Headers  . . . . . . . . . . . . . . 12
+   4.  Comment Headers  . . . . . . . . . . . . . . . . . . . . . . . 12
+   5.  Frame Packetizing  . . . . . . . . . . . . . . . . . . . . . . 13
+     5.1.  Example Fragmented Theora Packet . . . . . . . . . . . . . 13
+     5.2.  Packet Loss  . . . . . . . . . . . . . . . . . . . . . . . 16
+   6.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 17
+     6.1.  Mapping MIME Parameters into SDP . . . . . . . . . . . . . 18
+   7.  Security Considerations  . . . . . . . . . . . . . . . . . . . 19
+   8.  Acknowledgments  . . . . . . . . . . . . . . . . . . . . . . . 19
+   9.  References . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+     9.1.  Normative References . . . . . . . . . . . . . . . . . . . 19
+     9.2.  Informative References . . . . . . . . . . . . . . . . . . 20
+   Author's Address . . . . . . . . . . . . . . . . . . . . . . . . . 21
+   Intellectual Property and Copyright Statements . . . . . . . . . . 22
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Barbato                  Expires April 18, 2006                 [Page 2]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+1.  Introduction
+
+   Theora is a general purpose, lossy video codec.  It is based on the
+   VP3.1 video codec produced by On2 Technologies and has been donated
+   to the Xiph.org Foundation.
+
+   Theora I is a block-based lossy transform codec that utilizes an 8 x
+   8 Type-II Discrete Cosine Transform and block-based motion
+   compensation.  This places it in the same class of codecs as MPEG-1,
+   MPEG-2, MPEG-4, and H.263.  The details of how individual blocks are
+   organized and how DCT coefficients are stored in the bitstream differ
+   substantially from these codecs, however.  Theora supports only intra
+   frames (I frames in MPEG) and inter frames (P frames in MPEG).
+
+   Theora provides none of its own framing, synchronization, or
+   protection against transmission errors.  Theora is a free-form
+   variable bit rate (VBR) codec, and packets have no minimum size,
+   maximum size, or fixed/expected size.  Theora packets are thus
+   intended to be used with a transport mechanism that provides free-
+   form framing, synchronization, positioning, and error correction in
+   accordance with these design assumptions, such as Ogg [1]. or RTP/AVP
+   [3].
+
+   Theora I currently supports progressive video data of arbitrary
+   dimensions at a constant frame rate in one of several YCbCr color
+   spaces.  Three different chroma subsampling formats are supported:
+   4:2:0, 4:2:2, and 4:4:4.  The Theora I format does not support
+   interlaced material, variable frame rates, bit-depths larger than 8
+   bits per component, nor alternate color spaces such as RGB or
+   arbitrary multi-channel spaces.  Black and white content can be
+   efficiently encoded, however, because the uniform chroma planes
+   compress well.
+
+   Theora is similar to Vorbis audio [10] in that it requires the
+   inclusion of the entire probability model for the DCT coefficients
+   and all the quantization parameters in the bitstream headers to be
+   sent ahead of the video data.  It is therefore impossible to decode
+   any frame in the stream without having previously fetched the codec
+   info and codec setup headers, although Theora can initiate decode at
+   an arbitrary intra-frame packet within a bitstream so long as the
+   codec has been initialized with the setup headers.
+
+1.1.  Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in RFC 2119 [2].
+
+
+
+
+Barbato                  Expires April 18, 2006                 [Page 3]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+2.  Payload Format
+
+   Each frame of digital video is packetized into one or more RTP
+   packets.  If the data for a complete frame exceeds the network MTU,
+   it SHOULD be fragmented into multiple RTP packets, each smaller than
+   the MTU.  A single RTP packet MAY contain data for more than one
+   Theora frame.
+
+   For RTP based transportation of Theora encoded video the standard RTP
+   header is followed by a 4 octet payload header, then the payload
+   data.
+
+2.1.  RTP Header
+
+   The format of the RTP header is specified in [3] and shown in Figure
+   1.  This payload format uses the fields of the header in a manner
+   consistent with that specification.
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |V=2|P|X|  CC   |M|     PT      |       sequence number         |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                           timestamp                           |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |           synchronization source (SSRC) identifier            |
+      +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+      |            contributing source (CSRC) identifiers             |
+      |                              ...                              |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Figure 1: RTP Header
+
+   The RTP header begins with an octet of fields (V, P, X, and CC) to
+   support specialized RTP uses (see [3] and [4] for details).  For
+   Theora RTP, the following values are used.
+
+   Version (V): 2 bits
+
+   This field identifies the version of RTP.  The version used by this
+   specification is two (2).
+
+   Padding (P): 1 bit
+
+   Padding MAY be used with this payload format according to section 5.1
+   of [3].
+
+   Extension (X): 1 bit
+
+
+
+Barbato                  Expires April 18, 2006                 [Page 4]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+   The Extension bit is used in accordance with [3].
+
+   CSRC count (CC): 4 bits
+
+   The CSRC count is used in accordance with [3].
+
+   Marker (M): 1 bit
+
+   The Marker bit is used in accordance with [3].
+
+   Payload Type (PT): 7 bits
+
+   An RTP profile for a class of applications is expected to assign a
+   payload type for this format, or a dynamically allocated payload type
+   SHOULD be chosen which designates the payload as Theora.
+
+   Sequence number: 16 bits
+
+   The sequence number increments by one for each RTP data packet sent,
+   and may be used by the receiver to detect packet loss and to restore
+   packet sequence.  This field is detailed further in [3].
+
+   Timestamp: 32 bits
+
+   A timestamp representing the sampling time of the first sample of the
+   first Theora packet in the RTP packet.  The clock frequency MUST be
+   set to the sample rate of the encoded video data and is conveyed out-
+   of-band as an SDP attribute.
+
+   SSRC/CSRC identifiers:
+
+   These two fields, 32 bits each with one SSRC field and a maximum of
+   16 CSRC fields, are as defined in [3].
+
+2.2.  Payload Header
+
+   After the RTP Header section the following five octets are the
+   Payload Header.  This header is split into a number of bitfields
+   detailing the format of the following Payload Data packets.
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |               Configuration Ident             | F |TDT|# pkts.|
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+      +-+-+-+-+-+-+-+-+
+
+
+
+
+Barbato                  Expires April 18, 2006                 [Page 5]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+   Figure 2: Payload Header
+
+   Configuration Ident: 24 bits
+
+   This 24 bit field is used to associate the Theora data to a decoding
+   Packed Configuration.
+
+   Fragment type (F): 2 bit
+
+   This field is set accordingly the following list
+
+      0 = Not Fragmented
+      1 = Start Fragment
+      2 = Continuation Fragment
+      3 = End Fragment
+
+   Theora Data Type (TDT): 2 bits
+
+   This field sets the packet payload type for the Theora data.  There
+   are currently two type of Vorbis payloads.
+
+      0 = Raw Theora payload
+      1 = Theora Packed Configuration payload
+      2 = Legacy Theora Comment payload
+      3 = Reserved
+
+   The last 4 bits are the number of complete packets in this payload.
+   This provides for a maximum number of 15 Theora packets in the
+   payload.  If the packet contains fragmented data the number of
+   packets MUST be set to 0.
+
+2.3.  Payload Data
+
+   Each Theora payload section starts with a two octet length header
+   that is used to represent the size of the following data payload,
+   followed by the raw Theora data.
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |        Payload Length         |          Theora Data         ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Figure 3: Payload Data
+
+   The Theora codec uses relatively unstructured raw packets containing
+   binary integer fields of arbitrary width that often do not fall on an
+   octet boundary.  When this happens the bitstream is packed to an
+
+
+
+Barbato                  Expires April 18, 2006                 [Page 6]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+   octet boundary.  When a Theora encoder produces packets, unused space
+   in the last byte of a packet is always zeroed during the encoding
+   process.  Thus, should this unused space be read, it will return
+   binary zeros.
+
+   For payloads which consist of multiple Theora packets the payload
+   data consists of the payload length field followed by the payload
+   data for each of the Theora packets in the payload.
+
+2.4.  Example RTP Packet
+
+   Here is an example RTP packet containing two Theora packets.
+
+   RTP Packet Header:
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      | 2 |0|0|  0    |0|      PT     |       sequence number         |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                 timestamp (in sample rate units)              |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |          synchronisation source (SSRC) identifier             |
+      +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+      |            contributing source (CSRC) identifiers             |
+      |                              ...                              |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Figure 4: Example RTP Packet
+
+   Payload Data:
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |               Configuration Ident            | 0 | 0 | 2 pks  |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |        Payload Length         |                              ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..                        Theora data                          ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..           data               |        Payload Length         |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..                        Theora data                           |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Figure 5: Example Theora Payload Packet
+
+
+
+
+Barbato                  Expires April 18, 2006                 [Page 7]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+   The payload portion of the packet starts with the 24 bit
+   Configuration ident field followed by the 8 bit bitfield.  The
+   Fragment type field is set to 0, indicating that this packet contains
+   whole Theora frame data.  The Data type field is set to 0 since it is
+   theora raw data.  The number of whole Theora data packets is set to
+   2.
+
+   Each of the payload blocks starts with the two octet length field and
+   then follows by the variable length Theora data.
+
+
+3.  Configuration Headers
+
+   To decode a Theora stream three configuration header blocks are
+   needed.  The first header, the Identification Header, indicates the
+   frame dimensions, quality, blocks used and the version of the Theora
+   encoder used.  The second header, the Comment Header, contains stream
+   metadata and the third header, the Setup Header, details which
+   contains dequantization and Huffman tables.
+
+   Since this information must be transmitted reliably, and as the RTP
+   stream may change certain configuration data mid-session there are
+   different methods for delivering this configuration data to a client,
+   both in-band and out-of-band which is detailed below.  SDP delivery
+   is used to set-up an initial state for the client application.  The
+   changes may be due to different dequantization and Huffman tables as
+   well as different bitrates of the stream.
+
+   The delivery vectors in use are specified by an SDP attribute to
+   indicate the method and the optional URI where the Vorbis Packed
+   Configuration (Section 3.1.1) Packets could be fetched.  Different
+   delivery methods MAY be advertised for the same session.  The in-band
+   codebook delivery SHOULD be considered as baseline, out-of-band
+   delivery methods that don't use RTP will not be described in this
+   document.  For non chained streams, the Configuration delivery method
+   RECOMMENDED is inline the Packed Configuration (Section 3.1.1) in the
+   SDP as explained in the IANA considerations (Section 6.1)
+
+   The 24 bit Ident field is used to map which Configuration will be
+   used to decodea packet.  When the Ident field changes, it indicates
+   that a change in the stream has taken place.  The client application
+   MUST have in advance the correct configuration and if the client
+   detects a change in the Ident value and does not have this
+   information it MUST NOT decode the raw data associated until it
+   fetches the correct Configuration.
+
+
+
+
+
+
+Barbato                  Expires April 18, 2006                 [Page 8]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+3.1.  In-band Header Transmission
+
+   The Packed Configuration (Section 3.1.1) Payload is sent in-band with
+   the packet type bits set to match the payload type.  Clients MUST be
+   capable of dealing with periodic re-transmission of the configuration
+   headers.
+
+3.1.1.  Packed Configuration
+
+   A Theora Packed Configuration is indicated with the payload type
+   field set to 1.  Of the three headers, defined in the Theora I
+   specification [12], the identification and the setup will be packed
+   together, the comment header is completely suppressed.  Is up to the
+   client provide a minimal size comment header to the decoder if
+   required by the implementation.
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |V=2|P|X|  CC   |M|     PT      |             xxxx              |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                             xxxxx                             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |           synchronization source (SSRC) identifier            |
+      +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+      |            contributing source (CSRC) identifiers             |
+      |                              ...                              |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                             Ident             | 0 | 1 |      1|
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |          Setup length         |          Identification      ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..                        Identification                       ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..                        Identification                       ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..                        Identification                        |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..              |              Setup                           ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..                            Setup                            ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..                            Setup                             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Figure 6: Setup Header
+
+
+
+
+Barbato                  Expires April 18, 2006                 [Page 9]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+   The Ident field is set with the value that will be used by the Raw
+   Payload Packets to address this Configuration.  The Fragment type is
+   set to 0 since the packet bears the full Packed configuration, the
+   number of packet is set to 1.
+
+3.2.  Packed Headers Delivery
+
+   As mentioned above the RECOMMENDED delivery vector for Theora
+   configuration data is via a retrieval method that can be performed
+   using a reliable transport protocol.  As the RTP headers are not
+   required for this method of delivery the structure of the
+   configuration data is slightly different.  The packed header starts
+   with a 32 bit count field which details the number of packed headers
+   that are contained in the bundle.  Next is the Packed header payload
+   for each chained Theora stream.
+
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                     Number of packed headers                  |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                          Packed header                        |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                          Packed header                        |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Figure 7: Packed Headers Overview
+
+   Since the Configuration Ident and the Identification Header are fixed
+   lenght there is only a 2 byte Setup Lenght tag to define the lenght
+   of the Setup header.
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                   Ident                       |              ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..   Length     |              Identification Header           ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..                    Identification Header                     |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                          Setup Header                        ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..                         Setup Header                         |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Figure 8: Packed Headers Detail
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 10]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+   The key difference between the in-band format is there is no need for
+   the payload header octet.
+
+3.2.1.  Packed Headers IANA Considerations
+
+   The following IANA considerations MUST only be applied to the packed
+   headers.
+
+   MIME media type name: video
+
+   MIME subtype: theora-config
+
+   Required Parameters:
+
+   None.
+
+   Optional Parameters:
+
+   None.
+
+   Encoding considerations:
+
+   This type is only defined for transfer via non RTP protocol as
+   specified in RFC XXXX.
+
+   Security Considerations:
+
+   See Section 6 of RFC 3047.
+
+   Interoperability considerations: none
+
+   Published specification:
+
+   See RFC XXXX for details.
+
+   Applications which use this media type:
+
+   Theora encoded video, configuration data.
+
+   Additional information: none
+
+   Person & email address to contact for further information:
+
+   Luca Barbato: <lu_zero@gentoo.org>
+
+   Intended usage: COMMON
+
+   Author/Change controller:
+
+
+
+Barbato                  Expires April 18, 2006                [Page 11]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+   Author: Luca Barbato
+
+   Change controller: IETF AVT Working Group
+
+3.3.  Loss of Configuration Headers
+
+   Unlike the loss of raw Theora payload data, loss of a configuration
+   header can lead to a situation where it will not be possible to
+   successfully decode the stream.
+
+   Loss of Configuration Packet results in the halting of stream
+   decoding and SHOULD be reported to the client as well as a loss
+   report sent via RTCP.
+
+
+4.  Comment Headers
+
+   With the payload type flag set to 2, this indicates that the packet
+   contain the comment metadata, such as artist name, track title and so
+   on.  These metadata messages are not intended to be fully descriptive
+   but to offer basic track/song information.  Clients MAY ignore it
+   completely.  The details on the format of the comments can be found
+   in the Theora documentation [12].
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |V=2|P|X|  CC   |M|     PT      |             xxxx              |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                             xxxxx                             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |           synchronization source (SSRC) identifier            |
+      +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+      |            contributing source (CSRC) identifiers             |
+      |                              ...                              |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                      Ident                    | 0 | 2 |      1|
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |            length             |            Comment           ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..                           Comment                           ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..                           Comment                            |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Figure 9: Comment Packet
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 12]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+   The 2 bytes length field is necessary since this packet could be
+   fragmented.
+
+
+5.  Frame Packetizing
+
+   Each RTP packet contains either one complete Theora packet, one
+   Theora packet fragment, or an integer number of complete Theora
+   packets (up to a max of 15 packets, since the number of packets is
+   defined by a 4 bit value).
+
+   Any Theora data packet that is less than path MTU SHOULD be bundled
+   in the RTP packet with as many Theora packets as will fit, up to a
+   maximum of 15.  Path MTU is detailed in [7] and [8].
+
+   If a Theora packet is larger than 65535 octets it MUST be fragmented.
+   A fragmented packet has a zero in the last four bits of the payload
+   header.  The first fragment will set the Fragment type to 1.  Each
+   fragment after the first will set the Fragment type to 2 in the
+   payload header.  The RTP packet containing the last fragment of the
+   Theora packet will have the Fragment type set to 3.  To maintain the
+   correct sequence for fragmented packet reception the timestamp field
+   of fragmented packets MUST be the same as the first packet sent, with
+   the sequence number incremented as normal for the subsequent RTP
+   packets.
+
+5.1.  Example Fragmented Theora Packet
+
+   Here is an example fragmented Theora packet split over three RTP
+   packets.  Each packet contains the standard RTP headers as well as
+   the 4 octet Theora headers.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 13]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+      Packet 1:
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |V=2|P|X|  CC   |M|     PT      |           1000                |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                             xxxxx                             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |           synchronization source (SSRC) identifier            |
+      +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+      |            contributing source (CSRC) identifiers             |
+      |                              ...                              |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |              Configuration Ident              | 1 | 0 |      0|
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |        Payload Length         |           Theora data        ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..                        Theora data                          ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Figure 10: Example Fragmented Packet (Packet 1)
+
+   In this packet the initial sequence number is 1000 and the timestamp
+   is xxxxx.  The Fragment type field is set to one, indicating it is
+   the start packet of a serie of fragments.  The number of packets
+   field is set to 0, and as the payload is raw Theora data the Theora
+   payload type field is set to 0.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 14]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+      Packet 2:
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |V=2|P|X|  CC   |M|     PT      |           1001                |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                             xxxxx                             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |           synchronization source (SSRC) identifier            |
+      +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+      |            contributing source (CSRC) identifiers             |
+      |                              ...                              |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                Configuration Ident            | 2 | 0 |      0|
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |        Payload Length         |              ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..                        Theora data                          ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Figure 11: Example Fragmented Packet (Packet 2)
+
+   The Fragment type field is set to 2 and the number of packets field
+   is set to 0.  For large Theora fragments there can be several of
+   these type of payload packets.  The maximum packet size SHOULD be no
+   greater than the path MTU, including all RTP and payload headers.
+   The sequence number has been incremented by one but the timestamp
+   field remains the same as the initial packet.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 15]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+      Packet 3:
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |V=2|P|X|  CC   |M|     PT      |           1002                |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                             xxxxx                             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |           synchronization source (SSRC) identifier            |
+      +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+      |            contributing source (CSRC) identifiers             |
+      |                              ...                              |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |           Configuration Ident                 | 3 | 0 |      0|
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |        Payload Length         |                              ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ..                         Theora data                         ..
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Figure 12: Example Fragmented Packet (Packet 3)
+
+   This is the last Theora fragment packet.  The Fragment type filed is
+   set to 3 and the packet count remains set to 0.  As in the previous
+   packets the timestamp remains set to the first packet in the sequence
+   and the sequence number has been incremented.
+
+5.2.  Packet Loss
+
+   As there is no error correction within the Theora stream, packet loss
+   will result in a loss of signal.  Packet loss is more of an issue for
+   fragmented Theora packets as the client will have to cope with the
+   handling of the Fragment type field.  If we use the fragmented Theora
+   packet example above and the first packet is lost the client MUST
+   detect that the next packet has the packet count field set to 0 and
+   the Fragment type is set to 2 and MUST drop it.  The next packet,
+   which is the final fragmented packet, MUST be dropped in the same
+   manner.  Feedback reports on lost and dropped packets MUST be sent
+   back via RTCP.
+
+   If a particular multicast session has a large number of participants
+   care must be taken to prevent an RTCP feedback implosion, [9], in the
+   event of packet loss from a large number of participants.
+
+   Loss of any of the Configuration fragment will result in the loss of
+   the full Configuration packet with the result detailed in the Loss of
+
+
+
+Barbato                  Expires April 18, 2006                [Page 16]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+   Configuration Headers (Section 3.3) section.
+
+
+6.  IANA Considerations
+
+   MIME media type name: video
+
+   MIME subtype: theora
+
+   Required Parameters:
+
+   sampling: Determines the chroma subsampling format.
+
+   width: Determines the number of pixels per line.  This is an integer
+   between 1 and 1048561 and MUST be in multiples of 16.
+
+   height: Determines the number of lines per frame.  This is an integer
+   between 1 and 1048561 and MUST be in multiples of 16.
+
+   delivery-method: indicates the delivery methods in use, the possible
+   values are:inline, in_band, out_band/specific-method
+
+   configuration: the base16 [15] (hexadecimal) representation of the
+   Packed Headers (Section 3.2).
+
+   Optional Parameters:
+
+   configuration-uri: the URI of the configuration headers in case of
+   out of band transmission.  In the form of
+   "protocol://path/to/resource/".  Depending on the specific method the
+   single ident packet could be retrived by their number, or aggregated
+   in a single stream.
+
+   Encoding considerations:
+
+   This type is only defined for transfer via RTP as specified in RFC
+   XXXX.
+
+   Security Considerations:
+
+   See Section 6 of RFC 3047.
+
+   Interoperability considerations: none
+
+   Published specification:
+
+   See the Theora documentation [12] for details.
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 17]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+   Applications which use this media type:
+
+   Video streaming and conferencing tools
+
+   Additional information: none
+
+   Person & email address to contact for further information:
+
+   Luca Barbato: <lu_zero@gentoo.org>
+
+   Intended usage: COMMON
+
+   Author/Change controller:
+
+   Author: Luca Barbato
+
+   Change controller: IETF AVT Working Group
+
+6.1.  Mapping MIME Parameters into SDP
+
+   The information carried in the MIME media type specification has a
+   specific mapping to fields in the Session Description Protocol (SDP)
+   [6], which is commonly used to describe RTP sessions.  When SDP is
+   used to specify sessions the mapping are as follows:
+
+   o  The MIME type ("video") goes in SDP "m=" as the media name.
+
+   o  The MIME subtype ("THEORA") goes in SDP "a=rtpmap" as the encoding
+      name.
+
+   o  The parameter "rate" also goes in "a=rtpmap" as clock rate.
+
+   o  The mandated parameters "delivery-method" and "configuration" MUST
+      be included in the SDP "a=fmpt" attribute.
+
+   o  The optional parameter "configuration-uri", when present, MUST be
+      included in the SDP "a=fmpt" attribute.
+
+   If the stream comprises chained Theora files and all of them are
+   known in advance, the Configuration Packet for each file SHOULD be
+   packaged together and passed to the client using the configuration
+   attribute.
+
+   The URI specified in the configuration-uri attribute MUST point to a
+   location where all of the Configuration Packets needed for the life
+   of the session reside.
+
+   Example:
+
+
+
+Barbato                  Expires April 18, 2006                [Page 18]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+      c=IN IP4/6
+      m=video RTP/AVP 98
+      a=rtpmap:98 theora/90000
+      a=fmtp:98 sampling=YCbCr-4:2:2; width=1280; height=720; delivery-
+      method=inline; configuration=base16string1;
+
+   The answer to any offer, [5], MUST NOT change the URI specified in
+   the configuration-uri attribute.  The Configuration inlined in the
+   configuration parameter COULD change.
+
+
+7.  Security Considerations
+
+   RTP packets using this payload format are subject to the security
+   considerations discussed in the RTP specification [3].  This implies
+   that the confidentiality of the media stream is achieved by using
+   encryption.  Because the data compression used with this payload
+   format is applied end-to-end, encryption may be performed on the
+   compressed data.  Where the size of a data block is set care MUST be
+   taken to prevent buffer overflows in the client applications.
+
+
+8.  Acknowledgments
+
+   This document is a continuation of draft-kerr-avt-theora-rtp-00.txt
+
+   Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph
+   Giles, Mike Smith, Phil Kerr, Politecnico di Torino (LS)^3/IMG Group
+   in particular Federico Ridolfo, Francesco Varano, Giampaolo Mancini,
+   Juan Carlos De Martin.
+
+
+9.  References
+
+9.1.  Normative References
+
+   [1]   Pfeiffer, S., "The Ogg Encapsulation Format Version 0",
+         RFC 3533.
+
+   [2]   Bradner, S., "Key words for use in RFCs to Indicate Requirement
+         Levels", RFC 2119.
+
+   [3]   Schulzrinne, H., Casner, S., Frederick, R., and V. Jacobson,
+         "RTP: A Transport Protocol for real-time applications",
+         RFC 3550.
+
+   [4]   Schulzrinne, H. and S. Casner, "RTP Profile for video and Video
+         Conferences with Minimal Control.", RFC 3551.
+
+
+
+Barbato                  Expires April 18, 2006                [Page 19]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+   [5]   Rosenberg, J. and H. Schulzrinne, "An Offer/Answer Model with
+         Session Description Protocol (SDP)", RFC 3264.
+
+   [6]   Handley, M. and V. Jacobson, "SDP: Session Description
+         Protocol", RFC 2327.
+
+   [7]   Mogul et al., J., "Path MTU Discovery", RFC 1063.
+
+   [8]   McCann et al., J., "Path MTU Discovery for IP version 6",
+         RFC 1981.
+
+   [9]   Ott, J., Wenger, S., Sato, N., Burmeister, C., and J. Rey,
+         "Extended RTP Profile for RTCP-based Feedback (RTP/AVPF)",
+         Internet Draft (draft-ietf-avt-rtcp-feedback-11: Work in
+         progress).
+
+   [10]  Kerr, P., "RTP Payload Format for Vorbis Encoded Audio -
+         draft-ietf-avt-vorbis-rtp-00", Internet Draft (Work in
+         progress).
+
+9.2.  Informative References
+
+   [11]  "libTheora: Available from the Xiph website,
+         http://www.xiph.org".
+
+   [12]  "Ogg Theora I spec:  Codec setup and packet decode.
+         http://www.xiph.org/ogg/Theora/doc/Theora-spec-ref.html".
+
+   [13]  "ITU-T Recommendation V.42, 1994, Rev. 1. Error-correcting
+         Procedures for DCEs Using Asynchronous-to-Synchronous
+         Conversion. International Telecommunications Union. Available
+         from the ITU website, http://www.itu.int".
+
+   [14]  "ISO 3309, October 1984, 3rd Edition. Information Processing
+         Systems--Data Communication High-Level Data Link Control
+         Procedure--Frame Structure. International Organization for
+         Standardization.".
+
+   [15]  Josefsson, S., "The Base16, Base32, and Base64 Data Encodings",
+         RFC 3548.
+
+
+
+
+
+
+
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 20]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+Author's Address
+
+   Luca Barbato
+   Xiph.Org
+
+   Email: lu_zero@gentoo.org
+   URI:   http://www.xiph.org/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 21]
+
+Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+
+
+Intellectual Property Statement
+
+   The IETF takes no position regarding the validity or scope of any
+   Intellectual Property Rights or other rights that might be claimed to
+   pertain to the implementation or use of the technology described in
+   this document or the extent to which any license under such rights
+   might or might not be available; nor does it represent that it has
+   made any independent effort to identify any such rights.  Information
+   on the procedures with respect to rights in RFC documents can be
+   found in BCP 78 and BCP 79.
+
+   Copies of IPR disclosures made to the IETF Secretariat and any
+   assurances of licenses to be made available, or the result of an
+   attempt made to obtain a general license or permission for the use of
+   such proprietary rights by implementers or users of this
+   specification can be obtained from the IETF on-line IPR repository at
+   http://www.ietf.org/ipr.
+
+   The IETF invites any interested party to bring to its attention any
+   copyrights, patents or patent applications, or other proprietary
+   rights that may cover technology that may be required to implement
+   this standard.  Please address the information to the IETF at
+   ietf-ipr@ietf.org.
+
+
+Disclaimer of Validity
+
+   This document and the information contained herein are provided on an
+   "AS IS" basis and THE CONTRIBUTOR, THE ORGANIZATION HE/SHE REPRESENTS
+   OR IS SPONSORED BY (IF ANY), THE INTERNET SOCIETY AND THE INTERNET
+   ENGINEERING TASK FORCE DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF THE
+   INFORMATION HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED
+   WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+
+
+Copyright Statement
+
+   Copyright (C) The Internet Society (2005).  This document is subject
+   to the rights, licenses and restrictions contained in BCP 78, and
+   except as set forth therein, the authors retain all their rights.
+
+
+Acknowledgment
+
+   Funding for the RFC Editor function is currently provided by the
+   Internet Society.
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 22]
+
+
