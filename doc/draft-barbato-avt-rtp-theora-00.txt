@@ -7,7 +7,7 @@ Internet-Draft                                                  Xiph.Org
 Expires: April 18, 2006                                 October 15, 2005
 
 
-                    draft-barbato-avt-theora-rtp-00
+                    draft-barbato-avt-rtp-theora-00
               RTP Payload Format for Theora Encoded Video
 
 Status of this Memo
@@ -55,7 +55,7 @@ Abstract
 
 Barbato                  Expires April 18, 2006                 [Page 1]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
    use of Theora with MIME and Session Description Protocol (SDP).
@@ -111,7 +111,7 @@ Table of Contents
 
 Barbato                  Expires April 18, 2006                 [Page 2]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
 1.  Introduction
@@ -167,7 +167,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                 [Page 3]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
 2.  Payload Format
@@ -223,7 +223,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                 [Page 4]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
    The Extension bit is used in accordance with [3].
@@ -279,7 +279,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                 [Page 5]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
    Figure 2: Payload Header
@@ -335,7 +335,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                 [Page 6]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
    octet boundary.  When a Theora encoder produces packets, unused space
@@ -391,7 +391,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                 [Page 7]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
    The payload portion of the packet starts with the 24 bit
@@ -447,7 +447,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                 [Page 8]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
 3.1.  In-band Header Transmission
@@ -503,7 +503,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                 [Page 9]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
    The Ident field is set with the value that will be used by the Raw
@@ -559,7 +559,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                [Page 10]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
    The key difference between the in-band format is there is no need for
@@ -615,7 +615,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                [Page 11]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
    Author: Luca Barbato
@@ -671,7 +671,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                [Page 12]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
    The 2 bytes length field is necessary since this packet could be
@@ -727,7 +727,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                [Page 13]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
       Packet 1:
@@ -783,7 +783,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                [Page 14]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
       Packet 2:
@@ -839,7 +839,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                [Page 15]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
       Packet 3:
@@ -895,7 +895,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                [Page 16]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
    Configuration Headers (Section 3.3) section.
@@ -951,7 +951,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                [Page 17]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
    Applications which use this media type:
@@ -1007,7 +1007,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                [Page 18]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
       c=IN IP4/6
@@ -1063,7 +1063,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                [Page 19]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
    [5]   Rosenberg, J. and H. Schulzrinne, "An Offer/Answer Model with
@@ -1119,7 +1119,7 @@ Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
 
 Barbato                  Expires April 18, 2006                [Page 20]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
 Author's Address
@@ -1175,7 +1175,7 @@ Author's Address
 
 Barbato                  Expires April 18, 2006                [Page 21]
 
-Internet-Draft       draft-barbato-avt-theora-rtp-00        October 2005
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
 Intellectual Property Statement

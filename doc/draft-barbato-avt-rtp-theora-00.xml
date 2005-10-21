@@ -6,7 +6,7 @@
 <rfc ipr="full3667" docName="RTP Payload Format for Theora Encoded Video">
 
 <front>
-<title>draft-barbato-avt-theora-rtp-00</title>
+<title>draft-barbato-avt-rtp-theora-00</title>
 
 <author initials="L" surname="Barbato" fullname="Luca Barbato">
 <organization>Xiph.Org</organization>
