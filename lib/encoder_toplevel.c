@@ -1121,8 +1121,8 @@ int theora_encode_comment(theora_comment *tc, ogg_packet *op)
   op->bytes=oggpack_bytes(opb);
 
 #ifndef LIBOGG2
-  /* So we're expecting the application with free this? */
-  op->packet=malloc(oggpack_bytes(opb));
+  /* So we're expecting the application will free this? */
+  op->packet=_ogg_malloc(oggpack_bytes(opb));
   memcpy(op->packet, oggpack_get_buffer(opb), oggpack_bytes(opb));
   oggpack_writeclear(opb);
 #else
