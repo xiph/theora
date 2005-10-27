@@ -1131,7 +1131,7 @@ int theora_encode_comment(theora_comment *tc, ogg_packet *op)
      it becomes the property of libogg2's internal memory management. */
 #endif
 
-  free(opb);
+  _ogg_free(opb);
 
   op->b_o_s=0;
   op->e_o_s=0;
