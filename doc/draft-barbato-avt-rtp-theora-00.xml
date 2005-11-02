@@ -3,7 +3,7 @@
 <?rfc toc="yes" ?>
 <?rfc compact='yes'?>
 
-<rfc ipr="full3667" docName="RTP Payload Format for Theora Encoded Video">
+<rfc ipr="full3978" docName="RTP Payload Format for Theora Encoded Video">
 
 <front>
 <title>draft-barbato-avt-rtp-theora-00</title>
@@ -780,7 +780,7 @@ The URI specified in the configuration-uri attribute MUST point to a location wh
 </t>
 
 <t>
-The answer to any offer, <xref target="rfc3264"></xref>, MUST NOT change the URI specified in the configuration-uri attribute. The Configuration inlined in the configuration parameter COULD change.
+The answer to any offer, <xref target="rfc3264"></xref>, MUST NOT change the URI specified in the configuration-uri attribute. The Configuration inlined in the configuration parameter MAY change.
 </t>
 <t>Example:</t>
 

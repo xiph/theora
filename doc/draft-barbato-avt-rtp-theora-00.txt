@@ -1011,7 +1011,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
    the configuration-uri attribute.  The Configuration inlined in the
-   configuration parameter COULD change.
+   configuration parameter MAY change.
 
    Example:
 
