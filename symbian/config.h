@@ -39,7 +39,7 @@
 
 /* Do not build floating point code */
 
-#define THEORA_SUPPORT_FLOAT 0
+#define	THEORA_DISABLE_FLOAT 1
 
 #ifdef __WINS__
 
