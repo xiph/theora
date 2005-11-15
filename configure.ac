@@ -84,7 +84,6 @@ dnl --------------------------------------------------
 dnl Set some target options
 
 cflags_save="$CFLAGS"
-ldflags_save="$LDFLAGS"
 if test -z "$GCC"; then
         case $host in 
         *)
@@ -102,7 +101,6 @@ else
         esac
 fi
 CFLAGS="$CFLAGS $cflags_save"
-LDFLAGS="$LDFLAGS $ldflags_save"
 
 # Test whenever ld supports -version-script
 AC_PROG_LD
