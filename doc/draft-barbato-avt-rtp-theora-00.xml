@@ -779,9 +779,6 @@ If the stream comprises chained Theora files and all of them are known in advanc
 The URI specified in the configuration-uri attribute MUST point to a location where all of the Configuration Packets needed for the life of the session reside.
 </t>
 
-<t>
-The answer to any offer, <xref target="rfc3264"></xref>, MUST NOT change the URI specified in the configuration-uri attribute. The Configuration inlined in the configuration parameter MAY change.
-</t>
 <t>Example:</t>
 
 <vspace blankLines="1" />
@@ -792,9 +789,17 @@ The answer to any offer, <xref target="rfc3264"></xref>, MUST NOT change the URI
 <t>a=rtpmap:98 theora/90000</t>
 <t>a=fmtp:98 sampling=YCbCr-4:2:2; width=1280; height=720; delivery-method=inline; configuration=base16string1;</t>
 </list>
-
-
 </section> 
+
+<section anchor="Usage with the SDP Offer/Answer Mode" title="Usage with the SDP Offer/Answer Model">
+
+<t>
+The answer to any offer, <xref target="rfc3264"></xref>, MUST NOT change the URI specified in the configuration-uri attribute. The Configuration inlined in the configuration parameter MAY change.
+</t>
+
+</section>
+
+
 </section>
 
 <section anchor="Security Considerations" title="Security Considerations"> 
