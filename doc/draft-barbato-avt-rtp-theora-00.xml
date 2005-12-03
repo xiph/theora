@@ -356,7 +356,7 @@ A Theora Packed Configuration is indicated with the payload type field set to 1.
    |                              ...                              |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                             Ident             | 0 | 1 |      1|
+   |               Configuration Ident             | 0 | 1 |      1|
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |             length            |          Identification      ..
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -386,7 +386,7 @@ A Theora Packed Configuration is indicated with the payload type field set to 1.
 <section anchor="Out of Band Transmission" title="Out of Band Transmission">
 
 <t>
-This section, as stated before, won't cover all the possible out-of-band delivery methods since they rely to different protocols and be linked to a specific application. The following packet definition SHOULD be used in out-of-band delivery and MUST be used when Configuration is inlined in the SDP.
+This section, as stated before, will not cover all the possible out-of-band delivery methods since they rely to different protocols and be linked to a specific application. The following packet definition SHOULD be used in out-of-band delivery and MUST be used when Configuration is inlined in the SDP.
 </t>
 
 <section anchor="Packed Headers" title="Packed Headers"> 
@@ -418,7 +418,7 @@ Since the Configuration Ident and the Identification Header are fixed lenght the
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                   Ident                       |              ..
+   |            Configuration Ident                |              ..
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    ..   Length     |              Identification Header           ..
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -499,6 +499,29 @@ Intended usage: COMMON
 
 </section>
 </section>
+
+<section anchor="Well Known Configurations" title="Well Known Configurations">
+
+<t>
+Even if the Vorbis nature prevents the creation of everlasting profiles, some combination of codebooks, bitrate, channels and samplerate are quite common.
+A client may have a list of well known configuration and MAY avoid fetching them already.
+In order to retain compatibility the server, even if all the Configurations that will be in use are Well Known, MUST provide at least another way to provide codebooks.
+Every Configuration that is available as Well Known has the Ident highest bit set. Every Well Known List MUST contain at most 2^23 items.
+</t>
+
+<t>
+{FIXME:add an hash reference and a way to get them?}
+This off band delivery method MUST be signaled as "out_band/wkc/list_name" using the mandated parameter delivery-method. As further explained in the <xref target="IANA Considerations">IANA Considerations</xref> section.
+</t>
+
+<t>
+Only one list MUST be used at time. During <xref target="rfc3264">SDP Offer/Answer</xref> client and server MAY agree on a specific list, that subject will be discussed further on the specific <xref target="Usage with the SDP Offer/Answer Mode">SDP Offer/Answer</xref> section.
+This method
+</t>
+
+</section>
+
+
 </section>
 
 <section anchor="Loss of Configuration Headers" title="Loss of Configuration Headers"> 
@@ -512,6 +535,9 @@ Loss of Configuration Packet results in the halting of stream decoding and SHOUL
 </t>
 
 </section>
+
+
+
 </section>
 <section anchor="Comment Headers" title="Comment Headers">
 
@@ -533,7 +559,7 @@ With the payload type flag set to 2, this indicates that the packet contain the 
    |                              ...                              |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                      Ident                    | 0 | 2 |      1|
+   |              Configuration Ident              | 0 | 2 |      1|
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |            length             |            Comment           ..
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -614,7 +640,7 @@ In this packet the initial sequence number is 1000 and the timestamp is xxxxx.  
    |                              ...                              |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                Configuration Ident            | 2 | 0 |      0|
+   |              Configuration Ident              | 2 | 0 |      0|
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |        Payload Length         |              ..
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -644,7 +670,7 @@ The Fragment type field is set to 2 and the number of packets field is set to 0.
    |                              ...                              |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |           Configuration Ident                 | 3 | 0 |      0|
+   |              Configuration Ident              | 3 | 0 |      0|
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |        Payload Length         |                              ..
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -654,7 +680,7 @@ The Fragment type field is set to 2 and the number of packets field is set to 0.
 </figure>
 
 <t>
-This is the last Theora fragment packet.  The Fragment type filed is set to 3 and the packet count remains set to 0.  As in the previous packets the timestamp remains set to the first packet in the sequence and the sequence number has been incremented.
+This is the last Theora fragment packet. The Fragment type filed is set to 3 and the packet count remains set to 0. As in the previous packets the timestamp remains set to the first packet in the sequence and the sequence number has been incremented.
 </t>
 
 </section>
@@ -662,7 +688,7 @@ This is the last Theora fragment packet.  The Fragment type filed is set to 3 an
 <section anchor="Packet Loss" title="Packet Loss">
 
 <t>
-As there is no error correction within the Theora stream, packet loss will result in a loss of signal. Packet loss is more of an issue for fragmented Theora packets as the client will have to cope with the handling of the Fragment type field. If we use the fragmented Theora packet example above and the first packet is lost the client MUST detect that the next packet has the packet count field set to 0 and the Fragment type is set to 2 and MUST drop it.  The next packet, which is the final fragmented packet, MUST be dropped in the same manner. Feedback reports on lost and dropped packets MUST be sent back via RTCP.
+As there is no error correction within the Theora stream, packet loss will result in a loss of signal. Packet loss is more of an issue for fragmented Theora packets as the client will have to cope with the handling of the Fragment type field. If we use the fragmented Theora packet example above and the first packet is lost the client MUST detect that the next packet has the packet count field set to 0 and the Fragment type is set to 2 and MUST drop it. The next packet, which is the final fragmented packet, MUST be dropped in the same manner. Feedback reports on lost and dropped packets MUST be sent back via RTCP.
 </t>
 
 <t>
@@ -695,7 +721,7 @@ width: Determines the number of pixels per line. This is an integer between 1 an
 height: Determines the number of lines per frame. This is an integer between 1 and 1048561 and MUST be in multiples of 16.
 </t>
 <t>
-delivery-method: indicates the delivery methods in use, the possible values are:inline, in_band, out_band/specific-method
+delivery-method: indicates the delivery methods in use, the possible values are:inline, in_band, out_band/specific_method
 </t>
 <t>
 configuration: the <xref target="rfc3548">base16</xref> (hexadecimal) representation of the <xref target="Packed Headers">Packed Headers</xref>.
@@ -767,7 +793,7 @@ The information carried in the MIME media type specification has a specific mapp
 <t>The mandated parameters "delivery-method" and "configuration" MUST be included in the SDP "a=fmpt" attribute.</t>
 <vspace blankLines="1" />
 
-<t>The optional parameter "configuration-uri", when present,  MUST be included in the SDP "a=fmpt" attribute.</t>
+<t>The optional parameter "configuration-uri", when present,  MUST be included in the SDP "a=fmpt" attribute and MUST follow the delivery-method that applies.</t>
 </list>
 
 
@@ -787,12 +813,18 @@ The URI specified in the configuration-uri attribute MUST point to a location wh
 <t>c=IN IP4/6 </t>
 <t>m=video  RTP/AVP 98</t>
 <t>a=rtpmap:98 theora/90000</t>
-<t>a=fmtp:98 sampling=YCbCr-4:2:2; width=1280; height=720; delivery-method=inline; configuration=base16string1;</t>
+<t>a=fmtp:98 sampling=YCbCr-4:2:2; width=1280; height=720; delivery-method=inline; configuration=base16string1; delivery-method=out_band/rtsp; delivery-method=out_band/http; configuration-uri=http://path/to/resource/</t>
 </list>
+
 </section> 
 
 <section anchor="Usage with the SDP Offer/Answer Mode" title="Usage with the SDP Offer/Answer Model">
 
+
+<t>
+{FIXME:explain also the standard way to offer multiple streams and pick only the ones interesting?}
+The offer, as described in <xref target="rfc3264">An Offer/Answer Model Session Description Protocol</xref>, may contain a large number of delivery methods per single fmtp attribute, the answerer MUST remove every delivery-method and configuration-uri not supported.
+</t>
 <t>
 The answer to any offer, <xref target="rfc3264"></xref>, MUST NOT change the URI specified in the configuration-uri attribute. The Configuration inlined in the configuration parameter MAY change.
 </t>
