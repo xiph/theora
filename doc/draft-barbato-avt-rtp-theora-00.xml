@@ -822,11 +822,10 @@ The URI specified in the configuration-uri attribute MUST point to a location wh
 
 
 <t>
-{FIXME:explain also the standard way to offer multiple streams and pick only the ones interesting?}
 The offer, as described in <xref target="rfc3264">An Offer/Answer Model Session Description Protocol</xref>, may contain a large number of delivery methods per single fmtp attribute, the answerer MUST remove every delivery-method and configuration-uri not supported.
 </t>
 <t>
-The answer to any offer, <xref target="rfc3264"></xref>, MUST NOT change the URI specified in the configuration-uri attribute. The Configuration inlined in the configuration parameter MAY change.
+The answer to any offer, MUST NOT change the URI specified in the configuration-uri attribute. The Configuration inlined in the configuration parameter MAY change.
 </t>
 
 </section>
