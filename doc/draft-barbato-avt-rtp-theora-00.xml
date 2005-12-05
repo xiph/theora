@@ -503,15 +503,15 @@ Intended usage: COMMON
 <section anchor="Well Known Configurations" title="Well Known Configurations">
 
 <t>
-Even if the Vorbis nature prevents the creation of everlasting profiles, some combination of codebooks, bitrate, channels and samplerate are quite common.
+Even if the Theora nature prevents the creation of everlasting profiles, some combination of codebooks, bitrate, channels and samplerate are quite common.
 A client may have a list of well known configuration and MAY avoid fetching them already.
 In order to retain compatibility the server, even if all the Configurations that will be in use are Well Known, MUST provide at least another way to provide codebooks.
 Every Configuration that is available as Well Known has the Ident highest bit set. Every Well Known List MUST contain at most 2^23 items.
 </t>
 
 <t>
-{FIXME:add an hash reference and a way to get them?}
-This off band delivery method MUST be signaled as "out_band/wkc/list_name" using the mandated parameter delivery-method. As further explained in the <xref target="IANA Considerations">IANA Considerations</xref> section.
+{FIXME: reference to bzip2 or gz}
+This off band delivery method MUST be signaled as "out_band/wkc/list_name" using the mandated parameter delivery-method. An optional configuration-uri MAY point to a location where to fetch it. The list is in the form of <xref target="Packed Headers">Packed Headers</xref>, that MAY be compressed using bzip2 or gz algorithms As further explained in the <xref target="IANA Considerations">IANA Considerations</xref> section.
 </t>
 
 <t>
@@ -520,7 +520,6 @@ This method
 </t>
 
 </section>
-
 
 </section>
 
@@ -729,7 +728,7 @@ configuration: the <xref target="rfc3548">base16</xref> (hexadecimal) representa
 
 <t>
 Optional Parameters: </t><t>
-configuration-uri: the URI of the configuration headers in case of out of band transmission. In the form of "protocol://path/to/resource/". Depending on the specific method the single ident packet could be retrived by their number, or aggregated in a single stream.
+configuration-uri: the URI of the configuration headers in case of out of band transmission. In the form of "protocol://path/to/resource/". Depending on the specific method the single ident packet could be retrived by their number, or aggregated in a single stream, aggregates MAY be compressed and an sha1 checksum MAY be provided in the form of "protocol://path/to/resource/!sha1hash"
 </t>
 
 <t>
@@ -822,10 +821,7 @@ The URI specified in the configuration-uri attribute MUST point to a location wh
 
 
 <t>
-The offer, as described in <xref target="rfc3264">An Offer/Answer Model Session Description Protocol</xref>, may contain a large number of delivery methods per single fmtp attribute, the answerer MUST remove every delivery-method and configuration-uri not supported.
-</t>
-<t>
-The answer to any offer, MUST NOT change the URI specified in the configuration-uri attribute. The Configuration inlined in the configuration parameter MAY change.
+The offer, as described in <xref target="rfc3264">An Offer/Answer Model Session Description Protocol</xref>, may contain a large number of delivery methods per single fmtp attribute, the answerer MUST remove every delivery-method and configuration-uri not supported. All the parameters MUST not be altered on answer otherwise.
 </t>
 
 </section>

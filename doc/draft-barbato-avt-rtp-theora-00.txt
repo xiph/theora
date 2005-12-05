@@ -89,8 +89,8 @@ Table of Contents
      6.2.  Usage with the SDP Offer/Answer Model  . . . . . . . . . . 19
    7.  Security Considerations  . . . . . . . . . . . . . . . . . . . 19
    8.  Acknowledgments  . . . . . . . . . . . . . . . . . . . . . . . 19
-   9.  References . . . . . . . . . . . . . . . . . . . . . . . . . . 20
-     9.1.  Normative References . . . . . . . . . . . . . . . . . . . 20
+   9.  References . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+     9.1.  Normative References . . . . . . . . . . . . . . . . . . . 19
      9.2.  Informative References . . . . . . . . . . . . . . . . . . 20
    Author's Address . . . . . . . . . . . . . . . . . . . . . . . . . 22
    Intellectual Property and Copyright Statements . . . . . . . . . . 23
@@ -640,7 +640,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 3.2.2.  Well Known Configurations
 
-   Even if the Vorbis nature prevents the creation of everlasting
+   Even if the Theora nature prevents the creation of everlasting
    profiles, some combination of codebooks, bitrate, channels and
    samplerate are quite common.  A client may have a list of well known
    configuration and MAY avoid fetching them already.  In order to
@@ -650,10 +650,13 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    Known has the Ident highest bit set.  Every Well Known List MUST
    contain at most 2^23 items.
 
-   {FIXME:add an hash reference and a way to get them?} This off band
-   delivery method MUST be signaled as "out_band/wkc/list_name" using
-   the mandated parameter delivery-method.  As further explained in the
-   IANA Considerations (Section 6) section.
+   {FIXME: reference to bzip2 or gz} This off band delivery method MUST
+   be signaled as "out_band/wkc/list_name" using the mandated parameter
+   delivery-method.  An optional configuration-uri MAY point to a
+   location where to fetch it.  The list is in the form of Packed
+   Headers (Section 3.2.1), that MAY be compressed using bzip2 or gz
+   algorithms As further explained in the IANA Considerations
+   (Section 6) section.
 
    Only one list MUST be used at time.  During SDP Offer/Answer [5]
    client and server MAY agree on a specific list, that subject will be
@@ -663,9 +666,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 3.3.  Loss of Configuration Headers
 
    Unlike the loss of raw Theora payload data, loss of a configuration
-   header can lead to a situation where it will not be possible to
-   successfully decode the stream.
-
 
 
 
@@ -673,6 +673,9 @@ Barbato                  Expires April 18, 2006                [Page 12]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
+
+   header can lead to a situation where it will not be possible to
+   successfully decode the stream.
 
    Loss of Configuration Packet results in the halting of stream
    decoding and SHOULD be reported to the client as well as a loss
@@ -719,9 +722,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 5.  Frame Packetizing
 
    Each RTP packet contains either one complete Theora packet, one
-   Theora packet fragment, or an integer number of complete Theora
-   packets (up to a max of 15 packets, since the number of packets is
-   defined by a 4 bit value).
 
 
 
@@ -729,6 +729,10 @@ Barbato                  Expires April 18, 2006                [Page 13]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
+
+   Theora packet fragment, or an integer number of complete Theora
+   packets (up to a max of 15 packets, since the number of packets is
+   defined by a 4 bit value).
 
    Any Theora data packet that is less than path MTU SHOULD be bundled
    in the RTP packet with as many Theora packets as will fit, up to a
@@ -775,10 +779,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
    Figure 10: Example Fragmented Packet (Packet 1)
 
-   In this packet the initial sequence number is 1000 and the timestamp
-   is xxxxx.  The Fragment type field is set to one, indicating it is
-   the start packet of a serie of fragments.  The number of packets
-
 
 
 Barbato                  Expires April 18, 2006                [Page 14]
@@ -786,6 +786,9 @@ Barbato                  Expires April 18, 2006                [Page 14]
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
+   In this packet the initial sequence number is 1000 and the timestamp
+   is xxxxx.  The Fragment type field is set to one, indicating it is
+   the start packet of a serie of fragments.  The number of packets
    field is set to 0, and as the payload is raw Theora data the Theora
    payload type field is set to 0.
 
@@ -819,9 +822,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    greater than the path MTU, including all RTP and payload headers.
    The sequence number has been incremented by one but the timestamp
    field remains the same as the initial packet.
-
-
-
 
 
 
@@ -929,7 +929,9 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    out of band transmission.  In the form of
    "protocol://path/to/resource/".  Depending on the specific method the
    single ident packet could be retrived by their number, or aggregated
-   in a single stream.
+   in a single stream, aggregates MAY be compressed and an sha1 checksum
+   MAY be provided in the form of
+   "protocol://path/to/resource/!sha1hash"
 
    Encoding considerations:
 
@@ -944,8 +946,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
    Published specification:
 
-   See the Theora documentation [12] for details.
-
 
 
 
@@ -953,6 +953,8 @@ Barbato                  Expires April 18, 2006                [Page 17]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
+
+   See the Theora documentation [12] for details.
 
    Applications which use this media type:
 
@@ -1000,8 +1002,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
    The URI specified in the configuration-uri attribute MUST point to a
    location where all of the Configuration Packets needed for the life
-   of the session reside.
-
 
 
 
@@ -1009,6 +1009,8 @@ Barbato                  Expires April 18, 2006                [Page 18]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
+
+   of the session reside.
 
    Example:
 
@@ -1022,16 +1024,11 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 6.2.  Usage with the SDP Offer/Answer Model
 
-   {FIXME:explain also the standard way to offer multiple streams and
-   pick only the ones interesting?} The offer, as described in An Offer/
-   Answer Model Session Description Protocol [5], may contain a large
-   number of delivery methods per single fmtp attribute, the answerer
-   MUST remove every delivery-method and configuration-uri not
-   supported.
-
-   The answer to any offer, [5], MUST NOT change the URI specified in
-   the configuration-uri attribute.  The Configuration inlined in the
-   configuration parameter MAY change.
+   The offer, as described in An Offer/Answer Model Session Description
+   Protocol [5], may contain a large number of delivery methods per
+   single fmtp attribute, the answerer MUST remove every delivery-method
+   and configuration-uri not supported.  All the parameters MUST not be
+   altered on answer otherwise.
 
 
 7.  Security Considerations
@@ -1057,7 +1054,10 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 9.  References
 
+9.1.  Normative References
 
+   [1]   Pfeiffer, S., "The Ogg Encapsulation Format Version 0",
+         RFC 3533.
 
 
 
@@ -1065,11 +1065,6 @@ Barbato                  Expires April 18, 2006                [Page 19]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
-
-9.1.  Normative References
-
-   [1]   Pfeiffer, S., "The Ogg Encapsulation Format Version 0",
-         RFC 3533.
 
    [2]   Bradner, S., "Key words for use in RFCs to Indicate Requirement
          Levels", RFC 2119.
@@ -1114,6 +1109,11 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
          Conversion. International Telecommunications Union. Available
          from the ITU website, http://www.itu.int".
 
+   [14]  "ISO 3309, October 1984, 3rd Edition. Information Processing
+         Systems--Data Communication High-Level Data Link Control
+         Procedure--Frame Structure. International Organization for
+         Standardization.".
+
 
 
 
@@ -1122,13 +1122,13 @@ Barbato                  Expires April 18, 2006                [Page 20]
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
-   [14]  "ISO 3309, October 1984, 3rd Edition. Information Processing
-         Systems--Data Communication High-Level Data Link Control
-         Procedure--Frame Structure. International Organization for
-         Standardization.".
-
    [15]  Josefsson, S., "The Base16, Base32, and Base64 Data Encodings",
          RFC 3548.
+
+
+
+
+
 
 
 
