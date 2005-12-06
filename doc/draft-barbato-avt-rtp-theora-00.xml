@@ -439,63 +439,106 @@ Since the Configuration Ident and the Identification Header are fixed lenght the
 The following IANA considerations MUST only be applied to the packed headers.
 </t>
 
-<t>
-MIME media type name: video
-</t>
-<t>
-MIME subtype: theora-config
-</t>
+<vspace blankLines="1" />
 
-<t>
-Required Parameters:</t><t>
-None.
-</t>
+<list style="hanging">
+<t hangText="MIME media type name:"> audio </t>
 
-<t>
-Optional Parameters: </t><t>
-None.
-</t>
+<vspace blankLines="1" />
 
-<t>
-Encoding considerations:</t><t>
-This type is only defined for transfer via non RTP protocol as specified in RFC XXXX.
+<t hangText="MIME subtype:"> theora-config </t>
+
+<vspace blankLines="1" />
+
+<t hangText="Required Parameters:">
+<vspace blankLines="1" />
+None
 </t>
 
-<t>
-Security Considerations:</t><t>
-See Section 6 of RFC 3047.
+<vspace blankLines="1" />
+
+<t hangText="Optional Parameters:">
+<vspace blankLines="1" />
+None
 </t>
 
-<t>
-Interoperability considerations: none
+<vspace blankLines="1" />
+
+<t hangText="Encoding considerations:">
+<vspace blankLines="1" />
+This media type contains binary data.
 </t>
 
-<t>
-Published specification:</t>
-<t>See RFC XXXX for details.</t>
+<vspace blankLines="1" />
 
-<t>
-Applications which use this media type:</t><t>
+<t hangText="Security Considerations:">
+<vspace blankLines="1" />
+See Section 6 of RFC XXXX.
+</t>
+
+<vspace blankLines="1" />
+
+<t hangText="Interoperability considerations:">
+<vspace blankLines="1" />
+None
+</t>
+
+<vspace blankLines="1" />
+
+<t hangText="Published specification:">
+<vspace blankLines="1" />
+RFC XXXX [RFC Editor: please replace by the RFC number of  this memo,
+       when published]
+</t>
+
+<vspace blankLines="1" />
+
+<t hangText="Applications which use this media type:">
+<vspace blankLines="1" />
 Theora encoded video, configuration data.
 </t>
 
-<t>
-Additional information: none
+<vspace blankLines="1" />
+
+<t hangText="Additional information:"> 
+<vspace blankLines="1" />
+None
 </t>
 
-<t>
-Person &amp; email address to contact for further information:</t><t>
+<vspace blankLines="1" />
+
+<t hangText="Person &amp; email address to contact for further information:">
+<vspace blankLines="1" />
 Luca Barbato: &lt;lu_zero@gentoo.org&gt;
+<vspace blankLines="0" />
+IETF Audio/Video Transport Working Group
 </t>
 
-<t>
-Intended usage: COMMON
+<vspace blankLines="1" />
+
+<t hangText="Intended usage:">
+COMMON
 </t>
 
-<t>Author/Change controller:</t>
-<t>Author: Luca Barbato</t>
-<t>Change controller: IETF AVT Working Group</t>
+<vspace blankLines="1" />
 
+<t hangText="Restriction on usage:">
+<vspace blankLines="1" />
+This media type doesn't depend on the transport.
+</t>
+
+<vspace blankLines="1" />
+
+<t hangText="Author:">
+<vspace blankLines="1" />
+Luca Barbato</t>
+
+<vspace blankLines="1" />
+
+<t hangText="Change controller:">
+<vspace blankLines="1" />
+IETF AVT Working Group</t>
+</list>
 
 </section>
 </section>
@@ -704,72 +747,139 @@ Loss of any of the Configuration fragment will result in the loss of the full Co
 
 <section anchor="IANA Considerations" title="IANA Considerations"> 
 
-<t>MIME media type name: video</t>
+<vspace blankLines="1" />
 
-<t>MIME subtype: theora</t>
+<list style="hanging">
+<t hangText="MIME media type name:"> video </t>
 
-<t>Required Parameters:</t>
+<vspace blankLines="1" />
 
-<t>
-sampling: Determines the chroma subsampling format.
-</t>
-<t>
-width: Determines the number of pixels per line. This is an integer between 1 and 1048561 and MUST be in multiples of 16.
-</t>
-<t>
-height: Determines the number of lines per frame. This is an integer between 1 and 1048561 and MUST be in multiples of 16.
-</t>
-<t>
-delivery-method: indicates the delivery methods in use, the possible values are:inline, in_band, out_band/specific_method
-</t>
-<t>
-configuration: the <xref target="rfc3548">base16</xref> (hexadecimal) representation of the <xref target="Packed Headers">Packed Headers</xref>.
+<t hangText="MIME subtype:"> theora </t>
+
+<vspace blankLines="1" />
+
+<t hangText="Required Parameters:">
+
+<vspace blankLines="1" />
+
+<list style="hanging">
+
+<t hangText="sampling:"> Determines the chroma subsampling format.
 </t>
 
-<t>
-Optional Parameters: </t><t>
-configuration-uri: the URI of the configuration headers in case of out of band transmission. In the form of "protocol://path/to/resource/". Depending on the specific method the single ident packet could be retrived by their number, or aggregated in a single stream, aggregates MAY be compressed and an sha1 checksum MAY be provided in the form of "protocol://path/to/resource/!sha1hash"
+<vspace blankLines="1" />
+
+<t hangText="width:"> Determines the number of pixels per line. This is an integer between 1 and 1048561 and MUST be in multiples of 16.
 </t>
 
-<t>
-Encoding considerations:</t><t>
-This type is only defined for transfer via RTP as specified in RFC XXXX.
+<vspace blankLines="1" />
+
+<t hangText="height:">Determines the number of lines per frame. This is an integer between 1 and 1048561 and MUST be in multiples of 16.
 </t>
 
-<t>
-Security Considerations:</t><t>
-See Section 6 of RFC 3047.
+<vspace blankLines="1" />
+
+<t hangText="delivery-method:"> indicates the delivery methods in use, the possible values are: inline, in_band, out_band/specific_name<vspace blankLines="0" />
+Where "specific_name" is the name of the out of band delivery method.
+
 </t>
 
-<t>
-Interoperability considerations: none
+<vspace blankLines="1" />
+
+<t hangText="configuration:"> the <xref target="rfc3548">base16</xref> (hexadecimal) representation of the <xref target="Packed Headers">Packed Headers</xref>.
+</t>
+</list>
 </t>
 
-<t>
-Published specification:</t>
-<t>See the Theora documentation <xref target="theora-spec-ref"></xref> for details.</t>
+<vspace blankLines="1" />
 
-<t>
-Applications which use this media type:</t><t>
-Video streaming and conferencing tools
+<t hangText="Optional Parameters:">
+
+<vspace blankLines="1" />
+
+<list style="hanging">
+<t hangText="configuration-uri:"> the URI of the configuration headers in case of out of band transmission.  In the form of "protocol://path/to/resource/".  Depending on the specific method the single ident packet could be retrived by their number, or aggregated in a single stream, aggregates MAY be compressed using gz or bzip2 and an sha1 checksum MAY be provided in the form of "protocol://path/to/resource/! sha1hash"</t>
+</list>
 </t>
 
-<t>
-Additional information: none
+<vspace blankLines="1" />
+
+<t hangText="Encoding considerations:">
+<vspace blankLines="1" />
+This media type is framed and contains binary data.
 </t>
 
-<t>
-Person &amp; email address to contact for further information:</t><t>
-Luca Barbato: &lt;lu_zero@gentoo.org&gt;
+<vspace blankLines="1" />
+
+<t hangText="Security Considerations:">
+<vspace blankLines="1" />
+See Section 6 of RFC XXXX.</t>
+
+<vspace blankLines="1" />
+
+<t hangText="Interoperability considerations:">
+<vspace blankLines="1" />
+None</t>
+
+<vspace blankLines="1" />
+
+<t hangText="Published specification:">
+
+<vspace blankLines="1" />
+
+<t> RFC XXXX [RFC Editor: please replace by the RFC number of  this memo, when published]</t>
+<vspace blankLines="1" />
+<t>Ogg Theora I specification:  Codec setup and packet decode. Available from the Xiph website, http://www.xiph.org</t>
+
 </t>
 
-<t>
-Intended usage: COMMON
+<vspace blankLines="1" />
+
+<t hangText="Applications which use this media type:">
+<vspace blankLines="1"/>
+Audio streaming and conferencing tools </t>
+
+<vspace blankLines="1" />
+
+<t hangText="Additional information:">
+<vspace blankLines="1" />
+None </t>
+
+<vspace blankLines="1" />
+
+<t hangText="Person &amp; email address to contact for further information:">
+
+<vspace blankLines="1" />
+
+<t>Luca Barbato: &lt;lu_zero@gentoo.org&gt;</t>
+<t>IETF Audio/Video Transport Working Group</t>
+
 </t>
 
-<t>Author/Change controller:</t>
-<t>Author: Luca Barbato</t>
-<t>Change controller: IETF AVT Working Group</t>
+<vspace blankLines="1" />
+
+<t hangText="Intended usage:">
+<vspace blankLines="1" />
+COMMON</t>
+
+<vspace blankLines="1" />
+
+<t hangText="Restriction on usage:">
+<vspace blankLines="1" />
+This media type depends on RTP framing, and hence is only defined for transfer via <xref target="rfc3550">RTP</xref></t>
+
+<vspace blankLines="1" />
+
+<t hangText="Author:">
+<vspace blankLines="1"/>Luca Barbato</t>
+
+<vspace blankLines="1" />
+
+<t hangText="Change controller:"><vspace blankLines="1"/> IETF AVT Working Group</t>
+
+<vspace blankLines="1" />
+
+</list>
 
 <section anchor="Mapping MIME Parameters into SDP" title="Mapping MIME Parameters into SDP"> 
 
@@ -956,7 +1066,7 @@ Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike
 
 <reference anchor="theora-spec-ref">
 <front>
-<title>Ogg Theora I spec:  Codec setup and packet decode.  http://www.xiph.org/ogg/Theora/doc/Theora-spec-ref.html</title>
+<title>Ogg Theora I specification:  Codec setup and packet decode.  http://www.xiph.org/ogg/Theora/doc/Theora-spec-ref.html</title>
 </front>
 </reference>   
   

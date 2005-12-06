@@ -79,21 +79,21 @@ Table of Contents
      3.2.  Out of Band Transmission . . . . . . . . . . . . . . . . . 10
        3.2.1.  Packed Headers . . . . . . . . . . . . . . . . . . . . 10
        3.2.2.  Well Known Configurations  . . . . . . . . . . . . . . 12
-     3.3.  Loss of Configuration Headers  . . . . . . . . . . . . . . 12
+     3.3.  Loss of Configuration Headers  . . . . . . . . . . . . . . 13
    4.  Comment Headers  . . . . . . . . . . . . . . . . . . . . . . . 13
-   5.  Frame Packetizing  . . . . . . . . . . . . . . . . . . . . . . 13
-     5.1.  Example Fragmented Theora Packet . . . . . . . . . . . . . 14
-     5.2.  Packet Loss  . . . . . . . . . . . . . . . . . . . . . . . 16
-   6.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 17
-     6.1.  Mapping MIME Parameters into SDP . . . . . . . . . . . . . 18
-     6.2.  Usage with the SDP Offer/Answer Model  . . . . . . . . . . 19
-   7.  Security Considerations  . . . . . . . . . . . . . . . . . . . 19
-   8.  Acknowledgments  . . . . . . . . . . . . . . . . . . . . . . . 19
-   9.  References . . . . . . . . . . . . . . . . . . . . . . . . . . 19
-     9.1.  Normative References . . . . . . . . . . . . . . . . . . . 19
-     9.2.  Informative References . . . . . . . . . . . . . . . . . . 20
-   Author's Address . . . . . . . . . . . . . . . . . . . . . . . . . 22
-   Intellectual Property and Copyright Statements . . . . . . . . . . 23
+   5.  Frame Packetizing  . . . . . . . . . . . . . . . . . . . . . . 14
+     5.1.  Example Fragmented Theora Packet . . . . . . . . . . . . . 15
+     5.2.  Packet Loss  . . . . . . . . . . . . . . . . . . . . . . . 17
+   6.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 18
+     6.1.  Mapping MIME Parameters into SDP . . . . . . . . . . . . . 19
+     6.2.  Usage with the SDP Offer/Answer Model  . . . . . . . . . . 20
+   7.  Security Considerations  . . . . . . . . . . . . . . . . . . . 20
+   8.  Acknowledgments  . . . . . . . . . . . . . . . . . . . . . . . 21
+   9.  References . . . . . . . . . . . . . . . . . . . . . . . . . . 21
+     9.1.  Normative References . . . . . . . . . . . . . . . . . . . 21
+     9.2.  Informative References . . . . . . . . . . . . . . . . . . 22
+   Author's Address . . . . . . . . . . . . . . . . . . . . . . . . . 23
+   Intellectual Property and Copyright Statements . . . . . . . . . . 24
 
 
 
@@ -586,30 +586,30 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    The following IANA considerations MUST only be applied to the packed
    headers.
 
-   MIME media type name: video
+   MIME media type name: audio
 
    MIME subtype: theora-config
 
    Required Parameters:
 
-   None.
+      None
 
    Optional Parameters:
 
-   None.
+      None
 
    Encoding considerations:
 
-   This type is only defined for transfer via non RTP protocol as
-   specified in RFC XXXX.
+      This media type contains binary data.
 
    Security Considerations:
 
-   See Section 6 of RFC 3047.
+      See Section 6 of RFC XXXX.
 
-   Interoperability considerations: none
 
-   Published specification:
+
+
+
 
 
 
@@ -618,25 +618,41 @@ Barbato                  Expires April 18, 2006                [Page 11]
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
-   See RFC XXXX for details.
+   Interoperability considerations:
+
+      None
+
+   Published specification:
+
+      RFC XXXX [RFC Editor: please replace by the RFC number of this
+      memo, when published]
 
    Applications which use this media type:
 
-   Theora encoded video, configuration data.
+      Theora encoded video, configuration data.
 
-   Additional information: none
+   Additional information:
+
+      None
 
    Person & email address to contact for further information:
 
-   Luca Barbato: <lu_zero@gentoo.org>
+      Luca Barbato: <lu_zero@gentoo.org>
+      IETF Audio/Video Transport Working Group
 
    Intended usage: COMMON
 
-   Author/Change controller:
+   Restriction on usage:
 
-   Author: Luca Barbato
+      This media type doesn't depend on the transport.
 
-   Change controller: IETF AVT Working Group
+   Author:
+
+      Luca Barbato
+
+   Change controller:
+
+      IETF AVT Working Group
 
 3.2.2.  Well Known Configurations
 
@@ -649,6 +665,14 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    provide codebooks.  Every Configuration that is available as Well
    Known has the Ident highest bit set.  Every Well Known List MUST
    contain at most 2^23 items.
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 12]
+
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
+
 
    {FIXME: reference to bzip2 or gz} This off band delivery method MUST
    be signaled as "out_band/wkc/list_name" using the mandated parameter
@@ -666,14 +690,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 3.3.  Loss of Configuration Headers
 
    Unlike the loss of raw Theora payload data, loss of a configuration
-
-
-
-Barbato                  Expires April 18, 2006                [Page 12]
-
-Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
-
-
    header can lead to a situation where it will not be possible to
    successfully decode the stream.
 
@@ -690,6 +706,29 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    but to offer basic track/song information.  Clients MAY ignore it
    completely.  The details on the format of the comments can be found
    in the Theora documentation [12].
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 13]
+
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
+
 
        0                   1                   2                   3
        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -722,14 +761,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 5.  Frame Packetizing
 
    Each RTP packet contains either one complete Theora packet, one
-
-
-
-Barbato                  Expires April 18, 2006                [Page 13]
-
-Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
-
-
    Theora packet fragment, or an integer number of complete Theora
    packets (up to a max of 15 packets, since the number of packets is
    defined by a 4 bit value).
@@ -747,6 +778,14 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    correct sequence for fragmented packet reception the timestamp field
    of fragmented packets MUST be the same as the first packet sent, with
    the sequence number incremented as normal for the subsequent RTP
+
+
+
+Barbato                  Expires April 18, 2006                [Page 14]
+
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
+
+
    packets.
 
 5.1.  Example Fragmented Theora Packet
@@ -779,18 +818,29 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
    Figure 10: Example Fragmented Packet (Packet 1)
 
-
-
-Barbato                  Expires April 18, 2006                [Page 14]
-
-Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
-
-
    In this packet the initial sequence number is 1000 and the timestamp
    is xxxxx.  The Fragment type field is set to one, indicating it is
    the start packet of a serie of fragments.  The number of packets
    field is set to 0, and as the payload is raw Theora data the Theora
    payload type field is set to 0.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 15]
+
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
+
 
       Packet 2:
 
@@ -837,7 +887,13 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
 
-Barbato                  Expires April 18, 2006                [Page 15]
+
+
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 16]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
@@ -893,7 +949,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
 
-Barbato                  Expires April 18, 2006                [Page 16]
+Barbato                  Expires April 18, 2006                [Page 17]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
@@ -909,76 +965,107 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
    Required Parameters:
 
-   sampling: Determines the chroma subsampling format.
+      sampling: Determines the chroma subsampling format.
 
-   width: Determines the number of pixels per line.  This is an integer
-   between 1 and 1048561 and MUST be in multiples of 16.
+      width: Determines the number of pixels per line.  This is an
+         integer between 1 and 1048561 and MUST be in multiples of 16.
 
-   height: Determines the number of lines per frame.  This is an integer
-   between 1 and 1048561 and MUST be in multiples of 16.
+      height: Determines the number of lines per frame.  This is an
+         integer between 1 and 1048561 and MUST be in multiples of 16.
 
-   delivery-method: indicates the delivery methods in use, the possible
-   values are:inline, in_band, out_band/specific_method
+      delivery-method: indicates the delivery methods in use, the
+         possible values are: inline, in_band, out_band/specific_name
+         Where "specific_name" is the name of the out of band delivery
+         method.
 
-   configuration: the base16 [15] (hexadecimal) representation of the
-   Packed Headers (Section 3.2.1).
+      configuration: the base16 [15] (hexadecimal) representation of the
+         Packed Headers (Section 3.2.1).
 
    Optional Parameters:
 
-   configuration-uri: the URI of the configuration headers in case of
-   out of band transmission.  In the form of
-   "protocol://path/to/resource/".  Depending on the specific method the
-   single ident packet could be retrived by their number, or aggregated
-   in a single stream, aggregates MAY be compressed and an sha1 checksum
-   MAY be provided in the form of
-   "protocol://path/to/resource/!sha1hash"
+      configuration-uri: the URI of the configuration headers in case of
+         out of band transmission.  In the form of
+         "protocol://path/to/resource/".  Depending on the specific
+         method the single ident packet could be retrived by their
+         number, or aggregated in a single stream, aggregates MAY be
+         compressed using gz or bzip2 and an sha1 checksum MAY be
+         provided in the form of "protocol://path/to/resource/!
+         sha1hash"
 
    Encoding considerations:
 
-   This type is only defined for transfer via RTP as specified in RFC
-   XXXX.
+      This media type is framed and contains binary data.
 
    Security Considerations:
 
-   See Section 6 of RFC 3047.
-
-   Interoperability considerations: none
-
-   Published specification:
+      See Section 6 of RFC XXXX.
 
 
 
 
-Barbato                  Expires April 18, 2006                [Page 17]
+
+
+Barbato                  Expires April 18, 2006                [Page 18]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
-   See the Theora documentation [12] for details.
+   Interoperability considerations:
+
+      None
+
+   Published specification:
+
+      RFC XXXX [RFC Editor: please replace by the RFC number of this
+      memo, when published]
+
+      Ogg Theora I specification: Codec setup and packet decode.
+      Available from the Xiph website, http://www.xiph.org
 
    Applications which use this media type:
 
-   Video streaming and conferencing tools
+      Audio streaming and conferencing tools
 
-   Additional information: none
+   Additional information:
+
+      None
 
    Person & email address to contact for further information:
 
-   Luca Barbato: <lu_zero@gentoo.org>
+      Luca Barbato: <lu_zero@gentoo.org>
+      IETF Audio/Video Transport Working Group
 
-   Intended usage: COMMON
+   Intended usage:
 
-   Author/Change controller:
+      COMMON
 
-   Author: Luca Barbato
+   Restriction on usage:
 
-   Change controller: IETF AVT Working Group
+      This media type depends on RTP framing, and hence is only defined
+      for transfer via RTP [3]
+
+   Author:
+
+      Luca Barbato
+
+   Change controller:
+
+      IETF AVT Working Group
+
 
 6.1.  Mapping MIME Parameters into SDP
 
    The information carried in the MIME media type specification has a
    specific mapping to fields in the Session Description Protocol (SDP)
    [6], which is commonly used to describe RTP sessions.  When SDP is
+
+
+
+Barbato                  Expires April 18, 2006                [Page 19]
+
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
+
+
    used to specify sessions the mapping are as follows:
 
    o  The MIME type ("video") goes in SDP "m=" as the media name.
@@ -1002,14 +1089,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
    The URI specified in the configuration-uri attribute MUST point to a
    location where all of the Configuration Packets needed for the life
-
-
-
-Barbato                  Expires April 18, 2006                [Page 18]
-
-Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
-
-
    of the session reside.
 
    Example:
@@ -1035,6 +1114,14 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
    RTP packets using this payload format are subject to the security
    considerations discussed in the RTP specification [3].  This implies
+
+
+
+Barbato                  Expires April 18, 2006                [Page 20]
+
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
+
+
    that the confidentiality of the media stream is achieved by using
    encryption.  Because the data compression used with this payload
    format is applied end-to-end, encryption may be performed on the
@@ -1058,13 +1145,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
    [1]   Pfeiffer, S., "The Ogg Encapsulation Format Version 0",
          RFC 3533.
-
-
-
-Barbato                  Expires April 18, 2006                [Page 19]
-
-Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
-
 
    [2]   Bradner, S., "Key words for use in RFCs to Indicate Requirement
          Levels", RFC 2119.
@@ -1090,6 +1170,14 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    [9]   Ott, J., Wenger, S., Sato, N., Burmeister, C., and J. Rey,
          "Extended RTP Profile for RTCP-based Feedback (RTP/AVPF)",
          Internet Draft (draft-ietf-avt-rtcp-feedback-11: Work in
+
+
+
+Barbato                  Expires April 18, 2006                [Page 21]
+
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
+
+
          progress).
 
    [10]  Kerr, P., "RTP Payload Format for Vorbis Encoded Audio -
@@ -1101,7 +1189,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    [11]  "libTheora: Available from the Xiph website,
          http://www.xiph.org".
 
-   [12]  "Ogg Theora I spec:  Codec setup and packet decode.
+   [12]  "Ogg Theora I specification:  Codec setup and packet decode.
          http://www.xiph.org/ogg/Theora/doc/Theora-spec-ref.html".
 
    [13]  "ITU-T Recommendation V.42, 1994, Rev. 1. Error-correcting
@@ -1113,14 +1201,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
          Systems--Data Communication High-Level Data Link Control
          Procedure--Frame Structure. International Organization for
          Standardization.".
-
-
-
-
-Barbato                  Expires April 18, 2006                [Page 20]
-
-Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
-
 
    [15]  Josefsson, S., "The Base16, Base32, and Base64 Data Encodings",
          RFC 3548.
@@ -1149,31 +1229,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Barbato                  Expires April 18, 2006                [Page 21]
+Barbato                  Expires April 18, 2006                [Page 22]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
@@ -1229,7 +1285,7 @@ Author's Address
 
 
 
-Barbato                  Expires April 18, 2006                [Page 22]
+Barbato                  Expires April 18, 2006                [Page 23]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
@@ -1285,6 +1341,6 @@ Acknowledgment
 
 
 
-Barbato                  Expires April 18, 2006                [Page 23]
+Barbato                  Expires April 18, 2006                [Page 24]
 
 
