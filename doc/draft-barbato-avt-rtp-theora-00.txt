@@ -461,7 +461,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
    A Theora Packed Configuration is indicated with the payload type
    field set to 1.  Of the three headers, defined in the Theora I
-   specification [12], the identification and the setup will be packed
+   specification [16], the identification and the setup will be packed
    together, the comment header is completely suppressed.  Is up to the
    client provide a minimal size comment header to the decoder if
    required by the implementation.
@@ -674,13 +674,12 @@ Barbato                  Expires April 18, 2006                [Page 12]
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
-   {FIXME: reference to bzip2 or gz} This off band delivery method MUST
-   be signaled as "out_band/wkc/list_name" using the mandated parameter
-   delivery-method.  An optional configuration-uri MAY point to a
-   location where to fetch it.  The list is in the form of Packed
-   Headers (Section 3.2.1), that MAY be compressed using bzip2 or gz
-   algorithms As further explained in the IANA Considerations
-   (Section 6) section.
+   This off band delivery method MUST be signaled as "out_band/wkc/
+   list_name" using the mandated parameter delivery-method.  An optional
+   configuration-uri MAY point to a location where to fetch it.  The
+   list is in the form of Packed Headers (Section 3.2.1), that MAY be
+   compressed using bzip2 [14] or gzip [12] algorithms As further
+   explained in the IANA Considerations (Section 6) section.
 
    Only one list MUST be used at time.  During SDP Offer/Answer [5]
    client and server MAY agree on a specific list, that subject will be
@@ -705,7 +704,8 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    on.  These metadata messages are not intended to be fully descriptive
    but to offer basic track/song information.  Clients MAY ignore it
    completely.  The details on the format of the comments can be found
-   in the Theora documentation [12].
+   in the Theora documentation [16].
+
 
 
 
@@ -978,7 +978,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
          Where "specific_name" is the name of the out of band delivery
          method.
 
-      configuration: the base16 [15] (hexadecimal) representation of the
+      configuration: the base16 [11] (hexadecimal) representation of the
          Packed Headers (Section 3.2.1).
 
    Optional Parameters:
@@ -988,9 +988,9 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
          "protocol://path/to/resource/".  Depending on the specific
          method the single ident packet could be retrived by their
          number, or aggregated in a single stream, aggregates MAY be
-         compressed using gz or bzip2 and an sha1 checksum MAY be
-         provided in the form of "protocol://path/to/resource/!
-         sha1hash"
+         compressed using gzip [12] or bzip2 [14] and an sha1 [13]
+         checksum MAY be provided in the form of
+         "protocol://path/to/resource/! sha1hash"
 
    Encoding considerations:
 
@@ -1180,38 +1180,38 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
          progress).
 
-   [10]  Kerr, P., "RTP Payload Format for Vorbis Encoded Audio -
+   [10]  Barbato, L., "RTP Payload Format for Vorbis Encoded Audio -
          draft-ietf-avt-vorbis-rtp-00", Internet Draft (Work in
          progress).
 
+   [11]  Josefsson, S., "The Base16, Base32, and Base64 Data Encodings",
+         RFC 3548.
+
+   [12]  Deutsch, P., "GZIP file format specification version 4.3",
+         RFC 1952.
+
+   [13]  National Institute of Standards and Technology, "Secure Hash
+         Standard", May 1993.
+
+   [14]  Seward, J., "libbz2 and bzip2".
+
 9.2.  Informative References
 
-   [11]  "libTheora: Available from the Xiph website,
+   [15]  "libTheora: Available from the Xiph website,
          http://www.xiph.org".
 
-   [12]  "Ogg Theora I specification:  Codec setup and packet decode.
+   [16]  "Ogg Theora I specification:  Codec setup and packet decode.
          http://www.xiph.org/ogg/Theora/doc/Theora-spec-ref.html".
 
-   [13]  "ITU-T Recommendation V.42, 1994, Rev. 1. Error-correcting
+   [17]  "ITU-T Recommendation V.42, 1994, Rev. 1. Error-correcting
          Procedures for DCEs Using Asynchronous-to-Synchronous
          Conversion. International Telecommunications Union. Available
          from the ITU website, http://www.itu.int".
 
-   [14]  "ISO 3309, October 1984, 3rd Edition. Information Processing
+   [18]  "ISO 3309, October 1984, 3rd Edition. Information Processing
          Systems--Data Communication High-Level Data Link Control
          Procedure--Frame Structure. International Organization for
          Standardization.".
-
-   [15]  Josefsson, S., "The Base16, Base32, and Base64 Data Encodings",
-         RFC 3548.
-
-
-
-
-
-
-
-
 
 
 
