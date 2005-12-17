@@ -28,7 +28,7 @@
 
 <abstract>
 <t>
-This document describes a RTP payload format for transporting Theora encoded video.  It details the RTP encapsulation mechanism for raw Theora data and configuration headers consisting of the quantization matrices and the Huffman codebooks for the DCT coefficients, and a table of limit values for the deblocking filter.
+This document describes a RTP payload format for transporting Theora encoded video.  It details the RTP encapsulation mechanism for raw Theora data and configuration headers necessary to configure the decoder.
 </t>
 
 <t>
@@ -49,7 +49,7 @@ All references to RFC XXXX are to be replaced by references to the RFC number of
 
 <section anchor="Introduction" title="Introduction">
 <t>
-Theora is a general purpose, lossy video codec. It is based on the VP3.1 video codec produced by On2 Technologies and has been donated to the Xiph.org Foundation.  
+Theora is a general purpose, lossy video codec. It is based on the VP3 video codec produced by On2 Technologies and has been donated to the Xiph.org Foundation.  
 </t>
 
 <t>
@@ -57,16 +57,16 @@ Theora I is a block-based lossy transform codec that utilizes an 8 x 8 Type-II D
 </t>
 
 <t>
-Theora provides none of its own framing, synchronization, or protection against transmission errors.  Theora is a free-form variable bit rate (VBR) codec, and packets have no minimum size, maximum size, or fixed/expected size.  Theora packets are thus intended to be used with a transport mechanism that provides free-form framing, synchronization, positioning, and error correction in accordance with these design assumptions, such as Ogg <xref target="rfc3533"></xref>. or RTP/AVP <xref target="rfc3550"></xref>. 
+Theora provides none of its own framing, synchronization, or protection against transmission errors. Instead, the codec expects to receive a discrete sequence of data packets. Theora is a free-form variable bit rate (VBR) codec, and these packets have no minimum size, maximum size, or fixed/expected size.  Theora packets are thus intended to be used with a transport mechanism that provides free-form framing, synchronization, positioning, and error correction in accordance with these design assumptions, such as Ogg <xref target="rfc3533"></xref> or RTP/AVP <xref target="rfc3550"></xref>. 
 </t>
 
 <t>
-Theora I currently supports progressive video data of arbitrary dimensions at a constant frame rate in one of several YCbCr color spaces. 
+Theora I currently supports progressive video data of arbitrary dimensions at a constant frame rate in one of several Y'CbCr color spaces. 
 Three different chroma subsampling formats are supported: 4:2:0, 4:2:2, and 4:4:4.  The Theora I format does not support interlaced material, variable frame rates, bit-depths larger than 8 bits per component, nor alternate color spaces such as RGB or arbitrary multi-channel spaces.  Black and white content can be efficiently encoded, however, because the uniform chroma planes compress well.
 </t>
 
 <t>
-Theora is similar to Vorbis audio <xref target="vorbisrtp"></xref> in that it requires the inclusion of the entire probability model for the DCT coefficients and all the quantization parameters in the bitstream headers to be sent ahead of the video data.  It is therefore impossible to decode any frame in the stream without having previously fetched the codec info and codec setup headers, although Theora can initiate decode at an arbitrary intra-frame packet within a bitstream so long as the codec has been initialized with the setup headers.
+Theora is similar to the Vorbis audio <xref target="vorbisrtp"></xref> in that it the decoder reads the probability model for the entropy coder and all quantization parameters from special "header" packets at the start of the compressed data.  It is therefore impossible to decode any video data without having previously fetched the codec info and codec setup headers, although Theora can initiate decode at an arbitrary intra-frame packet so long as the codec has been initialized with the associated headers.
 </t>
 
 <section anchor="Terminology" title="Terminology">
@@ -82,11 +82,11 @@ and "OPTIONAL" in this document are to be interpreted as described in RFC 2119 <
 <section anchor="Payload Format" title="Payload Format">
 
 <t>
-Each frame of digital video is packetized into one or more RTP packets.  If the data for a complete frame exceeds the network MTU, it SHOULD be fragmented into multiple RTP packets, each smaller than the MTU. A single RTP packet MAY contain data for more than one Theora frame.
+Each frame of digital video is encoded as a single Theora data packet and sent over one of more RTP packets.  If the data for a complete frame exceeds the network MTU, it SHOULD be fragmented into multiple RTP packets, each smaller than the MTU. Conversely, a single RTP packet MAY contain data for more than one Theora frame.
 </t>
 
 <t>
-For RTP based transportation of Theora encoded video the standard RTP header is followed by a 4 octet payload header, then the payload data.
+For RTP based transport of Theora encoded video the standard RTP header is followed by a 4 octet payload header, then the payload data.
 </t>
 
 <section anchor="RTP Header" title="RTP Header">
@@ -202,11 +202,12 @@ This field is set accordingly the following list
 <t>      3 = End Fragment</t>
 </list>
 
+<t>This field must be zero if the number of packets field is non-zero.</t>
 
 <t>
 Theora Data Type (TDT): 2 bits</t>
 <t>
-This field sets the packet payload type for the Theora data.  There are currently two type of Vorbis payloads. 
+This field sets the packet payload type for the Theora data.  There are currently three Theora payload types. 
 </t>
 
 <vspace blankLines="1" />
@@ -226,7 +227,7 @@ The last 4 bits are the number of complete packets in this payload.  This provid
 <section anchor="Payload Data" title="Payload Data">
 
 <t>
-Each Theora payload section starts with a two octet length header that is used to represent the size of the following data payload, followed by the raw Theora data.
+Each Theora payload section starts with a two octet length header that is used to represent the size of the following data payload, followed by the raw Theora packet data.
 </t>
 
 <figure anchor="Payload Data Figure" title="Payload Data">
@@ -240,11 +241,11 @@ Each Theora payload section starts with a two octet length header that is used t
 </figure>
 
 <t>
-The Theora codec uses relatively unstructured raw packets containing binary integer fields of arbitrary width that often do not fall on an octet boundary.  When this happens the bitstream is packed to an octet boundary.  When a Theora encoder produces packets, unused space in the last byte of a packet is always zeroed during the encoding process.  Thus, should this unused space be read, it will return binary zeros.
+The Theora codec uses relatively unstructured raw packets containing binary integer fields of arbitrary width that often do not fall on an octet boundary. When a Theora encoder produces packets, unused space in the last byte of a packet is always zeroed during the encoding process.  Thus, should this unused space be read, it will return binary zeros.
 </t>
 
 <t>
-For payloads which consist of multiple Theora packets the payload data consists of the payload length field followed by the payload data for each of the Theora packets in the payload.
+For payloads which consist of multiple Theora packets the payload data consists of the payload length field followed by the first Theora packet's data, then the payload length followed by the second Theora packet, and so on for each of the Theora packets in the payload.
 </t>
 
 </section>
@@ -299,12 +300,12 @@ Payload Data:
 </figure>
 
 <t>
-The payload portion of the packet starts with the 24 bit Configuration ident field followed by the 8 bit bitfield. The Fragment type field is set to 0, indicating that this packet contains whole Theora frame data. The Data type field is set to 0 since it is theora raw data. The number of whole Theora data packets is set to 2.
+The payload portion of the packet starts with the 24 bit Configuration ident field followed by 8 bits describing the payload. The Fragment type field is set to 0, indicating that this packet contains whole Theora frame data. The Data type field is set to 0 since it is theora raw data. The number of whole Theora data packets is set to 2.
 </t>
 
 <t>
-Each of the payload blocks starts with the two octet length field and then
-follows by the variable length Theora data.
+Each of the payload blocks starts with the two octet length field followed
+by the variable length Theora packet data.
 </t>
 
 </section>
@@ -313,11 +314,11 @@ follows by the variable length Theora data.
 <section anchor="Configuration Headers" title="Configuration Headers">
 
 <t>
-To decode a Theora stream three configuration header blocks are needed.  The first header, the Identification Header, indicates the frame dimensions, quality, blocks used and the version of the Theora encoder used.  The second header, the Comment Header, contains stream metadata and the third header, the Setup Header, details which contains dequantization and Huffman tables.
+To decode a Theora stream three configuration header packets are needed.  The first, called the Identification Header, indicates the frame dimensions, quality, blocks used and the version of the Theora encoder used.  The second, called the Comment Header, contains stream metadata and the third, called the Setup Header, contains details of the dequantization and Huffman tables.
 </t>
 
 <t>
-Since this information must be transmitted reliably, and as the RTP stream may change certain configuration data mid-session there are different methods for delivering this configuration data to a client, both in-band and out-of-band which is detailed below. SDP delivery is used to set-up an initial state for the client application. The changes may be due to different dequantization and Huffman tables as well as different bitrates of the stream.
+Since this information must be transmitted reliably, and as the RTP stream may change certain configuration data mid-session, there are different methods for delivering this configuration data to a client, both in-band and out-of-band which are detailed below. SDP delivery is used to set up an initial state for the client application. The changes may be due to different dequantization and Huffman tables as well as different bitrates of the stream.
 </t>
 
 <t>
@@ -374,7 +375,7 @@ A Theora Packed Configuration is indicated with the payload type field set to 1.
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ]]></artwork>
 </figure>
-<t>The Ident field is set with the value that will be used by the Raw Payload Packets to address this Configuration. The Fragment type is set to 0 since the packet bears the full Packed configuration, the number of packet is set to 1.
+<t>The Ident field is set with the value that will be used by the Raw Payload Packets to address this Configuration. The Fragment type is set to 0 since the packet bears the full Packed configuration, the number of packet is set to 1. In practice, Packed Headers usually need to be fragmented to stay below the path MTU.
 </t>
 
 
@@ -386,13 +387,13 @@ A Theora Packed Configuration is indicated with the payload type field set to 1.
 <section anchor="Out of Band Transmission" title="Out of Band Transmission">
 
 <t>
-This section, as stated before, will not cover all the possible out-of-band delivery methods since they rely to different protocols and be linked to a specific application. The following packet definition SHOULD be used in out-of-band delivery and MUST be used when Configuration is inlined in the SDP.
+This section, as stated above, does not cover all the possible out-of-band delivery methods since they rely to different protocols and be linked to specific applications. The following packet definition SHOULD be used in out-of-band delivery and MUST be used when Configuration is inlined in the SDP.
 </t>
 
 <section anchor="Packed Headers" title="Packed Headers"> 
 
 <t>
-As mentioned above the RECOMMENDED delivery vector for Theora configuration data is via a retrieval method that can be performed using a reliable transport protocol. As the RTP headers are not required for this method of delivery the structure of the configuration data is slightly different. The packed header starts with a 32 bit count field which details the number of packed headers that are contained in the bundle. Next is the Packed header payload for each chained Theora stream.
+As mentioned above the recommended delivery vector for Theora configuration data is via a retrieval method that can be performed using a reliable transport protocol. As the RTP headers are not required for this method of delivery the structure of the configuration data is slightly different. The packed header starts with a 32 bit count field which details the number of packed headers that are contained in the bundle. Next is the Packed header payload for each setup id.
 </t>
 
 <figure anchor="Packed Headers Overview Figure" title="Packed Headers Overview">
@@ -410,7 +411,7 @@ As mentioned above the RECOMMENDED delivery vector for Theora configuration data
 </figure>
 
 <t>
-Since the Configuration Ident and the Identification Header are fixed lenght there is only a 2 byte Lenght tag to define the lenght of the packed headers.
+Since the Configuration Ident and the Identification Header are fixed length there is only a 2 byte Length tag to define the length of the packed headers.
 </t>
 
 <figure anchor="Packed Headers Detail Figure" title="Packed Headers Detail">
@@ -583,7 +584,7 @@ Loss of Configuration Packet results in the halting of stream decoding and SHOUL
 <section anchor="Comment Headers" title="Comment Headers">
 
 <t>
-With the payload type flag set to 2, this indicates that the packet contain the comment metadata, such as artist name, track title and so on. These metadata messages are not intended to be fully descriptive but to offer basic track/song information. Clients MAY ignore it completely. The details on the format of the comments can be found in the <xref target="theora-spec-ref">Theora documentation</xref>.
+When the payload type is set to 2, the packet contains the so-called "comment" metadata, such as artist name, track title and so on. These metadata messages are not intended to be fully descriptive but to offer basic title information. Clients MAY ignore it completely. The details on the format of the comments can be found in the <xref target="theora-spec-ref">Theora documentation</xref>.
 </t>
 <figure anchor="Comment Packet Figure" title="Comment Packet">
 <artwork><![CDATA[
@@ -611,14 +612,14 @@ With the payload type flag set to 2, this indicates that the packet contain the 
 ]]></artwork>
 </figure>
 
-<t>The 2 bytes length field is necessary since this packet could be fragmented.</t>
+<t>The 2 byte length field is necessary since this Theora packet could be fragmented.</t>
 
 </section>
 
 <section anchor="Frame Packetizing" title="Frame Packetizing">
 
 <t>
-Each RTP packet contains either one complete Theora packet, one Theora packet fragment, or an integer number of complete Theora packets (up to a max of 15 packets, since the number of packets is defined by a 4 bit value).
+Each RTP packet contains either one complete Theora packet, one Theora packet fragment, or an integer number of complete Theora packets (up to a maximum of 15 packets, since the number of packets is defined by a 4 bit value).
 </t>
 
 <t>
@@ -626,7 +627,7 @@ Any Theora data packet that is less than path MTU SHOULD be bundled in the RTP p
 </t>
 
 <t>
-If a Theora packet is larger than 65535 octets it MUST be fragmented.  A fragmented packet has a zero in the last four bits of the payload header. The first fragment will set the Fragment type to 1. Each fragment after the first will set the Fragment type to 2 in the payload header.  The RTP packet containing the last fragment of the Theora packet will have the Fragment type set to 3.  To maintain the correct sequence for fragmented packet reception the timestamp field of fragmented packets MUST be the same as the first packet sent, with the sequence number incremented as normal for the subsequent RTP packets.</t>
+If a Theora packet is larger than 65535 octets it MUST be fragmented.  A fragmented packet has a zero in the last four bits of the payload header. The RTP packet containing the first fragment will set the Fragment type to 1. Each RTP packet after the first will set the Fragment type to 2 in the payload header.  The RTP packet containing the last fragment of the Theora packet will have the Fragment type set to 3. If the fragmented Theora packet spans only two RTP packets, the first will set the Fragement type field to 1 and the second will set it to 2.  To maintain the correct sequence for fragmented packet reception the timestamp field of fragmented packets MUST be the same as the first packet sent, with the sequence number incremented as normal for the subsequent RTP packets.</t>
 
 <section anchor="Example Fragmented Theora Packet" title="Example Fragmented Theora Packet">
 
@@ -691,7 +692,7 @@ In this packet the initial sequence number is 1000 and the timestamp is xxxxx.  
 </figure>
 
 <t>
-The Fragment type field is set to 2 and the number of packets field is set to 0. For large Theora fragments there can be several of these type of payload packets. The maximum packet size SHOULD be no greater than the path MTU, including all RTP and payload headers. The sequence number has been incremented by one but the timestamp field remains the same as the initial packet.
+The Fragment type field is set to 2 and the number of packets field is set to 0. For large Theora fragments there can be several of these type of payload packets. The maximum RTP packet size SHOULD be no greater than the path MTU, including all RTP and payload headers. The sequence number has been incremented by one but the timestamp field remains the same as the initial packet.
 </t>
 
 <figure anchor="Example Fragmented Packet (Packet 3)" title="Example Fragmented Packet (Packet 3)">
@@ -738,7 +739,7 @@ If a particular multicast session has a large number of participants care must b
 </t>
 
 <t>
-Loss of any of the Configuration fragment will result in the loss of the full Configuration packet with the result detailed in the <xref target="Loss of Configuration Headers">Loss of Configuration Headers</xref> section.
+Loss of any of the Configuration fragment will result in the loss of the full Configuration packet as detailed in the <xref target="Loss of Configuration Headers">Loss of Configuration Headers</xref> section.
 </t>
 
 </section>
@@ -907,7 +908,7 @@ The information carried in the MIME media type specification has a specific mapp
 
 
 <t>
-If the stream comprises chained Theora files and all of them are known in advance, the Configuration Packet for each file SHOULD be packaged together and passed to the client using the configuration attribute.
+If the stream uses multiple decoder setup configurations and all of them are known in advance, the Configuration Packet for each file SHOULD be packaged together and passed to the client using the configuration attribute.
 </t>
 
 <t>
@@ -954,7 +955,7 @@ compressed data.  Where the size of a data block is set care MUST be taken to pr
 <t>This document is a continuation of draft-kerr-avt-theora-rtp-00.txt</t>
 
 <t>
-Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike Smith, Phil Kerr, Politecnico di Torino (LS)³/IMG Group in particular Federico Ridolfo, Francesco Varano, Giampaolo Mancini, Juan Carlos De Martin.
+Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike Smith, Phil Kerr, Timothy Terriberry, Politecnico di Torino (LS)³/IMG Group in particular Federico Ridolfo, Francesco Varano, Giampaolo Mancini, Juan Carlos De Martin.
 </t>
 
 </section> 
@@ -1100,7 +1101,7 @@ Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike
 
 <reference anchor="theora-spec-ref">
 <front>
-<title>Ogg Theora I specification:  Codec setup and packet decode.  http://www.xiph.org/ogg/Theora/doc/Theora-spec-ref.html</title>
+<title>Theora I specification:  Codec setup and packet decode.  http://www.xiph.org/theora/doc/Theora_I_spec.pdf</title>
 </front>
 </reference>   
   
