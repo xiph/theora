@@ -542,7 +542,7 @@ IETF AVT Working Group</t>
 
 </section>
 </section>
-
+<!--
 <section anchor="Well Known Configurations" title="Well Known Configurations">
 
 <t>
@@ -562,7 +562,7 @@ This method
 </t>
 
 </section>
-
+-->
 </section>
 
 <section anchor="Loss of Configuration Headers" title="Loss of Configuration Headers"> 
