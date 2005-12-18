@@ -61,8 +61,8 @@ Theora provides none of its own framing, synchronization, or protection against 
 </t>
 
 <t>
-Theora I currently supports progressive video data of arbitrary dimensions at a constant frame rate in one of several Y'CbCr color spaces. 
-Three different chroma subsampling formats are supported: 4:2:0, 4:2:2, and 4:4:4.  The Theora I format does not support interlaced material, variable frame rates, bit-depths larger than 8 bits per component, nor alternate color spaces such as RGB or arbitrary multi-channel spaces.  Black and white content can be efficiently encoded, however, because the uniform chroma planes compress well.
+Theora I currently supports progressive video data of arbitrary dimensions at a constant frame rate in one of several Y'CbCr color spaces.
+Three different chroma subsampling formats are supported: 4:2:0, 4:2:2, and 4:4:4.  The Theora I format does not support interlaced material, variable frame rates, bit-depths larger than 8 bits per component, nor alternate color spaces such as RGB or arbitrary multi-channel spaces.  Black and white content can be efficiently encoded, however, because the uniform chroma planes compress well. Arbitrary frame size will be encoded rounding to the upper multiple of 16 both dimension for performance reason. The original width and height will be encoded in the header and the decoder will use this information to clip the decoded frame to the right dimensions.
 </t>
 
 <t>
@@ -153,7 +153,7 @@ The sequence number increments by one for each RTP data packet sent, and may be 
 
 <t>
 Timestamp: 32 bits</t><t>
-A timestamp representing the sampling time of the first sample of the first Theora packet in the RTP packet. The clock frequency MUST be set to the sample rate of the encoded video data and is conveyed out-of-band as an SDP attribute.
+A timestamp representing the presentation time of the first sample of the first Theora packet in the RTP packet. The clock frequency MUST be set to 90kHz.
 </t>
 
 <t>
@@ -218,6 +218,10 @@ This field sets the packet payload type for the Theora data.  There are currentl
 <t>      3 = Reserved</t>
 </list>
 
+<t> The packets with a TDT of value 3 MUST be ignored </t>
+
+
+
 <t>
 The last 4 bits are the number of complete packets in this payload.  This provides for a maximum number of 15 Theora packets in the payload. If the packet contains fragmented data the number of packets MUST be set to 0.
 </t>
@@ -266,7 +270,7 @@ RTP Packet Header:
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    | 2 |0|0|  0    |0|      PT     |       sequence number         |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                 timestamp (in sample rate units)              |
+   |                           timestamp                           |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |          synchronisation source (SSRC) identifier             |
    +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
@@ -769,12 +773,12 @@ Loss of any of the Configuration fragment will result in the loss of the full Co
 
 <vspace blankLines="1" />
 
-<t hangText="width:"> Determines the number of pixels per line. This is an integer between 1 and 1048561 and MUST be in multiples of 16.
+<t hangText="width:"> Determines the number of pixels per line. This is an integer between 1 and 1048561 and MUST be in multiples of 16. 
 </t>
 
 <vspace blankLines="1" />
 
-<t hangText="height:">Determines the number of lines per frame. This is an integer between 1 and 1048561 and MUST be in multiples of 16.
+<t hangText="height:">Determines the number of lines per frame encoded. This is an integer between 1 and 1048561 and MUST be in multiples of 16.
 </t>
 
 <vspace blankLines="1" />
@@ -897,7 +901,7 @@ The information carried in the MIME media type specification has a specific mapp
 <t>The MIME subtype ("THEORA") goes in SDP "a=rtpmap" as the encoding name.</t>
 <vspace blankLines="1" />
 
-<t>The parameter "rate" also goes in "a=rtpmap" as clock rate.</t>
+<t>The clock rate in the "a=rtpmap" line MUST be 90000</t>
 <vspace blankLines="1" />
 
 <t>The mandated parameters "delivery-method" and "configuration" MUST be included in the SDP "a=fmpt" attribute.</t>

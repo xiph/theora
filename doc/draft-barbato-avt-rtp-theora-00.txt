@@ -1,6 +1,7 @@
 
 
 
+
 AVT Working Group                                             L. Barbato
 Internet-Draft                                                  Xiph.Org
 Expires: April 18, 2006                                 October 15, 2005
@@ -64,7 +65,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 Table of Contents
 
    1.  Introduction . . . . . . . . . . . . . . . . . . . . . . . . .  3
-     1.1.  Terminology  . . . . . . . . . . . . . . . . . . . . . . .  3
+     1.1.  Terminology  . . . . . . . . . . . . . . . . . . . . . . .  4
    2.  Payload Format . . . . . . . . . . . . . . . . . . . . . . . .  4
      2.1.  RTP Header . . . . . . . . . . . . . . . . . . . . . . . .  4
      2.2.  Payload Header . . . . . . . . . . . . . . . . . . . . . .  5
@@ -145,7 +146,11 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    bits per component, nor alternate color spaces such as RGB or
    arbitrary multi-channel spaces.  Black and white content can be
    efficiently encoded, however, because the uniform chroma planes
-   compress well.
+   compress well.  Arbitrary frame size will be encoded rounding to the
+   upper multiple of 16 both dimension for performance reason.  The
+   original width and height will be encoded in the header and the
+   decoder will use this information to clip the decoded frame to the
+   right dimensions.
 
    Theora is similar to the Vorbis audio [10] in that it the decoder
    reads the probability model for the entropy coder and all
@@ -156,17 +161,20 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    frame packet so long as the codec has been initialized with the
    associated headers.
 
-1.1.  Terminology
 
-   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
-   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
-   document are to be interpreted as described in RFC 2119 [2].
 
 
 
 Barbato                  Expires April 18, 2006                 [Page 3]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
+
+
+1.1.  Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in RFC 2119 [2].
 
 
 2.  Payload Format
@@ -211,19 +219,19 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    This field identifies the version of RTP.  The version used by this
    specification is two (2).
 
-   Padding (P): 1 bit
-
-   Padding MAY be used with this payload format according to section 5.1
-   of [3].
-
-   Extension (X): 1 bit
-
 
 
 Barbato                  Expires April 18, 2006                 [Page 4]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
+
+   Padding (P): 1 bit
+
+   Padding MAY be used with this payload format according to section 5.1
+   of [3].
+
+   Extension (X): 1 bit
 
    The Extension bit is used in accordance with [3].
 
@@ -249,10 +257,9 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
    Timestamp: 32 bits
 
-   A timestamp representing the sampling time of the first sample of the
-   first Theora packet in the RTP packet.  The clock frequency MUST be
-   set to the sample rate of the encoded video data and is conveyed out-
-   of-band as an SDP attribute.
+   A timestamp representing the presentation time of the first sample of
+   the first Theora packet in the RTP packet.  The clock frequency MUST
+   be set to 90kHz.
 
    SSRC/CSRC identifiers:
 
@@ -265,13 +272,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    Payload Header.  This header is split into a number of bitfields
    detailing the format of the following Payload Data packets.
 
-       0                   1                   2                   3
-       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      |               Configuration Ident             | F |TDT|# pkts.|
-      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-      +-+-+-+-+-+-+-+-+
 
 
 
@@ -280,6 +281,14 @@ Barbato                  Expires April 18, 2006                 [Page 5]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |               Configuration Ident             | F |TDT|# pkts.|
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+      +-+-+-+-+-+-+-+-+
 
    Figure 2: Payload Header
 
@@ -309,6 +318,8 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
       2 = Legacy Theora Comment payload
       3 = Reserved
 
+   The packets with a TDT of value 3 MUST be ignored
+
    The last 4 bits are the number of complete packets in this payload.
    This provides for a maximum number of 15 Theora packets in the
    payload.  If the packet contains fragmented data the number of
@@ -320,6 +331,13 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    that is used to represent the size of the following data payload,
    followed by the raw Theora packet data.
 
+
+
+Barbato                  Expires April 18, 2006                 [Page 6]
+
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
+
+
        0                   1                   2                   3
        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -329,14 +347,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    Figure 3: Payload Data
 
    The Theora codec uses relatively unstructured raw packets containing
-
-
-
-Barbato                  Expires April 18, 2006                 [Page 6]
-
-Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
-
-
    binary integer fields of arbitrary width that often do not fall on an
    octet boundary.  When a Theora encoder produces packets, unused space
    in the last byte of a packet is always zeroed during the encoding
@@ -360,7 +370,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       | 2 |0|0|  0    |0|      PT     |       sequence number         |
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      |                 timestamp (in sample rate units)              |
+      |                           timestamp                           |
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       |          synchronisation source (SSRC) identifier             |
       +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
@@ -371,15 +381,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    Figure 4: Example RTP Packet
 
    Payload Data:
-
-
-
-
-
-
-
-
-
 
 
 
@@ -969,8 +970,9 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
       width: Determines the number of pixels per line.  This is an
          integer between 1 and 1048561 and MUST be in multiples of 16.
 
-      height: Determines the number of lines per frame.  This is an
-         integer between 1 and 1048561 and MUST be in multiples of 16.
+      height: Determines the number of lines per frame encoded.  This is
+         an integer between 1 and 1048561 and MUST be in multiples of
+         16.
 
       delivery-method: indicates the delivery methods in use, the
          possible values are: inline, in_band, out_band/specific_name
@@ -998,7 +1000,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    Security Considerations:
 
       See Section 6 of RFC XXXX.
-
 
 
 
@@ -1072,7 +1073,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    o  The MIME subtype ("THEORA") goes in SDP "a=rtpmap" as the encoding
       name.
 
-   o  The parameter "rate" also goes in "a=rtpmap" as clock rate.
+   o  The clock rate in the "a=rtpmap" line MUST be 90000
 
    o  The mandated parameters "delivery-method" and "configuration" MUST
       be included in the SDP "a=fmpt" attribute.
@@ -1342,3 +1343,4 @@ Acknowledgment
 
 Barbato                  Expires April 18, 2006                [Page 24]
 
+
