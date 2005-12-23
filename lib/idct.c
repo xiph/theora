@@ -79,11 +79,11 @@ void IDctSlow(  Q_LIST_ENTRY * InputData,
       t2 >>= 16;
       _D = t1 - t2;
 
-      t1 = (xC4S4 * (_A - _C));
+      t1 = (xC4S4 * (ogg_int16_t)(_A - _C));
       t1 >>= 16;
       _Ad = t1;
 
-      t1 = (xC4S4 * (_B - _D));
+      t1 = (xC4S4 * (ogg_int16_t)(_B - _D));
       t1 >>= 16;
       _Bd = t1;
 
@@ -91,11 +91,11 @@ void IDctSlow(  Q_LIST_ENTRY * InputData,
       _Cd = _A + _C;
       _Dd = _B + _D;
 
-      t1 = (xC4S4 * (ip[0] + ip[4]));
+      t1 = (xC4S4 * (ogg_int16_t)(ip[0] + ip[4]));
       t1 >>= 16;
       _E = t1;
 
-      t1 = (xC4S4 * (ip[0] - ip[4]));
+      t1 = (xC4S4 * (ogg_int16_t)(ip[0] - ip[4]));
       t1 >>= 16;
       _F = t1;
 
@@ -170,11 +170,11 @@ void IDctSlow(  Q_LIST_ENTRY * InputData,
       t2 >>= 16;
       _D = t1 - t2;
 
-      t1 = (xC4S4 * (_A - _C));
+      t1 = (xC4S4 * (ogg_int16_t)(_A - _C));
       t1 >>= 16;
       _Ad = t1;
 
-      t1 = (xC4S4 * (_B - _D));
+      t1 = (xC4S4 * (ogg_int16_t)(_B - _D));
       t1 >>= 16;
       _Bd = t1;
 
@@ -182,11 +182,11 @@ void IDctSlow(  Q_LIST_ENTRY * InputData,
       _Cd = _A + _C;
       _Dd = _B + _D;
 
-      t1 = (xC4S4 * (ip[0*8] + ip[4*8]));
+      t1 = (xC4S4 * (ogg_int16_t)(ip[0*8] + ip[4*8]));
       t1 >>= 16;
       _E = t1;
 
-      t1 = (xC4S4 * (ip[0*8] - ip[4*8]));
+      t1 = (xC4S4 * (ogg_int16_t)(ip[0*8] - ip[4*8]));
       t1 >>= 16;
       _F = t1;
 
@@ -301,11 +301,11 @@ void IDct10( Q_LIST_ENTRY * InputData,
       _D = -t2;
 
 
-      t1 = (xC4S4 * (_A - _C));
+      t1 = (xC4S4 * (ogg_int16_t)(_A - _C));
       t1 >>= 16;
       _Ad = t1;
 
-      t1 = (xC4S4 * (_B - _D));
+      t1 = (xC4S4 * (ogg_int16_t)(_B - _D));
       t1 >>= 16;
       _Bd = t1;
 
@@ -378,11 +378,11 @@ void IDct10( Q_LIST_ENTRY * InputData,
       _D = - t2;
 
 
-      t1 = (xC4S4 * (_A - _C));
+      t1 = (xC4S4 * (ogg_int16_t)(_A - _C));
       t1 >>= 16;
       _Ad = t1;
 
-      t1 = (xC4S4 * (_B - _D));
+      t1 = (xC4S4 * (ogg_int16_t)(_B - _D));
       t1 >>= 16;
       _Bd = t1;
 
