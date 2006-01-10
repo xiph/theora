@@ -941,8 +941,26 @@ The offer, as described in <xref target="rfc3264">An Offer/Answer Model Session 
 
 </section>
 
+</section>
+
+<!-- WIP
+<section anchor="Examples" title="Examples">
+
+<t>
+The following examples are common usage patterns that MAY be applied in such situations, the main scope of this section is to explain better usage of the transmission vectors.
+</t>
+
+<section anchor="Peer to Peer Internet Messaging" title="Peer to Peer Internet Messaging">
+
+<t>This scenario implies two peers linked by a best effort network, the bandwidth isn't guaranteed, in order to keep the latency low enough is necessary to use dynamic adaptation tecniques.</t>
+
+</t>The agents have to agree over a set of bitrates and during the session they switch from higher to lower bandwidth depending on the rtcp feedback changing the payload number within the same rtp session</t>
+
+<t>Since all the codebooks are all known in advance and the payload changes may happen frequently the in-band vector won't be used at all.</t>
 
 </section>
+</section>
+-->
 
 <section anchor="Security Considerations" title="Security Considerations"> 
 <t>
