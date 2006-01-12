@@ -943,7 +943,7 @@ The offer, as described in <xref target="rfc3264">An Offer/Answer Model Session 
 
 </section>
 
-<!-- WIP
+<!-- WIP, still doesn't look good and probably is quite silly
 <section anchor="Examples" title="Examples">
 
 <t>
@@ -952,11 +952,16 @@ The following examples are common usage patterns that MAY be applied in such sit
 
 <section anchor="Peer to Peer Internet Messaging" title="Peer to Peer Internet Messaging">
 
-<t>This scenario implies two peers linked by a best effort network, the bandwidth isn't guaranteed, in order to keep the latency low enough is necessary to use dynamic adaptation tecniques.</t>
+<t>This scenario implies two peers linked by a best effort network, the bandwidth isn't guaranteed, in order to keep the latency low enough is necessary to use dynamic adaptation tecniques [missing reference].</t>
 
-</t>The agents have to agree over a set of bitrates and during the session they switch from higher to lower bandwidth depending on the rtcp feedback changing the payload number within the same rtp session</t>
+<t>Due the strict latency requirement sending the Configuration in-band isn't possible and the choice for the proposed solution is to not send Configuration on demand or by any other out of band means, since it will affect latency,  but prepare a set of possible Configurations related to different bitrates in advance during the session initiation.</t>
 
-<t>Since all the codebooks are all known in advance and the payload changes may happen frequently the in-band vector won't be used at all.</t>
+<t>Different session initiation methods either depending on the IM protocol (Jingle[reference], TINS[reference]) or stand alone (SIP[reference]); all all based on the Offer-Answer[reference] paradigm and let the peers agree on the Configurations set. All the Configuration usable for the session are known after this initial handshake.</t>
+
+<t>Each bitrate will be described using a separated payload number</t>
+
+<t>To adapt to the network profile with minimal overhead and latency the simplest way is to change the payload number within the same rtp session and have the client ready to decode any possible bitrate agreed.</t>
+
 
 </section>
 </section>
