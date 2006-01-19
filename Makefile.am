@@ -10,16 +10,19 @@ SUBDIRS = lib include doc examples tests m4
 # because of it, breaking make dist.  This works just as well.
 EXTRA_DIST = \
 	COPYING autogen.sh win32 libtheora.spec libtheora.spec.in \
-	theora-uninstalled.pc.in \
-	debian
+	theora-uninstalled.pc.in
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = theora.pc
 
 dist-hook:
-	rm -rf `find $(distdir)/debian -name .svn`
-	rm -rf `find $(distdir)/debian -name "Makefile*"`
-	rm -rf `find $(distdir)/win32 -name .svn`
+	for item in $(EXTRA_DIST); do \
+	  if test -d $$item; then \
+	    echo -n "cleaning $$item dir for distribution..."; \
+	    rm -rf `find $(distdir)/$$item -name .svn`; \
+	    echo "OK"; \
+	  fi; \
+	done
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@"
