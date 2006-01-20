@@ -9,7 +9,8 @@ SUBDIRS = lib include doc examples tests m4
 # to pick up on the lowercase changelog file and add ChangeLog to DIST_COMMON
 # because of it, breaking make dist.  This works just as well.
 EXTRA_DIST = \
-	COPYING autogen.sh win32 libtheora.spec libtheora.spec.in \
+	CHANGES COPYING autogen.sh win32 \
+	libtheora.spec libtheora.spec.in \
 	theora-uninstalled.pc.in
 
 pkgconfigdir = $(libdir)/pkgconfig
