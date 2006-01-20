@@ -655,9 +655,9 @@ int main(int argc,char *argv[]){
            keyframing.  Soon enough libtheora will be able to deal
            with non-keyframe seeks.  */
 
-        //if(videobuf_time>=get_time())
+        if(videobuf_time>=get_time())
         videobuf_ready=1;
-	fprintf(stderr, "got frame at %fs\n", videobuf_time);                
+                
       }else
         break;
     }
