@@ -1157,9 +1157,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    Configurations per session and don't process configuration packets
    already known.
 
-   Let's assume that the client playout buffer can store at least 7
-   packets for each stream.
-
 
 8.  Security Considerations
 
@@ -1170,6 +1167,9 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    format is applied end-to-end, encryption may be performed on the
    compressed data.  Where the size of a data block is set care MUST be
    taken to prevent buffer overflows in the client applications.
+
+
+
 
 
 
