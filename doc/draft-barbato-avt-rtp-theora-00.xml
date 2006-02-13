@@ -972,7 +972,7 @@ The following examples are common usage patterns that MAY be applied in such sit
 
 <t>When the streamed content changes the new Configuration is sent in-band before the actual stream, and the Configuration that has to be sent inline in the SDP updated. Since the inline method is unreliable, an out of band fallback is provided.</t>
 
-<t>The client could choose to fetch the Configuration from the alternate source as soon it discovers a Configuration packet got lost inline or use <xref target="RFC3611">selective retransmission</xref>, if the server supports that feature.</t>
+<t>The client could choose to fetch the Configuration from the alternate source as soon it discovers a Configuration packet got lost inline or use <xref target="rfc3611">selective retransmission</xref>, if the server supports that feature.</t>
 
 <t>A serverside optimization would be to keep an hash list of the Configurations per session to avoid packing all of them and send the same Configuration with different Ident tags</t>
 
@@ -1148,7 +1148,22 @@ Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike
 <title>Theora I specification:  Codec setup and packet decode.  http://www.xiph.org/theora/doc/Theora_I_spec.pdf</title>
 </front>
 </reference>   
-  
+
+<reference anchor='rfc3611'>
+
+<front>
+<title>RTP Control Protocol Extended Reports (RTCP XR)</title>
+<author initials='T.' surname='Friedman' fullname='T. Friedman'>
+<organization /></author>
+<author initials='R.' surname='Caceres' fullname='R. Caceres'>
+<organization /></author>
+<author initials='A.' surname='Clark' fullname='A. Clark'>
+<organization /></author>
+<date year='2003' month='November' /></front>
+<seriesInfo name='RFC' value='3611' />
+</reference>
+
+
 <reference anchor="ITU-T V42">
 <front>
 <title>

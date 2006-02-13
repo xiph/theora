@@ -84,15 +84,15 @@ Table of Contents
    6.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 18
      6.1.  Mapping MIME Parameters into SDP . . . . . . . . . . . . . 19
      6.2.  Usage with the SDP Offer/Answer Model  . . . . . . . . . . 20
-   7.  Security Considerations  . . . . . . . . . . . . . . . . . . . 20
-   8.  Acknowledgments  . . . . . . . . . . . . . . . . . . . . . . . 21
-   9.  References . . . . . . . . . . . . . . . . . . . . . . . . . . 21
-     9.1.  Normative References . . . . . . . . . . . . . . . . . . . 21
-     9.2.  Informative References . . . . . . . . . . . . . . . . . . 22
-   Author's Address . . . . . . . . . . . . . . . . . . . . . . . . . 23
-   Intellectual Property and Copyright Statements . . . . . . . . . . 24
-
-
+   7.  Examples . . . . . . . . . . . . . . . . . . . . . . . . . . . 20
+     7.1.  Stream Video . . . . . . . . . . . . . . . . . . . . . . . 21
+   8.  Security Considerations  . . . . . . . . . . . . . . . . . . . 21
+   9.  Acknowledgments  . . . . . . . . . . . . . . . . . . . . . . . 22
+   10. References . . . . . . . . . . . . . . . . . . . . . . . . . . 22
+     10.1. Normative References . . . . . . . . . . . . . . . . . . . 22
+     10.2. Informative References . . . . . . . . . . . . . . . . . . 23
+   Author's Address . . . . . . . . . . . . . . . . . . . . . . . . . 24
+   Intellectual Property and Copyright Statements . . . . . . . . . . 25
 
 
 
@@ -1110,10 +1110,10 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    altered on answer otherwise.
 
 
-7.  Security Considerations
+7.  Examples
 
-   RTP packets using this payload format are subject to the security
-   considerations discussed in the RTP specification [3].  This implies
+   The following examples are common usage patterns that MAY be applied
+   in such situations, the main scope of this section is to explain
 
 
 
@@ -1122,6 +1122,49 @@ Barbato                  Expires April 18, 2006                [Page 20]
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
+   better usage of the transmission vectors.
+
+7.1.  Stream Video
+
+   That is one of the most common situation: one single server streaming
+   content in multicast, the clients may start a session at random time.
+   The content itself could be a mix of live stream, as the wj's voice
+   or studio scenes, and stored streams, as the music she plays.
+
+   In this situation we don't know in advance how many codebooks we will
+   use.  The clients can join anytime and users expect to start the
+   fruition of the content in a short time.
+
+   On join the client will receive the current Configuration necessary
+   to decode the current streams inlined in the SDP so that the decoding
+   will start immediately after.
+
+   When the streamed content changes the new Configuration is sent in-
+   band before the actual stream, and the Configuration that has to be
+   sent inline in the SDP updated.  Since the inline method is
+   unreliable, an out of band fallback is provided.
+
+   The client could choose to fetch the Configuration from the alternate
+   source as soon it discovers a Configuration packet got lost inline or
+   use selective retransmission [17], if the server supports that
+   feature.
+
+   A serverside optimization would be to keep an hash list of the
+   Configurations per session to avoid packing all of them and send the
+   same Configuration with different Ident tags
+
+   A clientside optimization would be to keep a tag list of the
+   Configurations per session and don't process configuration packets
+   already known.
+
+   Let's assume that the client playout buffer can store at least 7
+   packets for each stream.
+
+
+8.  Security Considerations
+
+   RTP packets using this payload format are subject to the security
+   considerations discussed in the RTP specification [3].  This implies
    that the confidentiality of the media stream is achieved by using
    encryption.  Because the data compression used with this payload
    format is applied end-to-end, encryption may be performed on the
@@ -1129,7 +1172,13 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    taken to prevent buffer overflows in the client applications.
 
 
-8.  Acknowledgments
+
+Barbato                  Expires April 18, 2006                [Page 21]
+
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
+
+
+9.  Acknowledgments
 
    This document is a continuation of draft-kerr-avt-theora-rtp-00.txt
 
@@ -1139,9 +1188,9 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    Varano, Giampaolo Mancini, Juan Carlos De Martin.
 
 
-9.  References
+10.  References
 
-9.1.  Normative References
+10.1.  Normative References
 
    [1]   Pfeiffer, S., "The Ogg Encapsulation Format Version 0",
          RFC 3533.
@@ -1170,14 +1219,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    [9]   Ott, J., Wenger, S., Sato, N., Burmeister, C., and J. Rey,
          "Extended RTP Profile for RTCP-based Feedback (RTP/AVPF)",
          Internet Draft (draft-ietf-avt-rtcp-feedback-11: Work in
-
-
-
-Barbato                  Expires April 18, 2006                [Page 21]
-
-Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
-
-
          progress).
 
    [10]  Barbato, L., "RTP Payload Format for Vorbis Encoded Audio -
@@ -1185,6 +1226,14 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
          progress).
 
    [11]  Josefsson, S., "The Base16, Base32, and Base64 Data Encodings",
+
+
+
+Barbato                  Expires April 18, 2006                [Page 22]
+
+Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
+
+
          RFC 3548.
 
    [12]  Deutsch, P., "GZIP file format specification version 4.3",
@@ -1195,7 +1244,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
    [14]  Seward, J., "libbz2 and bzip2".
 
-9.2.  Informative References
+10.2.  Informative References
 
    [15]  "libTheora: Available from the Xiph website,
          http://www.xiph.org".
@@ -1203,12 +1252,15 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
    [16]  "Theora I specification:  Codec setup and packet decode.
          http://www.xiph.org/theora/doc/Theora_I_spec.pdf".
 
-   [17]  "ITU-T Recommendation V.42, 1994, Rev. 1. Error-correcting
+   [17]  Friedman, T., Caceres, R., and A. Clark, "RTP Control Protocol
+         Extended Reports (RTCP XR)", RFC 3611, November 2003.
+
+   [18]  "ITU-T Recommendation V.42, 1994, Rev. 1. Error-correcting
          Procedures for DCEs Using Asynchronous-to-Synchronous
          Conversion. International Telecommunications Union. Available
          from the ITU website, http://www.itu.int".
 
-   [18]  "ISO 3309, October 1984, 3rd Edition. Information Processing
+   [19]  "ISO 3309, October 1984, 3rd Edition. Information Processing
          Systems--Data Communication High-Level Data Link Control
          Procedure--Frame Structure. International Organization for
          Standardization.".
@@ -1229,7 +1281,11 @@ Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
 
 
-Barbato                  Expires April 18, 2006                [Page 22]
+
+
+
+
+Barbato                  Expires April 18, 2006                [Page 23]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
@@ -1285,7 +1341,7 @@ Author's Address
 
 
 
-Barbato                  Expires April 18, 2006                [Page 23]
+Barbato                  Expires April 18, 2006                [Page 24]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-00        October 2005
 
@@ -1341,6 +1397,6 @@ Acknowledgment
 
 
 
-Barbato                  Expires April 18, 2006                [Page 24]
+Barbato                  Expires April 18, 2006                [Page 25]
 
 
