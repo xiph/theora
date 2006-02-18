@@ -6,7 +6,7 @@
 <rfc ipr="full3978" docName="RTP Payload Format for Theora Encoded Video">
 
 <front>
-<title>draft-barbato-avt-rtp-theora-00</title>
+<title>draft-barbato-avt-rtp-theora-01</title>
 
 <author initials="L" surname="Barbato" fullname="Luca Barbato">
 <organization>Xiph.Org</organization>
@@ -785,7 +785,6 @@ Loss of any of the Configuration fragment will result in the loss of the full Co
 
 <t hangText="delivery-method:"> indicates the delivery methods in use, the possible values are: inline, in_band, out_band/specific_name<vspace blankLines="0" />
 Where "specific_name" is the name of the out of band delivery method.
-
 </t>
 
 <vspace blankLines="1" />
@@ -802,8 +801,7 @@ Where "specific_name" is the name of the out of band delivery method.
 <vspace blankLines="1" />
 
 <list style="hanging">
-<t hangText="configuration-uri:"> the URI of the configuration headers in case of out of band transmission.  In the form of "protocol://path/to/resource/".  Depending on the specific method the single ident packet could be retrived by their number, or aggregated in a single stream, aggregates MAY be compressed using 
-<xref target="rfc1952">gzip</xref> or <xref target="BZ2">bzip2</xref> and an <xref target="FIPS180">sha1</xref> checksum MAY be provided in the form of "protocol://path/to/resource/! sha1hash"</t>
+<t hangText="configuration-uri:"> the URI of the configuration headers in case of out of band transmission.  In the form of "protocol://path/to/resource/".  Depending on the specific method the single ident packets could be retrived by their number or aggregated in a single stream, aggregates MAY be compressed using <xref target="rfc1952">gzip</xref> or <xref target="BZ2">bzip2</xref> and an <xref target="FIPS180">sha1</xref> checksum MAY be provided in the form of "protocol://path/to/resource/aggregated.bz2!sha1hash"</t>
 </list>
 </t>
 
@@ -898,7 +896,7 @@ The information carried in the MIME media type specification has a specific mapp
 <t>The MIME type ("video") goes in SDP "m=" as the media name.</t>
 <vspace blankLines="1" />
 
-<t>The MIME subtype ("THEORA") goes in SDP "a=rtpmap" as the encoding name.</t>
+<t>The MIME subtype ("theora") goes in SDP "a=rtpmap" as the encoding name.</t>
 <vspace blankLines="1" />
 
 <t>The clock rate in the "a=rtpmap" line MUST be 90000</t>
@@ -919,16 +917,16 @@ If the stream uses multiple decoder setup configurations and all of them are kno
 The URI specified in the configuration-uri attribute MUST point to a location where all of the Configuration Packets needed for the life of the session reside.
 </t>
 
-<t>Example:</t>
-
-<vspace blankLines="1" />
+<section anchor="SDP Example" title="SDP Example">
+<t>The following example shows a basic SDP for a single stream. The first configuration packet is inlined in the sdp, other configurations could be fetched at any time from the first provided uri using or all the known configuration could be downloaded using the second uri. The inline <xref target="rfc3548">base16</xref> configuration string is omitted because of the lenght.</t>
 
 <list style="empty">
-<t>c=IN IP4/6 </t>
+<t>c=IN IP4 192.0.0.1</t>
 <t>m=video  RTP/AVP 98</t>
 <t>a=rtpmap:98 theora/90000</t>
-<t>a=fmtp:98 sampling=YCbCr-4:2:2; width=1280; height=720; delivery-method=inline; configuration=base16string1; delivery-method=out_band/rtsp; delivery-method=out_band/http; configuration-uri=http://path/to/resource/</t>
+<t>a=fmtp:98 sampling=YCbCr-4:2:2; width=1280; height=720; delivery-method=inline; configuration=base16string1; delivery-method=out_band/rtsp; delivery-method=out_band/rtsp; configuration-uri=rtsp://path/to/resource/; delivery-method=out_band/http; configuration-uri=http://another/path/to/resource/aggregate.bz2!sha1hash;</t>
 </list>
+</section>
 
 </section> 
 
@@ -997,7 +995,7 @@ compressed data.  Where the size of a data block is set care MUST be taken to pr
 <t>This document is a continuation of draft-kerr-avt-theora-rtp-00.txt</t>
 
 <t>
-Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike Smith, Phil Kerr, Timothy Terriberry, Politecnico di Torino (LS)³/IMG Group in particular Federico Ridolfo, Francesco Varano, Giampaolo Mancini, Juan Carlos De Martin.
+Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike Smith, Phil Kerr, Timothy Terriberry, Stefan Ehmann, Politecnico di Torino (LS)³/IMG Group in particular Federico Ridolfo, Francesco Varano, Giampaolo Mancini, Juan Carlos De Martin.
 </t>
 
 </section> 
