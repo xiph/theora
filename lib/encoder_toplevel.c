@@ -967,8 +967,8 @@ int theora_encode_YUVin(theora_state *t,
     cpi->ThisIsKeyFrame = 0;
   } else {
 
-    // don't allow generating invalid files that overflow the p-frame
-    // shift, even if keyframe autop is turned off
+    /* don't allow generating invalid files that overflow the p-frame
+       shift, even if keyframe_auto_p is turned off */
     if(cpi->LastKeyFrame >= (ogg_uint32_t)
        cpi->pb.info.keyframe_frequency_force)
       cpi->ThisIsKeyFrame = 1;
