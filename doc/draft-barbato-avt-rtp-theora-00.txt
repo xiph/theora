@@ -179,14 +179,16 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 2.  Payload Format
 
-   Each frame of digital video is encoded as a single Theora data packet
-   and sent over one of more RTP packets.  If the data for a complete
-   frame exceeds the network MTU, it SHOULD be fragmented into multiple
-   RTP packets, each smaller than the MTU.  Conversely, a single RTP
-   packet MAY contain data for more than one Theora frame.
+   For RTP based transportation of Theora encoded video the standard RTP
+   header is followed by a 4 octets payload header, then the payload
+   data.  The payload headers are used to associate the Theora data with
+   its associated decoding codebooks as well as indicating if the
+   following packet contains fragmented Theora data and/or the number of
+   whole Theora data frames.  The payload data contains the raw Theora
+   bitstream information.
 
    For RTP based transport of Theora encoded video the standard RTP
-   header is followed by a 4 octet payload header, then the payload
+   header is followed by a 4 octets payload header, then the payload
    data.
 
 2.1.  RTP Header
@@ -216,8 +218,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
    Version (V): 2 bits
 
-   This field identifies the version of RTP.  The version used by this
-   specification is two (2).
 
 
 
@@ -225,6 +225,9 @@ Barbato                  Expires August 24, 2006                [Page 4]
 
 Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
+
+   This field identifies the version of RTP.  The version used by this
+   specification is two (2).
 
    Padding (P): 1 bit
 
@@ -268,12 +271,9 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 2.2.  Payload Header
 
-   After the RTP Header section the following five octets are the
-   Payload Header.  This header is split into a number of bitfields
-   detailing the format of the following Payload Data packets.
-
-
-
+   The 4 octets following the RTP Header section are the Payload Header.
+   This header is split into a number of bitfields detailing the format
+   of the following Payload Data packets.
 
 
 
@@ -299,7 +299,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
    Fragment type (F): 2 bit
 
-   This field is set accordingly the following list
+   This field is set according to the following list
 
       0 = Not Fragmented
       1 = Start Fragment
@@ -320,9 +320,9 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
    The packets with a TDT of value 3 MUST be ignored
 
-   The last 4 bits are the number of complete packets in this payload.
-   This provides for a maximum number of 15 Theora packets in the
-   payload.  If the packet contains fragmented data the number of
+   The last 4 bits represent the number of complete packets in this
+   payload.  This provides for a maximum number of 15 Theora packets in
+   the payload.  If the packet contains fragmented data the number of
    packets MUST be set to 0.
 
 2.3.  Payload Data
@@ -397,7 +397,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
        0                   1                   2                   3
        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      |               Configuration Ident            | 0 | 0 | 2 pks  |
+      |               Configuration Ident             | 0 | 0 | 2 pks |
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       |        Payload Length         |                              ..
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -410,7 +410,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
    Figure 5: Example Theora Payload Packet
 
-   The payload portion of the packet starts with the 24 bit
+   The payload portion of the packet begins with the 24 bit
    Configuration ident field followed by 8 bits describing the payload.
    The Fragment type field is set to 0, indicating that this packet
    contains whole Theora frame data.  The Data type field is set to 0
@@ -457,7 +457,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
    SDP as explained in the IANA considerations (Section 6.1)
 
    The 24 bit Ident field is used to map which Configuration will be
-   used to decodea packet.  When the Ident field changes, it indicates
+   used to decode a packet.  When the Ident field changes, it indicates
    that a change in the stream has taken place.  The client application
    MUST have in advance the correct configuration and if the client
    detects a change in the Ident value and does not have this
@@ -476,8 +476,8 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
    A Theora Packed Configuration is indicated with the payload type
    field set to 1.  Of the three headers, defined in the Theora I
    specification [16], the identification and the setup will be packed
-   together, the comment header is completely suppressed.  Is up to the
-   client provide a minimal size comment header to the decoder if
+   together, the comment header is completely suppressed.  It is up to
+   the client to provide a minimal size comment header to the decoder if
    required by the implementation.
 
 
@@ -542,12 +542,12 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
    Payload Packets to address this Configuration.  The Fragment type is
    set to 0 since the packet bears the full Packed configuration, the
    number of packet is set to 1.  In practice, Packed Headers usually
-   need to be fragmented to stay below the path MTU.
+   need to be fragmented to fit the path MTU.
 
 3.2.  Out of Band Transmission
 
    This section, as stated above, does not cover all the possible out-
-   of-band delivery methods since they rely to different protocols and
+   of-band delivery methods since they rely on different protocols and
    be linked to specific applications.  The following packet definition
    SHOULD be used in out-of-band delivery and MUST be used when
    Configuration is inlined in the SDP.
@@ -564,7 +564,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 3.2.1.  Packed Headers
 
-   As mentioned above the recommended delivery vector for Theora
+   As mentioned above, the recommended delivery vector for Theora
    configuration data is via a retrieval method that can be performed
    using a reliable transport protocol.  As the RTP headers are not
    required for this method of delivery the structure of the
@@ -586,7 +586,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
    Figure 7: Packed Headers Overview
 
    Since the Configuration Ident and the Identification Header are fixed
-   length there is only a 2 byte Length tag to define the length of the
+   length there is only a 16bit Length tag to define the length of the
    packed headers.
 
        0                   1                   2                   3
@@ -605,8 +605,8 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
    Figure 8: Packed Headers Detail
 
-   The key difference between the in-band format is there is no need for
-   the payload header octet.
+   The key difference from the in-band format is that there is no need
+   for the payload header octet.
 
 
 
@@ -678,7 +678,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
    Restriction on usage:
 
-      This media type doesn't depend on the transport.
+      This media type does not depend on the transport.
 
    Author:
 
@@ -690,22 +690,22 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 3.3.  Loss of Configuration Headers
 
-   Unlike the loss of raw Theora payload data, loss of a configuration
-   header can lead to a situation where it will not be possible to
-   successfully decode the stream.
+   Unlike the loss of raw Theora payload data, the loss of a
+   configuration header can lead to a situation where it will not be
+   possible to successfully decode the stream.
 
-   Loss of Configuration Packet results in the halting of stream
+   A loss of a Configuration Packet results in the halting of stream
    decoding and SHOULD be reported to the client as well as a loss
    report sent via RTCP.
 
 
 4.  Comment Headers
 
-   When the payload type is set to 2, the packet contains the so-called
-   "comment" metadata, such as artist name, track title and so on.
-   These metadata messages are not intended to be fully descriptive but
-   to offer basic title information.  Clients MAY ignore it completely.
-   The details on the format of the comments can be found in the Theora
+   When the payload type is set to 2, the packet contains the comment
+   metadata, such as artist name, track title and so on.  These metadata
+   messages are not intended to be fully descriptive but to offer basic
+   title information.  Clients MAY ignore them completely.  The details
+   on the format of the comments can be found in the Theora
    documentation [16].
 
 
@@ -769,15 +769,15 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
    in the RTP packet with as many Theora packets as will fit, up to a
    maximum of 15.  Path MTU is detailed in [7] and [8].
 
-   If a Theora packet is larger than 65535 octets it MUST be fragmented.
    A fragmented packet has a zero in the last four bits of the payload
    header.  The RTP packet containing the first fragment will set the
    Fragment type to 1.  Each RTP packet after the first will set the
    Fragment type to 2 in the payload header.  The RTP packet containing
    the last fragment of the Theora packet will have the Fragment type
    set to 3.  If the fragmented Theora packet spans only two RTP
-   packets, the first will set the Fragement type field to 1 and the
+   packets, the first will set the Fragment type field to 1 and the
    second will set it to 2.  To maintain the correct sequence for
+   fragmented packet reception the timestamp field of fragmented packets
 
 
 
@@ -786,7 +786,6 @@ Barbato                  Expires August 24, 2006               [Page 14]
 Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 
-   fragmented packet reception the timestamp field of fragmented packets
    MUST be the same as the first packet sent, with the sequence number
    incremented as normal for the subsequent RTP packets.
 
@@ -794,7 +793,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
    Here is an example fragmented Theora packet split over three RTP
    packets.  Each packet contains the standard RTP headers as well as
-   the 4 octet Theora headers.
+   the 4 octets Theora headers.
 
       Packet 1:
 
@@ -825,6 +824,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
    the start packet of a serie of fragments.  The number of packets
    field is set to 0, and as the payload is raw Theora data the Theora
    payload type field is set to 0.
+
 
 
 
@@ -938,7 +938,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
    the Fragment type is set to 2 and MUST drop it.  The next packet,
    which is the final fragmented packet, MUST be dropped in the same
    manner.  Feedback reports on lost and dropped packets MUST be sent
-   back via RTCP.
+   back via RTCP.[note: reordering]
 
    If a particular multicast session has a large number of participants
    care must be taken to prevent an RTCP feedback implosion, [9], in the
@@ -1134,7 +1134,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 7.1.  Stream Video
 
-   That is one of the most common situation: one single server streaming
+   This is one of the most common situation: one single server streaming
    content in multicast, the clients may start a session at random time.
    The content itself could be a mix of live stream, as the wj's voice
    or studio scenes, and stored streams, as the music she plays.
@@ -1154,7 +1154,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
    The client could choose to fetch the Configuration from the alternate
    source as soon it discovers a Configuration packet got lost inline or
-   use selective retransmission [17], if the server supports that
+   use selective retransmission [17], if the server supports the
    feature.
 
    A serverside optimization would be to keep an hash list of the
@@ -1191,8 +1191,9 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
    Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph
    Giles, Mike Smith, Phil Kerr, Timothy Terriberry, Stefan Ehmann,
-   Politecnico di Torino (LS)^3/IMG Group in particular Federico
-   Ridolfo, Francesco Varano, Giampaolo Mancini, Juan Carlos De Martin.
+   Alessandro Salvatori, Politecnico di Torino (LS)^3/IMG Group in
+   particular Federico Ridolfo, Francesco Varano, Giampaolo Mancini,
+   Juan Carlos De Martin.
 
 
 10.  References
@@ -1225,7 +1226,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
    [9]   Ott, J., Wenger, S., Sato, N., Burmeister, C., and J. Rey,
          "Extended RTP Profile for RTCP-based Feedback (RTP/AVPF)",
-         Internet Draft (draft-ietf-avt-rtcp-feedback-11: Work in
 
 
 
@@ -1234,6 +1234,7 @@ Barbato                  Expires August 24, 2006               [Page 22]
 Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 
+         Internet Draft (draft-ietf-avt-rtcp-feedback-11: Work in
          progress).
 
    [10]  Barbato, L., "RTP Payload Format for Vorbis Encoded Audio -
@@ -1271,7 +1272,6 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
          Systems--Data Communication High-Level Data Link Control
          Procedure--Frame Structure. International Organization for
          Standardization.".
-
 
 
 

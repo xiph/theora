@@ -82,11 +82,11 @@ and "OPTIONAL" in this document are to be interpreted as described in RFC 2119 <
 <section anchor="Payload Format" title="Payload Format">
 
 <t>
-For RTP based transportation of Theora encoded video the standard RTP header is followed by a 4 octet payload header, then the payload data. The payload headers are used to associate the Theora data with its associated decoding codebooks as well as indicating if the following packet contains fragmented Theora data and/or the number of whole Theora data frames. The payload data contains the raw Theora bitstream information.
+For RTP based transportation of Theora encoded video the standard RTP header is followed by a 4 octets payload header, then the payload data. The payload headers are used to associate the Theora data with its associated decoding codebooks as well as indicating if the following packet contains fragmented Theora data and/or the number of whole Theora data frames. The payload data contains the raw Theora bitstream information.
 </t>
 
 <t>
-For RTP based transport of Theora encoded video the standard RTP header is followed by a 4 octet payload header, then the payload data.
+For RTP based transport of Theora encoded video the standard RTP header is followed by a 4 octets payload header, then the payload data.
 </t>
 
 <section anchor="RTP Header" title="RTP Header">
@@ -167,8 +167,7 @@ These two fields, 32 bits each with one SSRC field and a maximum of 16 CSRC fiel
 <section anchor="Payload Header" title="Payload Header">
 
 <t>
-After the RTP Header section the following five octets are the Payload Header.  
-This header is split into a number of bitfields detailing the format of the following Payload Data packets.
+The 4 octets following the RTP Header section are the Payload Header. This header is split into a number of bitfields detailing the format of the following Payload Data packets.
 </t>
 
 <figure anchor="Payload Header Figure" title="Payload Header">
@@ -192,7 +191,7 @@ This 24 bit field is used to associate the Theora data to a decoding Packed Conf
 <t>
 Fragment type (F): 2 bit</t>
 <t>
-This field is set accordingly the following list
+This field is set according to the following list
 </t>
 <vspace blankLines="1" />
 <list style="empty">
@@ -223,7 +222,7 @@ This field sets the packet payload type for the Theora data.  There are currentl
 
 
 <t>
-The last 4 bits are the number of complete packets in this payload.  This provides for a maximum number of 15 Theora packets in the payload. If the packet contains fragmented data the number of packets MUST be set to 0.
+The last 4 bits represent the number of complete packets in this payload.  This provides for a maximum number of 15 Theora packets in the payload. If the packet contains fragmented data the number of packets MUST be set to 0.
 </t>
 
 </section>
@@ -304,7 +303,7 @@ Payload Data:
 </figure>
 
 <t>
-The payload portion of the packet starts with the 24 bit Configuration ident field followed by 8 bits describing the payload. The Fragment type field is set to 0, indicating that this packet contains whole Theora frame data. The Data type field is set to 0 since it is theora raw data. The number of whole Theora data packets is set to 2.
+The payload portion of the packet begins with the 24 bit Configuration ident field followed by 8 bits describing the payload. The Fragment type field is set to 0, indicating that this packet contains whole Theora frame data. The Data type field is set to 0 since it is theora raw data. The number of whole Theora data packets is set to 2.
 </t>
 
 <t>
@@ -636,7 +635,7 @@ A fragmented packet has a zero in the last four bits of the payload header. The 
 <section anchor="Example Fragmented Theora Packet" title="Example Fragmented Theora Packet">
 
 <t>
-Here is an example fragmented Theora packet split over three RTP packets.  Each packet contains the standard RTP headers as well as the 4 octet Theora headers.
+Here is an example fragmented Theora packet split over three RTP packets.  Each packet contains the standard RTP headers as well as the 4 octets Theora headers.
 </t>
 
 <figure anchor="Example Fragmented Packet (Packet 1)" title="Example Fragmented Packet (Packet 1)">
