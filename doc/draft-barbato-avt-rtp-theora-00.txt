@@ -7,7 +7,7 @@ Internet-Draft                                                  Xiph.Org
 Expires: August 24, 2006                               February 20, 2006
 
 
-                    draft-barbato-avt-rtp-theora-01
+                    draft-barbato-avt-rtp-theora-00
               RTP Payload Format for Theora Encoded Video
 
 Status of this Memo
@@ -55,7 +55,7 @@ Editors Note
 
 Barbato                  Expires August 24, 2006                [Page 1]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
    All references to RFC XXXX are to be replaced by references to the
@@ -111,7 +111,7 @@ Table of Contents
 
 Barbato                  Expires August 24, 2006                [Page 2]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
 1.  Introduction
@@ -167,7 +167,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006                [Page 3]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
 1.1.  Terminology
@@ -223,7 +223,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006                [Page 4]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
    This field identifies the version of RTP.  The version used by this
@@ -279,7 +279,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006                [Page 5]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
        0                   1                   2                   3
@@ -335,7 +335,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006                [Page 6]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
        0                   1                   2                   3
@@ -391,7 +391,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006                [Page 7]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
        0                   1                   2                   3
@@ -447,7 +447,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006                [Page 8]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
    codebook delivery SHOULD be considered as baseline, out-of-band
@@ -503,7 +503,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006                [Page 9]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
        0                   1                   2                   3
@@ -559,7 +559,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006               [Page 10]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
 3.2.1.  Packed Headers
@@ -615,7 +615,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006               [Page 11]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
 3.2.1.1.  Packed Headers IANA Considerations
@@ -671,7 +671,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006               [Page 12]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
    Intended usage: COMMON
@@ -727,7 +727,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006               [Page 13]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
        0                   1                   2                   3
@@ -783,7 +783,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006               [Page 14]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
    MUST be the same as the first packet sent, with the sequence number
@@ -839,7 +839,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006               [Page 15]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
       Packet 2:
@@ -895,7 +895,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006               [Page 16]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
       Packet 3:
@@ -951,7 +951,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006               [Page 17]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
    Configuration Headers (Section 3.3) section.
@@ -1007,7 +1007,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006               [Page 18]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
    Interoperability considerations:
@@ -1063,7 +1063,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006               [Page 19]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
    used to specify sessions the mapping are as follows:
@@ -1119,7 +1119,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006               [Page 20]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
    and configuration-uri not supported.  All the parameters MUST not be
@@ -1175,7 +1175,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006               [Page 21]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
    that the confidentiality of the media stream is achieved by using
@@ -1231,7 +1231,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006               [Page 22]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
          Internet Draft (draft-ietf-avt-rtcp-feedback-11: Work in
@@ -1287,7 +1287,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 Barbato                  Expires August 24, 2006               [Page 23]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
 Author's Address
@@ -1343,7 +1343,7 @@ Author's Address
 
 Barbato                  Expires August 24, 2006               [Page 24]
 
-Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
+Internet-Draft       draft-barbato-avt-rtp-theora-00       February 2006
 
 
 Intellectual Property Statement
