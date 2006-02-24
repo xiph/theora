@@ -327,7 +327,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
 
 2.3.  Payload Data
 
-   Each Theora payload section starts with a two octet length header
+   Each Theora payload section starts with a two octets length header
    that is used to represent the size of the following data payload,
    followed by the raw Theora packet data.
 
@@ -417,7 +417,7 @@ Internet-Draft       draft-barbato-avt-rtp-theora-01       February 2006
    since it is theora raw data.  The number of whole Theora data packets
    is set to 2.
 
-   Each of the payload blocks starts with the two octet length field
+   Each of the payload blocks starts with the two octets length field
    followed by the variable length Theora packet data.
 
 
