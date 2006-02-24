@@ -230,7 +230,7 @@ The last 4 bits represent the number of complete packets in this payload.  This 
 <section anchor="Payload Data" title="Payload Data">
 
 <t>
-Each Theora payload section starts with a two octet length header that is used to represent the size of the following data payload, followed by the raw Theora packet data.
+Each Theora payload section starts with a two octets length header that is used to represent the size of the following data payload, followed by the raw Theora packet data.
 </t>
 
 <figure anchor="Payload Data Figure" title="Payload Data">
@@ -307,7 +307,7 @@ The payload portion of the packet begins with the 24 bit Configuration ident fie
 </t>
 
 <t>
-Each of the payload blocks starts with the two octet length field followed
+Each of the payload blocks starts with the two octets length field followed
 by the variable length Theora packet data.
 </t>
 
