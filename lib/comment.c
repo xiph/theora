@@ -104,6 +104,6 @@ void theora_comment_clear(theora_comment *tc){
     if(tc->user_comments)_ogg_free(tc->user_comments);
     if(tc->comment_lengths)_ogg_free(tc->comment_lengths);
     if(tc->vendor)_ogg_free(tc->vendor);
+    memset(tc,0,sizeof(*tc));
   }
-  memset(tc,0,sizeof(*tc));
 }

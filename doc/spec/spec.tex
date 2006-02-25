@@ -6053,19 +6053,26 @@ All intermediate values are truncated to a 32-bit signed representation by
  discarding any higher-order bits in their two's complement representation.
 The final output of each 1D transform is truncated to 16-bits in the same
  manner.
-In practice, 32 bits is sufficient for every calculation except scaling by
- $C4$.
-Here we specify truncating to 16 bits after the right shift by 16, but this is
- equivalent to truncating the result of the multiply to 32 bits before the
- right shift.
+In practice, if the high word of a $16\times 16$ bit multiplication can be
+ obtained directly, 16 bits is sufficient for every calculation except scaling
+ by $C4$.
+Here we specify truncating to 16 bits before the multiplication to simplify
+ implementations using hardware or common SIMD instruction sets.
+
+Note that if 16-bit register are used, overflow in the additions and
+ subtractions should be handled using \textit{unsaturated} arithmetic.
+That is, the high-order bits should be discarded and the low-order bits
+ retained, instead of clamping the result to the maximum or minimum value.
+This allows the maximum flexibility in re-ordering these instructions without
+ deviating from this specification.
 
 The 1D transform can only overflow if input coefficients larger than $\pm 6201$
  are present.
 However, the result of applying the 2D forward transform on pixel values in the
  range $-255\ldots 255$ can be as large as $\pm 8157$ due to the scale factor
  of four that is applied, and quantization errors could make this even larger.
-Therefore, the coefficients cannot simply be clamped into a valid range, as
- they could still overflow just the 1D inverse transform by itself.
+Therefore, the coefficients cannot simply be clamped into a valid range before
+ the transform.
 
 \subsubsection{The 1D Inverse DCT}
 \label{sub:1d-idct}
@@ -6142,6 +6149,8 @@ A circled minus sign $\ominus$ next to a signal line indicates that the value
 
 Operations on a single signal path through the graph cannot be reordered, but
  operations on different paths may be, or may be executed in parallel.
+Different graphs may be obtainable using the associative, commutative, and
+ distributive properties of unsaturated arithmetic.
 The column of numbers on the left represents an initial permutation of the
  input DCT coefficients.
 The column on the right represents the unpermuted output.
@@ -6167,17 +6176,20 @@ $\locvar{C7}$  & $\locvar{S1}$ & $12785$ \\
 
 \begin{enumerate}
 \item
-Assign $\locvar{T}[0]$ the value
- $\locvar{C4}*(\bitvar{Y}[0]+\bitvar{Y}[4])>>16$.
+Assign $\locvar{T}[0]$ the value $\bitvar{Y}[0]+\bitvar{Y}[4]$.
 \item
 Truncate $\locvar{T}[0]$ to a 16-bit representation by dropping any
  higher-order bits.
 \item
-Assign $\locvar{T}[1]$ the value
- $\locvar{C4}*(\bitvar{Y}[0]-\bitvar{Y}[4])>>16$.
+Assign $\locvar{T}[0]$ the value
+ $\locvar{C4}*\locvar{T}[0]>>16$.
+\item
+Assign $\locvar{T}[1]$ the value $\bitvar{Y}[0]-\bitvar{Y}[4]$.
 \item
 Truncate $\locvar{T}[1]$ to a 16-bit representation by dropping any
  higher-order bits.
+\item
+Assign $\locvar{T}[1]$ the value $\locvar{C4}*\locvar{T}[1]>>16$.
 \item
 Assign $\locvar{T}[2]$ the value $(\locvar{C6}*\bitvar{Y}[2]>>16)-
  (\locvar{S6}*\bitvar{Y}[6]>>16)$.
@@ -6199,21 +6211,23 @@ Assign $\locvar{T}[7]$ the value $(\locvar{S7}*\bitvar{Y}[1]>>16)+
 \item
 Assign \locvar{R} the value $\locvar{T}[4]+\locvar{T}[5]$.
 \item
-Assign $\locvar{T}[5]$ the value
- $\locvar{C4}*(\locvar{T}[4]-\locvar{T}[5])>>16$.
+Assign $\locvar{T}[5]$ the value $\locvar{T}[4]-\locvar{T}[5]$.
 \item
 Truncate $\locvar{T}[5]$ to a 16-bit representation by dropping any
  higher-order bits.
+\item
+Assign $\locvar{T}[5]$ the value $\locvar{C4}*(-\locvar{T}[5])>>16$.
 \item
 Assign $\locvar{T}[4]$ the value $\locvar{R}$.
 \item
 Assign \locvar{R} the value $\locvar{T}[7]+\locvar{T}[6]$.
 \item
-Assign $\locvar{T}[6]$ the value
- $\locvar{C4}*(\locvar{T}[7]-\locvar{T}[6])>>16$.
+Assign $\locvar{T}[6]$ the value $\locvar{T}[7]-\locvar{T}[6]$.
 \item
 Truncate $\locvar{T}[6]$ to a 16-bit representation by dropping any
  higher-order bits.
+\item
+Assign $\locvar{T}[6]$ the value $\locvar{C4}*\locvar{T}[6]>>16$.
 \item
 Assign $\locvar{T}[7]$ the value $\locvar{R}$.
 \item
@@ -6329,15 +6343,15 @@ Assign $\bitvar{X}[7]$ the value \locvar{R}.
 \locvar{\ci}     & Integer &  3 & No  & The column index. \\
 \locvar{\ri}     & Integer &  3 & No  & The row index. \\
 \locvar{Y}       & \multicolumn{1}{p{40pt}}{Integer Array} &
-                             16 & Yes & An 8-element array of 1-D iDCT input
+                             16 & Yes & An 8-element array of 1D iDCT input
  values. \\
 \locvar{X}       & \multicolumn{1}{p{40pt}}{Integer Array} &
-                             16 & Yes & An 8-element array of 1-D iDCT output
+                             16 & Yes & An 8-element array of 1D iDCT output
  values. \\
 \bottomrule\end{tabularx}
 \medskip
 
-This procedure applies the 1-D inverse DCT transform 16 times to a block of
+This procedure applies the 1D inverse DCT transform 16 times to a block of
  dequantized coefficients: once for each of the 8 rows, and once for each of
  the 8 columns of the result.
 Note that the coordinate system used for the columns is the same right-handed
@@ -6358,7 +6372,7 @@ Assign $\locvar{Y}[\locvar{\ci}]$ the value
  $\bitvar{DQC}[\locvar{\ri}*8+\locvar{\ci}]$.
 \end{enumerate}
 \item
-Compute \locvar{X}, the 1-D inverse DCT of \locvar{Y} using the procedure
+Compute \locvar{X}, the 1D inverse DCT of \locvar{Y} using the procedure
  described in Section~\ref{sub:1d-idct}.
 \item
 For each value of $\locvar{\ci}$ from 0 to 7:
@@ -6379,7 +6393,7 @@ Assign $\locvar{Y}[\locvar{\ri}]$ the value
  $\bitvar{RES}[\locvar{\ri}][\locvar{\ci}]$.
 \end{enumerate}
 \item
-Compute \locvar{X}, the 1-D inverse DCT of \locvar{Y} using the procedure
+Compute \locvar{X}, the 1D inverse DCT of \locvar{Y} using the procedure
  described in Section~\ref{sub:1d-idct}.
 \item
 For each value of \locvar{\ri} from 0 to 7:
@@ -6464,7 +6478,7 @@ A proper division by $2^{16}$ is done after the multiplications instead of a
 This can be implemented quickly by adding an offset of $\hex{FFFF}$ if the
  number is negative, and then shifting as before.
 This slightly increases the computational complexity of the transform.
-Unlike the inverse DCT, 16 bit registers and a $16\times16\rightarrow32$ bit
+Unlike the inverse DCT, 16-bit registers and a $16\times16\rightarrow32$ bit
  multiply are sufficient to avoid any overflow, so long as the input is in the
  range $-6270\ldots 6270$, which is larger than required.
 

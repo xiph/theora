@@ -720,16 +720,13 @@ static void CompressFrame( CP_INSTANCE *cpi) {
                &InterError, &IntraError );
 
     /* decide whether we really should have made this frame a key frame */
-
+    /* forcing out a keyframe if the max interval is up is done at a higher level */
     if( cpi->pb.info.keyframe_auto_p){
-      if( ( ( 2* IntraError < 5 * InterError )
-            && ( KFIndicator >= (ogg_uint32_t)
-                 cpi->pb.info.keyframe_auto_threshold)
-            && ( cpi->LastKeyFrame > cpi->pb.info.keyframe_mindistance)
-            ) ||
-          (cpi->LastKeyFrame >= (ogg_uint32_t)
-           cpi->pb.info.keyframe_frequency_force) ){
-
+      if( ( 2* IntraError < 5 * InterError )
+	  && ( KFIndicator >= (ogg_uint32_t)
+	       cpi->pb.info.keyframe_auto_threshold)
+	  && ( cpi->LastKeyFrame > cpi->pb.info.keyframe_mindistance)
+	  ){
         CompressKeyFrame(cpi);  /* Code a key frame */
         return;
       }
@@ -779,6 +776,8 @@ int theora_encode_init(theora_state *th, theora_info *c){
   dsp_static_init ();
 
   memset(th, 0, sizeof(*th));
+  /*Currently only the 4:2:0 format is supported.*/
+  if(c->pixelformat!=OC_PF_420)return OC_IMPL;
   th->internal_encode=cpi=_ogg_calloc(1,sizeof(*cpi));
 
   c->version_major=VERSION_MAJOR;
@@ -970,12 +969,22 @@ int theora_encode_YUVin(theora_state *t,
     CompressFirstFrame(cpi);
     cpi->ThisIsFirstFrame = 0;
     cpi->ThisIsKeyFrame = 0;
-  } else if ( cpi->ThisIsKeyFrame ) {
-    CompressKeyFrame(cpi);
-    cpi->ThisIsKeyFrame = 0;
-  } else  {
-    /* Compress the frame. */
-    CompressFrame( cpi );
+  } else {
+
+    /* don't allow generating invalid files that overflow the p-frame
+       shift, even if keyframe_auto_p is turned off */
+    if(cpi->LastKeyFrame >= (ogg_uint32_t)
+       cpi->pb.info.keyframe_frequency_force)
+      cpi->ThisIsKeyFrame = 1;
+    
+    if ( cpi->ThisIsKeyFrame ) {
+      CompressKeyFrame(cpi);
+      cpi->ThisIsKeyFrame = 0;
+    } else  {
+      /* Compress the frame. */
+      CompressFrame( cpi );
+    }
+
   }
 
   /* Update stats variables. */
