@@ -774,6 +774,8 @@ int theora_encode_init(theora_state *th, theora_info *c){
   CP_INSTANCE *cpi;
 
   memset(th, 0, sizeof(*th));
+  /*Currently only the 4:2:0 format is supported.*/
+  if(c->pixelformat!=OC_PF_420)return OC_IMPL;
   th->internal_encode=cpi=_ogg_calloc(1,sizeof(*cpi));
 
   c->version_major=VERSION_MAJOR;
