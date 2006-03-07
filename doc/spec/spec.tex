@@ -160,7 +160,7 @@ a//b & = \left\{\begin{array}{ll}
 \item[$a\%b$]
 The remainder from the integer division of $a$ by $b$.
 \begin{align*}
-a\%b & = |a|-|b|*|a//b|
+a\%b & = a-|b|*\left\lfloor\frac{a}{|b|}\right\rfloor
 \end{align*}
 Note that with this definition, the result is always non-negative and less than
  $|b|$.
@@ -206,7 +206,7 @@ The minimum number of bits required to store a positive integer $a$ in
 \begin{align*}
 \ilog(a) = \left\{\begin{array}{ll}
 0, & a \le 0 \\
-\left\lceil\log_2{a}\right\rceil, & a > 0
+\left\lfloor\log_2{a}\right\rfloor+1, & a > 0
 \end{array}\right.
 \end{align*}
 
@@ -7535,12 +7535,12 @@ Only the first $(\bitvar{NQRS}[\qti][\pli]+1)$ values will be used. \\
 
 This procedure uses all the procedures defined in the previous section of this
  chapter to decode and reconstruct a complete frame.
-As a special case, a 0-byte packet is treated exactly like an inter frame with
- no coded blocks.
 It takes as input values decoded from the headers, as well as the current
  reference frames.
 As output, it gives the uncropped, reconstructed frame.
 This should be cropped to picture region before display.
+As a special case, a 0-byte packet is treated exactly like an inter frame with
+ no coded blocks.
 
 \begin{enumerate}
 \item
