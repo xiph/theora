@@ -2056,8 +2056,11 @@ If \bitvar{VMIN} is not $2$, then stop.
 This stream is not decodable according to this specification.
 \item
 Read an 8-bit unsigned integer as \bitvar{VREV}.
-If \bitvar{VREV} is not $0$, then stop.
-This stream is not decodable according to this specification.
+If \bitvar{VREV} is greater than $0$, then this stream
+may contain optional features or interpretational changes 
+documented in a future version of this specification.
+Regardless of the value of \bitvar{VREV}, the stream is decodable 
+according to this specification.
 \item
 Read a 16-bit unsigned integer as \bitvar{FMBW}.
 This MUST be greater than zero.
