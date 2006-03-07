@@ -975,6 +975,9 @@ The fourth packet type marks a video packet.
 All other packet types are reserved; packets marked with a reserved type should
  be ignored.
 
+Additionally, zero-length packets are treated as if they were an inter 
+frame with no blocks coded. That is, as a duplicate frame.
+
 \paragraph{Frame Header Decode}
 
 The frame header contains some global information about the current frame.
