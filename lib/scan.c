@@ -1479,12 +1479,12 @@ static void PixelLineSearch( PP_INSTANCE *ppi,
                              ogg_uint32_t * line_length ){
   /* Exit if the pixel does not qualify or we have fallen off the edge
      of either the image plane or the row. */
-  if ( ((*ChangedLocalsPtr) <= 1) ||
-       ((*ChangedLocalsPtr) >= 6) ||
-       (RowNumber < 0) ||
+  if ( (RowNumber < 0) ||
        (RowNumber >= ppi->PlaneHeight) ||
        (ColNumber < 0) ||
-       (ColNumber >= ppi->PlaneWidth) ){
+       (ColNumber >= ppi->PlaneWidth) ||
+       ((*ChangedLocalsPtr) <= 1) ||
+       ((*ChangedLocalsPtr) >= 6) ){
     /* If not then it isn't part of any line. */
     return;
   }
