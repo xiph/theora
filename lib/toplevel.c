@@ -227,13 +227,13 @@ int theora_decode_header(theora_info *ci, theora_comment *cc, ogg_packet *op){
     theora_read(opb,8,&ret);
     typeflag = ret;
     if(!(typeflag&0x80)) {
-      free(opb);
+      _ogg_free(opb);
       return(OC_NOTFORMAT);
     }
 
     _tp_readbuffer(opb,id,6);
     if(memcmp(id,"theora",6)) {
-      free(opb);
+      _ogg_free(opb);
       return(OC_NOTFORMAT);
     }
 
@@ -241,43 +241,43 @@ int theora_decode_header(theora_info *ci, theora_comment *cc, ogg_packet *op){
     case 0x80:
       if(!op->b_o_s){
         /* Not the initial packet */
-        free(opb);
+        _ogg_free(opb);
         return(OC_BADHEADER);
       }
       if(ci->version_major!=0){
         /* previously initialized info header */
-        free(opb);
+        _ogg_free(opb);
         return OC_BADHEADER;
       }
 
       ret = _theora_unpack_info(ci,opb);
-      free(opb);
+      _ogg_free(opb);
       return(ret);
 
     case 0x81:
       if(ci->version_major==0){
         /* um... we didn't get the initial header */
-        free(opb);
+        _ogg_free(opb);
         return(OC_BADHEADER);
       }
 
       ret = _theora_unpack_comment(cc,opb);
-      free(opb);
+      _ogg_free(opb);
       return(ret);
 
     case 0x82:
       if(ci->version_major==0 || cc->vendor==NULL){
         /* um... we didn't get the initial header or comments yet */
-        free(opb);
+        _ogg_free(opb);
         return(OC_BADHEADER);
       }
 
       ret = _theora_unpack_tables(ci,opb);
-      free(opb);
+      _ogg_free(opb);
       return(ret);
     
     default:
-      free(opb);
+      _ogg_free(opb);
       if(ci->version_major==0 || cc->vendor==NULL || 
          ((codec_setup_info *)ci->codec_setup)->HuffRoot[0]==NULL){
         /* we haven't gotten the three required headers */
@@ -288,7 +288,7 @@ int theora_decode_header(theora_info *ci, theora_comment *cc, ogg_packet *op){
     }
   }
   /* I don't think it's possible to get this far, but better safe.. */
-  free(opb);
+  _ogg_free(opb);
   return(OC_BADHEADER);
 }
 
