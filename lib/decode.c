@@ -518,7 +518,8 @@ static ogg_uint32_t ExtractToken(oggpack_buffer *opb,
   /* until it hits a leaf at which point we have decoded a token */
   while ( CurrentRoot->Value < 0 ){
 
-    theora_read(opb, 1, &ret);  
+    theora_read(opb, 1, &ret);
+    if (ret < 0) break; /* out of packet data! */
     if (ret)
       CurrentRoot = CurrentRoot->OneChild;
     else
