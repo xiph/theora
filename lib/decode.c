@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2006                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -305,6 +305,9 @@ static ogg_int32_t ExtractMVectorComponentA(PB_INSTANCE *pbi){
     if (ret)
       MVectComponent = -MVectComponent;
     break;
+  default:
+    /* occurs if there is a read error */
+    MVectComponent = 0;
   }
 
   return MVectComponent;
@@ -352,9 +355,19 @@ static void DecodeMVectors ( PB_INSTANCE *pbi,
     return;
   }
 
-  /* set the default motion vector to 0,0 */
+  /* set the default motion vectors to 0,0 */
   MVect[0].x = 0;
   MVect[0].y = 0;
+  MVect[1].x = 0;
+  MVect[1].y = 0;
+  MVect[2].x = 0;
+  MVect[2].y = 0;
+  MVect[3].x = 0;
+  MVect[3].y = 0;
+  MVect[4].x = 0;
+  MVect[4].y = 0;
+  MVect[5].x = 0;
+  MVect[5].y = 0;
   LastInterMV.x = 0;
   LastInterMV.y = 0;
   PriorLastInterMV.x = 0;
