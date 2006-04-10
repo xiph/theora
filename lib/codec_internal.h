@@ -460,7 +460,7 @@ typedef struct PB_INSTANCE {
   Q_LIST_ENTRY  *dequant_InterY_coeffs;
   Q_LIST_ENTRY  *dequant_InterU_coeffs;
   Q_LIST_ENTRY  *dequant_InterV_coeffs;
-  Q_LIST_ENTRY  *dequant_coeffs;	/* currently active quantizer */
+  Q_LIST_ENTRY  *dequant_coeffs;        /* currently active quantizer */
   unsigned int   zigzag_index[64];
   ogg_int32_t    quant_Y_coeffs[64];
   ogg_int32_t    quant_UV_coeffs[64];

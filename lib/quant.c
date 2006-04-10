@@ -168,7 +168,7 @@ void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer* opb) {
 }
 
 static int _read_qtable_range(codec_setup_info *ci, oggpack_buffer* opb,
-	 int N, int type) 
+         int N, int type) 
 {
   int index, range;
   int qi = 0;

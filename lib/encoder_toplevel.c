@@ -723,10 +723,10 @@ static void CompressFrame( CP_INSTANCE *cpi) {
     /* forcing out a keyframe if the max interval is up is done at a higher level */
     if( cpi->pb.info.keyframe_auto_p){
       if( ( 2* IntraError < 5 * InterError )
-	  && ( KFIndicator >= (ogg_uint32_t)
-	       cpi->pb.info.keyframe_auto_threshold)
-	  && ( cpi->LastKeyFrame > cpi->pb.info.keyframe_mindistance)
-	  ){
+          && ( KFIndicator >= (ogg_uint32_t)
+               cpi->pb.info.keyframe_auto_threshold)
+          && ( cpi->LastKeyFrame > cpi->pb.info.keyframe_mindistance)
+          ){
         CompressKeyFrame(cpi);  /* Code a key frame */
         return;
       }

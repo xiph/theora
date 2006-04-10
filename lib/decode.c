@@ -72,7 +72,7 @@ static int LoadFrameHeader(PB_INSTANCE *pbi){
   /* Quality (Q) index */
   NQIndex = 0;
   theora_read(pbi->opb,6,&ret);
-  if (ret < 0 || ret >= 64) {	/* range check */
+  if (ret < 0 || ret >= 64) {   /* range check */
     ret = 0;
     pbi->DecoderErrorCode = 1;
   }
@@ -82,7 +82,7 @@ static int LoadFrameHeader(PB_INSTANCE *pbi){
   SpareBits = (unsigned char)ret;
   if (SpareBits) {
     theora_read(pbi->opb,6,&ret);
-    if (ret < 0 || ret >= 64) {	/* range check */
+    if (ret < 0 || ret >= 64) { /* range check */
       ret = 0;
       pbi->DecoderErrorCode = 1;
     }
@@ -91,7 +91,7 @@ static int LoadFrameHeader(PB_INSTANCE *pbi){
     SpareBits = (unsigned char)ret;
     if (SpareBits) {
       theora_read(pbi->opb,6,&ret);
-      if (ret < 0 || ret >= 64) {	/* range check */
+      if (ret < 0 || ret >= 64) {       /* range check */
         ret = 0;
         pbi->DecoderErrorCode = 1;
       }
@@ -558,7 +558,7 @@ static ogg_uint32_t ExtractToken(oggpack_buffer *opb,
 static void UnpackAndExpandDcToken( PB_INSTANCE *pbi,
                                     Q_LIST_ENTRY *ExpandedBlock,
                                     unsigned char * CoeffIndex ){
-  long			ret;
+  long                  ret;
   ogg_int32_t           ExtraBits = 0;
   ogg_uint32_t          Token;
 

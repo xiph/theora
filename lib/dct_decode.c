@@ -212,13 +212,13 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
     /* Select appropriate dequantiser matrix. */
     if ( pbi->CodingMode == CODE_INTRA )
       if ( FragmentNumber < 
-		(ogg_int32_t)(pbi->YPlaneFragments + pbi->UVPlaneFragments) )
+                (ogg_int32_t)(pbi->YPlaneFragments + pbi->UVPlaneFragments) )
         pbi->dequant_coeffs = pbi->dequant_U_coeffs;
       else
         pbi->dequant_coeffs = pbi->dequant_V_coeffs;
     else
       if ( FragmentNumber < 
-		(ogg_int32_t)(pbi->YPlaneFragments + pbi->UVPlaneFragments) )
+                (ogg_int32_t)(pbi->YPlaneFragments + pbi->UVPlaneFragments) )
         pbi->dequant_coeffs = pbi->dequant_InterU_coeffs;
       else
         pbi->dequant_coeffs = pbi->dequant_InterV_coeffs;

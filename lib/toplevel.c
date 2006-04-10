@@ -340,34 +340,39 @@ int theora_decode_packetin(theora_state *th,ogg_packet *op){
   oggpackB_readinit(pbi->opb,op->packet);
 #endif
 
-  /* verify that this is a video frame */
-  theora_read(pbi->opb,1,&ret);
+  if(op->bytes!=0){
+    /* verify that this is a video frame */
+    theora_read(pbi->opb,1,&ret);
 
-  if (ret==0) {
-    ret=LoadAndDecode(pbi);
+    if (ret==0) {
+      ret=LoadAndDecode(pbi);
 
-    if(ret)return ret;
+      if(ret)return ret;
 
-    if(pbi->PostProcessingLevel)
-      PostProcess(pbi);
+      if(pbi->PostProcessingLevel)
+        PostProcess(pbi);
 
-    if(op->granulepos>-1)
-      th->granulepos=op->granulepos;
-    else{
-      if(th->granulepos==-1){
-        th->granulepos=0;
-      }else{
-        if(pbi->FrameType==KEY_FRAME){
-          long frames= th->granulepos & ((1<<pbi->keyframe_granule_shift)-1);
-          th->granulepos>>=pbi->keyframe_granule_shift;
-          th->granulepos+=frames+1;
-          th->granulepos<<=pbi->keyframe_granule_shift;
-        }else
-          th->granulepos++;
+      if(op->granulepos>-1)
+        th->granulepos=op->granulepos;
+      else{
+        if(th->granulepos==-1){
+          th->granulepos=0;
+        }else{
+          if(pbi->FrameType==KEY_FRAME){
+            long frames= th->granulepos & ((1<<pbi->keyframe_granule_shift)-1);
+            th->granulepos>>=pbi->keyframe_granule_shift;
+            th->granulepos+=frames+1;
+            th->granulepos<<=pbi->keyframe_granule_shift;
+          }else
+            th->granulepos++;
+        }
       }
-    }
 
-    return(0);
+      return(0);
+    }
+  }else{
+    th->granulepos++;
+    return(OC_DUPFRAME);
   }
 
   return OC_BADPACKET;
