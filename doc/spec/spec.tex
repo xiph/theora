@@ -160,7 +160,7 @@ a//b & = \left\{\begin{array}{ll}
 \item[$a\%b$]
 The remainder from the integer division of $a$ by $b$.
 \begin{align*}
-a\%b & = |a|-|b|*|a//b|
+a\%b & = a-|b|*\left\lfloor\frac{a}{|b|}\right\rfloor
 \end{align*}
 Note that with this definition, the result is always non-negative and less than
  $|b|$.
@@ -206,7 +206,7 @@ The minimum number of bits required to store a positive integer $a$ in
 \begin{align*}
 \ilog(a) = \left\{\begin{array}{ll}
 0, & a \le 0 \\
-\left\lceil\log_2{a}\right\rceil, & a > 0
+\left\lfloor\log_2{a}\right\rfloor+1, & a > 0
 \end{array}\right.
 \end{align*}
 
@@ -974,6 +974,9 @@ The first three packet types mark each of the three Theora headers described
 The fourth packet type marks a video packet.
 All other packet types are reserved; packets marked with a reserved type should
  be ignored.
+
+Additionally, zero-length packets are treated as if they were an inter 
+frame with no blocks coded. That is, as a duplicate frame.
 
 \paragraph{Frame Header Decode}
 
@@ -2056,8 +2059,11 @@ If \bitvar{VMIN} is not $2$, then stop.
 This stream is not decodable according to this specification.
 \item
 Read an 8-bit unsigned integer as \bitvar{VREV}.
-If \bitvar{VREV} is not $0$, then stop.
-This stream is not decodable according to this specification.
+If \bitvar{VREV} is greater than $0$, then this stream
+may contain optional features or interpretational changes 
+documented in a future version of this specification.
+Regardless of the value of \bitvar{VREV}, the stream is decodable 
+according to this specification.
 \item
 Read a 16-bit unsigned integer as \bitvar{FMBW}.
 This MUST be greater than zero.
@@ -7535,12 +7541,12 @@ Only the first $(\bitvar{NQRS}[\qti][\pli]+1)$ values will be used. \\
 
 This procedure uses all the procedures defined in the previous section of this
  chapter to decode and reconstruct a complete frame.
-As a special case, a 0-byte packet is treated exactly like an inter frame with
- no coded blocks.
 It takes as input values decoded from the headers, as well as the current
  reference frames.
 As output, it gives the uncropped, reconstructed frame.
 This should be cropped to picture region before display.
+As a special case, a 0-byte packet is treated exactly like an inter frame with
+ no coded blocks.
 
 \begin{enumerate}
 \item

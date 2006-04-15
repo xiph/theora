@@ -121,49 +121,49 @@ void EAllocateFragmentInfo(CP_INSTANCE * cpi){
 
   cpi->FragmentLastQ =
     _ogg_malloc(cpi->pb.UnitFragments*
-		sizeof(*cpi->FragmentLastQAlloc));
+                sizeof(*cpi->FragmentLastQAlloc));
   cpi->FragTokens =
     _ogg_malloc(cpi->pb.UnitFragments*
-		sizeof(*cpi->FragTokensAlloc));
+                sizeof(*cpi->FragTokensAlloc));
   cpi->OriginalDC =
     _ogg_malloc(cpi->pb.UnitFragments*
-		sizeof(*cpi->OriginalDCAlloc));
+                sizeof(*cpi->OriginalDCAlloc));
   cpi->FragTokenCounts =
     _ogg_malloc(cpi->pb.UnitFragments*
-		sizeof(*cpi->FragTokenCountsAlloc));
+                sizeof(*cpi->FragTokenCountsAlloc));
   cpi->RunHuffIndices =
     _ogg_malloc(cpi->pb.UnitFragments*
-		sizeof(*cpi->RunHuffIndicesAlloc));
+                sizeof(*cpi->RunHuffIndicesAlloc));
   cpi->LastCodedErrorScore =
     _ogg_malloc(cpi->pb.UnitFragments*
-		sizeof(*cpi->LastCodedErrorScoreAlloc));
+                sizeof(*cpi->LastCodedErrorScoreAlloc));
   cpi->BlockCodedFlags =
     _ogg_malloc(cpi->pb.UnitFragments*
-		sizeof(*cpi->BlockCodedFlagsAlloc));
+                sizeof(*cpi->BlockCodedFlagsAlloc));
   cpi->ModeList =
     _ogg_malloc(cpi->pb.UnitFragments*
-		sizeof(*cpi->ModeListAlloc));
+                sizeof(*cpi->ModeListAlloc));
   cpi->MVList =
     _ogg_malloc(cpi->pb.UnitFragments*
-		sizeof(cpi->MVListAlloc));
+                sizeof(cpi->MVListAlloc));
   cpi->DCT_codes =
     _ogg_malloc(64*
-		sizeof(*cpi->DCT_codesAlloc));
+                sizeof(*cpi->DCT_codesAlloc));
   cpi->DCTDataBuffer =
     _ogg_malloc(64*
-		sizeof(*cpi->DCTDataBufferAlloc));
+                sizeof(*cpi->DCTDataBufferAlloc));
   cpi->quantized_list =
     _ogg_malloc(64*
-		sizeof(*cpi->quantized_listAlloc));
+                sizeof(*cpi->quantized_listAlloc));
   cpi->PartiallyCodedFlags =
     _ogg_malloc(cpi->pb.MacroBlocks*
-		sizeof(*cpi->PartiallyCodedFlags));
+                sizeof(*cpi->PartiallyCodedFlags));
   cpi->PartiallyCodedMbPatterns =
     _ogg_malloc(cpi->pb.MacroBlocks*
-		sizeof(*cpi->PartiallyCodedMbPatterns));
+                sizeof(*cpi->PartiallyCodedMbPatterns));
   cpi->UncodedMbFlags =
     _ogg_malloc(cpi->pb.MacroBlocks*
-		sizeof(*cpi->UncodedMbFlags));
+                sizeof(*cpi->UncodedMbFlags));
 
 }
 
@@ -214,25 +214,25 @@ void EAllocateFrameInfo(CP_INSTANCE * cpi){
   /* allocate frames */
   cpi->ConvDestBuffer =
     _ogg_malloc(FrameSize*
-		sizeof(*cpi->ConvDestBuffer));
+                sizeof(*cpi->ConvDestBuffer));
   cpi->yuv0ptr =
     _ogg_malloc(FrameSize*
-		sizeof(*cpi->yuv0ptr));
+                sizeof(*cpi->yuv0ptr));
   cpi->yuv1ptr =
     _ogg_malloc(FrameSize*
-		sizeof(*cpi->yuv1ptr));
+                sizeof(*cpi->yuv1ptr));
   cpi->OptimisedTokenListEb =
     _ogg_malloc(FrameSize*
-		sizeof(*cpi->OptimisedTokenListEb));
+                sizeof(*cpi->OptimisedTokenListEb));
   cpi->OptimisedTokenList =
     _ogg_malloc(FrameSize*
-		sizeof(*cpi->OptimisedTokenList));
+                sizeof(*cpi->OptimisedTokenList));
   cpi->OptimisedTokenListHi =
     _ogg_malloc(FrameSize*
-		sizeof(*cpi->OptimisedTokenListHi));
+                sizeof(*cpi->OptimisedTokenListHi));
   cpi->OptimisedTokenListPl =
     _ogg_malloc(FrameSize*
-		sizeof(*cpi->OptimisedTokenListPl));
+                sizeof(*cpi->OptimisedTokenListPl));
 }
 
 void ClearCPInstance(CP_INSTANCE *cpi){

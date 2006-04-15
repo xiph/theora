@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2006                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -72,17 +72,29 @@ static int LoadFrameHeader(PB_INSTANCE *pbi){
   /* Quality (Q) index */
   NQIndex = 0;
   theora_read(pbi->opb,6,&ret);
+  if (ret < 0 || ret >= 64) {   /* range check */
+    ret = 0;
+    pbi->DecoderErrorCode = 1;
+  }
   DctQIndex[NQIndex++] = (unsigned char)ret;
 
   theora_read(pbi->opb,1,&ret);
   SpareBits = (unsigned char)ret;
   if (SpareBits) {
     theora_read(pbi->opb,6,&ret);
+    if (ret < 0 || ret >= 64) { /* range check */
+      ret = 0;
+      pbi->DecoderErrorCode = 1;
+    }
     DctQIndex[NQIndex++] = (unsigned char)ret;
     theora_read(pbi->opb,1,&ret);
     SpareBits = (unsigned char)ret;
     if (SpareBits) {
       theora_read(pbi->opb,6,&ret);
+      if (ret < 0 || ret >= 64) {       /* range check */
+        ret = 0;
+        pbi->DecoderErrorCode = 1;
+      }
       DctQIndex[NQIndex++] = (unsigned char)ret;
     }
   }
@@ -103,7 +115,7 @@ static int LoadFrameHeader(PB_INSTANCE *pbi){
   /* Set this frame quality value and tables from the coded Q Index */
   UpdateQ(pbi, DctQIndex[0]);
 
-  return 1;
+  return pbi->DecoderErrorCode;
 }
 
 void SetFrameType( PB_INSTANCE *pbi,unsigned char FrType ){
@@ -123,13 +135,13 @@ void SetFrameType( PB_INSTANCE *pbi,unsigned char FrType ){
 static int LoadFrame(PB_INSTANCE *pbi){
 
   /* Load the frame header (including the frame size). */
-  if ( LoadFrameHeader(pbi) ){
+  if ( LoadFrameHeader(pbi) == 0 ){
     /* Read in the updated block map */
     QuadDecodeDisplayFragments( pbi );
-    return 1;
+    return 0;
   }
 
-  return 0;
+  return pbi->DecoderErrorCode;
 }
 
 static void DecodeModes (PB_INSTANCE *pbi,
@@ -293,6 +305,9 @@ static ogg_int32_t ExtractMVectorComponentA(PB_INSTANCE *pbi){
     if (ret)
       MVectComponent = -MVectComponent;
     break;
+  default:
+    /* occurs if there is a read error */
+    MVectComponent = 0;
   }
 
   return MVectComponent;
@@ -340,9 +355,19 @@ static void DecodeMVectors ( PB_INSTANCE *pbi,
     return;
   }
 
-  /* set the default motion vector to 0,0 */
+  /* set the default motion vectors to 0,0 */
   MVect[0].x = 0;
   MVect[0].y = 0;
+  MVect[1].x = 0;
+  MVect[1].y = 0;
+  MVect[2].x = 0;
+  MVect[2].y = 0;
+  MVect[3].x = 0;
+  MVect[3].y = 0;
+  MVect[4].x = 0;
+  MVect[4].y = 0;
+  MVect[5].x = 0;
+  MVect[5].y = 0;
   LastInterMV.x = 0;
   LastInterMV.y = 0;
   PriorLastInterMV.x = 0;
@@ -518,7 +543,8 @@ static ogg_uint32_t ExtractToken(oggpack_buffer *opb,
   /* until it hits a leaf at which point we have decoded a token */
   while ( CurrentRoot->Value < 0 ){
 
-    theora_read(opb, 1, &ret);  
+    theora_read(opb, 1, &ret);
+    if (ret < 0) break; /* out of packet data! */
     if (ret)
       CurrentRoot = CurrentRoot->OneChild;
     else
@@ -532,7 +558,7 @@ static ogg_uint32_t ExtractToken(oggpack_buffer *opb,
 static void UnpackAndExpandDcToken( PB_INSTANCE *pbi,
                                     Q_LIST_ENTRY *ExpandedBlock,
                                     unsigned char * CoeffIndex ){
-  long			ret;
+  long                  ret;
   ogg_int32_t           ExtraBits = 0;
   ogg_uint32_t          Token;
 
@@ -691,8 +717,16 @@ static void UnPackVideo (PB_INSTANCE *pbi){
   /* Get the DC huffman table choice for Y and then UV */
   theora_read(pbi->opb,DC_HUFF_CHOICE_BITS,&ret); 
   DcHuffChoice1 = ret + DC_HUFF_OFFSET;
+  if (ret < 0 || DcHuffChoice1 >= NUM_HUFF_TABLES) {
+    DcHuffChoice1 = DC_HUFF_OFFSET;
+    pbi->DecoderErrorCode = 1;
+  }
   theora_read(pbi->opb,DC_HUFF_CHOICE_BITS,&ret); 
   DcHuffChoice2 = ret + DC_HUFF_OFFSET;
+  if (ret < 0 || DcHuffChoice2 >= NUM_HUFF_TABLES) {
+    DcHuffChoice2 = DC_HUFF_OFFSET;
+    pbi->DecoderErrorCode = 1;
+  }
 
   /* UnPack DC coefficients / tokens */
   CodedBlockListPtr = pbi->CodedBlockList;
@@ -729,8 +763,16 @@ static void UnPackVideo (PB_INSTANCE *pbi){
 
   theora_read(pbi->opb,AC_HUFF_CHOICE_BITS,&ret); 
   AcHuffIndex1 = ret + AC_HUFF_OFFSET;
+  if (ret < 0 || AcHuffIndex1 >= NUM_HUFF_TABLES) {
+    AcHuffIndex1 = AC_HUFF_OFFSET;
+    pbi->DecoderErrorCode = 1;
+  }
   theora_read(pbi->opb,AC_HUFF_CHOICE_BITS,&ret); 
   AcHuffIndex2 = ret + AC_HUFF_OFFSET;
+  if (ret < 0 || AcHuffIndex2 >= NUM_HUFF_TABLES) {
+    AcHuffIndex2 = AC_HUFF_OFFSET;
+    pbi->DecoderErrorCode = 1;
+  }
 
   /* Unpack Lower AC coefficients. */
   while ( EncodedCoeffs < 64 ) {
@@ -812,12 +854,15 @@ static void DecodeData(PB_INSTANCE *pbi){
 
   /* Decode the modes data */
   DecodeModes( pbi, pbi->YSBRows, pbi->YSBCols);
+  if (pbi->DecoderErrorCode) return;
 
   /* Unpack and decode the motion vectors. */
   DecodeMVectors ( pbi, pbi->YSBRows, pbi->YSBCols);
+  if (pbi->DecoderErrorCode) return;
 
   /* Unpack and decode the actual video data. */
   UnPackVideo(pbi);
+  if (pbi->DecoderErrorCode) return;
 
   /* Reconstruct and display the frame */
   dsp_static_save_fpu ();
@@ -828,22 +873,18 @@ static void DecodeData(PB_INSTANCE *pbi){
 
 
 int LoadAndDecode(PB_INSTANCE *pbi){
-  int    LoadFrameOK;
 
   /* Reset the DC predictors. */
   pbi->InvLastIntraDC = 0;
   pbi->InvLastInterDC = 0;
 
-  /* Load the next frame. */
-  LoadFrameOK = LoadFrame(pbi);
-
-  if ( LoadFrameOK ){
+  if ( LoadFrame(pbi) == 0 ){
     pbi->LastFrameQualityValue = pbi->ThisFrameQualityValue;
 
     /* Decode the data into the fragment buffer. */
     DecodeData(pbi);
-    return(0);
+    if (pbi->DecoderErrorCode == 0) return 0;
   }
 
-  return(OC_BADPACKET);
+  return OC_BADPACKET;
 }

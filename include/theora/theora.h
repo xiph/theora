@@ -58,16 +58,16 @@ ogg_buffer_state *ogg_buffer_create(void);
  * All samples are 8 bits.
  */
 typedef struct {
-    int   y_width;	/**< Width of the Y' luminance plane */
-    int   y_height;	/**< Height of the luminance plane */
-    int   y_stride;	/**< Offset in bytes between successive rows */
+    int   y_width;      /**< Width of the Y' luminance plane */
+    int   y_height;     /**< Height of the luminance plane */
+    int   y_stride;     /**< Offset in bytes between successive rows */
 
-    int   uv_width;	/**< Height of the Cb and Cr chroma planes */
-    int   uv_height;	/**< Width of the chroma planes */
-    int   uv_stride;	/**< Offset between successive chroma rows */
-    unsigned char *y;	/**< Pointer to start of luminance data */
-    unsigned char *u;	/**< Pointer to start of Cb data */
-    unsigned char *v;	/**< Pointer to start of Cr data */
+    int   uv_width;     /**< Height of the Cb and Cr chroma planes */
+    int   uv_height;    /**< Width of the chroma planes */
+    int   uv_stride;    /**< Offset between successive chroma rows */
+    unsigned char *y;   /**< Pointer to start of luminance data */
+    unsigned char *u;   /**< Pointer to start of Cb data */
+    unsigned char *v;   /**< Pointer to start of Cr data */
 
 } yuv_buffer;
 
@@ -75,10 +75,10 @@ typedef struct {
  * A Colorspace.
  */
 typedef enum {
-  OC_CS_UNSPECIFIED,	/**< The colorspace is unknown or unspecified */
-  OC_CS_ITU_REC_470M,	/**< This is the best option for 'NTSC' content */
-  OC_CS_ITU_REC_470BG,	/**< This is the best option for 'PAL' content */
-  OC_CS_NSPACES		/**< This marks the end of the defined colorspaces */
+  OC_CS_UNSPECIFIED,    /**< The colorspace is unknown or unspecified */
+  OC_CS_ITU_REC_470M,   /**< This is the best option for 'NTSC' content */
+  OC_CS_ITU_REC_470BG,  /**< This is the best option for 'PAL' content */
+  OC_CS_NSPACES         /**< This marks the end of the defined colorspaces */
 } theora_colorspace;
 
 /**
@@ -89,10 +89,10 @@ typedef enum {
  * exact definitions.
  */
 typedef enum {
-  OC_PF_420,	/**< Chroma subsampling by 2 in each direction (4:2:0) */
-  OC_PF_RSVD,	/**< Reserved value */
-  OC_PF_422,	/**< Horizonatal chroma subsampling by 2 (4:2:2) */
-  OC_PF_444,	/**< No chroma subsampling at all (4:4:4) */
+  OC_PF_420,    /**< Chroma subsampling by 2 in each direction (4:2:0) */
+  OC_PF_RSVD,   /**< Reserved value */
+  OC_PF_422,    /**< Horizonatal chroma subsampling by 2 (4:2:2) */
+  OC_PF_444,    /**< No chroma subsampling at all (4:4:4) */
 } theora_pixelformat;
 
 /**
@@ -185,22 +185,23 @@ typedef struct{
  * for their length.
  */
 typedef struct theora_comment{
-  char **user_comments;		/**< An array of comment string vectors */
-  int   *comment_lengths;	/**< An array of corresponding string vector lengths in bytes */
-  int    comments;		/**< The total number of comment string vectors */
-  char  *vendor;		/**< The vendor string identifying the encoder, null terminated */
+  char **user_comments;         /**< An array of comment string vectors */
+  int   *comment_lengths;       /**< An array of corresponding string vector lengths in bytes */
+  int    comments;              /**< The total number of comment string vectors */
+  char  *vendor;                /**< The vendor string identifying the encoder, null terminated */
 
 } theora_comment;
 
-#define OC_FAULT       -1	/**< General failure */
-#define OC_EINVAL      -10	/**< Library encountered invalid internal data */
-#define OC_DISABLED    -11	/**< Requested action is disabled */
-#define OC_BADHEADER   -20	/**< Header packet was corrupt/invalid */
-#define OC_NOTFORMAT   -21	/**< Packet is not a theora packet */
-#define OC_VERSION     -22	/**< Bitstream version is not handled */
-#define OC_IMPL        -23	/**< Feature or action not implemented */
-#define OC_BADPACKET   -24	/**< Packet is corrupt */
-#define OC_NEWPACKET   -25	/**< Packet is an (ignorable) unhandled extension */
+#define OC_FAULT       -1       /**< General failure */
+#define OC_EINVAL      -10      /**< Library encountered invalid internal data */
+#define OC_DISABLED    -11      /**< Requested action is disabled */
+#define OC_BADHEADER   -20      /**< Header packet was corrupt/invalid */
+#define OC_NOTFORMAT   -21      /**< Packet is not a theora packet */
+#define OC_VERSION     -22      /**< Bitstream version is not handled */
+#define OC_IMPL        -23      /**< Feature or action not implemented */
+#define OC_BADPACKET   -24      /**< Packet is corrupt */
+#define OC_NEWPACKET   -25      /**< Packet is an (ignorable) unhandled extension */
+#define OC_DUPFRAME    1        /**< Packet is a dropped frame */
 
 /** 
  * Retrieve a human-readable string to identify the encoder vendor and version.
@@ -434,7 +435,7 @@ extern ogg_int64_t theora_granule_frame(theora_state *th,ogg_int64_t granulepos)
  * \returns The absolute time in seconds corresponding to \a granulepos.
  * \retval -1. The given granulepos is undefined (i.e. negative), or
  * \retval -1. The function has been disabled because floating 
- *		point support is not available.
+ *              point support is not available.
  */
 extern double theora_granule_time(theora_state *th,ogg_int64_t granulepos);
 

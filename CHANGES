@@ -1,6 +1,11 @@
 libtheora 1.0alph6 (unreleased)
 
- * no changes yet
+ * Major RTP payload specification update
+ * Minor format specification updates
+ * Fix some spurious calls to free() instead of _ogg_free()
+ * Fix invalid array indexing in PixelLineSearch()
+ * Improve robustness against invalid input
+ * General warning cleanup
 
 libtheora 1.0alpha5 (2005 August 20)
 
