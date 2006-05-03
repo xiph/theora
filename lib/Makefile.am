@@ -1,10 +1,10 @@
 INCLUDES = -I$(top_srcdir)/include
 
 EXTRA_DIST = Version_script.in \
-	i386/dsp_mmx.c \
-	i386/dsp_mmxext.c \
-	i386/recon_mmx.c \
-	i386/fdct_mmx.c \
+	x86_32/dsp_mmx.c \
+	x86_32/dsp_mmxext.c \
+	x86_32/recon_mmx.c \
+	x86_32/fdct_mmx.c \
 	x86_64/dsp_mmx.c \
 	x86_64/dsp_mmxext.c \
 	x86_64/recon_mmx.c \
@@ -20,9 +20,22 @@ endif
 
 if CPU_x86_64
 arch_dir = x86_64
+arch_sources= \
+	$(arch_dir)/dsp_mmx.c \
+	$(arch_dir)/dsp_mmxext.c \
+	$(arch_dir)/recon_mmx.c \
+	$(arch_dir)/fdct_mmx.c
 else
-arch_dir = i386
+if CPU_x86_32
+arch_dir = x86_32
+arch_sources= \
+	$(arch_dir)/dsp_mmx.c \
+	$(arch_dir)/dsp_mmxext.c \
+	$(arch_dir)/recon_mmx.c \
+	$(arch_dir)/fdct_mmx.c
 endif
+endif
+
 
 libtheora_la_SOURCES = \
 	blockmap.c \
@@ -44,10 +57,7 @@ libtheora_la_SOURCES = \
 	toplevel.c \
 	cpu.c \
 	dsp.c \
-	$(arch_dir)/dsp_mmx.c \
-	$(arch_dir)/dsp_mmxext.c \
-	$(arch_dir)/recon_mmx.c \
-	$(arch_dir)/fdct_mmx.c \
+  $(arch_sources) \
 	$(encoder_sources)
 
 noinst_HEADERS = \

@@ -33,7 +33,7 @@ cpuid(ogg_int32_t op, ogg_uint32_t *eax, ogg_uint32_t *ebx, ogg_uint32_t *ecx, o
                 "=d" (*edx)          
               : "a" (op)            
               : "cc");
-#else
+#elif defined(__x86)
   asm volatile ("pushl %%ebx   \n\t"
                 "cpuid         \n\t"
                 "movl %%ebx,%1 \n\t"
@@ -53,11 +53,11 @@ static ogg_uint32_t cpu_get_flags (void)
   ogg_uint32_t eax, ebx, ecx, edx;
   ogg_uint32_t flags;
 
-# if defined(__x86_64__)
+#if defined(__x86_64__)
 
   /* no need to check, we have cpuid on x86_64 */
 
-#else /* assume i386 */
+#elif defined(__x86)
   asm volatile ("pushfl              \n\t"
                 "pushfl              \n\t"
                 "popl %0             \n\t"

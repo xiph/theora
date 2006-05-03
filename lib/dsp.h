@@ -85,11 +85,13 @@ extern DspFunctions dsp_funcs;
 extern void dsp_recon_init (DspFunctions *funcs);
 
 void dsp_init(DspFunctions *funcs);
-void dsp_mmx_init(DspFunctions *funcs);
-void dsp_mmxext_init(DspFunctions *funcs);
-void dsp_mmx_fdct_init(DspFunctions *funcs);
-void dsp_mmx_recon_init(DspFunctions *funcs);
 void dsp_static_init(void);
+#if defined(__x86)
+extern void dsp_mmx_init(DspFunctions *funcs);
+extern void dsp_mmxext_init(DspFunctions *funcs);
+extern void dsp_mmx_fdct_init(DspFunctions *funcs);
+extern void dsp_mmx_recon_init(DspFunctions *funcs);
+#endif
 
 #define dsp_save_fpu(funcs) (funcs.save_fpu ())
 #define dsp_static_save_fpu() dsp_save_fpu(dsp_funcs)

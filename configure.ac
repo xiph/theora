@@ -102,12 +102,21 @@ else
 fi
 CFLAGS="$CFLAGS $cflags_save"
 
+cpu_optimization="no optimization for your platform, please send a patch"
 cpu_x86_64=no
-case $target in
-	x86_64-*)
-		cpu_x86_64=yes ;;
+cpu_x86_32=no
+case $target_cpu in
+	i[[3456]]86)
+		cpu_x86_32=yes 
+    cpu_optimization="32bit x86"
+    ;;
+	x86_64)
+		cpu_x86_64=yes
+    cpu_optimization="64bit x86"
+    ;;
 esac
 AM_CONDITIONAL([CPU_x86_64], [test x$cpu_x86_64 = xyes])
+AM_CONDITIONAL([CPU_x86_32], [test x$cpu_x86_32 = xyes])
 
 # Test whenever ld supports -version-script
 AC_PROG_LD
@@ -295,8 +304,9 @@ AC_MSG_RESULT([
 
   General configuration:
 
-    Encoding support: ............ ${ac_enable_encode}
-    Floating point support: ...... ${ac_enable_float}
+    Encoding support: ........... ${ac_enable_encode}
+    Floating point support: ..... ${ac_enable_float}
+    Assembly optimization: ...... ${cpu_optimization}
 
   Installation paths:
 

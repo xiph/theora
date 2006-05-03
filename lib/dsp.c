@@ -405,13 +405,16 @@ void dsp_static_init(void)
 {
   cpu_init ();
   dsp_init (&dsp_funcs);
+
   dsp_recon_init (&dsp_funcs);
   dsp_dct_init (&dsp_funcs);
+#if defined(__x86)
   if (cpu_flags & CPU_X86_MMX) {
     dsp_mmx_init(&dsp_funcs);
   }
   if (cpu_flags & CPU_X86_MMXEXT) {
     dsp_mmxext_init(&dsp_funcs);
   }
+#endif
 }
 
