@@ -4,7 +4,7 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT(libtheora-mmx,[1.0alpha5])
+AC_INIT(libtheora-mmx,[1.0alpha6-svn])
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
@@ -95,12 +95,19 @@ else
 
         case $host in 
         *)
-                DEBUG="-g -W -D__NO_MATH_INLINES"
+                DEBUG="-g -Wall -D__NO_MATH_INLINES"
                 CFLAGS="-Wall -O3 -fforce-addr -fomit-frame-pointer -finline-functions -funroll-loops"
-                PROFILE="-W -pg -g -O3 -fno-inline-functions";;
+                PROFILE="-Wall -pg -g -O3 -fno-inline-functions";;
         esac
 fi
 CFLAGS="$CFLAGS $cflags_save"
+
+cpu_x86_64=no
+case $target in
+	x86_64-*)
+		cpu_x86_64=yes ;;
+esac
+AM_CONDITIONAL([CPU_x86_64], [test x$cpu_x86_64 = xyes])
 
 # Test whenever ld supports -version-script
 AC_PROG_LD

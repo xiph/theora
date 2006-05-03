@@ -1,6 +1,14 @@
 INCLUDES = -I$(top_srcdir)/include
 
-EXTRA_DIST = Version_script.in
+EXTRA_DIST = Version_script.in \
+	i386/dsp_mmx.c \
+	i386/dsp_mmxext.c \
+	i386/recon_mmx.c \
+	i386/fdct_mmx.c \
+	x86_64/dsp_mmx.c \
+	x86_64/dsp_mmxext.c \
+	x86_64/recon_mmx.c \
+	x86_64/fdct_mmx.c
 
 lib_LTLIBRARIES = libtheora.la
 
@@ -8,6 +16,12 @@ if THEORA_DISABLE_ENCODE
 encoder_sources = encoder_disabled.c
 else
 encoder_sources = dct_encode.c encode.c encoder_toplevel.c
+endif
+
+if CPU_x86_64
+arch_dir = x86_64
+else
+arch_dir = i386
 endif
 
 libtheora_la_SOURCES = \
@@ -30,10 +44,10 @@ libtheora_la_SOURCES = \
 	toplevel.c \
 	cpu.c \
 	dsp.c \
-	i386/dsp_mmx.c \
-	i386/dsp_mmxext.c \
- 	i386/recon_mmx.c \
-	i386/fdct_mmx.c \
+	$(arch_dir)/dsp_mmx.c \
+	$(arch_dir)/dsp_mmxext.c \
+	$(arch_dir)/recon_mmx.c \
+	$(arch_dir)/fdct_mmx.c \
 	$(encoder_sources)
 
 noinst_HEADERS = \

@@ -334,7 +334,7 @@ static void fdct_short__mmx ( ogg_int16_t *InputData, ogg_int16_t *OutputData)
   );
 }
 
-void dsp_mmx_fdct_init(DspFunctions *funcs)
+void dsp_i386_mmx_fdct_init(DspFunctions *funcs)
 {
   funcs->fdct_short = fdct_short__mmx;
 }

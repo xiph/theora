@@ -18,8 +18,8 @@
 #include <stdlib.h>
 #include "dsp.h"
 
-static ogg_uint32_t sad8x8__mmxext (unsigned char *ptr1, ogg_uint32_t stride1,
-		       	    unsigned char *ptr2, ogg_uint32_t stride2)
+static ogg_uint32_t sad8x8__mmxext (unsigned char *ptr1, ogg_uint64_t stride1,
+                                    unsigned char *ptr2, ogg_uint64_t stride2)
 {
   ogg_uint32_t  DiffVal;
 
@@ -53,9 +53,9 @@ static ogg_uint32_t sad8x8__mmxext (unsigned char *ptr1, ogg_uint32_t stride1,
   return DiffVal;
 }
 
-static ogg_uint32_t sad8x8_thres__mmxext (unsigned char *ptr1, ogg_uint32_t stride1,
-		       		  unsigned char *ptr2, ogg_uint32_t stride2, 
-			   	  ogg_uint32_t thres)
+static ogg_uint32_t sad8x8_thres__mmxext (unsigned char *ptr1, ogg_uint64_t stride1,
+                                          unsigned char *ptr2, ogg_uint64_t stride2, 
+			   	  ogg_uint64_t thres)
 {
   ogg_uint32_t  DiffVal;
 
@@ -85,10 +85,10 @@ static ogg_uint32_t sad8x8_thres__mmxext (unsigned char *ptr1, ogg_uint32_t stri
   return DiffVal;
 }
 
-static ogg_uint32_t sad8x8_xy2_thres__mmxext (unsigned char *SrcData, ogg_uint32_t SrcStride,
-		                      unsigned char *RefDataPtr1,
-			              unsigned char *RefDataPtr2, ogg_uint32_t RefStride,
-			              ogg_uint32_t thres)
+static ogg_uint32_t sad8x8_xy2_thres__mmxext (unsigned char *SrcData, ogg_uint64_t SrcStride,
+                                              unsigned char *RefDataPtr1,
+                                              unsigned char *RefDataPtr2, ogg_uint64_t RefStride,
+                                              ogg_uint64_t thres)
 {
   ogg_uint32_t  DiffVal;
 
@@ -150,7 +150,7 @@ static ogg_uint32_t row_sad8__mmxext (unsigned char *Src1, unsigned char *Src2)
 }
 
 static ogg_uint32_t col_sad8x8__mmxext (unsigned char *Src1, unsigned char *Src2,
-		                    ogg_uint32_t stride)
+		                    ogg_uint64_t stride)
 {
   ogg_uint32_t MaxSad;
 
@@ -162,7 +162,7 @@ static ogg_uint32_t col_sad8x8__mmxext (unsigned char *Src1, unsigned char *Src2
     "  pxor        %%mm5, %%mm5     \n\t" 	/* mm5 high sum */
     "  pxor        %%mm6, %%mm6     \n\t"	/* mm6 low sum */
     "  pxor        %%mm7, %%mm7     \n\t" 	/* mm7 high sum */
-    "  mov         $4, %%edi        \n\t"	/* 4 rows */
+    "  mov         $4, %%rdi        \n\t"	/* 4 rows */
     "1:                             \n\t"
     "  movq        (%1), %%mm0      \n\t"	/* take 8 bytes */
     "  movq        (%2), %%mm1      \n\t"	/* take 8 bytes */
@@ -180,10 +180,10 @@ static ogg_uint32_t col_sad8x8__mmxext (unsigned char *Src1, unsigned char *Src2
     "  add         %3, %1           \n\t"	/* Inc pointer into the new data */
     "  add         %3, %2           \n\t"	/* Inc pointer into the new data */
 
-    "  dec         %%edi            \n\t"
+    "  dec         %%rdi            \n\t"
     "  jnz 1b                       \n\t"
 
-    "  mov         $4, %%edi        \n\t"	/* 4 rows */
+    "  mov         $4, %%rdi        \n\t"	/* 4 rows */
     "2:                             \n\t"
     "  movq        (%1), %%mm0      \n\t"	/* take 8 bytes */
     "  movq        (%2), %%mm1      \n\t"	/* take 8 bytes */
@@ -201,7 +201,7 @@ static ogg_uint32_t col_sad8x8__mmxext (unsigned char *Src1, unsigned char *Src2
     "  add         %3, %1           \n\t"	/* Inc pointer into the new data */
     "  add         %3, %2           \n\t"	/* Inc pointer into the new data */
 
-    "  dec         %%edi            \n\t"
+    "  dec         %%rdi            \n\t"
     "  jnz 2b                       \n\t"
 
     "  pmaxsw      %%mm6, %%mm7     \n\t"
@@ -220,18 +220,18 @@ static ogg_uint32_t col_sad8x8__mmxext (unsigned char *Src1, unsigned char *Src2
        "+r" (Src1), 
        "+r" (Src2) 
      : "r" (stride)
-     : "memory", "edi"
+     : "memory", "rdi"
   );
 
   return MaxSad;
 }
 
-static ogg_uint32_t inter8x8_err_xy2__mmxext (unsigned char *SrcData, ogg_uint32_t SrcStride,
-		                     unsigned char *RefDataPtr1,
-				     unsigned char *RefDataPtr2, ogg_uint32_t RefStride)
+static ogg_uint32_t inter8x8_err_xy2__mmxext (unsigned char *SrcData, ogg_uint64_t SrcStride,
+                                              unsigned char *RefDataPtr1,
+                                              unsigned char *RefDataPtr2, ogg_uint64_t RefStride)
 {
-  ogg_uint32_t XSum;
-  ogg_uint32_t XXSum;
+  ogg_uint64_t XSum;
+  ogg_uint64_t XXSum;
 
   __asm__ __volatile__ (
     "  .balign 16                   \n\t"
@@ -240,7 +240,7 @@ static ogg_uint32_t inter8x8_err_xy2__mmxext (unsigned char *SrcData, ogg_uint32
     "  pxor        %%mm5, %%mm5     \n\t"
     "  pxor        %%mm6, %%mm6     \n\t"
     "  pxor        %%mm7, %%mm7     \n\t"
-    "  mov         $8, %%edi        \n\t"
+    "  mov         $8, %%rdi        \n\t"
     "1:                             \n\t"
     "  movq        (%2), %%mm0      \n\t"	/* take 8 bytes */
 
@@ -272,7 +272,7 @@ static ogg_uint32_t inter8x8_err_xy2__mmxext (unsigned char *SrcData, ogg_uint32
     "  add         %6, %3           \n\t"	/* Inc pointer into ref data */
     "  add         %6, %4           \n\t"	/* Inc pointer into ref data */
 
-    "  dec         %%edi            \n\t"
+    "  dec         %%rdi            \n\t"
     "  jnz 1b                       \n\t"
 
     "  movq        %%mm5, %%mm0     \n\t"
@@ -297,14 +297,14 @@ static ogg_uint32_t inter8x8_err_xy2__mmxext (unsigned char *SrcData, ogg_uint32
        "+r" (RefDataPtr2) 
      : "m" (SrcStride),
        "m" (RefStride)
-     : "edi", "memory"
+     : "rdi", "memory"
   );
 
   /* Compute and return population variance as mis-match metric. */
   return (( (XXSum<<6) - XSum*XSum ));
 }
 
-void dsp_mmxext_init(DspFunctions *funcs)
+void dsp_i386_mmxext_init(DspFunctions *funcs)
 {
   funcs->row_sad8 = row_sad8__mmxext;
   funcs->col_sad8x8 = col_sad8x8__mmxext;
@@ -313,4 +313,3 @@ void dsp_mmxext_init(DspFunctions *funcs)
   funcs->sad8x8_xy2_thres = sad8x8_xy2_thres__mmxext;
   funcs->inter8x8_err_xy2 = inter8x8_err_xy2__mmxext;
 }
-

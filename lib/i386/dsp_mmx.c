@@ -624,7 +624,7 @@ static void restore_fpu (void)
   );
 }
 
-void dsp_i386_mmx_init(DspFunctions *funcs)
+void dsp_mmx_init(DspFunctions *funcs)
 {
   funcs->restore_fpu = restore_fpu;
   funcs->sub8x8 = sub8x8__mmx;

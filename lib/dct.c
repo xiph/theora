@@ -257,7 +257,7 @@ void dsp_dct_init (DspFunctions *funcs)
 {
   funcs->fdct_short = fdct_short__c;
   if (cpu_flags & CPU_X86_MMX) {
-    dsp_i386_mmx_fdct_init(&dsp_funcs);
+    dsp_mmx_fdct_init(&dsp_funcs);
   }
 }
 

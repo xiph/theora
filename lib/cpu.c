@@ -19,24 +19,45 @@
 
 ogg_uint32_t cpu_flags = 0;
 
+void
+cpuid(ogg_int32_t op, ogg_uint32_t *eax, ogg_uint32_t *ebx, ogg_uint32_t *ecx, ogg_uint32_t *edx) 
+{
+#if defined(__x86_64__)
+  asm volatile ("pushq %%rbx   \n\t"
+                "cpuid         \n\t"
+                "movl %%ebx,%1 \n\t"
+                "popq %%rbx"        
+              : "=a" (*eax),         
+                "=r" (*ebx),         
+                "=c" (*ecx),         
+                "=d" (*edx)          
+              : "a" (op)            
+              : "cc");
+#else
+  asm volatile ("pushl %%ebx   \n\t"
+                "cpuid         \n\t"
+                "movl %%ebx,%1 \n\t"
+                "popl %%ebx"        
+              : "=a" (*eax),         
+                "=r" (*ebx),         
+                "=c" (*ecx),         
+                "=d" (*edx)          
+              : "a" (op)            
+              : "cc");
+#endif
+}
+
 #if 1
 static ogg_uint32_t cpu_get_flags (void)
 {
   ogg_uint32_t eax, ebx, ecx, edx;
   ogg_uint32_t flags;
 
-#define cpuid(op,eax,ebx,ecx,edx)      \
-  asm volatile ("pushl %%ebx   \n\t"   \
-                "cpuid         \n\t"   \
-                "movl %%ebx,%1 \n\t"   \
-                "popl %%ebx"           \
-              : "=a" (eax),            \
-                "=r" (ebx),            \
-                "=c" (ecx),            \
-                "=d" (edx)             \
-              : "a" (op)               \
-              : "cc")
+# if defined(__x86_64__)
 
+  /* no need to check, we have cpuid on x86_64 */
+
+#else /* assume i386 */
   asm volatile ("pushfl              \n\t"
                 "pushfl              \n\t"
                 "popl %0             \n\t"
@@ -51,11 +72,12 @@ static ogg_uint32_t cpu_get_flags (void)
                 "=r" (ebx)
               :
               : "cc");
-         
+
   if (eax == ebx)             /* no cpuid */
     return 0;
+#endif
 
-  cpuid(0, eax, ebx, ecx, edx);
+  cpuid(0, &eax, &ebx, &ecx, &edx);
 
   if (ebx == 0x756e6547 &&
       edx == 0x49656e69 &&
@@ -63,7 +85,7 @@ static ogg_uint32_t cpu_get_flags (void)
     /* intel */
 
   inteltest:
-    cpuid(1, eax, ebx, ecx, edx);
+    cpuid(1, &eax, &ebx, &ecx, &edx);
     if ((edx & 0x00800000) == 0)
       return 0;
     flags = CPU_X86_MMX;
@@ -76,10 +98,10 @@ static ogg_uint32_t cpu_get_flags (void)
              edx == 0x69746e65 &&
              ecx == 0x444d4163) {
     /* AMD */
-    cpuid(0x80000000, eax, ebx, ecx, edx);
+    cpuid(0x80000000, &eax, &ebx, &ecx, &edx);
     if ((unsigned)eax < 0x80000001)
       goto inteltest;
-    cpuid(0x80000001, eax, ebx, ecx, edx);
+    cpuid(0x80000001, &eax, &ebx, &ecx, &edx);
     if ((edx & 0x00800000) == 0)
       return 0;
     flags = CPU_X86_MMX;

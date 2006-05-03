@@ -408,10 +408,10 @@ void dsp_static_init(void)
   dsp_recon_init (&dsp_funcs);
   dsp_dct_init (&dsp_funcs);
   if (cpu_flags & CPU_X86_MMX) {
-    dsp_i386_mmx_init(&dsp_funcs);
+    dsp_mmx_init(&dsp_funcs);
   }
   if (cpu_flags & CPU_X86_MMXEXT) {
-    dsp_i386_mmxext_init(&dsp_funcs);
+    dsp_mmxext_init(&dsp_funcs);
   }
 }
 
