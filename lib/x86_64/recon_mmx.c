@@ -19,13 +19,6 @@
 
 static const __attribute__ ((aligned(8),used)) ogg_int64_t V128 = 0x8080808080808080LL;
 
-#if defined(__MINGW32__) || defined(__CYGWIN__) || \
-	    defined(__OS2__) || (defined (__OpenBSD__) && !defined(__ELF__))
-# define M(a) "_" #a
-#else
-# define M(a) #a
-#endif
-
 static void copy8x8__mmx (unsigned char *src,
                           unsigned char *dest,
                           ogg_uint64_t stride)
@@ -71,7 +64,7 @@ static void recon_intra8x8__mmx (unsigned char *ReconPtr, ogg_int16_t *ChangePtr
   __asm__ __volatile__ (
     "  .balign 16                      \n\t"
 
-    "  movq     "M(V128)", %%mm0       \n\t" /* Set mm0 to 0x8080808080808080 */
+    "  movq        %[V128], %%mm0      \n\t" /* Set mm0 to 0x8080808080808080 */
 
     "  lea         128(%1), %%rdi      \n\t" /* Endpoint in input buffer */
     "1:                                \n\t" 
@@ -89,7 +82,8 @@ static void recon_intra8x8__mmx (unsigned char *ReconPtr, ogg_int16_t *ChangePtr
     "  jc          1b                  \n\t" /* Loop back if we are not done */
       : "+r" (ReconPtr)
       : "r" (ChangePtr),
-        "r" (LineStep)
+        "r" (LineStep),
+        [V128] "m" (V128)
       : "memory", "rdi"
   );
 }

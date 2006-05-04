@@ -86,7 +86,7 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  movq        %%mm2, %%mm0       \n\t" /* make a copy */                   \
   "  paddsw      %%mm2, %%mm3       \n\t" /* mm3 = is0734 + is1256 */         \
                                                                               \
-  "  pmulhw   "M(xC4S4)", %%mm0     \n\t" /* mm0 = xC4S4 * ( is0734 - is1256 ) - ( is0734 - is1256 ) */ \
+  "  pmulhw      %[xC4S4], %%mm0    \n\t" /* mm0 = xC4S4 * ( is0734 - is1256 ) - ( is0734 - is1256 ) */ \
   "  paddw       %%mm2, %%mm0       \n\t" /* mm0 = xC4S4 * ( is0734 - is1256 ) */ \
   "  psrlw       $15, %%mm2         \n\t"                                     \
   "  paddw       %%mm2, %%mm0       \n\t" /* Truncate mm0, now it is op[4] */ \
@@ -95,7 +95,7 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  movq        %%mm0," #ip4 "     \n\t" /* save ip4, now mm0,mm2 are free */ \
                                                                               \
   "  movq        %%mm3, %%mm0       \n\t"                                     \
-  "  pmulhw   "M(xC4S4)", %%mm3     \n\t" /* mm3 = xC4S4 * ( is0734 +is1256 ) - ( is0734 +is1256 ) */ \
+  "  pmulhw      %[xC4S4], %%mm3    \n\t" /* mm3 = xC4S4 * ( is0734 +is1256 ) - ( is0734 +is1256 ) */ \
                                                                               \
   "  psrlw       $15, %%mm2         \n\t"                                     \
   "  paddw       %%mm0, %%mm3       \n\t" /* mm3 = xC4S4 * ( is0734 +is1256 )	 */ \
@@ -104,7 +104,7 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  movq        %%mm3," #ip0 "     \n\t"                                     \
   /* ------------------------------------------------------------------- */   \
   "  movq      " #temp ", %%mm3     \n\t" /* mm3 = irot_input_y */            \
-  "  pmulhw   "M(xC2S6)", %%mm3     \n\t" /* mm3 = xC2S6 * irot_input_y - irot_input_y */ \
+  "  pmulhw      %[xC2S6], %%mm3     \n\t" /* mm3 = xC2S6 * irot_input_y - irot_input_y */ \
                                                                               \
   "  movq      " #temp ", %%mm2     \n\t"                                     \
   "  movq        %%mm2, %%mm0       \n\t"                                     \
@@ -116,7 +116,7 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  movq        %%mm5, %%mm0       \n\t"                                     \
                                                                               \
   "  movq        %%mm5, %%mm2       \n\t"                                     \
-  "  pmulhw   "M(xC6S2)", %%mm0     \n\t" /* mm0 = xC6S2 * irot_input_x */    \
+  "  pmulhw      %[xC6S2], %%mm0    \n\t" /* mm0 = xC6S2 * irot_input_x */    \
                                                                               \
   "  psrlw       $15, %%mm2         \n\t"                                     \
   "  paddw       %%mm2, %%mm0       \n\t" /* Truncated */                     \
@@ -127,7 +127,7 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  movq        %%mm5, %%mm0       \n\t"                                     \
   "  movq        %%mm5, %%mm2       \n\t"                                     \
                                                                               \
-  "  pmulhw   "M(xC2S6)", %%mm5     \n\t" /* mm5 = xC2S6 * irot_input_x - irot_input_x */ \
+  "  pmulhw      %[xC2S6], %%mm5     \n\t" /* mm5 = xC2S6 * irot_input_x - irot_input_x */ \
   "  psrlw       $15, %%mm2         \n\t"                                     \
                                                                               \
   "  movq      " #temp ", %%mm3     \n\t"                                     \
@@ -136,7 +136,7 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  paddw       %%mm2, %%mm5       \n\t" /* Truncated */                     \
   "  movq        %%mm3, %%mm2       \n\t"                                     \
                                                                               \
-  "  pmulhw   "M(xC6S2)", %%mm3     \n\t" /* mm3 = xC6S2 * irot_input_y */    \
+  "  pmulhw      %[xC6S2], %%mm3    \n\t" /* mm3 = xC6S2 * irot_input_y */    \
   "  psrlw       $15, %%mm2         \n\t"                                     \
                                                                               \
   "  paddw       %%mm2, %%mm3       \n\t" /* Truncated */                     \
@@ -144,7 +144,7 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
                                                                               \
   "  movq        %%mm3," #ip6 "     \n\t"                                     \
   /* ------------------------------------------------------------------- */   \
-  "  movq     "M(xC4S4)", %%mm0     \n\t"                                     \
+  "  movq        %[xC4S4], %%mm0    \n\t"                                     \
   "  movq        %%mm1, %%mm2       \n\t"                                     \
   "  movq        %%mm1, %%mm3       \n\t"                                     \
                                                                               \
@@ -174,13 +174,13 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  paddsw      %%mm1, %%mm1       \n\t"                                     \
   "  paddsw      %%mm4, %%mm1       \n\t" /* mm1 = id07 + icommon_product1 */ \
   /* ------------------------------------------------------------------- */   \
-  "  movq     "M(xC1S7)", %%mm7     \n\t"                                     \
+  "  movq        %[xC1S7], %%mm7    \n\t"                                     \
   "  movq        %%mm1, %%mm2       \n\t"                                     \
                                                                               \
   "  movq        %%mm1, %%mm3       \n\t"                                     \
   "  pmulhw      %%mm7, %%mm1       \n\t" /* mm1 = xC1S7 * irot_input_x - irot_input_x */ \
                                                                               \
-  "  movq     "M(xC7S1)", %%mm7     \n\t"                                     \
+  "  movq        %[xC7S1], %%mm7    \n\t"                                     \
   "  psrlw       $15, %%mm2         \n\t"                                     \
                                                                               \
   "  paddw       %%mm3, %%mm1       \n\t" /* mm1 = xC1S7 * irot_input_x */    \
@@ -192,10 +192,10 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  movq        %%mm0, %%mm5       \n\t"                                     \
   "  movq        %%mm0, %%mm2       \n\t"                                     \
                                                                               \
-  "  movq     "M(xC1S7)", %%mm7     \n\t"                                     \
+  "  movq        %[xC1S7], %%mm7    \n\t"                                     \
   "  pmulhw      %%mm7, %%mm0       \n\t" /* mm0 = xC1S7 * irot_input_y - irot_input_y */ \
                                                                               \
-  "  movq     "M(xC7S1)", %%mm7     \n\t"                                     \
+  "  movq        %[xC7S1], %%mm7    \n\t"                                     \
   "  psrlw       $15, %%mm2         \n\t"                                     \
                                                                               \
   "  paddw       %%mm5, %%mm0       \n\t" /* mm0 = xC1S7 * irot_input_y */    \
@@ -210,8 +210,8 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  movq        %%mm1," #ip1 "     \n\t"                                     \
   "  movq        %%mm3," #ip7 "     \n\t"                                     \
   /* ------------------------------------------------------------------- */   \
-  "  movq     "M(xC3S5)", %%mm0     \n\t"                                     \
-  "  movq     "M(xC5S3)", %%mm1     \n\t"                                     \
+  "  movq        %[xC3S5], %%mm0    \n\t"                                     \
+  "  movq        %[xC5S3], %%mm1    \n\t"                                     \
                                                                               \
   "  movq        %%mm6, %%mm5       \n\t"                                     \
   "  movq        %%mm6, %%mm7       \n\t"                                     \
@@ -329,7 +329,14 @@ static void fdct_short__mmx ( ogg_int16_t *InputData, ogg_int16_t *OutputData)
     
     : "+r" (InputData),
       "+r" (OutputData)
-    : "r" (temp)
+    : "r" (temp),
+      [xC1S7] "m" (xC1S7),      /* gcc 3.1+ allows named asm parameters */
+      [xC2S6] "m" (xC2S6),
+      [xC3S5] "m" (xC3S5),
+      [xC4S4] "m" (xC4S4),
+      [xC5S3] "m" (xC5S3),
+      [xC6S2] "m" (xC6S2),
+      [xC7S1] "m" (xC7S1)
     : "memory"
   );
 }

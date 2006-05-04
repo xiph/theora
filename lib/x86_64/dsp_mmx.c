@@ -20,13 +20,6 @@
 
 static const __attribute__ ((aligned(8),used)) ogg_int64_t V128 = 0x0080008000800080LL;
 
-#if defined(__MINGW32__) || defined(__CYGWIN__) || \
-    defined(__OS2__) || (defined (__OpenBSD__) && !defined(__ELF__))
-# define M(a) "_" #a
-#else
-# define M(a) #a
-#endif
-
 #define DSP_OP_AVG(a,b) ((((int)(a)) + ((int)(b)))/2)
 #define DSP_OP_DIFF(a,b) (((int)(a)) - ((int)(b)))
 #define DSP_OP_ABS_DIFF(a,b) abs((((int)(a)) - ((int)(b))))
@@ -77,7 +70,7 @@ static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
     "  .balign 16                   \n\t"
 
     "  pxor        %%mm7, %%mm7     \n\t" 
-    "  movq      "M(V128)", %%mm1   \n\t"
+    "  movq        %[V128], %%mm1   \n\t"
 
     ".rept 8                        \n\t"
     "  movq        (%0), %%mm0      \n\t" /* mm0 = FiltPtr */
@@ -97,7 +90,8 @@ static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
 
      : "+r" (FiltPtr),
        "+r" (DctInputPtr)
-     : "m" (PixelsPerLine)
+     : "m" (PixelsPerLine),
+       [V128] "m" (V128)
      : "memory"
   );
 }
