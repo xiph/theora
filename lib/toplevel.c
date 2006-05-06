@@ -23,6 +23,7 @@
 #include <string.h>
 #include <theora/theora.h>
 #include "toplevel.h"
+#include "dsp.h"
 
 static int _ilog(unsigned int v){
   int ret=0;

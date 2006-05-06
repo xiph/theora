@@ -82,6 +82,7 @@ typedef struct
 
 extern DspFunctions dsp_funcs;
 
+extern void dsp_dct_init(DspFunctions *funcs);
 extern void dsp_recon_init (DspFunctions *funcs);
 
 void dsp_init(DspFunctions *funcs);

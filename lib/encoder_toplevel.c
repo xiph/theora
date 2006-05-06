@@ -23,6 +23,7 @@
 #include <string.h>
 #include "toplevel_lookup.h"
 #include "toplevel.h"
+#include "dsp.h"
 
 #define A_TABLE_SIZE        29
 #define DF_CANDIDATE_WINDOW 5
