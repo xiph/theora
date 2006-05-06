@@ -47,11 +47,12 @@ cpuid(ogg_int32_t op, ogg_uint32_t *eax, ogg_uint32_t *ebx, ogg_uint32_t *ecx, o
 #endif
 }
 
-#if 1
 static ogg_uint32_t cpu_get_flags (void)
 {
   ogg_uint32_t eax, ebx, ecx, edx;
-  ogg_uint32_t flags;
+  ogg_uint32_t flags = 0;
+
+/* check for cpuid support */
 
 #if defined(__x86_64__)
 
@@ -117,11 +118,6 @@ static ogg_uint32_t cpu_get_flags (void)
 
   return flags;
 }
-#else
-static ogg_uint32_t cpu_get_flags (void) {
-  return 0;
-}
-#endif
 
 void cpu_init () 
 {
