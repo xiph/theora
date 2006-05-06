@@ -408,7 +408,7 @@ void dsp_static_init(void)
 
   dsp_recon_init (&dsp_funcs);
   dsp_dct_init (&dsp_funcs);
-#if defined(__x86)
+#if defined(__i386__)
   if (cpu_flags & CPU_X86_MMX) {
     dsp_mmx_init(&dsp_funcs);
   }

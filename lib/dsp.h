@@ -86,7 +86,7 @@ extern void dsp_recon_init (DspFunctions *funcs);
 
 void dsp_init(DspFunctions *funcs);
 void dsp_static_init(void);
-#if defined(__x86)
+#if defined(__i386__)
 extern void dsp_mmx_init(DspFunctions *funcs);
 extern void dsp_mmxext_init(DspFunctions *funcs);
 extern void dsp_mmx_fdct_init(DspFunctions *funcs);
