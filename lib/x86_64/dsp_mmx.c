@@ -283,7 +283,7 @@ static void restore_fpu (void)
   );
 }
 
-void dsp_i386_mmx_init(DspFunctions *funcs)
+void dsp_mmx_init(DspFunctions *funcs)
 {
   fprintf(stderr, "setting accelerated x86_64 mmx dsp functions.\n");
   funcs->restore_fpu = restore_fpu;
