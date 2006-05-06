@@ -26,7 +26,7 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t V128 = 0x008000800080
 #define DSP_OP_ABS_DIFF(a,b) abs((((int)(a)) - ((int)(b))))
 
 static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
-                  ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine,
+                  ogg_int16_t *DctInputPtr, ogg_uint64_t PixelsPerLine,
                   ogg_uint64_t ReconPixelsPerLine) 
 {
   __asm__ __volatile__ (
@@ -50,7 +50,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
     "  movq        %%mm0,  (%2)     \n\t" /* write answer out */
     "  movq        %%mm2, 8(%2)     \n\t" /* write answer out */
     /* Increment pointers */
-    "  add         $16, %2           \n\t"
+    "  add         $16, %2          \n\t"
     "  add         %3, %0           \n\t"
     "  add         %4, %1           \n\t"
     ".endr                          \n\t"
@@ -65,7 +65,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
 }
 
 static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
-                      ogg_uint32_t PixelsPerLine) 
+                      ogg_uint64_t PixelsPerLine) 
 {
   __asm__ __volatile__ (
     "  .balign 16                   \n\t"
@@ -99,7 +99,7 @@ static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
 
 static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
                      unsigned char *ReconPtr2, ogg_int16_t *DctInputPtr,
-                     ogg_uint32_t PixelsPerLine,
+                     ogg_uint64_t PixelsPerLine,
                      ogg_uint64_t ReconPixelsPerLine) 
 {
   __asm__ __volatile__ (
@@ -188,7 +188,7 @@ static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint64_t Stri
     "  paddw       %%mm0, %%mm5     \n\t"
     "  movd        %%mm5, %%rdi     \n\t"
     "  movsx       %%di, %%rdi      \n\t"
-    "  mov        %%rdi, %0        \n\t"
+    "  mov         %%rdi, %0        \n\t"
 
     "  movq        %%mm7, %%mm0     \n\t"
     "  psrlq       $32, %%mm7       \n\t"
@@ -206,11 +206,11 @@ static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint64_t Stri
   return (( (XXSum<<6) - XSum*XSum ) );
 }
 
-static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcStride,
-		                 unsigned char *RefDataPtr, ogg_uint32_t RefStride)
+static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint64_t SrcStride,
+		                 unsigned char *RefDataPtr, ogg_uint64_t RefStride)
 {
-  ogg_uint32_t  XSum;
-  ogg_uint32_t  XXSum;
+  ogg_uint64_t  XSum;
+  ogg_uint64_t  XXSum;
 
   __asm__ __volatile__ (
     "  .balign 16                   \n\t"
@@ -256,7 +256,7 @@ static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcS
     "  paddw       %%mm0, %%mm5     \n\t"
     "  movd        %%mm5, %%rdi     \n\t"
     "  movsx       %%di, %%rdi      \n\t"
-    "  mov        %%rdi, %0        \n\t"
+    "  mov         %%rdi, %0        \n\t"
 
     "  movq        %%mm7, %%mm0     \n\t"
     "  psrlq       $32, %%mm7       \n\t"
