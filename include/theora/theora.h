@@ -104,7 +104,7 @@ typedef enum {
  * this is what the width and height members represent. To
  * handle other sizes, a crop rectangle is specified in 
  * frame_height and frame_width, offset_x and offset_y. The
- * offset and size should still be a power of 2 to avoid
+ * offset and size should still be a multiple of 2 to avoid
  * chroma sampling shifts.
  *
  * Frame rate, in frames per second is stored as a rational
