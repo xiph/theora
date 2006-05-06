@@ -15,6 +15,7 @@
 
  ********************************************************************/
 
+#include <stdio.h>
 #include <stdlib.h>
 #include "dsp.h"
 
@@ -306,6 +307,7 @@ static ogg_uint32_t inter8x8_err_xy2__mmxext (unsigned char *SrcData, ogg_uint64
 
 void dsp_i386_mmxext_init(DspFunctions *funcs)
 {
+  fprintf(stderr, "enabling accerated x86_64 mmxext dsp functions.\n");
   funcs->row_sad8 = row_sad8__mmxext;
   funcs->col_sad8x8 = col_sad8x8__mmxext;
   funcs->sad8x8 = sad8x8__mmxext;

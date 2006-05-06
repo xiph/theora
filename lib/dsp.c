@@ -15,6 +15,7 @@
 
  ********************************************************************/
 
+#include <stdio.h>
 #include <stdlib.h>
 #include "cpu.h"
 #include "dsp.h"
@@ -386,6 +387,7 @@ static void nop (void) { /* NOP */ }
 
 void dsp_init(DspFunctions *funcs)
 {
+  fprintf(stderr, "setting dsp functions to C defaults.\n");
   funcs->save_fpu = nop;
   funcs->restore_fpu = nop;
   funcs->sub8x8 = sub8x8__c;

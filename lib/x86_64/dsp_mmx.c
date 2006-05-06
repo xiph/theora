@@ -15,6 +15,7 @@
 
  ********************************************************************/
 
+#include <stdio.h>
 #include <stdlib.h>
 #include "dsp.h"
 
@@ -284,6 +285,7 @@ static void restore_fpu (void)
 
 void dsp_i386_mmx_init(DspFunctions *funcs)
 {
+  fprintf(stderr, "setting accelerated x86_64 mmx dsp functions.\n");
   funcs->restore_fpu = restore_fpu;
   funcs->sub8x8 = sub8x8__mmx;
   funcs->sub8x8_128 = sub8x8_128__mmx;
