@@ -24,5 +24,6 @@ extern ogg_uint32_t cpu_flags;
 #define CPU_X86_MMXEXT	(1<<2)
 #define CPU_X86_SSE	(1<<3)
 #define CPU_X86_SSE2	(1<<4)
+#define CPU_X86_3DNOWEXT (1<<5)
 
 void cpu_init () ;
