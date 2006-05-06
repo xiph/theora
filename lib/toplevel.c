@@ -154,6 +154,11 @@ static int _theora_unpack_info(theora_info *ci, oggpack_buffer *opb){
 
   theora_read(opb,2,&ret);
   ci->pixelformat=ret;
+  if(ci->pixelformat==OC_PF_RSVD)
+    return (OC_BADHEADER);
+  /* 4:2:2 and 4:4:4 not currently implemented */
+  else if(ci->pixelformat != OC_PF_420)
+    return (OC_IMPL);
 
   /* spare configuration bits */
   if ( theora_read(opb,3,&ret) == -1 )
