@@ -21,7 +21,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <theora/theora.h>
+#include "theora/theora.h"
 #include "toplevel.h"
 
 static int _ilog(unsigned int v){

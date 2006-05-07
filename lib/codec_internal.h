@@ -22,7 +22,7 @@
 # include "config.h"
 #endif
 
-#include <theora/theora.h>
+#include "theora/theora.h"
 #include "huffman.h"
 
 #ifndef LIBOGG2
