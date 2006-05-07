@@ -1042,6 +1042,7 @@ static void _tp_writelsbint(oggpack_buffer *opb, long value)
 /* build the initial short header for stream recognition and format */
 int theora_encode_header(theora_state *t, ogg_packet *op){
   CP_INSTANCE *cpi=(CP_INSTANCE *)(t->internal_encode);
+  int offset_y;
 
 #ifndef LIBOGG2
   oggpackB_reset(cpi->oggbuffer);
@@ -1060,7 +1061,12 @@ int theora_encode_header(theora_state *t, ogg_packet *op){
   oggpackB_write(cpi->oggbuffer,cpi->pb.info.frame_width,24);
   oggpackB_write(cpi->oggbuffer,cpi->pb.info.frame_height,24);
   oggpackB_write(cpi->oggbuffer,cpi->pb.info.offset_x,8);
-  oggpackB_write(cpi->oggbuffer,cpi->pb.info.offset_y,8);
+  /* Applications use offset_y to mean offset from the top of the image; the
+   * meaning in the bitstream is the opposite (from the bottom). Transform.
+   */
+  offset_y = cpi->pb.info.height - cpi->pb.info.frame_height - 
+    cpi->pb.info.offset_y;
+  oggpackB_write(cpi->oggbuffer,offset_y,8);
 
   oggpackB_write(cpi->oggbuffer,cpi->pb.info.fps_numerator,32);
   oggpackB_write(cpi->oggbuffer,cpi->pb.info.fps_denominator,32);

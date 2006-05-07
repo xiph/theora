@@ -6,6 +6,9 @@ libtheora 1.0alph6 (unreleased)
  * Fix invalid array indexing in PixelLineSearch()
  * Improve robustness against invalid input
  * General warning cleanup
+ * The offset_y member now means what every application thought it meant
+   (offset from the top). This will mean some old files (those with a 
+   non-centered image created with a buggy encoder) will display differently.
 
 libtheora 1.0alpha5 (2005 August 20)
 

@@ -132,6 +132,8 @@ static int _theora_unpack_info(theora_info *ci, oggpack_buffer *opb){
   ci->offset_x=ret;
   theora_read(opb,8,&ret);
   ci->offset_y=ret;
+  /* Change offset_y to have the meaning everyone expects it to have */
+  ci->offset_y = ci->height - ci->frame_height - ci->offset_y;
 
   theora_read(opb,32,&ret);
   ci->fps_numerator=ret;
