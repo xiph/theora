@@ -349,8 +349,8 @@ static void UpdatePreviousBlockLists(PP_INSTANCE *ppi) {
 }
 
 static void CreateOutputDisplayMap( PP_INSTANCE *ppi,
-                                    char *InternalFragmentsPtr,
-                                    char *RecentHistoryPtr,
+                                    signed char *InternalFragmentsPtr,
+                                    signed char *RecentHistoryPtr,
                                     unsigned char *ExternalFragmentsPtr ) {
   ogg_uint32_t i;
   ogg_uint32_t HistoryBlocksAdded = 0;
