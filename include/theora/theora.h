@@ -107,6 +107,9 @@ typedef enum {
  * offset and size should still be a multiple of 2 to avoid
  * chroma sampling shifts.
  *
+ * Offset values in this structure are measured from the 
+ * upper left of the image.
+ *
  * Frame rate, in frames per second is stored as a rational
  * fraction. So is the aspect ratio. Note that this refers
  * to the aspect ratio of the frame pixels, not of the
