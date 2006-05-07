@@ -678,7 +678,7 @@ void ExpandToken( Q_LIST_ENTRY * ExpandedBlock,
 }
 
 void ClearDownQFragData(PB_INSTANCE *pbi){
-  ogg_int32_t       i,j;
+  ogg_int32_t       i;
   Q_LIST_ENTRY *    QFragPtr;
 
   for ( i = 0; i < pbi->CodedBlockIndex; i++ ) {
