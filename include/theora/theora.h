@@ -54,8 +54,11 @@ ogg_buffer_state *ogg_buffer_create(void);
  * configurations. For theora the width and height of the largest plane
  * must be a multiple of 16. The actual meaningful picture size and 
  * offset are stored in the theora_info structure; frames returned by
- * the decoder may need to be cropped for display. 
- * All samples are 8 bits.
+ * the decoder may need to be cropped for display.
+ *
+ * All samples are 8 bits. Within each plane samples are ordered by
+ * row from the top of the frame to the bottom. Within each row samples
+ * are ordered from left to right.
  */
 typedef struct {
     int   y_width;      /**< Width of the Y' luminance plane */
@@ -105,12 +108,10 @@ typedef enum {
  * handle other sizes, a crop rectangle is specified in 
  * frame_height and frame_width, offset_x and offset_y. The
  * offset and size should still be a multiple of 2 to avoid
- * chroma sampling shifts.
+ * chroma sampling shifts. Offset values in this structure
+ * are measured from the  upper left of the image.
  *
- * Offset values in this structure are measured from the 
- * upper left of the image.
- *
- * Frame rate, in frames per second is stored as a rational
+ * Frame rate, in frames per second, is stored as a rational
  * fraction. So is the aspect ratio. Note that this refers
  * to the aspect ratio of the frame pixels, not of the
  * overall frame itself.
@@ -119,18 +120,18 @@ typedef enum {
  * good default settings for the encoder parameters.
  */
 typedef struct {
-  ogg_uint32_t  width;
-  ogg_uint32_t  height;
-  ogg_uint32_t  frame_width;
-  ogg_uint32_t  frame_height;
-  ogg_uint32_t  offset_x;
-  ogg_uint32_t  offset_y;
-  ogg_uint32_t  fps_numerator;
-  ogg_uint32_t  fps_denominator;
-  ogg_uint32_t  aspect_numerator;
-  ogg_uint32_t  aspect_denominator;
-  theora_colorspace colorspace;
-  int           target_bitrate;
+  ogg_uint32_t  width;		/**< encoded frame width  */
+  ogg_uint32_t  height;		/**< encoded frame height */
+  ogg_uint32_t  frame_width;	/**< display frame width  */
+  ogg_uint32_t  frame_height;	/**< display frame height */
+  ogg_uint32_t  offset_x;	/**< horizontal offset of the displayed frame */
+  ogg_uint32_t  offset_y;	/**< vertical offset of the displayed frame */
+  ogg_uint32_t  fps_numerator;	    /**< frame rate numerator **/
+  ogg_uint32_t  fps_denominator;    /**< frame rate denominator **/
+  ogg_uint32_t  aspect_numerator;   /**< pixel aspect ratio numerator */
+  ogg_uint32_t  aspect_denominator; /**< pixel aspect ratio denominator */
+  theora_colorspace colorspace;	    /**< colorspace */
+  int           target_bitrate;	    /**< nominal bitrate in bits per second */
   int           quality;  /**< Nominal quality setting, 0-63 */
   int           quick_p;  /**< Quick encode/decode */
 
@@ -153,7 +154,7 @@ typedef struct {
   ogg_int32_t   noise_sensitivity;
   ogg_int32_t   sharpness;
 
-  theora_pixelformat pixelformat;
+  theora_pixelformat pixelformat;	/**< chroma subsampling mode to expect */
 
 } theora_info;
 
