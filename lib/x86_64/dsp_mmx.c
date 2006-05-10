@@ -26,8 +26,8 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t V128 = 0x008000800080
 #define DSP_OP_ABS_DIFF(a,b) abs((((int)(a)) - ((int)(b))))
 
 static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
-                  ogg_int16_t *DctInputPtr, ogg_uint64_t PixelsPerLine,
-                  ogg_uint64_t ReconPixelsPerLine) 
+                  ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine,
+                  ogg_uint32_t ReconPixelsPerLine) 
 {
   __asm__ __volatile__ (
     "  .balign 16                   \n\t"
@@ -58,15 +58,17 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
      : "+r" (FiltPtr),
        "+r" (ReconPtr),
        "+r" (DctInputPtr)
-     : "m" (PixelsPerLine),
-       "m" (ReconPixelsPerLine) 
+     : "r" ((ogg_uint64_t)PixelsPerLine),
+       "r" ((ogg_uint64_t)ReconPixelsPerLine) 
      : "memory"
   );
 }
 
 static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
-                      ogg_uint64_t PixelsPerLine) 
+                      ogg_uint32_t PixelsPerLine) 
 {
+  ogg_uint64_t ppl = PixelsPerLine;
+
   __asm__ __volatile__ (
     "  .balign 16                   \n\t"
 
@@ -91,7 +93,7 @@ static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
 
      : "+r" (FiltPtr),
        "+r" (DctInputPtr)
-     : "m" (PixelsPerLine),
+     : "r" (ppl), /* gcc bug? a cast won't work here, e.g. (ogg_uint64_t)PixelsPerLine */
        [V128] "m" (V128)
      : "memory"
   );
@@ -99,8 +101,8 @@ static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
 
 static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
                      unsigned char *ReconPtr2, ogg_int16_t *DctInputPtr,
-                     ogg_uint64_t PixelsPerLine,
-                     ogg_uint64_t ReconPixelsPerLine) 
+                     ogg_uint32_t PixelsPerLine,
+                     ogg_uint32_t ReconPixelsPerLine) 
 {
   __asm__ __volatile__ (
     "  .balign 16                   \n\t"
@@ -141,13 +143,13 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
        "+r" (ReconPtr1),
        "+r" (ReconPtr2),
        "+r" (DctInputPtr)
-     : "m" (PixelsPerLine),
-       "m" (ReconPixelsPerLine) 
+     : "r" ((ogg_uint64_t)PixelsPerLine),
+       "r" ((ogg_uint64_t)ReconPixelsPerLine) 
      : "memory"
   );
 }
 
-static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint64_t Stride)
+static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint32_t Stride)
 {
   ogg_uint64_t  XSum;
   ogg_uint64_t  XXSum;
@@ -198,7 +200,7 @@ static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint64_t Stri
      : "=r" (XSum),
        "=r" (XXSum),
        "+r" (DataPtr) 
-     : "r" (Stride)
+     : "r" ((ogg_uint64_t)Stride)
      : "rdi", "memory"
   );
 
@@ -206,8 +208,8 @@ static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint64_t Stri
   return (( (XXSum<<6) - XSum*XSum ) );
 }
 
-static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint64_t SrcStride,
-		                 unsigned char *RefDataPtr, ogg_uint64_t RefStride)
+static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcStride,
+		                 unsigned char *RefDataPtr, ogg_uint32_t RefStride)
 {
   ogg_uint64_t  XSum;
   ogg_uint64_t  XXSum;
@@ -267,8 +269,8 @@ static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint64_t SrcS
        "=m" (XXSum),
        "+r" (SrcData), 
        "+r" (RefDataPtr) 
-     : "m" (SrcStride),
-       "m" (RefStride)
+     : "r" ((ogg_uint64_t)SrcStride),
+       "r" ((ogg_uint64_t)RefStride)
      : "rdi", "memory"
   );
 

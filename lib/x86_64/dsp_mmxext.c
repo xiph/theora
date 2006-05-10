@@ -19,8 +19,8 @@
 #include <stdlib.h>
 #include "dsp.h"
 
-static ogg_uint32_t sad8x8__mmxext (unsigned char *ptr1, ogg_uint64_t stride1,
-                                    unsigned char *ptr2, ogg_uint64_t stride2)
+static ogg_uint32_t sad8x8__mmxext (unsigned char *ptr1, ogg_uint32_t stride1,
+                                    unsigned char *ptr2, ogg_uint32_t stride2)
 {
   ogg_uint32_t  DiffVal;
 
@@ -46,17 +46,17 @@ static ogg_uint32_t sad8x8__mmxext (unsigned char *ptr1, ogg_uint64_t stride1,
      : "=r" (DiffVal),
        "+r" (ptr1), 
        "+r" (ptr2) 
-     : "r" (stride1),
-       "r" (stride2)
+     : "r" ((ogg_uint64_t)stride1),
+       "r" ((ogg_uint64_t)stride2)
      : "memory"
   );
 
   return DiffVal;
 }
 
-static ogg_uint32_t sad8x8_thres__mmxext (unsigned char *ptr1, ogg_uint64_t stride1,
-                                          unsigned char *ptr2, ogg_uint64_t stride2, 
-			   	  ogg_uint64_t thres)
+static ogg_uint32_t sad8x8_thres__mmxext (unsigned char *ptr1, ogg_uint32_t stride1,
+                                          unsigned char *ptr2, ogg_uint32_t stride2, 
+			   	  ogg_uint32_t thres)
 {
   ogg_uint32_t  DiffVal;
 
@@ -78,18 +78,18 @@ static ogg_uint32_t sad8x8_thres__mmxext (unsigned char *ptr1, ogg_uint64_t stri
      : "=r" (DiffVal),
        "+r" (ptr1), 
        "+r" (ptr2) 
-     : "r" (stride1),
-       "r" (stride2)
+     : "r" ((ogg_uint64_t)stride1),
+       "r" ((ogg_uint64_t)stride2)
      : "memory"
   );
 
   return DiffVal;
 }
 
-static ogg_uint32_t sad8x8_xy2_thres__mmxext (unsigned char *SrcData, ogg_uint64_t SrcStride,
+static ogg_uint32_t sad8x8_xy2_thres__mmxext (unsigned char *SrcData, ogg_uint32_t SrcStride,
                                               unsigned char *RefDataPtr1,
-                                              unsigned char *RefDataPtr2, ogg_uint64_t RefStride,
-                                              ogg_uint64_t thres)
+                                              unsigned char *RefDataPtr2, ogg_uint32_t RefStride,
+                                              ogg_uint32_t thres)
 {
   ogg_uint32_t  DiffVal;
 
@@ -114,8 +114,8 @@ static ogg_uint32_t sad8x8_xy2_thres__mmxext (unsigned char *SrcData, ogg_uint64
        "+r" (SrcData), 
        "+r" (RefDataPtr1), 
        "+r" (RefDataPtr2) 
-     : "m" (SrcStride),
-       "m" (RefStride)
+     : "r" ((ogg_uint64_t)SrcStride),
+       "r" ((ogg_uint64_t)RefStride)
      : "memory"
   );
 
@@ -151,7 +151,7 @@ static ogg_uint32_t row_sad8__mmxext (unsigned char *Src1, unsigned char *Src2)
 }
 
 static ogg_uint32_t col_sad8x8__mmxext (unsigned char *Src1, unsigned char *Src2,
-		                    ogg_uint64_t stride)
+		                    ogg_uint32_t stride)
 {
   ogg_uint32_t MaxSad;
 
@@ -220,16 +220,16 @@ static ogg_uint32_t col_sad8x8__mmxext (unsigned char *Src1, unsigned char *Src2
      : "=r" (MaxSad),
        "+r" (Src1), 
        "+r" (Src2) 
-     : "r" (stride)
+     : "r" ((ogg_uint64_t)stride)
      : "memory", "rdi"
   );
 
   return MaxSad;
 }
 
-static ogg_uint32_t inter8x8_err_xy2__mmxext (unsigned char *SrcData, ogg_uint64_t SrcStride,
+static ogg_uint32_t inter8x8_err_xy2__mmxext (unsigned char *SrcData, ogg_uint32_t SrcStride,
                                               unsigned char *RefDataPtr1,
-                                              unsigned char *RefDataPtr2, ogg_uint64_t RefStride)
+                                              unsigned char *RefDataPtr2, ogg_uint32_t RefStride)
 {
   ogg_uint64_t XSum;
   ogg_uint64_t XXSum;
@@ -296,8 +296,8 @@ static ogg_uint32_t inter8x8_err_xy2__mmxext (unsigned char *SrcData, ogg_uint64
        "+r" (SrcData), 
        "+r" (RefDataPtr1),
        "+r" (RefDataPtr2) 
-     : "m" (SrcStride),
-       "m" (RefStride)
+     : "r" ((ogg_uint64_t)SrcStride),
+       "r" ((ogg_uint64_t)RefStride)
      : "rdi", "memory"
   );
 

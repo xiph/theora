@@ -22,7 +22,7 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t V128 = 0x808080808080
 
 static void copy8x8__mmx (unsigned char *src,
                           unsigned char *dest,
-                          ogg_uint64_t stride)
+                          ogg_uint32_t stride)
 {
   __asm__ __volatile__ (
     "  .balign 16                      \n\t"
@@ -54,13 +54,13 @@ static void copy8x8__mmx (unsigned char *src,
     "  movq        %%mm3, (%0, %%rdi)  \n\t"
       : "+a" (dest)
       : "c" (src),
-        "d" (stride)
+        "d" ((ogg_uint64_t)stride)
       : "memory", "rdi"
   );
 }
 
 static void recon_intra8x8__mmx (unsigned char *ReconPtr, ogg_int16_t *ChangePtr,
-                                 ogg_uint64_t LineStep)
+                                 ogg_uint32_t LineStep)
 {
   __asm__ __volatile__ (
     "  .balign 16                      \n\t"
@@ -83,14 +83,14 @@ static void recon_intra8x8__mmx (unsigned char *ReconPtr, ogg_int16_t *ChangePtr
     "  jc          1b                  \n\t" /* Loop back if we are not done */
       : "+r" (ReconPtr)
       : "r" (ChangePtr),
-        "r" (LineStep),
+        "r" ((ogg_uint64_t)LineStep),
         [V128] "m" (V128)
       : "memory", "rdi"
   );
 }
 
 static void recon_inter8x8__mmx (unsigned char *ReconPtr, unsigned char *RefPtr,
-                                 ogg_int16_t *ChangePtr, ogg_uint64_t LineStep)
+                                 ogg_int16_t *ChangePtr, ogg_uint32_t LineStep)
 {
   __asm__ __volatile__ (
     "  .balign 16                      \n\t"
@@ -120,14 +120,14 @@ static void recon_inter8x8__mmx (unsigned char *ReconPtr, unsigned char *RefPtr,
       : "+r" (ReconPtr)
       : "r" (ChangePtr),
         "r" (RefPtr),
-        "r" (LineStep)
+        "r" ((ogg_uint64_t)LineStep)
       : "memory", "rdi"
   );
 }
 
 static void recon_inter8x8_half__mmx (unsigned char *ReconPtr, unsigned char *RefPtr1,
                                       unsigned char *RefPtr2, ogg_int16_t *ChangePtr,
-                                      ogg_uint64_t LineStep)
+                                      ogg_uint32_t LineStep)
 {
   __asm__ __volatile__ (
     "  .balign 16                      \n\t"
@@ -165,7 +165,7 @@ static void recon_inter8x8_half__mmx (unsigned char *ReconPtr, unsigned char *Re
       : "r" (ChangePtr),
         "r" (RefPtr1),
         "r" (RefPtr2),
-        "m" (LineStep)
+        "r" ((ogg_uint64_t)LineStep)
       : "memory", "rdi"
   );
 }
