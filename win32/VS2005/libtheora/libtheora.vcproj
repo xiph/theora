@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="libtheora"
 	ProjectGUID="{653F3841-3F26-49B9-AFCF-091DB4B67031}"
+	RootNamespace="libtheora"
 	Keyword="Win32Proj"
 	>
 	<Platforms>
@@ -385,6 +386,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\lib\cpu.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\lib\dct.c"
 				>
 			</File>
@@ -398,6 +403,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\lib\decode.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\lib\dsp.c"
 				>
 			</File>
 			<File
@@ -468,6 +477,14 @@
 			>
 			<File
 				RelativePath="..\..\..\lib\block_inline.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\lib\cpu.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\lib\dsp.h"
 				>
 			</File>
 			<File
