@@ -15,8 +15,9 @@
 
  ********************************************************************/
 
-#include <stdio.h>
 #include <stdlib.h>
+
+#include "codec_internal.h"
 #include "dsp.h"
 
 static ogg_uint32_t sad8x8__mmxext (unsigned char *ptr1, ogg_uint32_t stride1,
@@ -307,7 +308,7 @@ static ogg_uint32_t inter8x8_err_xy2__mmxext (unsigned char *SrcData, ogg_uint32
 
 void dsp_mmxext_init(DspFunctions *funcs)
 {
-  fprintf(stderr, "enabling accelerated x86_32 mmxext dsp functions.\n");
+  TH_DEBUG("enabling accelerated x86_32 mmxext dsp functions.\n");
   funcs->row_sad8 = row_sad8__mmxext;
   funcs->col_sad8x8 = col_sad8x8__mmxext;
   funcs->sad8x8 = sad8x8__mmxext;

@@ -15,7 +15,6 @@
 
  ********************************************************************/
 
-#include <stdio.h>
 #include "codec_internal.h"
 
 static const __attribute__ ((aligned(8),used)) ogg_int64_t V128 = 0x8080808080808080LL;
@@ -172,7 +171,7 @@ static void recon_inter8x8_half__mmx (unsigned char *ReconPtr, unsigned char *Re
 
 void dsp_mmx_recon_init(DspFunctions *funcs)
 {
-  fprintf(stderr, "enabling accelerated x86_64 mmx recon functions.\n");
+  TH_DEBUG("enabling accelerated x86_64 mmx recon functions.\n");
   funcs->copy8x8 = copy8x8__mmx;
   funcs->recon_intra8x8 = recon_intra8x8__mmx;
   funcs->recon_inter8x8 = recon_inter8x8__mmx;

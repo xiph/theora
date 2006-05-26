@@ -15,7 +15,6 @@
 
  ********************************************************************/
 
-#include <stdio.h>
 #include "cpu.h"
 
 void
@@ -114,18 +113,16 @@ ogg_uint32_t cpu_init (void)
 {
   ogg_uint32_t cpu_flags = cpu_get_flags();
 
-  /*
   if (cpu_flags) {
-    fprintf(stderr, "vectorized instruction sets supported:");
-    if (cpu_flags & CPU_X86_MMX)      fprintf(stderr, " mmx");
-    if (cpu_flags & CPU_X86_MMXEXT)   fprintf(stderr, " mmxext");
-    if (cpu_flags & CPU_X86_SSE)      fprintf(stderr, " sse");
-    if (cpu_flags & CPU_X86_SSE2)     fprintf(stderr, " sse2");
-    if (cpu_flags & CPU_X86_3DNOW)    fprintf(stderr, " 3dnow");
-    if (cpu_flags & CPU_X86_3DNOWEXT) fprintf(stderr, " 3dnowext");
-    fprintf(stderr, "\n");
+    TH_DEBUG("vectorized instruction sets supported:");
+    if (cpu_flags & CPU_X86_MMX)      TH_DEBUG(" mmx");
+    if (cpu_flags & CPU_X86_MMXEXT)   TH_DEBUG(" mmxext");
+    if (cpu_flags & CPU_X86_SSE)      TH_DEBUG(" sse");
+    if (cpu_flags & CPU_X86_SSE2)     TH_DEBUG(" sse2");
+    if (cpu_flags & CPU_X86_3DNOW)    TH_DEBUG(" 3dnow");
+    if (cpu_flags & CPU_X86_3DNOWEXT) TH_DEBUG(" 3dnowext");
+    TH_DEBUG("\n");
   }
-  */
 
   return cpu_flags;
 }

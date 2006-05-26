@@ -32,6 +32,13 @@
 #define theora_read(x,y,z) ( oggpackB_read(x,y,z) )
 #endif
 
+#ifdef DEBUG
+#include <stdio.h>
+#define TH_DEBUG(x) fprintf(stderr, x)
+#else
+#define TH_DEBUG(x)
+#endif
+
 #define CURRENT_ENCODE_VERSION   1
 #define HUGE_ERROR              (1<<28)  /*  Out of range test value */
 

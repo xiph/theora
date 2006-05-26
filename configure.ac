@@ -87,17 +87,17 @@ cflags_save="$CFLAGS"
 if test -z "$GCC"; then
         case $host in 
         *)
-                DEBUG="-g"
+                DEBUG="-g -DDEBUG"
                 CFLAGS="-O"
-                PROFILE="-g -p" ;;
+                PROFILE="-g -p -DDEBUG" ;;
         esac
 else
 
         case $host in 
         *)
-                DEBUG="-g -Wall -D__NO_MATH_INLINES"
+                DEBUG="-g -Wall -DDEBUG -D__NO_MATH_INLINES"
                 CFLAGS="-Wall -O3 -fforce-addr -fomit-frame-pointer -finline-functions -funroll-loops"
-                PROFILE="-Wall -pg -g -O3 -fno-inline-functions";;
+                PROFILE="-Wall -pg -g -O3 -fno-inline-functions -DDEBGU";;
         esac
 fi
 CFLAGS="$CFLAGS $cflags_save"

@@ -15,8 +15,9 @@
 
  ********************************************************************/
 
-#include <stdio.h>
 #include <stdlib.h>
+
+#include "codec_internal.h"
 #include "dsp.h"
 
 static const __attribute__ ((aligned(8),used)) ogg_int64_t V128 = 0x0080008000800080LL;
@@ -627,7 +628,7 @@ static void restore_fpu (void)
 
 void dsp_mmx_init(DspFunctions *funcs)
 {
-  fprintf(stderr, "enabling accelerated x86_32 mmx dsp functions.\n");
+  TH_DEBUG("enabling accelerated x86_32 mmx dsp functions.\n");
   funcs->restore_fpu = restore_fpu;
   funcs->sub8x8 = sub8x8__mmx;
   funcs->sub8x8_128 = sub8x8_128__mmx;

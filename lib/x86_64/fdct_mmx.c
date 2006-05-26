@@ -9,8 +9,8 @@
 ;//
 ;//--------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <theora/theora.h>
+#include "theora/theora.h"
+#include "codec_internal.h"
 #include "dsp.h"
 
 static const __attribute__ ((aligned(8),used)) ogg_int64_t xC1S7 = 0x0fb15fb15fb15fb15LL;
@@ -344,6 +344,6 @@ static void fdct_short__mmx ( ogg_int16_t *InputData, ogg_int16_t *OutputData)
 
 void dsp_mmx_fdct_init(DspFunctions *funcs)
 {
-  fprintf(stderr, "enabling accelerated x86_64 mmx fdct function.\n");
+  TH_DEBUG("enabling accelerated x86_64 mmx fdct function.\n");
   funcs->fdct_short = fdct_short__mmx;
 }
