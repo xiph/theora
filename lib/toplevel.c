@@ -21,7 +21,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <theora/theora.h>
+#include "theora/theora.h"
 #include "toplevel.h"
 #include "dsp.h"
 
