@@ -531,8 +531,7 @@ static void PackToken ( CP_INSTANCE *cpi, ogg_int32_t FragmentNumber,
 
 static ogg_uint32_t GetBlockReconErrorSlow( CP_INSTANCE *cpi,
                                      ogg_int32_t BlockIndex ) {
-  ogg_uint32_t  i;
-  ogg_uint32_t  ErrorVal = 0;
+  ogg_uint32_t  ErrorVal;
 
   unsigned char * SrcDataPtr =
     &cpi->ConvDestBuffer[cpi->pb.pixel_index_table[BlockIndex]];
@@ -550,21 +549,8 @@ static ogg_uint32_t GetBlockReconErrorSlow( CP_INSTANCE *cpi,
     RecStride = cpi->pb.UVStride;
   }
 
+  ErrorVal = dsp_sad8x8 (cpi->dsp, SrcDataPtr, SrcStride, RecDataPtr, RecStride);
 
-  /* Decide on standard or MMX implementation */
-  for ( i=0; i < BLOCK_HEIGHT_WIDTH; i++ ) {
-    ErrorVal += abs( ((int)SrcDataPtr[0]) - ((int)RecDataPtr[0]) );
-    ErrorVal += abs( ((int)SrcDataPtr[1]) - ((int)RecDataPtr[1]) );
-    ErrorVal += abs( ((int)SrcDataPtr[2]) - ((int)RecDataPtr[2]) );
-    ErrorVal += abs( ((int)SrcDataPtr[3]) - ((int)RecDataPtr[3]) );
-    ErrorVal += abs( ((int)SrcDataPtr[4]) - ((int)RecDataPtr[4]) );
-    ErrorVal += abs( ((int)SrcDataPtr[5]) - ((int)RecDataPtr[5]) );
-    ErrorVal += abs( ((int)SrcDataPtr[6]) - ((int)RecDataPtr[6]) );
-    ErrorVal += abs( ((int)SrcDataPtr[7]) - ((int)RecDataPtr[7]) );
-    /* Step to next row of block. */
-    SrcDataPtr += SrcStride;
-    RecDataPtr += RecStride;
-  }
   return ErrorVal;
 }
 
@@ -933,8 +919,12 @@ ogg_uint32_t EncodeData(CP_INSTANCE *cpi){
     /* Zero Decoder EOB run count */
     cpi->pb.EOB_Run = 0;
 
+    dsp_save_fpu (cpi->dsp);
+
     /* Encode any fragments coded using DCT. */
     coded_pixels += QuadCodeDisplayFragments (cpi);
+
+    dsp_restore_fpu (cpi->dsp);
 
     return coded_pixels;
 

@@ -23,6 +23,7 @@
 #include <string.h>
 #include "theora/theora.h"
 #include "toplevel.h"
+#include "dsp.h"
 
 static int _ilog(unsigned int v){
   int ret=0;
@@ -309,6 +310,9 @@ int theora_decode_init(theora_state *th, theora_info *c){
   th->internal_encode=NULL;
 
   InitPBInstance(pbi);
+
+  dsp_static_init (&pbi->dsp);
+
   memcpy(&pbi->info,c,sizeof(*c));
   pbi->info.codec_setup=NULL;
   th->i=&pbi->info;

@@ -23,6 +23,7 @@
 #include <string.h>
 #include "toplevel_lookup.h"
 #include "toplevel.h"
+#include "dsp.h"
 
 #define A_TABLE_SIZE        29
 #define DF_CANDIDATE_WINDOW 5
@@ -778,12 +779,15 @@ int theora_encode_init(theora_state *th, theora_info *c){
   if(c->pixelformat!=OC_PF_420)return OC_IMPL;
   th->internal_encode=cpi=_ogg_calloc(1,sizeof(*cpi));
 
+  dsp_static_init (&cpi->dsp);
+  memcpy (&cpi->pb.dsp, &cpi->dsp, sizeof(DspFunctions));
+
   c->version_major=VERSION_MAJOR;
   c->version_minor=VERSION_MINOR;
   c->version_subminor=VERSION_SUB;
 
   InitTmpBuffers(&cpi->pb);
-  InitPPInstance(&cpi->pp);
+  InitPPInstance(&cpi->pp, &cpi->dsp);
 
   /* Initialise Configuration structure to legal values */
   if(c->quality>63)c->quality=63;

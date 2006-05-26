@@ -19,6 +19,7 @@
 #include <string.h>
 #include "codec_internal.h"
 #include "pp.h"
+#include "dsp.h"
 
 #define MAX(a, b) ((a>b)?a:b)
 #define MIN(a, b) ((a<b)?a:b)
@@ -150,9 +151,11 @@ void ClearPPInstance(PP_INSTANCE *ppi){
 }
 
 
-void InitPPInstance(PP_INSTANCE *ppi){
+void InitPPInstance(PP_INSTANCE *ppi, DspFunctions *funcs){
 
   memset(ppi,0,sizeof(*ppi));
+
+  memcpy(&ppi->dsp, funcs, sizeof(DspFunctions));
 
   /* Initializations */
   ppi->PrevFrameLimit = 3; /* Must not exceed MAX_PREV_FRAMES (Note
@@ -490,7 +493,7 @@ static void DeringFrame(PB_INSTANCE *pbi,
 
       } else {
 
-        CopyBlock(SrcPtr + 8 * col, DestPtr + 8 * col, LineLength);
+        dsp_copy8x8(pbi->dsp, SrcPtr + 8 * col, DestPtr + 8 * col, LineLength);
 
       }
 
@@ -529,7 +532,7 @@ static void DeringFrame(PB_INSTANCE *pbi,
         DeringBlockWeak(SrcPtr + 8 * col, DestPtr + 8 * col,
                         LineLength,Quality,QuantScale);
       }else{
-        CopyBlock(SrcPtr + 8 * col, DestPtr + 8 * col, LineLength);
+        dsp_copy8x8(pbi->dsp, SrcPtr + 8 * col, DestPtr + 8 * col, LineLength);
       }
 
       ++Block;
@@ -565,7 +568,7 @@ static void DeringFrame(PB_INSTANCE *pbi,
         DeringBlockWeak(SrcPtr + 8 * col, DestPtr + 8 * col,
                         LineLength,Quality,QuantScale);
       }else{
-        CopyBlock(SrcPtr + 8 * col, DestPtr + 8 * col, LineLength);
+        dsp_copy8x8(pbi->dsp, SrcPtr + 8 * col, DestPtr + 8 * col, LineLength);
       }
 
       ++Block;

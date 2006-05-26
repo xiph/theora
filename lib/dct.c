@@ -16,6 +16,8 @@
  ********************************************************************/
 
 #include "codec_internal.h"
+#include "dsp.h"
+#include "cpu.h"
 
 static ogg_int32_t xC1S7 = 64277;
 static ogg_int32_t xC2S6 = 60547;
@@ -28,7 +30,7 @@ static ogg_int32_t xC7S1 = 12785;
 #define SIGNBITDUPPED(X) ((signed )(((X) & 0x80000000)) >> 31)
 #define DOROUND(X) ( (SIGNBITDUPPED(X) & (0xffff)) + (X) )
 
-void fdct_short ( ogg_int16_t * InputData, ogg_int16_t * OutputData ){
+static void fdct_short__c ( ogg_int16_t * InputData, ogg_int16_t * OutputData ){
   int loop;
 
   ogg_int32_t  is07, is12, is34, is56;
@@ -251,3 +253,14 @@ void fdct_short ( ogg_int16_t * InputData, ogg_int16_t * OutputData ){
     op ++;
   }
 }
+
+void dsp_dct_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)
+{
+  funcs->fdct_short = fdct_short__c;
+#if (defined(__i386__) || defined(__x86_64__))
+  if (cpu_flags & CPU_X86_MMX) {
+    dsp_mmx_fdct_init(funcs);
+  }
+#endif
+}
+

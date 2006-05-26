@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "codec_internal.h"
+#include "dsp.h"
 
 
 #define GOLDEN_FRAME_THRESH_Q   50
@@ -112,22 +113,6 @@ void SetupLoopFilter(PB_INSTANCE *pbi){
   SetupBoundingValueArray_Generic(pbi, FLimit);
 }
 
-void CopyBlock(unsigned char *src,
-               unsigned char *dest,
-               unsigned int srcstride){
-  unsigned char *s = src;
-  unsigned char *d = dest;
-  unsigned int stride = srcstride;
-
-  int j;
-  for ( j = 0; j < 8; j++ ){
-    ((ogg_uint32_t*)d)[0] = ((ogg_uint32_t*)s)[0];
-    ((ogg_uint32_t*)d)[1] = ((ogg_uint32_t*)s)[1];
-    s+=stride;
-    d+=stride;
-  }
-}
-
 static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
   ogg_uint32_t ReconPixelsPerLine;
   ogg_int32_t     ReconPixelIndex;
@@ -163,8 +148,8 @@ static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
   ReconPixelIndex = pbi->recon_pixel_index_table[FragmentNumber];
 
   /* Get the pixel index for the first pixel in the fragment. */
-  ReconIntra( pbi, (unsigned char *)(&pbi->ThisFrameRecon[ReconPixelIndex]),
-              (ogg_int16_t *)pbi->ReconDataBuffer, ReconPixelsPerLine );
+  dsp_recon_intra8x8 (pbi->dsp, (unsigned char *)(&pbi->ThisFrameRecon[ReconPixelIndex]),
+              (ogg_int16_t *)pbi->ReconDataBuffer, ReconPixelsPerLine);
 
 }
 
@@ -248,10 +233,9 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
     /* Reconstruct the pixel data using the last frame reconstruction
        and change data when the motion vector is (0,0), the recon is
        based on the lastframe without loop filtering---- for testing */
-    ReconInter( pbi, &pbi->ThisFrameRecon[ReconPixelIndex],
+    dsp_recon_inter8x8 (pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
                 &pbi->LastFrameRecon[ReconPixelIndex],
-                pbi->ReconDataBuffer, ReconPixelsPerLine );
-
+                  pbi->ReconDataBuffer, ReconPixelsPerLine);
   }else if ( ModeUsesMC[pbi->CodingMode] ) {
     /* The mode uses a motion vector. */
     /* Get vector from list */
@@ -298,29 +282,30 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
     if ( (int)(LastFrameRecPtr - LastFrameRecPtr2) == 0 ) {
       /* Reconstruct the pixel dats from the reference frame and change data
          (no half pixel in this case as the two references were the same. */
-      ReconInter( pbi, &pbi->ThisFrameRecon[ReconPixelIndex],
+      dsp_recon_inter8x8 (pbi->dsp,
+		  &pbi->ThisFrameRecon[ReconPixelIndex],
                   LastFrameRecPtr, pbi->ReconDataBuffer,
-                  ReconPixelsPerLine );
+                  ReconPixelsPerLine);
     }else{
       /* Fractional pixel reconstruction. */
       /* Note that we only use two pixels per reconstruction even for
          the diagonal. */
-      ReconInterHalfPixel2( pbi,&pbi->ThisFrameRecon[ReconPixelIndex],
+      dsp_recon_inter8x8_half(pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
                             LastFrameRecPtr, LastFrameRecPtr2,
-                            pbi->ReconDataBuffer, ReconPixelsPerLine );
+                            pbi->ReconDataBuffer, ReconPixelsPerLine);
     }
   } else if ( pbi->CodingMode == CODE_USING_GOLDEN ){
     /* Golden frame with motion vector */
     /* Reconstruct the pixel data using the golden frame
        reconstruction and change data */
-    ReconInter( pbi, &pbi->ThisFrameRecon[ReconPixelIndex],
+    dsp_recon_inter8x8 (pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
                 &pbi->GoldenFrame[ ReconPixelIndex ],
-                pbi->ReconDataBuffer, ReconPixelsPerLine );
+                  pbi->ReconDataBuffer, ReconPixelsPerLine);
   } else {
     /* Simple Intra coding */
     /* Get the pixel index for the first pixel in the fragment. */
-    ReconIntra( pbi, &pbi->ThisFrameRecon[ReconPixelIndex],
-                pbi->ReconDataBuffer, ReconPixelsPerLine );
+    dsp_recon_intra8x8 (pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
+              pbi->ReconDataBuffer, ReconPixelsPerLine);
   }
 }
 
@@ -475,7 +460,7 @@ static void CopyRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
       SrcPtr = &SrcReconPtr[ PixelIndex ];
       DestPtr = &DestReconPtr[ PixelIndex ];
 
-      CopyBlock(SrcPtr, DestPtr, PlaneLineStep);
+      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
     }
   }
 
@@ -487,7 +472,7 @@ static void CopyRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
       SrcPtr = &SrcReconPtr[ PixelIndex ];
       DestPtr = &DestReconPtr[ PixelIndex ];
 
-      CopyBlock(SrcPtr, DestPtr, PlaneLineStep);
+      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
 
     }
   }
@@ -512,7 +497,7 @@ static void CopyNotRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
       SrcPtr = &SrcReconPtr[ PixelIndex ];
       DestPtr = &DestReconPtr[ PixelIndex ];
 
-      CopyBlock(SrcPtr, DestPtr, PlaneLineStep);
+      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
     }
   }
 
@@ -524,7 +509,7 @@ static void CopyNotRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
       SrcPtr = &SrcReconPtr[ PixelIndex ];
       DestPtr = &DestReconPtr[ PixelIndex ];
 
-      CopyBlock(SrcPtr, DestPtr, PlaneLineStep);
+      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
 
     }
   }

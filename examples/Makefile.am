@@ -26,8 +26,8 @@ encoder_example_LDADD = $(GETOPT_OBJS) $(LDADD) $(VORBIS_LIBS) $(VORBISENC_LIBS)
 encoder_example_DEPENDENCIES = $(GETOPT_OBJS)
 
 debug:
-	$(MAKE) all CFLAGS="@DEBUG@ $(CFLAGS)"
+	$(MAKE) all CFLAGS="@DEBUG@"
 
 profile:
-	$(MAKE) all CFLAGS="@PROFILE@ $(CFLAGS)"
+	$(MAKE) all CFLAGS="@PROFILE@"
 

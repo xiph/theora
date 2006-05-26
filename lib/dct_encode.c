@@ -17,109 +17,9 @@
 
 #include <stdlib.h>
 #include "codec_internal.h"
+#include "dsp.h"
 
 static int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };
-
-static void Sub8 (unsigned char *FiltPtr, unsigned char *ReconPtr,
-                  ogg_int16_t *DctInputPtr, unsigned char *old_ptr1,
-                  unsigned char *new_ptr1, ogg_uint32_t PixelsPerLine,
-                  ogg_uint32_t ReconPixelsPerLine ) {
-  int i;
-
-  /* For each block row */
-  for ( i=0; i<BLOCK_HEIGHT_WIDTH; i++ ){
-    DctInputPtr[0] = (ogg_int16_t)((int)(FiltPtr[0]) - ((int)ReconPtr[0]) );
-    DctInputPtr[1] = (ogg_int16_t)((int)(FiltPtr[1]) - ((int)ReconPtr[1]) );
-    DctInputPtr[2] = (ogg_int16_t)((int)(FiltPtr[2]) - ((int)ReconPtr[2]) );
-    DctInputPtr[3] = (ogg_int16_t)((int)(FiltPtr[3]) - ((int)ReconPtr[3]) );
-    DctInputPtr[4] = (ogg_int16_t)((int)(FiltPtr[4]) - ((int)ReconPtr[4]) );
-    DctInputPtr[5] = (ogg_int16_t)((int)(FiltPtr[5]) - ((int)ReconPtr[5]) );
-    DctInputPtr[6] = (ogg_int16_t)((int)(FiltPtr[6]) - ((int)ReconPtr[6]) );
-    DctInputPtr[7] = (ogg_int16_t)((int)(FiltPtr[7]) - ((int)ReconPtr[7]) );
-
-    /* Update the screen canvas in one step*/
-    ((ogg_uint32_t*)old_ptr1)[0] = ((ogg_uint32_t*)new_ptr1)[0];
-    ((ogg_uint32_t*)old_ptr1)[1] = ((ogg_uint32_t*)new_ptr1)[1];
-
-    /* Start next row */
-    new_ptr1 += PixelsPerLine;
-    old_ptr1 += PixelsPerLine;
-    FiltPtr += PixelsPerLine;
-    ReconPtr += ReconPixelsPerLine;
-    DctInputPtr += BLOCK_HEIGHT_WIDTH;
-  }
-}
-
-static void Sub8_128 (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
-                      unsigned char *old_ptr1, unsigned char *new_ptr1,
-                      ogg_uint32_t PixelsPerLine ) {
-  int i;
-  /* For each block row */
-  for ( i=0; i<BLOCK_HEIGHT_WIDTH; i++ ){
-    /* INTRA mode so code raw image data */
-    /* We convert the data to 8 bit signed (by subtracting 128) as
-       this reduces the internal precision requirments in the DCT
-       transform. */
-    DctInputPtr[0] = (ogg_int16_t)((int)(FiltPtr[0]) - 128);
-    DctInputPtr[1] = (ogg_int16_t)((int)(FiltPtr[1]) - 128);
-    DctInputPtr[2] = (ogg_int16_t)((int)(FiltPtr[2]) - 128);
-    DctInputPtr[3] = (ogg_int16_t)((int)(FiltPtr[3]) - 128);
-    DctInputPtr[4] = (ogg_int16_t)((int)(FiltPtr[4]) - 128);
-    DctInputPtr[5] = (ogg_int16_t)((int)(FiltPtr[5]) - 128);
-    DctInputPtr[6] = (ogg_int16_t)((int)(FiltPtr[6]) - 128);
-    DctInputPtr[7] = (ogg_int16_t)((int)(FiltPtr[7]) - 128);
-
-    /* Update the screen canvas in one step */
-    ((ogg_uint32_t*)old_ptr1)[0] = ((ogg_uint32_t*)new_ptr1)[0];
-    ((ogg_uint32_t*)old_ptr1)[1] = ((ogg_uint32_t*)new_ptr1)[1];
-
-    /* Start next row */
-    new_ptr1 += PixelsPerLine;
-    old_ptr1 += PixelsPerLine;
-    FiltPtr += PixelsPerLine;
-    DctInputPtr += BLOCK_HEIGHT_WIDTH;
-  }
-}
-
-static void Sub8Av2 (unsigned char *FiltPtr, unsigned char *ReconPtr1,
-                     unsigned char *ReconPtr2, ogg_int16_t *DctInputPtr,
-                     unsigned char *old_ptr1, unsigned char *new_ptr1,
-                     ogg_uint32_t PixelsPerLine,
-                     ogg_uint32_t ReconPixelsPerLine ) {
-  int i;
-
-  /* For each block row */
-  for ( i=0; i<BLOCK_HEIGHT_WIDTH; i++ ) {
-    DctInputPtr[0] = (ogg_int16_t)
-      ((int)(FiltPtr[0]) - (((int)ReconPtr1[0] + (int)ReconPtr2[0]) / 2) );
-    DctInputPtr[1] = (ogg_int16_t)
-      ((int)(FiltPtr[1]) - (((int)ReconPtr1[1] + (int)ReconPtr2[1]) / 2) );
-    DctInputPtr[2] = (ogg_int16_t)
-      ((int)(FiltPtr[2]) - (((int)ReconPtr1[2] + (int)ReconPtr2[2]) / 2) );
-    DctInputPtr[3] = (ogg_int16_t)
-      ((int)(FiltPtr[3]) - (((int)ReconPtr1[3] + (int)ReconPtr2[3]) / 2) );
-    DctInputPtr[4] = (ogg_int16_t)
-      ((int)(FiltPtr[4]) - (((int)ReconPtr1[4] + (int)ReconPtr2[4]) / 2) );
-    DctInputPtr[5] = (ogg_int16_t)
-      ((int)(FiltPtr[5]) - (((int)ReconPtr1[5] + (int)ReconPtr2[5]) / 2) );
-    DctInputPtr[6] = (ogg_int16_t)
-      ((int)(FiltPtr[6]) - (((int)ReconPtr1[6] + (int)ReconPtr2[6]) / 2) );
-    DctInputPtr[7] = (ogg_int16_t)
-      ((int)(FiltPtr[7]) - (((int)ReconPtr1[7] + (int)ReconPtr2[7]) / 2) );
-
-    /* Update the screen canvas in one step */
-    ((ogg_uint32_t*)old_ptr1)[0] = ((ogg_uint32_t*)new_ptr1)[0];
-    ((ogg_uint32_t*)old_ptr1)[1] = ((ogg_uint32_t*)new_ptr1)[1];
-
-    /* Start next row */
-    new_ptr1 += PixelsPerLine;
-    old_ptr1 += PixelsPerLine;
-    FiltPtr += PixelsPerLine;
-    ReconPtr1 += ReconPixelsPerLine;
-    ReconPtr2 += ReconPixelsPerLine;
-    DctInputPtr += BLOCK_HEIGHT_WIDTH;
-  }
-}
 
 static unsigned char TokenizeDctValue (ogg_int16_t DataValue,
                                        ogg_uint32_t * TokenListPtr ){
@@ -452,13 +352,15 @@ static void MotionBlockDifference (CP_INSTANCE * cpi, unsigned char * FiltPtr,
 
   /* Is the MV offset exactly pixel alligned */
   if ( AbsRefOffset == 0 ){
-    Sub8( FiltPtr, ReconPtr1, DctInputPtr, old_ptr1, new_ptr1,
-               PixelsPerLine, ReconPixelsPerLine );
+    dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
+               PixelsPerLine, ReconPixelsPerLine);
+    dsp_copy8x8 (cpi->dsp, new_ptr1, old_ptr1, PixelsPerLine);
   } else {
     /* Fractional pixel MVs. */
     /* Note that we only use two pixel values even for the diagonal */
-    Sub8Av2(FiltPtr, ReconPtr1,ReconPtr2,DctInputPtr, old_ptr1,
-                 new_ptr1, PixelsPerLine, ReconPixelsPerLine );
+    dsp_sub8x8avg2(cpi->dsp, FiltPtr, ReconPtr1,ReconPtr2,DctInputPtr,
+                 PixelsPerLine, ReconPixelsPerLine);
+    dsp_copy8x8 (cpi->dsp, new_ptr1, old_ptr1, PixelsPerLine);
   }
 }
 
@@ -534,17 +436,18 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
         pb.GoldenFrame[cpi->pb.recon_pixel_index_table[FragIndex]];
     }
 
-    Sub8( FiltPtr, ReconPtr1, DctInputPtr, old_ptr1, new_ptr1,
-               PixelsPerLine, ReconPixelsPerLine );
+    dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
+               PixelsPerLine, ReconPixelsPerLine);
+    dsp_copy8x8 (cpi->dsp, new_ptr1, old_ptr1, PixelsPerLine);
   } else if ( cpi->pb.CodingMode==CODE_INTRA ) {
-    Sub8_128(FiltPtr, DctInputPtr, old_ptr1, new_ptr1, PixelsPerLine);
-
+    dsp_sub8x8_128(cpi->dsp, FiltPtr, DctInputPtr, PixelsPerLine);
+    dsp_copy8x8 (cpi->dsp, new_ptr1, old_ptr1, PixelsPerLine);
   }
 
   /* Proceed to encode the data into the encode buffer if the encoder
      is enabled. */
   /* Perform a 2D DCT transform on the data. */
-  fdct_short( cpi->DCTDataBuffer, cpi->DCT_codes );
+  dsp_fdct_short(cpi->dsp, cpi->DCTDataBuffer, cpi->DCT_codes );
 
   /* Quantize that transform data. */
   quantize ( &cpi->pb, cpi->DCT_codes, cpi->pb.QFragData[FragIndex] );

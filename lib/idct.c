@@ -10,7 +10,7 @@
  *                                                                  *
  ********************************************************************
 
-  function:
+  function: C implementation of the Theora iDCT
   last mod: $Id: idct.c,v 1.6 2003/12/03 08:59:41 arc Exp $
 
  ********************************************************************/
@@ -20,6 +20,8 @@
 #include "quant_lookup.h"
 
 #define IdctAdjustBeforeShift 8
+
+/* cos(n*pi/16) or sin(8-n)*pi/16) */
 #define xC1S7 64277
 #define xC2S6 60547
 #define xC3S5 54491
@@ -28,6 +30,85 @@
 #define xC6S2 25080
 #define xC7S1 12785
 
+/* compute the 16 bit signed 1D inverse DCT - spec version */
+static void idct_short__c ( ogg_int16_t * InputData, ogg_int16_t * OutputData ) {
+  ogg_int32_t t[8], r;
+  ogg_int16_t *y = InputData;
+  ogg_int16_t *x = OutputData;
+
+  t[0] = y[0] + y[4];
+  t[0] &= 0xffff;
+  t[0] = (xC4S4 * t[0]) >> 16;
+
+  t[1] = y[0] - y[4];
+  t[1] &= 0xffff;
+  t[1] = (xC4S4 * t[1]) >> 16;
+
+  t[2] = ((xC6S2 * t[2]) >> 16) - ((xC2S6 * y[6]) >> 16);
+  t[3] = ((xC2S6 * t[2]) >> 16) + ((xC6S2 * y[6]) >> 16);
+  t[4] = ((xC7S1 * t[1]) >> 16) - ((xC1S7 * y[7]) >> 16);
+  t[5] = ((xC3S5 * t[5]) >> 16) - ((xC5S3 * y[3]) >> 16);
+  t[6] = ((xC5S3 * t[5]) >> 16) + ((xC3S5 * y[3]) >> 16);
+  t[7] = ((xC1S7 * t[1]) >> 16) + ((xC7S1 * y[7]) >> 16);
+
+  r = t[4] + t[5];
+  t[5] = t[4] - t[5];
+  t[5] &= 0xffff;
+  t[5] = (xC4S4 * (-t[5])) >> 16;
+  t[4] = r;
+
+  r = t[7] + t[6];
+  t[6] = t[7] - t[6];
+  t[6] &= 0xffff;
+  t[6] = (xC4S4 * t[6]) >> 16;
+  t[7] = r;
+
+  r = t[0] + t[3];
+  t[3] = t[0] - t[3];
+  t[0] = r;
+
+  r = t[1] + t[2];
+  t[2] = t[1] - t[2];
+  t[1] = r;
+
+  r = t[6] + t[5];
+  t[5] = t[6] - t[5];
+  t[6] = r;
+
+  r = t[0] + t[7];
+  r &= 0xffff;
+  x[0] = r;
+
+  r = t[1] + t[6];
+  r &= 0xffff;
+  x[1] = r;
+
+  r = t[2] + t[5];
+  r &= 0xffff;
+  x[2] = r;
+
+  r = t[3] + t[4];
+  r &= 0xffff;
+  x[3] = r;
+
+  r = t[3] - t[4];
+  r &= 0xffff;
+  x[4] = r;
+
+  r = t[2] - t[5];
+  r &= 0xffff;
+  x[5] = r;
+
+  r = t[1] - t[6];
+  r &= 0xffff;
+  x[6] = r;
+
+  r = t[0] - t[7];
+  r &= 0xffff;
+  x[7] = r;
+
+}
+
 static void dequant_slow( ogg_int16_t * dequant_coeffs,
                    ogg_int16_t * quantized_list,
                    ogg_int32_t * DCT_block) {
@@ -35,6 +116,8 @@ static void dequant_slow( ogg_int16_t * dequant_coeffs,
   for(i=0;i<64;i++)
     DCT_block[dezigzag_index[i]] = quantized_list[i] * dequant_coeffs[i];
 }
+
+
 
 void IDctSlow(  Q_LIST_ENTRY * InputData,
                 ogg_int16_t *QuantMatrix,

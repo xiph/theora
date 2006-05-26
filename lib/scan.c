@@ -19,8 +19,19 @@
 #include <math.h>
 #include <string.h>
 #include "codec_internal.h"
+#include "dsp.h"
 
 #define MAX_SEARCH_LINE_LEN                   7
+
+#define SET8_0(ptr) \
+  ((ogg_uint32_t *)ptr)[0] = 0x00000000; \
+  ((ogg_uint32_t *)ptr)[1] = 0x00000000;
+#define SET8_1(ptr) \
+  ((ogg_uint32_t *)ptr)[0] = 0x01010101; \
+  ((ogg_uint32_t *)ptr)[1] = 0x01010101;
+#define SET8_8(ptr) \
+  ((ogg_uint32_t *)ptr)[0] = 0x08080808; \
+  ((ogg_uint32_t *)ptr)[1] = 0x08080808;
 
 static ogg_uint32_t LineLengthScores[ MAX_SEARCH_LINE_LEN + 1 ] = {
   0, 0, 0, 0, 2, 4, 12, 24
@@ -384,69 +395,6 @@ static void CreateOutputDisplayMap( PP_INSTANCE *ppi,
   ppi->KFIndicator = ((ppi->KFIndicator*100)/((ppi->ScanYPlaneFragments*3)/4));
 }
 
-static ogg_uint32_t ScalarRowSAD( unsigned char * Src1,
-                                  unsigned char * Src2 ){
-  ogg_uint32_t SadValue;
-  ogg_uint32_t SadValue1;
-
-  SadValue    = abs( Src1[0] - Src2[0] ) + abs( Src1[1] - Src2[1] ) +
-    abs( Src1[2] - Src2[2] ) + abs( Src1[3] - Src2[3] );
-
-  SadValue1   = abs( Src1[4] - Src2[4] ) + abs( Src1[5] - Src2[5] ) +
-    abs( Src1[6] - Src2[6] ) + abs( Src1[7] - Src2[7] );
-
-  SadValue = ( SadValue > SadValue1 ) ? SadValue : SadValue1;
-
-  return SadValue;
-}
-
-static ogg_uint32_t ScalarColSAD( PP_INSTANCE *ppi,
-                           unsigned char * Src1,
-                           unsigned char * Src2 ){
-  ogg_uint32_t SadValue[8] = {0,0,0,0,0,0,0,0};
-  ogg_uint32_t SadValue2[8] = {0,0,0,0,0,0,0,0};
-  ogg_uint32_t MaxSad = 0;
-  ogg_uint32_t i;
-
-  for ( i = 0; i < 4; i++ ){
-    SadValue[0] += abs(Src1[0] - Src2[0]);
-    SadValue[1] += abs(Src1[1] - Src2[1]);
-    SadValue[2] += abs(Src1[2] - Src2[2]);
-    SadValue[3] += abs(Src1[3] - Src2[3]);
-    SadValue[4] += abs(Src1[4] - Src2[4]);
-    SadValue[5] += abs(Src1[5] - Src2[5]);
-    SadValue[6] += abs(Src1[6] - Src2[6]);
-    SadValue[7] += abs(Src1[7] - Src2[7]);
-
-    Src1 += ppi->PlaneStride;
-    Src2 += ppi->PlaneStride;
-  }
-
-  for ( i = 0; i < 4; i++ ){
-    SadValue2[0] += abs(Src1[0] - Src2[0]);
-    SadValue2[1] += abs(Src1[1] - Src2[1]);
-    SadValue2[2] += abs(Src1[2] - Src2[2]);
-    SadValue2[3] += abs(Src1[3] - Src2[3]);
-    SadValue2[4] += abs(Src1[4] - Src2[4]);
-    SadValue2[5] += abs(Src1[5] - Src2[5]);
-    SadValue2[6] += abs(Src1[6] - Src2[6]);
-    SadValue2[7] += abs(Src1[7] - Src2[7]);
-
-    Src1 += ppi->PlaneStride;
-    Src2 += ppi->PlaneStride;
-  }
-
-  for ( i = 0; i < 8; i++ ){
-    if ( SadValue[i] > MaxSad )
-      MaxSad = SadValue[i];
-    if ( SadValue2[i] > MaxSad )
-      MaxSad = SadValue2[i];
-  }
-
-  return MaxSad;
-}
-
-
 static int RowSadScan( PP_INSTANCE *ppi,
                        unsigned char * YuvPtr1,
                        unsigned char * YuvPtr2,
@@ -475,7 +423,7 @@ static int RowSadScan( PP_INSTANCE *ppi,
     for ( i = 0; i < ppi->PlaneHFragments; i ++ ){
       if ( *LocalDispFragPtr <= BLOCK_NOT_CODED ){
         /* Calculate the SAD score for the block row */
-        GrpSad = ScalarRowSAD(LocalYuvPtr1,LocalYuvPtr2);
+        GrpSad = dsp_row_sad8(ppi->dsp, LocalYuvPtr1,LocalYuvPtr2);
 
         /* Now test the group SAD score */
         if ( GrpSad > LocalGrpLowSadThresh ){
@@ -532,7 +480,7 @@ static int ColSadScan( PP_INSTANCE *ppi,
     /* Skip if block already marked to be coded. */
     if ( *LocalDispFragPtr <= BLOCK_NOT_CODED ){
       /* Calculate the SAD score for the block column */
-      MaxSad = ScalarColSAD( ppi, LocalYuvPtr1, LocalYuvPtr2 );
+      MaxSad = dsp_col_sad8x8(ppi->dsp, LocalYuvPtr1, LocalYuvPtr2, ppi->PlaneStride );
 
       /* Now test the group SAD score */
       if ( MaxSad > LocalGrpLowSadThresh ){
@@ -758,7 +706,7 @@ static void RowDiffScan( PP_INSTANCE *ppi,
       if (*DispFragPtr == CANDIDATE_BLOCK){
 
         /* Clear down entries in changed locals array */
-        memset(ChLocalsPtr,0,8);
+        SET8_0(ChLocalsPtr);
 
         for ( j = 0; j < HFRAGPIXELS; j++ ){
           /* Take a local copy of the measured difference. */
@@ -777,10 +725,10 @@ static void RowDiffScan( PP_INSTANCE *ppi,
       }else{
         /* If we are breaking out here mark all pixels as changed. */
         if ( *DispFragPtr > BLOCK_NOT_CODED ){
-          memset(bits_map_ptr,1,8);
-          memset(ChLocalsPtr,8,8);
+          SET8_1(bits_map_ptr);
+          SET8_8(ChLocalsPtr);
         }else{
-          memset(ChLocalsPtr,0,8);
+          SET8_0(ChLocalsPtr);
         }
       }
 
@@ -816,7 +764,7 @@ static void RowDiffScan( PP_INSTANCE *ppi,
     /* Test for break out conditions to save time. */
     if (*DispFragPtr == CANDIDATE_BLOCK){
       /* Clear down entries in changed locals array */
-      memset(ChLocalsPtr,0,8);
+      SET8_0(ChLocalsPtr);
 
       for ( j = 0; j < HFRAGPIXELS; j++ ){
         /* Take a local copy of the measured difference. */
@@ -839,10 +787,10 @@ static void RowDiffScan( PP_INSTANCE *ppi,
     }else{
       /* If we are breaking out here mark all pixels as changed. */
       if ( *DispFragPtr > BLOCK_NOT_CODED ){
-        memset(bits_map_ptr,1,8);
-        memset(ChLocalsPtr,8,8);
+        SET8_1(bits_map_ptr);
+        SET8_8(ChLocalsPtr);
       }else{
-        memset(ChLocalsPtr,0,8);
+        SET8_0(ChLocalsPtr);
       }
     }
 
@@ -876,7 +824,7 @@ static void RowDiffScan( PP_INSTANCE *ppi,
       /* Test for break out conditions to save time. */
       if (*DispFragPtr == CANDIDATE_BLOCK){
         /* Clear down entries in changed locals array */
-        memset(ChLocalsPtr,0,8);
+        SET8_0(ChLocalsPtr);
         for ( j = 0; j < HFRAGPIXELS; j++ ){
           /* Take a local copy of the measured difference. */
           Diff = (int)YuvPtr1[j] - (int)YuvPtr2[j];
@@ -899,10 +847,10 @@ static void RowDiffScan( PP_INSTANCE *ppi,
       }else{
         /* If we are breaking out here mark all pixels as changed. */
         if ( *DispFragPtr > BLOCK_NOT_CODED ){
-          memset(bits_map_ptr,1,8);
-          memset(ChLocalsPtr,8,8);
+          SET8_1(bits_map_ptr);
+          SET8_8(ChLocalsPtr);
         }else{
-          memset(ChLocalsPtr,0,8);
+          SET8_0(ChLocalsPtr);
         }
       }
 
@@ -935,7 +883,7 @@ static void RowDiffScan( PP_INSTANCE *ppi,
     /* Test for break out conditions to save time. */
     if (*DispFragPtr == CANDIDATE_BLOCK){
       /* Clear down entries in changed locals array */
-      memset(ChLocalsPtr,0,8);
+      SET8_0(ChLocalsPtr);
 
       for ( j = 0; j < HFRAGPIXELS; j++ ){
         /* Take a local copy of the measured difference. */
@@ -959,10 +907,10 @@ static void RowDiffScan( PP_INSTANCE *ppi,
     }else{
       /* If we are breaking out here mark all pixels as changed.*/
       if ( *DispFragPtr > BLOCK_NOT_CODED ) {
-          memset(bits_map_ptr,1,8);
-          memset(ChLocalsPtr,8,8);
+          SET8_1(bits_map_ptr);
+          SET8_8(ChLocalsPtr);
         }else{
-          memset(ChLocalsPtr,0,8);
+          SET8_0(ChLocalsPtr);
         }
     }
     /* If we have a lot of changed pixels for this fragment on this
@@ -1071,7 +1019,7 @@ static void RowChangedLocalsScan( PP_INSTANCE *ppi,
         }
       }else{
         if ( *DispFragPtr > BLOCK_NOT_CODED )
-          memset(ChLocalsPtr,0,8);
+          SET8_0(ChLocalsPtr);
 
         /* Step pointers */
         ChLocalsPtr += HFRAGPIXELS;
@@ -1133,7 +1081,7 @@ static void RowChangedLocalsScan( PP_INSTANCE *ppi,
         }
       }else{
         if ( *DispFragPtr > BLOCK_NOT_CODED )
-          memset(ChLocalsPtr,0,8);
+          SET8_0(ChLocalsPtr);
 
         /* Step pointers */
         ChLocalsPtr += HFRAGPIXELS;
@@ -2126,10 +2074,12 @@ static void AnalysePlane( PP_INSTANCE *ppi,
     /* Fast break out test for obvious yes and no cases in this row of
        blocks */
     if ( i < ppi->PlaneVFragments ){
+      dsp_save_fpu (ppi->dsp);
       UpdatedOrCandidateBlocks =
         RowSadScan( ppi, RawPlanePtr0, RawPlanePtr1, DispFragPtr0 );
-      if( ColSadScan( ppi, RawPlanePtr0, RawPlanePtr1, DispFragPtr0 ) )
-        UpdatedOrCandidateBlocks = 1;
+      UpdatedOrCandidateBlocks |=
+        ColSadScan( ppi, RawPlanePtr0, RawPlanePtr1, DispFragPtr0 );
+      dsp_restore_fpu (ppi->dsp);
     }else{
       /* Make sure we still call other functions if RowSadScan() disabled */
       UpdatedOrCandidateBlocks = 1;

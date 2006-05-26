@@ -24,6 +24,7 @@
 
 #include "theora/theora.h"
 #include "huffman.h"
+#include "dsp.h"
 
 #ifndef LIBOGG2
 #define theora_read(x,y,z) ( *z = oggpackB_read(x,y) )
@@ -226,6 +227,8 @@ typedef struct PP_INSTANCE {
   ogg_int32_t YuvDiffsCircularBufferSize;
   ogg_int32_t ChLocalsCircularBufferSize;
   ogg_int32_t PixelMapCircularBufferSize;
+
+  DspFunctions dsp;  /* Selected functions for this platform */
 
 } PP_INSTANCE;
 
@@ -492,6 +495,8 @@ typedef struct PB_INSTANCE {
 
   unsigned char *DataOutputInPtr;
 
+  DspFunctions   dsp;  /* Selected functions for this platform */
+
 } PB_INSTANCE;
 
 /* Encoder (Compressor) instance -- installed in a theora_state */
@@ -678,6 +683,8 @@ typedef struct CP_INSTANCE {
   int               packetflag;
   int               doneflag;
 
+  DspFunctions   dsp;  /* Selected functions for this platform */
+
 } CP_INSTANCE;
 
 #define clamp255(x) ((unsigned char)((((x)<0)-1) & ((x) | -((x)>255))))
@@ -687,7 +694,7 @@ extern ogg_uint32_t YUVAnalyseFrame( PP_INSTANCE *ppi,
                                      ogg_uint32_t * KFIndicator );
 
 extern void ClearPPInstance(PP_INSTANCE *ppi);
-extern void InitPPInstance(PP_INSTANCE *ppi);
+extern void InitPPInstance(PP_INSTANCE *ppi, DspFunctions *funcs);
 extern int GetFrameType(PB_INSTANCE *pbi);
 extern void InitPBInstance(PB_INSTANCE *pbi);
 extern void ClearPBInstance(PB_INSTANCE *pbi);

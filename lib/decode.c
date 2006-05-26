@@ -865,7 +865,9 @@ static void DecodeData(PB_INSTANCE *pbi){
   if (pbi->DecoderErrorCode) return;
 
   /* Reconstruct and display the frame */
+  dsp_save_fpu (pbi->dsp);
   ReconRefFrames(pbi);
+  dsp_restore_fpu (pbi->dsp);
 
 }
 
