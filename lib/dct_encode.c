@@ -352,15 +352,15 @@ static void MotionBlockDifference (CP_INSTANCE * cpi, unsigned char * FiltPtr,
 
   /* Is the MV offset exactly pixel alligned */
   if ( AbsRefOffset == 0 ){
-    dsp_static_sub8x8( FiltPtr, ReconPtr1, DctInputPtr,
+    dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
                PixelsPerLine, ReconPixelsPerLine);
-    dsp_static_copy8x8 (new_ptr1, old_ptr1, PixelsPerLine);
+    dsp_copy8x8 (cpi->dsp, new_ptr1, old_ptr1, PixelsPerLine);
   } else {
     /* Fractional pixel MVs. */
     /* Note that we only use two pixel values even for the diagonal */
-    dsp_static_sub8x8avg2(FiltPtr, ReconPtr1,ReconPtr2,DctInputPtr,
+    dsp_sub8x8avg2(cpi->dsp, FiltPtr, ReconPtr1,ReconPtr2,DctInputPtr,
                  PixelsPerLine, ReconPixelsPerLine);
-    dsp_static_copy8x8 (new_ptr1, old_ptr1, PixelsPerLine);
+    dsp_copy8x8 (cpi->dsp, new_ptr1, old_ptr1, PixelsPerLine);
   }
 }
 
@@ -436,18 +436,18 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
         pb.GoldenFrame[cpi->pb.recon_pixel_index_table[FragIndex]];
     }
 
-    dsp_static_sub8x8( FiltPtr, ReconPtr1, DctInputPtr,
+    dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
                PixelsPerLine, ReconPixelsPerLine);
-    dsp_static_copy8x8 (new_ptr1, old_ptr1, PixelsPerLine);
+    dsp_copy8x8 (cpi->dsp, new_ptr1, old_ptr1, PixelsPerLine);
   } else if ( cpi->pb.CodingMode==CODE_INTRA ) {
-    dsp_static_sub8x8_128(FiltPtr, DctInputPtr, PixelsPerLine);
-    dsp_static_copy8x8 (new_ptr1, old_ptr1, PixelsPerLine);
+    dsp_sub8x8_128(cpi->dsp, FiltPtr, DctInputPtr, PixelsPerLine);
+    dsp_copy8x8 (cpi->dsp, new_ptr1, old_ptr1, PixelsPerLine);
   }
 
   /* Proceed to encode the data into the encode buffer if the encoder
      is enabled. */
   /* Perform a 2D DCT transform on the data. */
-  dsp_static_fdct_short( cpi->DCTDataBuffer, cpi->DCT_codes );
+  dsp_fdct_short(cpi->dsp, cpi->DCTDataBuffer, cpi->DCT_codes );
 
   /* Quantize that transform data. */
   quantize ( &cpi->pb, cpi->DCT_codes, cpi->pb.QFragData[FragIndex] );

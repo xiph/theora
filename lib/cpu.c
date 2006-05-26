@@ -18,8 +18,6 @@
 #include <stdio.h>
 #include "cpu.h"
 
-ogg_uint32_t cpu_flags = 0;
-
 void
 cpuid(ogg_int32_t op, ogg_uint32_t *eax, ogg_uint32_t *ebx, ogg_uint32_t *ecx, ogg_uint32_t *edx)
 {
@@ -75,7 +73,7 @@ static ogg_uint32_t cpu_get_flags (void)
     return 0;
 #endif
 
-  //cpuid(0, &eax, &ebx, &ecx, &edx);
+  /*cpuid(0, &eax, &ebx, &ecx, &edx); */
   /* Intel */
   cpuid(1, &eax, &ebx, &ecx, &edx);
   if ((edx & 0x00800000) == 0)
@@ -112,10 +110,11 @@ static ogg_uint32_t cpu_get_flags (void) {
 
 #endif
 
-void cpu_init () 
+ogg_uint32_t cpu_init (void)
 {
-  cpu_flags = cpu_get_flags();
+  ogg_uint32_t cpu_flags = cpu_get_flags();
 
+  /*
   if (cpu_flags) {
     fprintf(stderr, "vectorized instruction sets supported:");
     if (cpu_flags & CPU_X86_MMX)      fprintf(stderr, " mmx");
@@ -126,4 +125,7 @@ void cpu_init ()
     if (cpu_flags & CPU_X86_3DNOWEXT) fprintf(stderr, " 3dnowext");
     fprintf(stderr, "\n");
   }
+  */
+
+  return cpu_flags;
 }

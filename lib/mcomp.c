@@ -97,7 +97,7 @@ void InitMotionCompensation ( CP_INSTANCE *cpi ){
     cpi->MVPixelOffsetY[i] = (cpi->MVOffsetY[i]*LineStepY) + cpi->MVOffsetX[i];
 }
 
-static ogg_uint32_t GetInterErr (unsigned char * NewDataPtr,
+static ogg_uint32_t GetInterErr (CP_INSTANCE *cpi, unsigned char * NewDataPtr,
                           unsigned char * RefDataPtr1,
                           unsigned char * RefDataPtr2,
                           ogg_uint32_t PixelsPerLine ) {
@@ -108,10 +108,10 @@ static ogg_uint32_t GetInterErr (unsigned char * NewDataPtr,
   /* Mode of interpolation chosen based upon on the offset of the
      second reference pointer */
   if ( RefOffset == 0 ) {
-    DiffVal = dsp_static_inter8x8_err (NewDataPtr, PixelsPerLine,
+    DiffVal = dsp_inter8x8_err (cpi->dsp, NewDataPtr, PixelsPerLine,
 		          RefDataPtr1, RefPixelsPerLine);
   }else{
-    DiffVal = dsp_static_inter8x8_err_xy2 (NewDataPtr, PixelsPerLine,
+    DiffVal = dsp_inter8x8_err_xy2 (cpi->dsp, NewDataPtr, PixelsPerLine,
 		          RefDataPtr1, 
 		          RefDataPtr2, RefPixelsPerLine);
   }
@@ -120,7 +120,8 @@ static ogg_uint32_t GetInterErr (unsigned char * NewDataPtr,
   return DiffVal;
 }
 
-static ogg_uint32_t GetHalfPixelSumAbsDiffs (unsigned char * SrcData,
+static ogg_uint32_t GetHalfPixelSumAbsDiffs (CP_INSTANCE *cpi,
+                                      unsigned char * SrcData,
                                       unsigned char * RefDataPtr1,
                                       unsigned char * RefDataPtr2,
                                       ogg_uint32_t PixelsPerLine,
@@ -133,10 +134,10 @@ static ogg_uint32_t GetHalfPixelSumAbsDiffs (unsigned char * SrcData,
 
   if ( RefOffset == 0 ) {
     /* Simple case as for non 0.5 pixel */
-    DiffVal += dsp_static_sad8x8 (SrcData, PixelsPerLine, 
+    DiffVal += dsp_sad8x8 (cpi->dsp, SrcData, PixelsPerLine, 
 		               RefDataPtr1, RefPixelsPerLine);
   } else  {
-    DiffVal += dsp_static_sad8x8_xy2_thres (SrcData, PixelsPerLine, 
+    DiffVal += dsp_sad8x8_xy2_thres (cpi->dsp, SrcData, PixelsPerLine, 
 		               RefDataPtr1, 
 		               RefDataPtr2, RefPixelsPerLine, BestSoFar);
   }
@@ -149,38 +150,38 @@ ogg_uint32_t GetMBIntraError (CP_INSTANCE *cpi, ogg_uint32_t FragIndex,
   ogg_uint32_t  LocalFragIndex = FragIndex;
   ogg_uint32_t  IntraError = 0;
 
-  dsp_static_save_fpu ();
+  dsp_save_fpu (cpi->dsp);
 
   /* Add together the intra errors for those blocks in the macro block
      that are coded (Y only) */
   if ( cpi->pb.display_fragments[LocalFragIndex] )
     IntraError +=
-      dsp_static_intra8x8_err (&cpi->
+      dsp_intra8x8_err (cpi->dsp, &cpi->
                     ConvDestBuffer[cpi->pb.pixel_index_table[LocalFragIndex]],
                     PixelsPerLine);
 
   LocalFragIndex++;
   if ( cpi->pb.display_fragments[LocalFragIndex] )
     IntraError +=
-      dsp_static_intra8x8_err (&cpi->
+      dsp_intra8x8_err (cpi->dsp, &cpi->
                     ConvDestBuffer[cpi->pb.pixel_index_table[LocalFragIndex]],
                     PixelsPerLine);
 
   LocalFragIndex = FragIndex + cpi->pb.HFragments;
   if ( cpi->pb.display_fragments[LocalFragIndex] )
     IntraError +=
-      dsp_static_intra8x8_err (&cpi->
+      dsp_intra8x8_err (cpi->dsp, &cpi->
                      ConvDestBuffer[cpi->pb.pixel_index_table[LocalFragIndex]],
                     PixelsPerLine);
 
   LocalFragIndex++;
   if ( cpi->pb.display_fragments[LocalFragIndex] )
     IntraError +=
-      dsp_static_intra8x8_err (&cpi->
+      dsp_intra8x8_err (cpi->dsp, &cpi->
                     ConvDestBuffer[cpi->pb.pixel_index_table[LocalFragIndex]],
                     PixelsPerLine);
 
-  dsp_static_restore_fpu ();
+  dsp_restore_fpu (cpi->dsp);
 
   return IntraError;
 }
@@ -204,7 +205,7 @@ ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
   unsigned char * SrcPtr1;
   unsigned char * RefPtr1;
 
-  dsp_static_save_fpu ();
+  dsp_save_fpu (cpi->dsp);
 
   /* Work out pixel offset into source buffer. */
   PixelIndex = cpi->pb.pixel_index_table[LocalFragIndex];
@@ -234,7 +235,7 @@ ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
   if ( cpi->pb.display_fragments[LocalFragIndex] ) {
     SrcPtr1 = &SrcPtr[PixelIndex];
     RefPtr1 = &RefPtr[RefPixelIndex + RefPixelOffset];
-    InterError += GetInterErr( SrcPtr1, RefPtr1,
+    InterError += GetInterErr(cpi, SrcPtr1, RefPtr1,
                                  &RefPtr1[RefPtr2Offset], PixelsPerLine );
   }
 
@@ -244,7 +245,7 @@ ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
     RefPixelIndex = cpi->pb.recon_pixel_index_table[LocalFragIndex];
     SrcPtr1 = &SrcPtr[PixelIndex];
     RefPtr1 = &RefPtr[RefPixelIndex + RefPixelOffset];
-    InterError += GetInterErr( SrcPtr1, RefPtr1,
+    InterError += GetInterErr(cpi, SrcPtr1, RefPtr1,
                                  &RefPtr1[RefPtr2Offset], PixelsPerLine );
 
   }
@@ -255,7 +256,7 @@ ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
     RefPixelIndex = cpi->pb.recon_pixel_index_table[LocalFragIndex];
     SrcPtr1 = &SrcPtr[PixelIndex];
     RefPtr1 = &RefPtr[RefPixelIndex + RefPixelOffset];
-    InterError += GetInterErr( SrcPtr1, RefPtr1,
+    InterError += GetInterErr(cpi, SrcPtr1, RefPtr1,
                                  &RefPtr1[RefPtr2Offset], PixelsPerLine );
   }
 
@@ -265,11 +266,11 @@ ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
     RefPixelIndex = cpi->pb.recon_pixel_index_table[LocalFragIndex];
     SrcPtr1 = &SrcPtr[PixelIndex];
     RefPtr1 = &RefPtr[RefPixelIndex + RefPixelOffset];
-    InterError += GetInterErr( SrcPtr1, RefPtr1,
+    InterError += GetInterErr(cpi, SrcPtr1, RefPtr1,
                                  &RefPtr1[RefPtr2Offset], PixelsPerLine );
   }
 
-  dsp_static_restore_fpu ();
+  dsp_restore_fpu (cpi->dsp);
 
   return InterError;
 }
@@ -305,7 +306,7 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
   unsigned char * RefDataPtr1;
   unsigned char * RefDataPtr2;
 
-  dsp_static_save_fpu ();
+  dsp_save_fpu (cpi->dsp);
 
   /* Note which of the four blocks in the macro block are to be
      included in the search. */
@@ -329,19 +330,19 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
 
   /* Check the 0,0 candidate. */
   if ( MBlockDispFrags[0] ) {
-    Error += dsp_static_sad8x8 (SrcPtr[0], PixelsPerLine, RefPtr,
+    Error += dsp_sad8x8 (cpi->dsp, SrcPtr[0], PixelsPerLine, RefPtr,
                          PixelsPerLine + STRIDE_EXTRA);
   }
   if ( MBlockDispFrags[1] ) {
-    Error += dsp_static_sad8x8 (SrcPtr[1], PixelsPerLine, RefPtr + 8,
+    Error += dsp_sad8x8 (cpi->dsp, SrcPtr[1], PixelsPerLine, RefPtr + 8,
                          PixelsPerLine + STRIDE_EXTRA);
   }
   if ( MBlockDispFrags[2] ) {
-    Error += dsp_static_sad8x8 (SrcPtr[2], PixelsPerLine, RefPtr + RefRow2Offset,
+    Error += dsp_sad8x8 (cpi->dsp, SrcPtr[2], PixelsPerLine, RefPtr + RefRow2Offset,
                          PixelsPerLine + STRIDE_EXTRA);
   }
   if ( MBlockDispFrags[3] ) {
-    Error += dsp_static_sad8x8 (SrcPtr[3], PixelsPerLine, RefPtr + RefRow2Offset + 8,
+    Error += dsp_sad8x8 (cpi->dsp, SrcPtr[3], PixelsPerLine, RefPtr + RefRow2Offset + 8,
                          PixelsPerLine + STRIDE_EXTRA);
   }
 
@@ -365,22 +366,22 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
 
       /* Get the score for the current offset */
       if ( MBlockDispFrags[0] ) {
-        Error += dsp_static_sad8x8 (SrcPtr[0], PixelsPerLine, CandidateBlockPtr,
+        Error += dsp_sad8x8 (cpi->dsp, SrcPtr[0], PixelsPerLine, CandidateBlockPtr,
                              PixelsPerLine + STRIDE_EXTRA);
       }
 
       if ( MBlockDispFrags[1] && (Error < MinError) ) {
-        Error += dsp_static_sad8x8_thres (SrcPtr[1], PixelsPerLine, CandidateBlockPtr + 8,
+        Error += dsp_sad8x8_thres (cpi->dsp, SrcPtr[1], PixelsPerLine, CandidateBlockPtr + 8,
                              PixelsPerLine + STRIDE_EXTRA, MinError);
       }
 
       if ( MBlockDispFrags[2] && (Error < MinError) ) {
-        Error += dsp_static_sad8x8_thres (SrcPtr[2], PixelsPerLine, CandidateBlockPtr + RefRow2Offset,
+        Error += dsp_sad8x8_thres (cpi->dsp, SrcPtr[2], PixelsPerLine, CandidateBlockPtr + RefRow2Offset,
                              PixelsPerLine + STRIDE_EXTRA, MinError);
       }
 
       if ( MBlockDispFrags[3] && (Error < MinError) ) {
-        Error += dsp_static_sad8x8_thres (SrcPtr[3], PixelsPerLine, CandidateBlockPtr + RefRow2Offset + 8,
+        Error += dsp_sad8x8_thres (cpi->dsp, SrcPtr[3], PixelsPerLine, CandidateBlockPtr + RefRow2Offset + 8,
                              PixelsPerLine + STRIDE_EXTRA, MinError);
       }
 
@@ -420,7 +421,7 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
       RefDataPtr1 = BestBlockPtr;
       RefDataPtr2 = RefDataPtr1 + cpi->HalfPixelRef2Offset[i];
       HalfPixelError =
-        GetHalfPixelSumAbsDiffs( SrcPtr[0], RefDataPtr1, RefDataPtr2,
+        GetHalfPixelSumAbsDiffs(cpi, SrcPtr[0], RefDataPtr1, RefDataPtr2,
                          PixelsPerLine, HalfPixelError, BestHalfPixelError );
     }
 
@@ -428,7 +429,7 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
       RefDataPtr1 = BestBlockPtr + 8;
       RefDataPtr2 = RefDataPtr1 + cpi->HalfPixelRef2Offset[i];
       HalfPixelError =
-        GetHalfPixelSumAbsDiffs( SrcPtr[1], RefDataPtr1, RefDataPtr2,
+        GetHalfPixelSumAbsDiffs(cpi, SrcPtr[1], RefDataPtr1, RefDataPtr2,
                          PixelsPerLine, HalfPixelError, BestHalfPixelError );
     }
 
@@ -436,7 +437,7 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
       RefDataPtr1 = BestBlockPtr + RefRow2Offset;
       RefDataPtr2 = RefDataPtr1 + cpi->HalfPixelRef2Offset[i];
       HalfPixelError =
-        GetHalfPixelSumAbsDiffs( SrcPtr[2], RefDataPtr1, RefDataPtr2,
+        GetHalfPixelSumAbsDiffs(cpi, SrcPtr[2], RefDataPtr1, RefDataPtr2,
                          PixelsPerLine, HalfPixelError, BestHalfPixelError );
     }
 
@@ -444,7 +445,7 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
       RefDataPtr1 = BestBlockPtr + RefRow2Offset + 8;
       RefDataPtr2 = RefDataPtr1 + cpi->HalfPixelRef2Offset[i];
       HalfPixelError =
-        GetHalfPixelSumAbsDiffs( SrcPtr[3], RefDataPtr1, RefDataPtr2,
+        GetHalfPixelSumAbsDiffs(cpi, SrcPtr[3], RefDataPtr1, RefDataPtr2,
                          PixelsPerLine, HalfPixelError, BestHalfPixelError );
     }
 
@@ -462,7 +463,7 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
   InterMVError = GetMBInterError( cpi, cpi->ConvDestBuffer, RefFramePtr,
                                   FragIndex, MV->x, MV->y, PixelsPerLine );
 
-  dsp_static_restore_fpu ();
+  dsp_restore_fpu (cpi->dsp);
 
   /* Return score of best matching block. */
   return InterMVError;
@@ -496,7 +497,7 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
   unsigned char * RefDataPtr1;
   unsigned char * RefDataPtr2;
 
-  dsp_static_save_fpu ();
+  dsp_save_fpu (cpi->dsp);
 
   /* Note which of the four blocks in the macro block are to be
      included in the search. */
@@ -531,19 +532,19 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
 
       /* Summ errors for each block. */
       if ( MBlockDispFrags[0] ) {
-        Error += dsp_static_sad8x8 (SrcPtr[0], PixelsPerLine, CandidateBlockPtr,
+        Error += dsp_sad8x8 (cpi->dsp, SrcPtr[0], PixelsPerLine, CandidateBlockPtr,
                              PixelsPerLine + STRIDE_EXTRA);
       }
       if ( MBlockDispFrags[1] ){
-        Error += dsp_static_sad8x8 (SrcPtr[1], PixelsPerLine, CandidateBlockPtr + 8,
+        Error += dsp_sad8x8 (cpi->dsp, SrcPtr[1], PixelsPerLine, CandidateBlockPtr + 8,
                              PixelsPerLine + STRIDE_EXTRA);
       }
       if ( MBlockDispFrags[2] ){
-        Error += dsp_static_sad8x8 (SrcPtr[2], PixelsPerLine, CandidateBlockPtr + RefRow2Offset,
+        Error += dsp_sad8x8 (cpi->dsp, SrcPtr[2], PixelsPerLine, CandidateBlockPtr + RefRow2Offset,
                              PixelsPerLine + STRIDE_EXTRA);
       }
       if ( MBlockDispFrags[3] ){
-        Error += dsp_static_sad8x8 (SrcPtr[3], PixelsPerLine, CandidateBlockPtr + RefRow2Offset + 8,
+        Error += dsp_sad8x8 (cpi->dsp, SrcPtr[3], PixelsPerLine, CandidateBlockPtr + RefRow2Offset + 8,
                              PixelsPerLine + STRIDE_EXTRA);
       }
 
@@ -580,7 +581,7 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
       RefDataPtr1 = BestBlockPtr;
       RefDataPtr2 = RefDataPtr1 + cpi->HalfPixelRef2Offset[i];
       HalfPixelError =
-        GetHalfPixelSumAbsDiffs( SrcPtr[0], RefDataPtr1, RefDataPtr2,
+        GetHalfPixelSumAbsDiffs(cpi, SrcPtr[0], RefDataPtr1, RefDataPtr2,
                          PixelsPerLine, HalfPixelError, BestHalfPixelError );
     }
 
@@ -588,7 +589,7 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
       RefDataPtr1 = BestBlockPtr + 8;
       RefDataPtr2 = RefDataPtr1 + cpi->HalfPixelRef2Offset[i];
       HalfPixelError =
-        GetHalfPixelSumAbsDiffs( SrcPtr[1], RefDataPtr1, RefDataPtr2,
+        GetHalfPixelSumAbsDiffs(cpi, SrcPtr[1], RefDataPtr1, RefDataPtr2,
                          PixelsPerLine, HalfPixelError, BestHalfPixelError );
     }
 
@@ -596,7 +597,7 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
       RefDataPtr1 = BestBlockPtr + RefRow2Offset;
       RefDataPtr2 = RefDataPtr1 + cpi->HalfPixelRef2Offset[i];
       HalfPixelError =
-        GetHalfPixelSumAbsDiffs( SrcPtr[2], RefDataPtr1, RefDataPtr2,
+        GetHalfPixelSumAbsDiffs(cpi, SrcPtr[2], RefDataPtr1, RefDataPtr2,
                          PixelsPerLine, HalfPixelError, BestHalfPixelError );
     }
 
@@ -604,7 +605,7 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
       RefDataPtr1 = BestBlockPtr + RefRow2Offset + 8;
       RefDataPtr2 = RefDataPtr1 + cpi->HalfPixelRef2Offset[i];
       HalfPixelError =
-        GetHalfPixelSumAbsDiffs( SrcPtr[3], RefDataPtr1, RefDataPtr2,
+        GetHalfPixelSumAbsDiffs(cpi, SrcPtr[3], RefDataPtr1, RefDataPtr2,
                          PixelsPerLine, HalfPixelError, BestHalfPixelError );
     }
 
@@ -622,7 +623,7 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
   InterMVError = GetMBInterError( cpi, cpi->ConvDestBuffer, RefFramePtr,
                                   FragIndex, MV->x, MV->y, PixelsPerLine );
 
-  dsp_static_restore_fpu ();
+  dsp_restore_fpu (cpi->dsp);
 
   /* Return score of best matching block. */
   return InterMVError;
@@ -666,7 +667,7 @@ static ogg_uint32_t GetBMVExhaustiveSearch (CP_INSTANCE *cpi,
 
     for ( j = 0; j < (ogg_int32_t)MAX_MV_EXTENT; j++ ){
       /* Get the block error score. */
-      Error = dsp_static_sad8x8 (SrcPtr, PixelsPerLine, CandidateBlockPtr,
+      Error = dsp_sad8x8 (cpi->dsp, SrcPtr, PixelsPerLine, CandidateBlockPtr,
                              PixelsPerLine + STRIDE_EXTRA);
 
       /* Was this the best so far */
@@ -697,7 +698,7 @@ static ogg_uint32_t GetBMVExhaustiveSearch (CP_INSTANCE *cpi,
   for ( i=0; i < 9; i++ ) {
     RefDataPtr2 = BestBlockPtr + cpi->HalfPixelRef2Offset[i];
     HalfPixelError =
-      GetHalfPixelSumAbsDiffs( SrcPtr, BestBlockPtr, RefDataPtr2,
+      GetHalfPixelSumAbsDiffs(cpi, SrcPtr, BestBlockPtr, RefDataPtr2,
                             PixelsPerLine, 0, BestHalfPixelError );
 
     if ( HalfPixelError < BestHalfPixelError ){
@@ -714,7 +715,7 @@ static ogg_uint32_t GetBMVExhaustiveSearch (CP_INSTANCE *cpi,
   RefDataPtr2 = BestBlockPtr + cpi->HalfPixelRef2Offset[BestHalfOffset];
 
   InterMVError =
-    GetInterErr( SrcPtr, BestBlockPtr, RefDataPtr2, PixelsPerLine );
+    GetInterErr(cpi, SrcPtr, BestBlockPtr, RefDataPtr2, PixelsPerLine );
 
   /* Return score of best matching block. */
   return InterMVError;
@@ -727,7 +728,7 @@ ogg_uint32_t GetFOURMVExhaustiveSearch (CP_INSTANCE *cpi,
                                         MOTION_VECTOR *MV ) {
   ogg_uint32_t  InterMVError;
 
-  dsp_static_save_fpu ();
+  dsp_save_fpu (cpi->dsp);
 
   /* For the moment the 4MV mode is only deemed to be valid 
      if all four Y blocks are to be updated */
@@ -759,7 +760,7 @@ ogg_uint32_t GetFOURMVExhaustiveSearch (CP_INSTANCE *cpi,
     InterMVError = HUGE_ERROR;
   }
 
-  dsp_static_restore_fpu ();
+  dsp_restore_fpu (cpi->dsp);
 
   /* Return score of best matching block. */
   return InterMVError;

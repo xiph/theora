@@ -774,19 +774,20 @@ int theora_encode_init(theora_state *th, theora_info *c){
 
   CP_INSTANCE *cpi;
 
-  dsp_static_init ();
-
   memset(th, 0, sizeof(*th));
   /*Currently only the 4:2:0 format is supported.*/
   if(c->pixelformat!=OC_PF_420)return OC_IMPL;
   th->internal_encode=cpi=_ogg_calloc(1,sizeof(*cpi));
+
+  dsp_static_init (&cpi->dsp);
+  memcpy (&cpi->pb.dsp, &cpi->dsp, sizeof(DspFunctions));
 
   c->version_major=VERSION_MAJOR;
   c->version_minor=VERSION_MINOR;
   c->version_subminor=VERSION_SUB;
 
   InitTmpBuffers(&cpi->pb);
-  InitPPInstance(&cpi->pp);
+  InitPPInstance(&cpi->pp, &cpi->dsp);
 
   /* Initialise Configuration structure to legal values */
   if(c->quality>63)c->quality=63;

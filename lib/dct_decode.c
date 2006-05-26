@@ -148,7 +148,7 @@ static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
   ReconPixelIndex = pbi->recon_pixel_index_table[FragmentNumber];
 
   /* Get the pixel index for the first pixel in the fragment. */
-  dsp_static_recon_intra8x8 ((unsigned char *)(&pbi->ThisFrameRecon[ReconPixelIndex]),
+  dsp_recon_intra8x8 (pbi->dsp, (unsigned char *)(&pbi->ThisFrameRecon[ReconPixelIndex]),
               (ogg_int16_t *)pbi->ReconDataBuffer, ReconPixelsPerLine);
 
 }
@@ -233,7 +233,7 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
     /* Reconstruct the pixel data using the last frame reconstruction
        and change data when the motion vector is (0,0), the recon is
        based on the lastframe without loop filtering---- for testing */
-    dsp_static_recon_inter8x8 (&pbi->ThisFrameRecon[ReconPixelIndex],
+    dsp_recon_inter8x8 (pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
                 &pbi->LastFrameRecon[ReconPixelIndex],
                   pbi->ReconDataBuffer, ReconPixelsPerLine);
   }else if ( ModeUsesMC[pbi->CodingMode] ) {
@@ -282,7 +282,7 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
     if ( (int)(LastFrameRecPtr - LastFrameRecPtr2) == 0 ) {
       /* Reconstruct the pixel dats from the reference frame and change data
          (no half pixel in this case as the two references were the same. */
-      dsp_static_recon_inter8x8 (
+      dsp_recon_inter8x8 (pbi->dsp,
 		  &pbi->ThisFrameRecon[ReconPixelIndex],
                   LastFrameRecPtr, pbi->ReconDataBuffer,
                   ReconPixelsPerLine);
@@ -290,7 +290,7 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
       /* Fractional pixel reconstruction. */
       /* Note that we only use two pixels per reconstruction even for
          the diagonal. */
-      dsp_static_recon_inter8x8_half(&pbi->ThisFrameRecon[ReconPixelIndex],
+      dsp_recon_inter8x8_half(pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
                             LastFrameRecPtr, LastFrameRecPtr2,
                             pbi->ReconDataBuffer, ReconPixelsPerLine);
     }
@@ -298,13 +298,13 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
     /* Golden frame with motion vector */
     /* Reconstruct the pixel data using the golden frame
        reconstruction and change data */
-    dsp_static_recon_inter8x8 (&pbi->ThisFrameRecon[ReconPixelIndex],
+    dsp_recon_inter8x8 (pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
                 &pbi->GoldenFrame[ ReconPixelIndex ],
                   pbi->ReconDataBuffer, ReconPixelsPerLine);
   } else {
     /* Simple Intra coding */
     /* Get the pixel index for the first pixel in the fragment. */
-    dsp_static_recon_intra8x8 (&pbi->ThisFrameRecon[ReconPixelIndex],
+    dsp_recon_intra8x8 (pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
               pbi->ReconDataBuffer, ReconPixelsPerLine);
   }
 }
@@ -460,7 +460,7 @@ static void CopyRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
       SrcPtr = &SrcReconPtr[ PixelIndex ];
       DestPtr = &DestReconPtr[ PixelIndex ];
 
-      dsp_static_copy8x8 (SrcPtr, DestPtr, PlaneLineStep);
+      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
     }
   }
 
@@ -472,7 +472,7 @@ static void CopyRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
       SrcPtr = &SrcReconPtr[ PixelIndex ];
       DestPtr = &DestReconPtr[ PixelIndex ];
 
-      dsp_static_copy8x8 (SrcPtr, DestPtr, PlaneLineStep);
+      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
 
     }
   }
@@ -497,7 +497,7 @@ static void CopyNotRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
       SrcPtr = &SrcReconPtr[ PixelIndex ];
       DestPtr = &DestReconPtr[ PixelIndex ];
 
-      dsp_static_copy8x8 (SrcPtr, DestPtr, PlaneLineStep);
+      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
     }
   }
 
@@ -509,7 +509,7 @@ static void CopyNotRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
       SrcPtr = &SrcReconPtr[ PixelIndex ];
       DestPtr = &DestReconPtr[ PixelIndex ];
 
-      dsp_static_copy8x8 (SrcPtr, DestPtr, PlaneLineStep);
+      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
 
     }
   }
@@ -663,7 +663,7 @@ void ExpandToken( Q_LIST_ENTRY * ExpandedBlock,
 }
 
 void ClearDownQFragData(PB_INSTANCE *pbi){
-  ogg_int32_t       i,j;
+  ogg_int32_t       i;
   Q_LIST_ENTRY *    QFragPtr;
 
   for ( i = 0; i < pbi->CodedBlockIndex; i++ ) {

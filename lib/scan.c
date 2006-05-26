@@ -423,7 +423,7 @@ static int RowSadScan( PP_INSTANCE *ppi,
     for ( i = 0; i < ppi->PlaneHFragments; i ++ ){
       if ( *LocalDispFragPtr <= BLOCK_NOT_CODED ){
         /* Calculate the SAD score for the block row */
-        GrpSad = dsp_static_row_sad8(LocalYuvPtr1,LocalYuvPtr2);
+        GrpSad = dsp_row_sad8(ppi->dsp, LocalYuvPtr1,LocalYuvPtr2);
 
         /* Now test the group SAD score */
         if ( GrpSad > LocalGrpLowSadThresh ){
@@ -480,7 +480,7 @@ static int ColSadScan( PP_INSTANCE *ppi,
     /* Skip if block already marked to be coded. */
     if ( *LocalDispFragPtr <= BLOCK_NOT_CODED ){
       /* Calculate the SAD score for the block column */
-      MaxSad = dsp_static_col_sad8x8(LocalYuvPtr1, LocalYuvPtr2, ppi->PlaneStride );
+      MaxSad = dsp_col_sad8x8(ppi->dsp, LocalYuvPtr1, LocalYuvPtr2, ppi->PlaneStride );
 
       /* Now test the group SAD score */
       if ( MaxSad > LocalGrpLowSadThresh ){
@@ -2074,12 +2074,12 @@ static void AnalysePlane( PP_INSTANCE *ppi,
     /* Fast break out test for obvious yes and no cases in this row of
        blocks */
     if ( i < ppi->PlaneVFragments ){
-      dsp_static_save_fpu ();
+      dsp_save_fpu (ppi->dsp);
       UpdatedOrCandidateBlocks =
         RowSadScan( ppi, RawPlanePtr0, RawPlanePtr1, DispFragPtr0 );
       UpdatedOrCandidateBlocks |=
         ColSadScan( ppi, RawPlanePtr0, RawPlanePtr1, DispFragPtr0 );
-      dsp_static_restore_fpu ();
+      dsp_restore_fpu (ppi->dsp);
     }else{
       /* Make sure we still call other functions if RowSadScan() disabled */
       UpdatedOrCandidateBlocks = 1;

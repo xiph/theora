@@ -25,8 +25,6 @@
 #define DSP_OP_DIFF(a,b) (((int)(a)) - ((int)(b)))
 #define DSP_OP_ABS_DIFF(a,b) abs((((int)(a)) - ((int)(b))))
 
-DspFunctions dsp_funcs;
-
 static void sub8x8__c (unsigned char *FiltPtr, unsigned char *ReconPtr,
                   ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine,
                   ogg_uint32_t ReconPixelsPerLine) {
@@ -387,7 +385,7 @@ static void nop (void) { /* NOP */ }
 
 void dsp_init(DspFunctions *funcs)
 {
-  fprintf(stderr, "setting dsp functions to C defaults.\n");
+  /*fprintf(stderr, "setting dsp functions to C defaults.\n"); */
   funcs->save_fpu = nop;
   funcs->restore_fpu = nop;
   funcs->sub8x8 = sub8x8__c;
@@ -403,19 +401,21 @@ void dsp_init(DspFunctions *funcs)
   funcs->inter8x8_err_xy2 = inter8x8_err_xy2__c;
 }
 
-void dsp_static_init(void)
+void dsp_static_init(DspFunctions *funcs)
 {
-  cpu_init ();
-  dsp_init (&dsp_funcs);
+  ogg_uint32_t cpuflags;
 
-  dsp_recon_init (&dsp_funcs);
-  dsp_dct_init (&dsp_funcs);
+  cpuflags = cpu_init ();
+  dsp_init (funcs);
+
+  dsp_recon_init (funcs, cpuflags);
+  dsp_dct_init (funcs, cpuflags);
 #if (defined(__i386__) || defined(__x86_64__))
-  if (cpu_flags & CPU_X86_MMX) {
-    dsp_mmx_init(&dsp_funcs);
+  if (cpuflags & CPU_X86_MMX) {
+    dsp_mmx_init(funcs);
   }
-  if (cpu_flags & CPU_X86_MMXEXT) {
-    dsp_mmxext_init(&dsp_funcs);
+  if (cpuflags & CPU_X86_MMXEXT) {
+    dsp_mmxext_init(funcs);
   }
 #endif
 }

@@ -549,7 +549,7 @@ static ogg_uint32_t GetBlockReconErrorSlow( CP_INSTANCE *cpi,
     RecStride = cpi->pb.UVStride;
   }
 
-  ErrorVal = dsp_static_sad8x8 (SrcDataPtr, SrcStride, RecDataPtr, RecStride);
+  ErrorVal = dsp_sad8x8 (cpi->dsp, SrcDataPtr, SrcStride, RecDataPtr, RecStride);
 
   return ErrorVal;
 }
@@ -919,12 +919,12 @@ ogg_uint32_t EncodeData(CP_INSTANCE *cpi){
     /* Zero Decoder EOB run count */
     cpi->pb.EOB_Run = 0;
 
-    dsp_static_save_fpu ();
+    dsp_save_fpu (cpi->dsp);
 
     /* Encode any fragments coded using DCT. */
     coded_pixels += QuadCodeDisplayFragments (cpi);
 
-    dsp_static_restore_fpu ();
+    dsp_restore_fpu (cpi->dsp);
 
     return coded_pixels;
 

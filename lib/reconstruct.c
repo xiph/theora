@@ -98,7 +98,7 @@ static void recon_inter8x8_half__c (unsigned char *ReconPtr, unsigned char *RefP
   }
 }
 
-void dsp_recon_init (DspFunctions *funcs)
+void dsp_recon_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)
 {
   funcs->copy8x8 = copy8x8__c;
   funcs->recon_intra8x8 = recon_intra8x8__c;
@@ -106,7 +106,7 @@ void dsp_recon_init (DspFunctions *funcs)
   funcs->recon_inter8x8_half = recon_inter8x8_half__c;
 #if (defined(__i386__) || defined(__x86_64__))
   if (cpu_flags & CPU_X86_MMX) {
-    dsp_mmx_recon_init(&dsp_funcs);
+    dsp_mmx_recon_init(funcs);
   }
 #endif
 }

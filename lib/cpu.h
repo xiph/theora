@@ -17,7 +17,7 @@
 
 #include "codec_internal.h"
 
-extern ogg_uint32_t cpu_flags;
+//extern ogg_uint32_t cpu_flags;
 
 #define CPU_X86_MMX	(1<<0)
 #define CPU_X86_3DNOW	(1<<1)
@@ -26,4 +26,5 @@ extern ogg_uint32_t cpu_flags;
 #define CPU_X86_SSE2	(1<<4)
 #define CPU_X86_3DNOWEXT (1<<5)
 
-void cpu_init () ;
+ogg_uint32_t cpu_init (void);
+

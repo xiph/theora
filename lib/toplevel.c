@@ -304,14 +304,15 @@ int theora_decode_init(theora_state *th, theora_info *c){
   PB_INSTANCE *pbi;
   codec_setup_info *ci;
 
-  dsp_static_init ();
-
   ci=(codec_setup_info *)c->codec_setup;
   memset(th, 0, sizeof(*th));
   th->internal_decode=pbi=_ogg_calloc(1,sizeof(*pbi));
   th->internal_encode=NULL;
 
   InitPBInstance(pbi);
+
+  dsp_static_init (&pbi->dsp);
+
   memcpy(&pbi->info,c,sizeof(*c));
   pbi->info.codec_setup=NULL;
   th->i=&pbi->info;
