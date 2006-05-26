@@ -792,6 +792,9 @@ int theora_encode_init(theora_state *th, theora_info *c){
   /* Initialise Configuration structure to legal values */
   if(c->quality>63)c->quality=63;
   if(c->quality<0)c->quality=32;
+  if(c->target_bitrate<0)c->target_bitrate=0;
+  /* we clamp target_bitrate to 24 bits after setting up the encoder */
+
   cpi->Configuration.BaseQ = c->quality;
   cpi->Configuration.FirstFrameQ = c->quality;
   cpi->Configuration.MaxQ = c->quality;
@@ -832,6 +835,10 @@ int theora_encode_init(theora_state *th, theora_info *c){
   if(c->keyframe_mindistance>c->keyframe_frequency_force)
     c->keyframe_mindistance=c->keyframe_frequency_force;
   cpi->pb.keyframe_granule_shift=_ilog(c->keyframe_frequency_force-1);
+
+  /* clamp the target_bitrate to a maximum of 24 bits so we get a
+     more meaningful value when we write this out in the header. */
+  if(c->target_bitrate>(1<<24)-1)c->target_bitrate=(1<<24)-1;
 
   /* copy in config */
   memcpy(&cpi->pb.info,c,sizeof(*c));
