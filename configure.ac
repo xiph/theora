@@ -108,11 +108,11 @@ cpu_x86_32=no
 case $target_cpu in
 	i[[3456]]86)
 		cpu_x86_32=yes 
-		cpu_optimization="32bit x86"
+		cpu_optimization="32 bit x86"
     	;;
 	x86_64)
 		cpu_x86_64=yes
-		cpu_optimization="64bit x86"
+		cpu_optimization="64 bit x86"
 	;;
 esac
 AM_CONDITIONAL([CPU_x86_64], [test x$cpu_x86_64 = xyes])
