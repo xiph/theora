@@ -6,7 +6,9 @@ docdir = $(datadir)/doc/$(PACKAGE)-$(VERSION)
 
 built_docs =
 
-static_docs = vp3-format.txt color.html
+static_docs = vp3-format.txt color.html \
+	draft-barbato-avt-rtp-theora-00.xml \
+	draft-barbato-avt-rtp-theora-00.txt
 
 doc_DATA = $(built_docs) $(static_docs) doxygen-build.stamp
 
@@ -29,18 +31,28 @@ dist_docdir = $(distdir)/libtheora
 dist-hook:
 	if test -d libtheora; then \
 	  mkdir $(dist_docdir); \
+	  echo -n "copying built documenation..."; \
 	  for dir in libtheora/*; do \
 	    b=`basename $$dir`; \
-	    if test $$b != "CVS"; then \
+	    if test $$b != ".svn"; then \
 	      if test -d $$dir; then \
 		mkdir $(dist_docdir)/$$b; \
 		for f in $$dir/*; do \
 		  cp -p $$f $(dist_docdir)/$$b; \
-		done \
-	      fi \
-	    fi \
-	  done \
+		done; \
+	      fi; \
+	    fi; \
+	  done; \
+	  echo "OK"; \
 	fi
+	for item in $(EXTRA_DIST); do \
+	  if test -d $$item; then \
+	    echo -n "cleaning $$item dir for distribution..."; \
+	    rm -rf `find $(distdir)/$$item -name .svn`; \
+	    echo "OK"; \
+	  fi; \
+	done
+
 
 
 install-data-local: doxygen-build.stamp
