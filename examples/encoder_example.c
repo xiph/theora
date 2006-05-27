@@ -263,7 +263,7 @@ static void id_file(char *f){
         fprintf(stderr,"Incorrect YUV input file version; YUV4MPEG2 required.\n");
       }
 
-      ret=sscanf(buffer,"MPEG2 W%d H%d F%d:%d I%c A%d:%d",
+      ret=sscanf((char *)buffer,"MPEG2 W%d H%d F%d:%d I%c A%d:%d",
                  &frame_x,&frame_y,&tmp_video_hzn,&tmp_video_hzd,&interlace,
                  &tmp_video_an,&tmp_video_ad);
       if(ret<7){
@@ -377,8 +377,8 @@ int fetch_and_process_video(FILE *video,ogg_page *videopage,
                             int videoflag){
   /* You'll go to Hell for using static variables */
   static int          state=-1;
-  static signed char *yuvframe[2];
-  signed char        *line;
+  static unsigned char *yuvframe[2];
+  unsigned char        *line;
   yuv_buffer          yuv;
   ogg_packet          op;
   int i, e;
@@ -496,7 +496,7 @@ int fetch_and_process_video(FILE *video,ogg_page *videopage,
       ogg_stream_packetin(to,&op);
 
       {
-        signed char *temp=yuvframe[0];
+        unsigned char *temp=yuvframe[0];
         yuvframe[0]=yuvframe[1];
         yuvframe[1]=temp;
         state--;
