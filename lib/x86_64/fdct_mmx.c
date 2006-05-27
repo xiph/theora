@@ -1,13 +1,17 @@
-;//==========================================================================
-;//
-;//  THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
-;//  KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
-;//  IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR
-;//  PURPOSE.
-;//
-;//  Copyright (c) 1999 - 2001  On2 Technologies Inc. All Rights Reserved.
-;//
-;//--------------------------------------------------------------------------
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggTheora SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 1999-2006                *
+ * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ *                                                                  *
+ ********************************************************************/
+
+/* mmx fdct implementation for x86_64 */
+/* $Id$ */
 
 #include "theora/theora.h"
 #include "codec_internal.h"
@@ -27,23 +31,6 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
 #else
 # define M(a) #a
 #endif
-
-/***********************************************************************
- *	File:			fdct_m.asm
- *
- *	Description:
- *					This function perform 2-D Forward DCT on a 8x8 block
- *					
- *
- *	Input:			Pointers to input source data buffer and destination 
- *					buffer.
- *
- *	Note:			none
- *
- *	Special Notes:	We try to do the truncation right to match the result 
- *					of the c version. 
- *
- ************************************************************************/
 
 /* execute stage 1 of forward DCT */
 #define Fdct_mmx(ip0,ip1,ip2,ip3,ip4,ip5,ip6,ip7,temp)                        \
@@ -299,6 +286,9 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  movq        %%mm2," #op2 "     \n\t"
 
 
+/* This performs a 2D Forward DCT on an 8x8 block with short
+   coefficients. We try to do the truncation to match the C
+   version. */
 static void fdct_short__mmx ( ogg_int16_t *InputData, ogg_int16_t *OutputData)
 {
   ogg_int64_t __attribute__((aligned(8))) align_tmp[16];
@@ -342,6 +332,7 @@ static void fdct_short__mmx ( ogg_int16_t *InputData, ogg_int16_t *OutputData)
   );
 }
 
+/* install our implementation in the function table */
 void dsp_mmx_fdct_init(DspFunctions *funcs)
 {
   TH_DEBUG("enabling accelerated x86_64 mmx fdct function.\n");
