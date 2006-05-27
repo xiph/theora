@@ -85,7 +85,7 @@ extern void dsp_recon_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
 
 void dsp_init(DspFunctions *funcs);
 void dsp_static_init(DspFunctions *funcs);
-#if defined(__i386__)
+#if defined(USE_ASM) && (defined(__i386__) || defined(__x86_64__))
 extern void dsp_mmx_init(DspFunctions *funcs);
 extern void dsp_mmxext_init(DspFunctions *funcs);
 extern void dsp_mmx_fdct_init(DspFunctions *funcs);

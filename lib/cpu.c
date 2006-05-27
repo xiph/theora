@@ -45,7 +45,8 @@ cpuid(ogg_int32_t op, ogg_uint32_t *eax, ogg_uint32_t *ebx, ogg_uint32_t *ecx, o
 #endif
 }
 
-#if defined(__x86_64__) || defined(__i386__)
+#if defined(USE_ASM) && (defined(__i386__) || defined(__x86_64__))
+
 static ogg_uint32_t cpu_get_flags (void)
 {
   ogg_uint32_t eax, ebx, ecx, edx;
@@ -101,13 +102,13 @@ static ogg_uint32_t cpu_get_flags (void)
   return flags;
 }
 
-#else /* not an i386 or x86_64 */
+#else /* no supported cpu architecture */
 
 static ogg_uint32_t cpu_get_flags (void) {
   return 0;
 }
 
-#endif
+#endif /* USE_ASM */
 
 ogg_uint32_t cpu_init (void)
 {

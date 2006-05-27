@@ -257,7 +257,7 @@ static void fdct_short__c ( ogg_int16_t * InputData, ogg_int16_t * OutputData ){
 void dsp_dct_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)
 {
   funcs->fdct_short = fdct_short__c;
-#if (defined(__i386__) || defined(__x86_64__))
+#if defined(USE_ASM)
   if (cpu_flags & CPU_X86_MMX) {
     dsp_mmx_fdct_init(funcs);
   }

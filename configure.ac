@@ -97,15 +97,20 @@ else
         *)
                 DEBUG="-g -Wall -DDEBUG -D__NO_MATH_INLINES"
                 CFLAGS="-Wall -O3 -fforce-addr -fomit-frame-pointer -finline-functions -funroll-loops"
-                PROFILE="-Wall -pg -g -O3 -fno-inline-functions -DDEBGU";;
+                PROFILE="-Wall -pg -g -O3 -fno-inline-functions -DDEBUG";;
         esac
 fi
 CFLAGS="$CFLAGS $cflags_save"
 
-cpu_optimization="no optimization for your platform, please send a patch"
 cpu_x86_64=no
 cpu_x86_32=no
-case $target_cpu in
+AC_ARG_ENABLE(asm,
+    [  --disable-asm           disable assembly optimizations ],
+    [ ac_enable_asm=$enableval ], [ ac_enable_asm=yes] )
+
+if test "x${ac_enable_asm}" = xyes; then
+  cpu_optimization="no optimization for your platform, please send a patch"
+  case $target_cpu in
 	i[[3456]]86)
 		cpu_x86_32=yes 
 		cpu_optimization="32 bit x86"
@@ -114,7 +119,10 @@ case $target_cpu in
 		cpu_x86_64=yes
 		cpu_optimization="64 bit x86"
 	;;
-esac
+  esac
+else
+  cpu_optimization="disabled"
+fi
 AM_CONDITIONAL([CPU_x86_64], [test x$cpu_x86_64 = xyes])
 AM_CONDITIONAL([CPU_x86_32], [test x$cpu_x86_32 = xyes])
 
