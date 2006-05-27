@@ -11,7 +11,7 @@
  ********************************************************************
 
   function: read/write and client interface for comment header packet
-  last mod: $Id: comment.c,v 1.10 2004/03/18 14:25:25 tterribe Exp $
+  last mod: $Id$
 
  ********************************************************************/
 

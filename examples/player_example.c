@@ -12,7 +12,7 @@
 
   function: example SDL player application; plays Ogg Theora files (with
             optional Vorbis audio second stream)
-  last mod: $Id: player_example.c,v 1.29 2004/03/08 06:44:26 giles Exp $
+  last mod: $Id$
 
  ********************************************************************/
 

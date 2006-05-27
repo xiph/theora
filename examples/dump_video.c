@@ -11,7 +11,7 @@
  ********************************************************************
 
   function: example dumpvid application; dumps  Theora streams
-  last mod: $Id: dump_video.c,v 1.10 2004/03/08 06:44:26 giles Exp $
+  last mod: $Id$
 
  ********************************************************************/
 

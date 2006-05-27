@@ -11,7 +11,7 @@
  ********************************************************************
 
   function: simple static lookups for VP3 frame encoder
-  last mod: $Id: encoder_lookup.h,v 1.8 2003/12/03 08:59:42 arc Exp $
+  last mod: $Id$
 
  ********************************************************************/
 
