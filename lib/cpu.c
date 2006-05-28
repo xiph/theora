@@ -18,9 +18,10 @@
 #include "cpu.h"
 
 void
-cpuid(ogg_int32_t op, ogg_uint32_t *eax, ogg_uint32_t *ebx, ogg_uint32_t *ecx, ogg_uint32_t *edx)
+cpuid(ogg_int32_t op, ogg_uint32_t *out_eax, ogg_uint32_t *out_ebx, ogg_uint32_t *out_ecx, ogg_uint32_t *out_edx)
 {
-#if defined(__x86_64__)
+#ifdef USE_ASM
+# if defined(__x86_64__)
   asm volatile ("pushq %%rbx   \n\t"
                 "cpuid         \n\t"
                 "movl %%ebx,%1 \n\t"
@@ -31,7 +32,7 @@ cpuid(ogg_int32_t op, ogg_uint32_t *eax, ogg_uint32_t *ebx, ogg_uint32_t *ecx, o
                 "=d" (*edx)          
               : "a" (op)            
               : "cc");
-#elif defined(__i386__)
+# elif defined(__i386__)
   asm volatile ("pushl %%ebx   \n\t"
                 "cpuid         \n\t"
                 "movl %%ebx,%1 \n\t"
@@ -42,6 +43,27 @@ cpuid(ogg_int32_t op, ogg_uint32_t *eax, ogg_uint32_t *ebx, ogg_uint32_t *ecx, o
                 "=d" (*edx)          
               : "a" (op)            
               : "cc");
+# elif defined(WIN32)
+    ogg_uint32_t my_eax, my_ebx, my_ecx, my_edx;
+    __asm {
+        //push   ebx
+        mov     eax, op
+        cpuid
+        mov     my_eax, eax
+        mov     my_ebx, ebx
+        mov     my_ecx, ecx
+        mov     my_edx, edx
+        
+
+
+    };
+
+    *out_eax = my_eax;
+    *out_ebx = my_ebx;
+    *out_ecx = my_ecx;
+    *out_edx = my_edx; 
+# endif
+
 #endif
 }
 
