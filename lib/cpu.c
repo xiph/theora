@@ -67,7 +67,7 @@ cpuid(ogg_int32_t op, ogg_uint32_t *out_eax, ogg_uint32_t *out_ebx, ogg_uint32_t
 #endif
 }
 
-#if defined(USE_ASM) && (defined(__i386__) || defined(__x86_64__) || defined(WIN32))
+#if defined(USE_ASM)
 
 static ogg_uint32_t cpu_get_flags (void)
 {
