@@ -21,8 +21,15 @@
 #define _LARGEFILE64_SOURCE
 #define _FILE_OFFSET_BITS 64
 
+/* Define to give performance data win32 only*/
+//#define THEORA_PERF_DATA 
+#ifdef THEORA_PERF_DATA
+#include <windows.h>
+#endif
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
+
 #endif
 
 #ifndef _REENTRANT
@@ -30,10 +37,16 @@
 #endif
 
 #include <stdio.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
+#ifndef WIN32
 #include <getopt.h>
+#else
+#include "getopt.h"
+#endif
 #include <time.h>
 #include <math.h>
 #include "theora/theora.h"
@@ -537,15 +550,30 @@ int main(int argc,char *argv[]){
   ogg_int64_t video_bytesout=0;
   double timebase;
 
+
   FILE* outfile = stdout;
 
-#ifdef _WIN32 /* We need to set stdin/stdout to binary mode. Damn windows. */
+#ifdef _WIN32 
+# ifdef THEORA_PERF_DATA
+    LARGE_INTEGER start_time;
+    LARGE_INTEGER final_time;
+
+    LONGLONG elapsed_ticks;
+    LARGE_INTEGER ticks_per_second;
+    
+    LONGLONG elapsed_secs;
+    LONGLONG elapsed_sec_mod;
+    double elapsed_secs_dbl ;
+# endif
+  /* We need to set stdin/stdout to binary mode. Damn windows. */
   /* if we were reading/writing a file, it would also need to in
      binary mode, eg, fopen("file.wav","wb"); */
   /* Beware the evil ifdef. We avoid these where we can, but this one we
      cannot. Don't add any more, you'll probably go to hell if you do. */
   _setmode( _fileno( stdin ), _O_BINARY );
   _setmode( _fileno( stdout ), _O_BINARY );
+
+
 #endif
 
   while((c=getopt_long(argc,argv,optstring,options,&long_option_index))!=EOF){
@@ -620,6 +648,15 @@ int main(int argc,char *argv[]){
     id_file(argv[optind]);
     optind++;
   }
+
+
+
+#ifdef THEORA_PERF_DATA
+# ifdef WIN32
+    QueryPerformanceCounter(&start_time);
+# endif
+#endif
+
 
   /* yayness.  Set up Ogg output stream */
   srand(time(NULL));
@@ -847,6 +884,23 @@ int main(int argc,char *argv[]){
   if(outfile && outfile!=stdout)fclose(outfile);
 
   fprintf(stderr,"\r   \ndone.\n\n");
+
+#ifdef THEORA_PERF_DATA
+# ifdef WIN32
+    QueryPerformanceCounter(&final_time);
+    elapsed_ticks = final_time.QuadPart - start_time.QuadPart;
+    ticks_per_second;
+    QueryPerformanceFrequency(&ticks_per_second);
+    elapsed_secs = elapsed_ticks / ticks_per_second.QuadPart;
+    elapsed_sec_mod = elapsed_ticks % ticks_per_second.QuadPart;
+    elapsed_secs_dbl = elapsed_secs;
+    elapsed_secs_dbl += ((double)elapsed_sec_mod / (double)ticks_per_second.QuadPart);
+    printf("Encode time = %lld ticks\n", elapsed_ticks);
+    printf("~%lld and %lld / %lld seconds\n", elapsed_secs, elapsed_sec_mod, ticks_per_second.QuadPart);
+    printf("~%Lf seconds\n", elapsed_secs_dbl);
+# endif
+
+#endif 
 
   return(0);
 

@@ -41,8 +41,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include;..\..\..\lib"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS; THEORA_USE_ASM"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -122,12 +122,12 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="3"
+				Optimization="2"
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include;..\..\..\lib"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS; THEORA_USE_ASM"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
@@ -135,7 +135,7 @@
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				Detect64BitPortabilityProblems="true"
-				DebugInformationFormat="3"
+				DebugInformationFormat="0"
 				CompileAs="1"
 				DisableSpecificWarnings="4244;4267;4057;4100;4245"
 			/>
@@ -153,7 +153,7 @@
 				OutputFile="$(OutDir)/libtheora.dll"
 				LinkIncremental="1"
 				ModuleDefinitionFile="..\..\libtheora.def"
-				GenerateDebugInformation="true"
+				GenerateDebugInformation="false"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -216,8 +216,8 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include;..\..\..\lib"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS; THEORA_USE_ASM"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
@@ -307,8 +307,8 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include;..\..\..\lib"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS; THEORA_USE_ASM"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
@@ -410,11 +410,19 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\lib\x86_32_vs\dsp_mmx.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\lib\encode.c"
 				>
 			</File>
 			<File
 				RelativePath="..\..\..\lib\encoder_toplevel.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\lib\x86_32_vs\fdct_mmx.c"
 				>
 			</File>
 			<File
@@ -455,6 +463,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\lib\quant.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\lib\x86_32_vs\recon_mmx.c"
 				>
 			</File>
 			<File
