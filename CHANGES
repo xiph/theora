@@ -1,4 +1,8 @@
-libtheora 1.0alph6 (2006 May 30)
+libtheora 1.0alpha7 (unreleased)
+
+ - no changes yet -
+
+libtheora 1.0alpha6 (2006 May 30)
 
  * Merge theora-mmx simd acceleration (x86_32 and x86_64)
  * Major RTP payload specification update
