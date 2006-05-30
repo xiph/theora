@@ -8,6 +8,10 @@ Timothy B. Terriberry
 Dan B. Miller
 	- Pre alpha3 development
 	
+Wim Tayman
+Dan Lenski
+	- MMX optimized functions
+	
 Aaron Colwell
 Thomas Vander Stichele
 Jan Gerber
@@ -23,7 +27,7 @@ Arc Riley
 
 Silvia Pfeiffer
 	- Figures for the spec
-	
+
 Michael Smith
 Andre Pang
 calc

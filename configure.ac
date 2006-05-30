@@ -4,7 +4,7 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT(libtheora,[1.0alpha6-svn])
+AC_INIT(libtheora,[1.0alpha6])
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
