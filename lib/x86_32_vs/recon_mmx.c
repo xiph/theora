@@ -8,11 +8,6 @@
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
- ********************************************************************
-
-  function:
-  last mod: $Id: reconstruct.c,v 1.6 2003/12/03 08:59:41 arc Exp $
-
  ********************************************************************/
 
 #include "codec_internal.h"
