@@ -413,6 +413,7 @@ static void recon_inter8x8_half__sse2 (unsigned char *ReconPtr, unsigned char *R
 		           unsigned char *RefPtr2, ogg_int16_t *ChangePtr,
 			   ogg_uint32_t LineStep)
 {
+#if 0
   ogg_uint32_t  i;
 
   for (i = 8; i; i--){
@@ -430,6 +431,178 @@ static void recon_inter8x8_half__sse2 (unsigned char *ReconPtr, unsigned char *R
     RefPtr1 += LineStep;
     RefPtr2 += LineStep;
   }
+
+#else
+
+    __asm {
+        align 16
+
+        mov         eax, LineStep
+        mov         ebx, RefPtr1
+        mov         ecx, RefPtr2
+        mov         edx, ChangePtr
+        mov         edi, ReconPtr
+
+        pxor        xmm0, xmm0
+
+        /* Iteration 1 */
+        movq        xmm1, QWORD PTR [ebx]
+        movq        xmm2, QWORD PTR [ecx]
+        punpcklbw   xmm1, xmm0
+        punpcklbw   xmm2, xmm0
+        paddsw      xmm1, xmm2
+        psrlw       xmm1, 1
+
+        movdqa      xmm2, [edx]
+        paddsw      xmm1, xmm2
+
+        packuswb    xmm1, xmm0
+
+        movq        QWORD PTR [edi], xmm1
+        lea         edi, [edi + eax]
+        lea         ebx, [ebx + eax]
+        lea         ecx, [ecx + eax]
+        lea         edx, [edx + 16]
+
+
+        /* Iteration 2 */
+        movq        xmm1, QWORD PTR [ebx]
+        movq        xmm2, QWORD PTR [ecx]
+        punpcklbw   xmm1, xmm0
+        punpcklbw   xmm2, xmm0
+        paddsw      xmm1, xmm2
+        psrlw       xmm1, 1
+
+        movdqa      xmm2, [edx]
+        paddsw      xmm1, xmm2
+
+        packuswb    xmm1, xmm0
+
+        movq        QWORD PTR [edi], xmm1
+        lea         edi, [edi + eax]
+        lea         ebx, [ebx + eax]
+        lea         ecx, [ecx + eax]
+        lea         edx, [edx + 16]
+
+        /* Iteration 3 */
+        movq        xmm1, QWORD PTR [ebx]
+        movq        xmm2, QWORD PTR [ecx]
+        punpcklbw   xmm1, xmm0
+        punpcklbw   xmm2, xmm0
+        paddsw      xmm1, xmm2
+        psrlw       xmm1, 1
+
+        movdqa      xmm2, [edx]
+        paddsw      xmm1, xmm2
+
+        packuswb    xmm1, xmm0
+
+        movq        QWORD PTR [edi], xmm1
+        lea         edi, [edi + eax]
+        lea         ebx, [ebx + eax]
+        lea         ecx, [ecx + eax]
+        lea         edx, [edx + 16]
+
+        /* Iteration 4 */
+        movq        xmm1, QWORD PTR [ebx]
+        movq        xmm2, QWORD PTR [ecx]
+        punpcklbw   xmm1, xmm0
+        punpcklbw   xmm2, xmm0
+        paddsw      xmm1, xmm2
+        psrlw       xmm1, 1
+
+        movdqa      xmm2, [edx]
+        paddsw      xmm1, xmm2
+
+        packuswb    xmm1, xmm0
+
+        movq        QWORD PTR [edi], xmm1
+        lea         edi, [edi + eax]
+        lea         ebx, [ebx + eax]
+        lea         ecx, [ecx + eax]
+        lea         edx, [edx + 16]
+
+        /* Iteration 5 */
+        movq        xmm1, QWORD PTR [ebx]
+        movq        xmm2, QWORD PTR [ecx]
+        punpcklbw   xmm1, xmm0
+        punpcklbw   xmm2, xmm0
+        paddsw      xmm1, xmm2
+        psrlw       xmm1, 1
+
+        movdqa      xmm2, [edx]
+        paddsw      xmm1, xmm2
+
+        packuswb    xmm1, xmm0
+
+        movq        QWORD PTR [edi], xmm1
+        lea         edi, [edi + eax]
+        lea         ebx, [ebx + eax]
+        lea         ecx, [ecx + eax]
+        lea         edx, [edx + 16]
+
+        /* Iteration 6 */
+        movq        xmm1, QWORD PTR [ebx]
+        movq        xmm2, QWORD PTR [ecx]
+        punpcklbw   xmm1, xmm0
+        punpcklbw   xmm2, xmm0
+        paddsw      xmm1, xmm2
+        psrlw       xmm1, 1
+
+        movdqa      xmm2, [edx]
+        paddsw      xmm1, xmm2
+
+        packuswb    xmm1, xmm0
+
+        movq        QWORD PTR [edi], xmm1
+        lea         edi, [edi + eax]
+        lea         ebx, [ebx + eax]
+        lea         ecx, [ecx + eax]
+        lea         edx, [edx + 16]
+
+        /* Iteration 7 */
+        movq        xmm1, QWORD PTR [ebx]
+        movq        xmm2, QWORD PTR [ecx]
+        punpcklbw   xmm1, xmm0
+        punpcklbw   xmm2, xmm0
+        paddsw      xmm1, xmm2
+        psrlw       xmm1, 1
+
+        movdqa      xmm2, [edx]
+        paddsw      xmm1, xmm2
+
+        packuswb    xmm1, xmm0
+
+        movq        QWORD PTR [edi], xmm1
+        lea         edi, [edi + eax]
+        lea         ebx, [ebx + eax]
+        lea         ecx, [ecx + eax]
+        lea         edx, [edx + 16]
+
+        /* Iteration 8 */
+        movq        xmm1, QWORD PTR [ebx]
+        movq        xmm2, QWORD PTR [ecx]
+        punpcklbw   xmm1, xmm0
+        punpcklbw   xmm2, xmm0
+        paddsw      xmm1, xmm2
+        psrlw       xmm1, 1
+
+        movdqa      xmm2, [edx]
+        paddsw      xmm1, xmm2
+
+        packuswb    xmm1, xmm0
+
+        movq        QWORD PTR [edi], xmm1
+ /*       lea         edi, [edi + LineStep]
+        lea         ebx, [ebx + LineStep]
+        lea         ecx, [ecx + LineStep]
+        lea         edx, [edx + 16]*/
+
+
+
+    };
+
+#endif
 }
 
 
