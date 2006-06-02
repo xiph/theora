@@ -14,7 +14,7 @@
 #include "dsp.h"
 #include "cpu.h"
 
-static const unsigned int V128x16[4] = { 0x80808080, 0x80808080, 0x80808080, 0x80808080 };
+static __declspec(align(16)) const unsigned int V128x16[4] = { 0x80808080, 0x80808080, 0x80808080, 0x80808080 };
 static const unsigned int* V128x16Ptr = V128x16;
 
 static void copy8x8__sse2 (unsigned char *src,
@@ -66,12 +66,6 @@ static void copy8x8__sse2 (unsigned char *src,
         lea         edx, [ecx + ecx * 4]
         lea         esi, [ecx + edi * 2]
 
-        /* 
-            TODO::: If we can somehow ensure each addressed element of src 
-            and dest, were 16 byte aligned could maybe use movdqa which might be
-            faster. That requires that the base pointer is aligned,
-            and that the stride is a multiple of 16
-            */
 
         /* Load all 8 registers */
         movq      xmm0, QWORD PTR [eax]
@@ -143,6 +137,12 @@ static void recon_intra8x8__sse2 (unsigned char *ReconPtr, ogg_int16_t *ChangePt
     7   CCCC CCCC .... .... .... 
     */
 
+
+
+    /* ChangePtr must be 16 byte aligned */
+    /* LineStep must be a multiple of 16 */
+
+
     __asm {
 
         align 16
@@ -152,34 +152,34 @@ static void recon_intra8x8__sse2 (unsigned char *ReconPtr, ogg_int16_t *ChangePt
         mov     ecx, LineStep
         mov     edx, V128x16Ptr
 
-        /* Check whether we can use movdqa for 16 byte alignment */
 
-        movdqu      xmm7, [edx]
+        movdqa      xmm7, [edx]
         /* 8 lots of int16 per register on the first mov */
         /* Then packs those 8 + another 8 down to 16x 8 bits */
         /* Loads the data in only 4 iterations into different registers */
         /* Maybe just make all the loads offsetted adress and no lea? */
         
         /* Iteration 1 - xmm0 */
-        movdqu      xmm0, [ebx]
-        packsswb    xmm0, [ebx + 16]
+        movdqa      xmm0, [ebx]
+        movdqa      xmm6, [ebx + 16]
+        packsswb    xmm0, xmm6  /*[ebx + 16]*/
         pxor        xmm0, xmm7
         lea         ebx, [ebx + 32]
 
         /* Iteration 2 - xmm1*/
-        movdqu      xmm1, [ebx]
+        movdqa      xmm1, [ebx]
         packsswb    xmm1, [ebx + 16]
         pxor        xmm1, xmm7
         lea         ebx, [ebx + 32]
 
         /* Iteration 3 - xmm2 */
-        movdqu      xmm2, [ebx]
+        movdqa      xmm2, [ebx]
         packsswb    xmm2, [ebx + 16]
         pxor        xmm2, xmm7
         lea         ebx, [ebx + 32]
 
         /* Iteration 4 - xmm3 */
-        movdqu      xmm3, [ebx]
+        movdqa      xmm3, [ebx]
         packsswb    xmm3, [ebx + 16]
         pxor        xmm3, xmm7
         /* lea         ebx, [ebx + 16] */
@@ -220,6 +220,8 @@ static void recon_intra8x8__sse2 (unsigned char *ReconPtr, ogg_int16_t *ChangePt
 static void recon_inter8x8__sse2 (unsigned char *ReconPtr, unsigned char *RefPtr,
 		      ogg_int16_t *ChangePtr, ogg_uint32_t LineStep)
 {
+
+#if 0
   ogg_uint32_t i;
 
   for (i = 8; i; i--){
@@ -236,6 +238,175 @@ static void recon_inter8x8__sse2 (unsigned char *ReconPtr, unsigned char *RefPtr
     ReconPtr += LineStep;
     RefPtr += LineStep;
   }
+#else
+    
+    /*
+
+            @RefPtr
+            <--- Line Step -------->
+    0       RRRR RRRR .... .... ....
+    ...
+    7       RRRR RRRR .... .... ....
+
+
+            @ChangePtr
+    0       HLHL HLHL HLHL HLHL
+    ...
+    7       HLHL HLHL HLHL HLHL
+
+
+            @ReconPtr
+            <--- Line Step -------->
+    0       XXXX XXXX .... .... ....
+    ...
+    7       XXXX XXXX .... .... ....
+
+
+    Y = HL (16 bits, H-high 8, L-low 8)
+
+    X = clamp255(Y+R)
+
+    */
+
+
+
+    /* TODO - It could be better on this one to interleave the writes
+        as it goes */
+
+    __asm {
+        align   16
+        
+        /* Setup params */
+        mov         eax, ReconPtr
+        mov         ebx, ChangePtr
+        mov         ecx, LineStep
+        mov         edx, RefPtr     /* This pointer isn't properly aligned - recheck this*/
+
+        /* xmm0 = 0 */
+        pxor        xmm0, xmm0
+
+
+        /* Iteration 1&2 */
+        movdqa      xmm1, [ebx]
+        movq        xmm2, QWORD PTR [edx]
+        punpcklbw   xmm2, xmm0
+        paddsw      xmm1, xmm2
+
+        /* xmm1 holds 8x8bit of output spread into 8x16bit */
+
+        movdqa      xmm2, [ebx + 16]
+        movq        xmm3, QWORD PTR [edx + ecx]
+        punpcklbw   xmm3, xmm0
+        paddsw      xmm2, xmm3
+
+        /* xmm2 holds 8x8bit of output spread into 8x16bit */
+
+        
+        /* Advance Pointers */
+        lea         ebx, [ebx + 32]
+        lea         edx, [edx + ecx * 2]
+
+
+        /* Iteration 3&4 */
+        movdqa      xmm3, [ebx]
+        movq        xmm4, QWORD PTR [edx]
+        punpcklbw   xmm4, xmm0
+        paddsw      xmm3, xmm4
+
+        /* xmm3 holds 8x8bit of output spread into 8x16bit */
+
+        movdqa      xmm4, [ebx + 16]
+        movq        xmm5, QWORD PTR [edx + ecx]
+        punpcklbw   xmm5, xmm0
+        paddsw      xmm4, xmm5
+
+        /* xmm4 holds 8x8bit of output spread into 8x16bit */
+
+        
+        /* Advance Pointers */
+        lea         ebx, [ebx + 32]
+        lea         edx, [edx + ecx * 2]
+
+
+        /* Consolidate the results from 4 registers of 16bits to 2 of 8bits */
+        packuswb    xmm1, xmm2
+        packuswb    xmm3, xmm4
+
+
+
+        /* Iteration 5&6 */
+        movdqa      xmm6, [ebx]
+        movq        xmm2, QWORD PTR [edx]
+        punpcklbw   xmm2, xmm0
+        paddsw      xmm6, xmm2
+
+        /* xmm6 holds 8x8bit of output spread into 8x16bit */
+
+        movdqa      xmm2, [ebx + 16]
+        movq        xmm7, QWORD PTR [edx + ecx]
+        punpcklbw   xmm7, xmm0
+        paddsw      xmm2, xmm7
+
+        /* xmm2 holds 8x8bit of output spread into 8x16bit */
+
+        
+        /* Advance Pointers */
+        lea         ebx, [ebx + 32]
+        lea         edx, [edx + ecx * 2]
+
+
+        /* Iteration 7&8 */
+        movdqa      xmm7, [ebx]
+        movq        xmm4, QWORD PTR [edx]
+        punpcklbw   xmm4, xmm0
+        paddsw      xmm7, xmm4
+
+        /* xmm7 holds 8x8bit of output spread into 8x16bit */
+
+        movdqa      xmm4, [ebx + 16]
+        movq        xmm5, QWORD PTR [edx + ecx]
+        punpcklbw   xmm5, xmm0
+        paddsw      xmm4, xmm5
+
+        /* xmm4 holds 8x8bit of output spread into 8x16bit */
+
+        
+        /* Consolidate the results from 4 registers of 16bits to 2 of 8bits */
+        packuswb    xmm6, xmm2
+        packuswb    xmm7, xmm4
+        
+
+        /* Write the results out */
+
+        /* Iteration 1&2 - xmm1 */
+        movq        QWORD PTR [eax], xmm1
+        psrldq      xmm1, 8
+        movq        QWORD PTR [eax + ecx], xmm1
+        lea         eax, [eax + ecx * 2]
+        
+        /* Iteration 3&4 - xmm3 */
+        movq        QWORD PTR [eax], xmm3
+        psrldq      xmm3, 8
+        movq        QWORD PTR [eax + ecx], xmm3
+        lea         eax, [eax + ecx * 2]
+
+        /* Iteration 5&6 - xmm6 */
+        movq        QWORD PTR [eax], xmm6
+        psrldq      xmm6, 8
+        movq        QWORD PTR [eax + ecx], xmm6
+        lea         eax, [eax + ecx * 2]
+
+        /* Iteration 7&8 - xmm7 */
+        movq        QWORD PTR [eax], xmm7
+        psrldq      xmm7, 8
+        movq        QWORD PTR [eax + ecx], xmm7
+        /* lea         eax, [eax + ecx]*/
+
+
+ 
+    };
+
+#endif
 }
 
 static void recon_inter8x8_half__sse2 (unsigned char *ReconPtr, unsigned char *RefPtr1,

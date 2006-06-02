@@ -22,7 +22,7 @@
 void ClearTmpBuffers(PB_INSTANCE * pbi){
 
   if(pbi->ReconDataBuffer)
-    _ogg_free(pbi->ReconDataBuffer);
+    _theora_16_byte_aligned_free(pbi->ReconDataBuffer);
   if(pbi->DequantBuffer)
     _ogg_free(pbi->DequantBuffer);
   if(pbi->TmpDataBuffer)
@@ -63,7 +63,7 @@ void InitTmpBuffers(PB_INSTANCE * pbi){
 
   /* Adjust the position of all of our temporary */
   pbi->ReconDataBuffer      =
-    _ogg_malloc(64*sizeof(*pbi->ReconDataBuffer));
+    _theora_16_byte_aligned_malloc(64*sizeof(*pbi->ReconDataBuffer));
 
   pbi->DequantBuffer        =
     _ogg_malloc(64 * sizeof(*pbi->DequantBuffer));

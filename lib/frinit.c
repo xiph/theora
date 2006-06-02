@@ -277,11 +277,11 @@ void InitFragmentInfo(PB_INSTANCE * pbi){
 
 void ClearFrameInfo(PB_INSTANCE * pbi){
   if(pbi->ThisFrameRecon )
-    _ogg_free(pbi->ThisFrameRecon );
+    _theora_16_byte_aligned_free(pbi->ThisFrameRecon );
   if(pbi->GoldenFrame)
     _ogg_free(pbi->GoldenFrame);
   if(pbi->LastFrameRecon)
-    _ogg_free(pbi->LastFrameRecon);
+    _theora_16_byte_aligned_free(pbi->LastFrameRecon);
   if(pbi->PostProcessBuffer)
     _ogg_free(pbi->PostProcessBuffer);
 
@@ -306,13 +306,13 @@ void InitFrameInfo(PB_INSTANCE * pbi, unsigned int FrameSize){
 
   /* allocate frames */
   pbi->ThisFrameRecon =
-    _ogg_malloc(FrameSize*sizeof(*pbi->ThisFrameRecon));
+    _theora_16_byte_aligned_malloc(FrameSize*sizeof(*pbi->ThisFrameRecon));
 
   pbi->GoldenFrame =
     _ogg_malloc(FrameSize*sizeof(*pbi->GoldenFrame));
 
   pbi->LastFrameRecon =
-    _ogg_malloc(FrameSize*sizeof(*pbi->LastFrameRecon));
+    _theora_16_byte_aligned_malloc(FrameSize*sizeof(*pbi->LastFrameRecon));
 
   pbi->PostProcessBuffer =
     _ogg_malloc(FrameSize*sizeof(*pbi->PostProcessBuffer));

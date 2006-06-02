@@ -90,6 +90,7 @@ extern void dsp_mmx_init(DspFunctions *funcs);
 extern void dsp_mmxext_init(DspFunctions *funcs);
 extern void dsp_mmx_fdct_init(DspFunctions *funcs);
 extern void dsp_mmx_recon_init(DspFunctions *funcs);
+extern void dsp_sse2_recon_init(DspFunctions *funcs);
 #endif
 
 #define dsp_save_fpu(funcs) (funcs.save_fpu ())

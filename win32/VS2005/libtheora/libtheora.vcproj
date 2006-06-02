@@ -46,6 +46,7 @@
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
+				EnableEnhancedInstructionSet="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="true"
@@ -470,6 +471,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\lib\x86_32_vs\recon_sse2.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\lib\reconstruct.c"
 				>
 			</File>
@@ -489,6 +494,10 @@
 			>
 			<File
 				RelativePath="..\..\..\lib\block_inline.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\lib\codec_internal.h"
 				>
 			</File>
 			<File
