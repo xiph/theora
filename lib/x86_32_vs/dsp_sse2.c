@@ -236,15 +236,13 @@ static void sub8x8_128__sse2 (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
              8x16bits to fill all 128 bits of the register        
         */
         movq        xmm1, QWORD PTR [esi]
-        punpcklbw   xmm1, xmm0
-
         movq        xmm2, QWORD PTR [esi + eax]
-        punpcklbw   xmm2, xmm0
-
         movq        xmm3, QWORD PTR [esi + eax * 2]
-        punpcklbw   xmm3, xmm0
-
         movq        xmm4, QWORD PTR [esi + ebx]
+
+        punpcklbw   xmm1, xmm0
+        punpcklbw   xmm2, xmm0
+        punpcklbw   xmm3, xmm0
         punpcklbw   xmm4, xmm0
 
         /* Subtract 128 16bitwise and write*/
@@ -258,21 +256,24 @@ static void sub8x8_128__sse2 (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
         movdqa      [edi + 48], xmm4
 
 
+
+
         /* Advance the source and dest pointer for the next 4 iterations */
         lea         esi, [esi + eax * 4]
         add         edi, 64
 
+
+
+
         /* Repeat of above for second round */
         movq        xmm1, QWORD PTR [esi]
-        punpcklbw   xmm1, xmm0
-
         movq        xmm2, QWORD PTR [esi + eax]
-        punpcklbw   xmm2, xmm0
-
         movq        xmm3, QWORD PTR [esi + eax * 2]
-        punpcklbw   xmm3, xmm0
-
         movq        xmm4, QWORD PTR [esi + ebx]
+
+        punpcklbw   xmm1, xmm0
+        punpcklbw   xmm2, xmm0
+        punpcklbw   xmm3, xmm0
         punpcklbw   xmm4, xmm0
 
         /* Subtract 128 16bitwise and write*/
@@ -286,6 +287,7 @@ static void sub8x8_128__sse2 (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
         movdqa      [edi + 48], xmm4
 
     };
+
  
 #endif
 }
