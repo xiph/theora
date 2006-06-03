@@ -657,6 +657,9 @@ static ogg_uint32_t col_sad8x8__sse2 (unsigned char *Src1, unsigned char *Src2,
  
     ogg_uint32_t SadValue;
 
+    /* TODO::: It may not be worth contracting to 8 bit in the middle 
+                The conversion back and forth possibly outweighs the saving */
+
 
     __asm {
         align       16
@@ -887,177 +890,163 @@ static ogg_uint32_t sad8x8__sse2 (unsigned char *ptr1, ogg_uint32_t stride1,
 
   return sad;
 #else
+
   ogg_uint32_t  DiffVal;
 
   __asm {
     align  16
 
-    mov         ebx, ptr1
-    mov         edx, ptr2
+    mov         eax, ptr1
+    mov         ebx, ptr2
+    mov         ecx, stride1
+    mov         edx, stride2
+    lea         edi, [ecx + ecx*2]
+    lea         esi, [edx + edx*2]
 
-    pxor		mm6, mm6		;	/* zero out mm6 for unpack */
-    pxor		mm7, mm7		;	/* mm7 contains the result */
-    
-    ; /* ITERATION 1 */
-    movq		mm0, [ebx]		;	/* take 8 bytes */
-    movq		mm1, [edx]		;	
-    movq		mm2, mm0		;	
+    pxor      xmm2, xmm2 /* Result */    
+    pxor      xmm3, xmm3
 
-    psubusb		mm0, mm1		;	/* A - B */
-    psubusb		mm1, mm2		;	/* B - A */
-    por		mm0, mm1		;	/* and or gives abs difference */
-    movq		mm1, mm0		;	
+    /* Iteration 1-4 */
 
-    punpcklbw		mm0, mm6		;	/* unpack to higher precision for accumulation */
-    paddw		mm7, mm0		;	/* accumulate difference... */
-    punpckhbw		mm1, mm6		;	/* unpack high four bytes to higher precision */
-    add		ebx, stride1		;	/* Inc pointer into the new data */
-    paddw		mm7, mm1		;	/* accumulate difference... */
-    add		edx, stride2		;	/* Inc pointer into ref data */
+        /*Read 2 lots of 8 bytes from each */
+        movq      xmm0, QWORD PTR [eax]
+        movq      xmm1, QWORD PTR [eax + ecx]
 
-    ; /* ITERATION 2 */
-    movq		mm0, [ebx]		;	/* take 8 bytes */
-    movq		mm1, [edx]		;	
-    movq		mm2, mm0		;	
+        movq      xmm4, QWORD PTR [ebx]
+        movq      xmm5, QWORD PTR [ebx + edx]
 
-    psubusb		mm0, mm1		;	/* A - B */
-    psubusb		mm1, mm2		;	/* B - A */
-    por		mm0, mm1		;	/* and or gives abs difference */
-    movq		mm1, mm0		;	
+        /* Absolute difference */
+        movq        xmm6, xmm0
+        movq        xmm7, xmm1
+        psubusb     xmm0, xmm4
+        psubusb     xmm1, xmm5
+        psubusb     xmm4, xmm6
+        psubusb     xmm5, xmm7
+        por         xmm0, xmm4
+        por         xmm1, xmm5
 
-    punpcklbw		mm0, mm6		;	/* unpack to higher precision for accumulation */
-    paddw		mm7, mm0		;	/* accumulate difference... */
-    punpckhbw		mm1, mm6		;	/* unpack high four bytes to higher precision */
-    add		ebx, stride1		;	/* Inc pointer into the new data */
-    paddw		mm7, mm1		;	/* accumulate difference... */
-    add		edx, stride2		;	/* Inc pointer into ref data */
+        /* Expand to 16 bits */
+        punpcklbw   xmm0, xmm3
+        punpcklbw   xmm1, xmm3
 
+        /* Accumulate */
+        paddw       xmm0, xmm1
+        paddw       xmm2, xmm0
 
-    ; /* ITERATION 3 */
-    movq		mm0, [ebx]		;	/* take 8 bytes */
-    movq		mm1, [edx]		;	
-    movq		mm2, mm0		;	
+        /* ----- half ----- */
 
-    psubusb		mm0, mm1		;	/* A - B */
-    psubusb		mm1, mm2		;	/* B - A */
-    por		mm0, mm1		;	/* and or gives abs difference */
-    movq		mm1, mm0		;	
-
-    punpcklbw		mm0, mm6		;	/* unpack to higher precision for accumulation */
-    paddw		mm7, mm0		;	/* accumulate difference... */
-    punpckhbw		mm1, mm6		;	/* unpack high four bytes to higher precision */
-    add		ebx, stride1		;	/* Inc pointer into the new data */
-    paddw		mm7, mm1		;	/* accumulate difference... */
-    add		edx, stride2		;	/* Inc pointer into ref data */
-
-    ; /* ITERATION 4 */
-    movq		mm0, [ebx]		;	/* take 8 bytes */
-    movq		mm1, [edx]		;	
-    movq		mm2, mm0		;	
-
-    psubusb		mm0, mm1		;	/* A - B */
-    psubusb		mm1, mm2		;	/* B - A */
-    por		mm0, mm1		;	/* and or gives abs difference */
-    movq		mm1, mm0		;	
-
-    punpcklbw		mm0, mm6		;	/* unpack to higher precision for accumulation */
-    paddw		mm7, mm0		;	/* accumulate difference... */
-    punpckhbw		mm1, mm6		;	/* unpack high four bytes to higher precision */
-    add		ebx, stride1		;	/* Inc pointer into the new data */
-    paddw		mm7, mm1		;	/* accumulate difference... */
-    add		edx, stride2		;	/* Inc pointer into ref data */
+        /*Read second 2 lots of 8 bytes from each */
+        movq      xmm0, QWORD PTR [eax + ecx * 2]
+        movq      xmm1, QWORD PTR [eax + edi]
 
 
-    ; /* ITERATION 5 */
-    movq		mm0, [ebx]		;	/* take 8 bytes */
-    movq		mm1, [edx]		;	
-    movq		mm2, mm0		;	
+        movq      xmm4, QWORD PTR [ebx + edx * 2]
+        movq      xmm5, QWORD PTR [ebx + esi]
 
-    psubusb		mm0, mm1		;	/* A - B */
-    psubusb		mm1, mm2		;	/* B - A */
-    por		mm0, mm1		;	/* and or gives abs difference */
-    movq		mm1, mm0		;	
+        /* Absolute difference */
+        movq        xmm6, xmm0
+        movq        xmm7, xmm1
+        psubusb     xmm0, xmm4
+        psubusb     xmm1, xmm5
+        psubusb     xmm4, xmm6
+        psubusb     xmm5, xmm7
+        por         xmm0, xmm4
+        por         xmm1, xmm5
 
-    punpcklbw		mm0, mm6		;	/* unpack to higher precision for accumulation */
-    paddw		mm7, mm0		;	/* accumulate difference... */
-    punpckhbw		mm1, mm6		;	/* unpack high four bytes to higher precision */
-    add		ebx, stride1		;	/* Inc pointer into the new data */
-    paddw		mm7, mm1		;	/* accumulate difference... */
-    add		edx, stride2		;	/* Inc pointer into ref data */
+        /* Expand to 16 bits */
+        punpcklbw   xmm0, xmm3
+        punpcklbw   xmm1, xmm3
 
+        /* Accumulate */
+        paddw       xmm0, xmm1
+        paddw       xmm2, xmm0
 
-    ; /* ITERATION 6 */
-    movq		mm0, [ebx]		;	/* take 8 bytes */
-    movq		mm1, [edx]		;	
-    movq		mm2, mm0		;	
-
-    psubusb		mm0, mm1		;	/* A - B */
-    psubusb		mm1, mm2		;	/* B - A */
-    por		mm0, mm1		;	/* and or gives abs difference */
-    movq		mm1, mm0		;	
-
-    punpcklbw		mm0, mm6		;	/* unpack to higher precision for accumulation */
-    paddw		mm7, mm0		;	/* accumulate difference... */
-    punpckhbw		mm1, mm6		;	/* unpack high four bytes to higher precision */
-    add		ebx, stride1		;	/* Inc pointer into the new data */
-    paddw		mm7, mm1		;	/* accumulate difference... */
-    add		edx, stride2		;	/* Inc pointer into ref data */
+    /* Advance read ptrs */
+    lea     eax, [eax + ecx*4]
+    lea     ebx, [ebx + edx*4]
 
 
-    ; /* ITERATION 7 */
-    movq		mm0, [ebx]		;	/* take 8 bytes */
-    movq		mm1, [edx]		;	
-    movq		mm2, mm0		;	
+    /* Iteration 5-8 */
 
-    psubusb		mm0, mm1		;	/* A - B */
-    psubusb		mm1, mm2		;	/* B - A */
-    por		mm0, mm1		;	/* and or gives abs difference */
-    movq		mm1, mm0		;	
+        /*Read 2 lots of 8 bytes from each */
+        movq      xmm0, QWORD PTR [eax]
+        movq      xmm1, QWORD PTR [eax + ecx]
 
-    punpcklbw		mm0, mm6		;	/* unpack to higher precision for accumulation */
-    paddw		mm7, mm0		;	/* accumulate difference... */
-    punpckhbw		mm1, mm6		;	/* unpack high four bytes to higher precision */
-    add		ebx, stride1		;	/* Inc pointer into the new data */
-    paddw		mm7, mm1		;	/* accumulate difference... */
-    add		edx, stride2		;	/* Inc pointer into ref data */
+        movq      xmm4, QWORD PTR [ebx]
+        movq      xmm5, QWORD PTR [ebx + edx]
 
+        /* Absolute difference */
+        movq        xmm6, xmm0
+        movq        xmm7, xmm1
+        psubusb     xmm0, xmm4
+        psubusb     xmm1, xmm5
+        psubusb     xmm4, xmm6
+        psubusb     xmm5, xmm7
+        por         xmm0, xmm4
+        por         xmm1, xmm5
 
+        /* Expand to 16 bits */
+        punpcklbw   xmm0, xmm3
+        punpcklbw   xmm1, xmm3
 
-    ; /* ITERATION 8 */
-    movq		mm0, [ebx]		;	/* take 8 bytes */
-    movq		mm1, [edx]		;	
-    movq		mm2, mm0		;	
+        /* Accumulate */
+        paddw       xmm0, xmm1
+        paddw       xmm2, xmm0
 
-    psubusb		mm0, mm1		;	/* A - B */
-    psubusb		mm1, mm2		;	/* B - A */
-    por		mm0, mm1		;	/* and or gives abs difference */
-    movq		mm1, mm0		;	
+        /* ----- half ----- */
 
-    punpcklbw		mm0, mm6		;	/* unpack to higher precision for accumulation */
-    paddw		mm7, mm0		;	/* accumulate difference... */
-    punpckhbw		mm1, mm6		;	/* unpack high four bytes to higher precision */
-    add		ebx, stride1		;	/* Inc pointer into the new data */
-    paddw		mm7, mm1		;	/* accumulate difference... */
-    add		edx, stride2		;	/* Inc pointer into ref data */
+        /*Read second 2 lots of 8 bytes from each */
+        movq      xmm0, QWORD PTR [eax + ecx * 2]
+        movq      xmm1, QWORD PTR [eax + edi]
 
 
+        movq      xmm4, QWORD PTR [ebx + edx * 2]
+        movq      xmm5, QWORD PTR [ebx + esi]
 
-    ; /* ------ */
+        /* Absolute difference */
+        movq        xmm6, xmm0
+        movq        xmm7, xmm1
+        psubusb     xmm0, xmm4
+        psubusb     xmm1, xmm5
+        psubusb     xmm4, xmm6
+        psubusb     xmm5, xmm7
+        por         xmm0, xmm4
+        por         xmm1, xmm5
 
-    movq		mm0, mm7		;	
-    psrlq		mm7, 32		;	
-    paddw		mm7, mm0		;	
-    movq		mm0, mm7		;	
-    psrlq		mm7, 16		;	
-    paddw		mm7, mm0		;	
-    movd		eax, mm7		;	
-    and		    eax, 0xffff		;	
+        /* Expand to 16 bits */
+        punpcklbw   xmm0, xmm3
+        punpcklbw   xmm1, xmm3
 
+        /* Accumulate */
+        paddw       xmm0, xmm1
+        paddw       xmm2, xmm0
+        
+    /*---------------------------*/
+
+    /* Add the items in the result */
+    movdqa      xmm0, xmm2
+    psrlq       xmm2, 32
+
+    paddw       xmm0, xmm2
+
+
+    movdqa      xmm2, xmm0
+    psrlq       xmm0, 16
+
+    paddw       xmm2, xmm0
+
+    movdqa      xmm0, xmm2
+    psrldq      xmm2, 8
+    paddw       xmm0, xmm2
+
+    /* Put it in the return variable */
+    movd        eax, xmm0
+    and         eax, 0xffff
     mov         DiffVal, eax
+
+
   };
-
-  return DiffVal;
-
+    return DiffVal;
  
 
 #endif
@@ -1543,8 +1532,8 @@ void dsp_sse2_init(DspFunctions *funcs)
   funcs->sub8x8avg2 = sub8x8avg2__sse2;
   funcs->row_sad8 = row_sad8__sse2;
   funcs->col_sad8x8 = col_sad8x8__sse2;
-  //funcs->sad8x8 = sad8x8__sse2;
-  //funcs->sad8x8_thres = sad8x8_thres__sse2;
+  funcs->sad8x8 = sad8x8__sse2;
+  funcs->sad8x8_thres = sad8x8_thres__sse2;
   //funcs->sad8x8_xy2_thres = sad8x8_xy2_thres__sse2;
   //funcs->intra8x8_err = intra8x8_err__sse2;
   //funcs->inter8x8_err = inter8x8_err__sse2;
