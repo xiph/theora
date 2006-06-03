@@ -584,6 +584,7 @@ static ogg_uint32_t row_sad8__sse2 (unsigned char *Src1, unsigned char *Src2)
     movdqa      xmm1, xmm3
     psrldq      xmm3, 8
 
+    /* eax = max(SadValue, SadValue1) */
     psubusw     xmm1, xmm3
     paddw       xmm1, xmm3
 
@@ -595,53 +596,6 @@ static ogg_uint32_t row_sad8__sse2 (unsigned char *Src1, unsigned char *Src2)
 
   return SadValue;
 
-  
-  //__asm {
-  //  align       16
-  //  mov         ebx, Src1
-  //  mov         ecx, Src2
-
-
-  //  pxor		mm6, mm6		;	/* zero out mm6 for unpack */
-  //  pxor		mm7, mm7		;	/* zero out mm7 for unpack */
-  //  movq		mm0, [ebx]		;	/* take 8 bytes */
-  //  movq		mm1, [ecx]		;	
-
-  //  movq		mm2, mm0		;	
-  //  psubusb		mm0, mm1		;	/* A - B */
-  //  psubusb		mm1, mm2		;	/* B - A */
-  //  por		mm0, mm1		;	/* and or gives abs difference */
-
-  //  movq		mm1, mm0		;	
-
-  //  punpcklbw		mm0, mm6		;	/* ; unpack low four bytes to higher precision */
-  //  punpckhbw		mm1, mm7		;	/* ; unpack high four bytes to higher precision */
-
-  //  movq		mm2, mm0		;	
-  //  movq		mm3, mm1		;	
-  //  psrlq		mm2, 32		;	/* fold and add */
-  //  psrlq		mm3, 32		;	
-  //  paddw		mm0, mm2		;	
-  //  paddw		mm1, mm3		;	
-  //  movq		mm2, mm0		;	
-  //  movq		mm3, mm1		;	
-  //  psrlq		mm2, 16		;	
-  //  psrlq		mm3, 16		;	
-  //  paddw		mm0, mm2		;	
-  //  paddw		mm1, mm3		;	
-
-  //  psubusw		mm1, mm0		;	
-  //  paddw		mm1, mm0		;	/* mm1 = max(mm1, mm0) */
-  //  movd		eax, mm1		;
-
-  //  and         eax, 0xffff
-  //  mov         MaxSad, eax
-  //};
-  // return MaxSad;
-  
-  
-  
- 
 
 #endif
 }
@@ -696,83 +650,214 @@ static ogg_uint32_t col_sad8x8__sse2 (unsigned char *Src1, unsigned char *Src2,
     
   return MaxSad;
 #else
-  ogg_uint32_t MaxSad;
+
+    static __declspec(align(16)) unsigned int temp_regs[8];
+    static unsigned int* const temp_reg_ptr = temp_regs;
+    static unsigned int* const temp_reg_result_ptr = &temp_regs[4];
+ 
+    ogg_uint32_t SadValue;
 
 
     __asm {
         align       16
+        
+        /* Setup the paramters */
         mov         ebx, Src1
         mov         ecx, Src2
+        mov         edx, stride
+        lea         eax, [edx + edx*2]
+        mov         edi, temp_reg_ptr
+        mov         esi, temp_reg_result_ptr
 
-        pxor		mm3, mm3		;	/* zero out mm3 for unpack */
-        pxor		mm4, mm4		;	/* mm4 low sum */
-        pxor		mm5, mm5		;	/* mm5 high sum */
-        pxor		mm6, mm6		;	/* mm6 low sum */
-        pxor		mm7, mm7		;	/* mm7 high sum */
-        mov		edi, 4		;	/* 4 rows */
-        label_1:				;	
-        movq		mm0, [ebx]		;	/* take 8 bytes */
-        movq		mm1, [ecx]		;	/* take 8 bytes */
+        /* Read the first 4 iterations */
+        movq      xmm0, QWORD PTR [ebx]
+        movq      xmm4, QWORD PTR [ebx + edx]
+        movq      xmm2, QWORD PTR [ebx + edx*2]
+        movq      xmm6, QWORD PTR [ebx + eax]
 
-        movq		mm2, mm0		;	
-        psubusb		mm0, mm1		;	/* A - B */
-        psubusb		mm1, mm2		;	/* B - A */
-        por		mm0, mm1		;	/* and or gives abs difference */
-        movq		mm1, mm0		;	
+        movq      xmm1, QWORD PTR [ecx]
+        movq      xmm5, QWORD PTR [ecx + edx]
+        movq      xmm3, QWORD PTR [ecx + edx*2]
+        movq      xmm7, QWORD PTR [ecx + eax]
 
-        punpcklbw		mm0, mm3		;	/* unpack to higher precision for accumulation */
-        paddw		mm4, mm0		;	/* accumulate difference... */
-        punpckhbw		mm1, mm3		;	/* unpack high four bytes to higher precision */
-        paddw		mm5, mm1		;	/* accumulate difference... */
-        add		ebx, stride		;	/* Inc pointer into the new data */
-        add		ecx, stride		;	/* Inc pointer into the new data */
+        /* Consolidate the results from 8 registers of 8x16bits to 4 of 16x8bits */
+            movdqa      [edi], xmm7 /* Save xmm7 */
+            pxor        xmm7, xmm7
 
-        dec		edi		;	
-        jnz		label_1		;	
+            /* Expand everything to 16 bits */
+            punpcklbw   xmm0, xmm7
+            punpcklbw   xmm1, xmm7
+            punpcklbw   xmm2, xmm7
+            punpcklbw   xmm3, xmm7
+            punpcklbw   xmm4, xmm7
+            punpcklbw   xmm5, xmm7
+            punpcklbw   xmm6, xmm7
 
-        mov		edi, 4		;	/* 4 rows */
-        label_2:				;	
-        movq		mm0, [ebx]		;	/* take 8 bytes */
-        movq		mm1, [ecx]		;	/* take 8 bytes */
+            /* Now merge the first 3 */
+            packuswb    xmm0, xmm4
+            packuswb    xmm1, xmm5
+            packuswb    xmm2, xmm6
 
-        movq		mm2, mm0		;	
-        psubusb		mm0, mm1		;	/* A - B */
-        psubusb		mm1, mm2		;	/* B - A */
-        por		mm0, mm1		;	/* and or gives abs difference */
-        movq		mm1, mm0		;	
+            /* Restore xmm7 for the final merge into xmm3 */
+            movdqa      xmm6, [edi]
+            punpcklbw   xmm6, xmm7
+            packuswb    xmm3, xmm6
 
-        punpcklbw		mm0, mm3		;	/* unpack to higher precision for accumulation */
-        paddw		mm6, mm0		;	/* accumulate difference... */
-        punpckhbw		mm1, mm3		;	/* unpack high four bytes to higher precision */
-        paddw		mm7, mm1		;	/* accumulate difference... */
-        add		ebx, stride		;	/* Inc pointer into the new data */
-        add		ecx, stride		;	/* Inc pointer into the new data */
+        /* Duplicate all the registers */
+        movdqa      xmm4, xmm0
+        movdqa      xmm5, xmm1
+        movdqa      xmm6, xmm2
+        movdqa      xmm7, xmm3
 
-        dec		edi		;	
-        jnz		label_2		;	
+        /* result = abs_diff(a,b) = (a-b)|(b-a) */
+        psubusb     xmm0, xmm1
+        psubusb     xmm2, xmm3
 
-        psubusw		mm7, mm6		;	
-        paddw		mm7, mm6		;	/* mm7 = max(mm7, mm6) */
-        psubusw		mm5, mm4		;	
-        paddw		mm5, mm4		;	/* mm5 = max(mm5, mm4) */
-        psubusw		mm7, mm5		;	
-        paddw		mm7, mm5		;	/* mm7 = max(mm5, mm7) */
-        movq		mm6, mm7		;	
-        psrlq		mm6, 32		;	
-        psubusw		mm7, mm6		;	
-        paddw		mm7, mm6		;	/* mm7 = max(mm5, mm7) */
-        movq		mm6, mm7		;	
-        psrlq		mm6, 16		;	
-        psubusw		mm7, mm6		;	
-        paddw		mm7, mm6		;	/* mm7 = max(mm5, mm7) */
-        movd		eax, mm7		;	
-        and		    eax, 0xffff		;
+        psubusb     xmm1, xmm4
+        psubusb     xmm3, xmm6
 
-        mov         MaxSad, eax
+        por         xmm0, xmm1
+        por         xmm2, xmm3
+
+        /* Expand the 32x8bits in 2 registers to 32x16bits in 4 registers */
+        pxor        xmm7, xmm7
+
+        movdqa      xmm1, xmm0
+        movdqa      xmm3, xmm2
+        
+        punpcklbw   xmm0, xmm7
+        punpckhbw   xmm1, xmm7
+        punpcklbw   xmm2, xmm7
+        punpckhbw   xmm3, xmm7
+
+        /* Add them up and then xmm0 contains the 8x16bit SadValue array*/
+        paddw       xmm0, xmm1
+        paddw       xmm2, xmm3
+        paddw       xmm0, xmm2
+
+        /* Save xmm0 for later so we can use all 8 registers again in the memread */
+        /* push        xmm0 */
+        movdqa      [esi], xmm0
+
+        /* Advance the read pointers */
+        lea         ebx, [ebx + edx*4]
+        lea         ecx, [ecx + edx*4]
+
+        /* ----- Repeat of above for the second sad array ------ */
+
+        /* Read the first 4 iterations */
+        movq      xmm0, QWORD PTR [ebx]
+        movq      xmm4, QWORD PTR [ebx + edx]
+        movq      xmm2, QWORD PTR [ebx + edx*2]
+        movq      xmm6, QWORD PTR [ebx + eax]
+
+        movq      xmm1, QWORD PTR [ecx]
+        movq      xmm5, QWORD PTR [ecx + edx]
+        movq      xmm3, QWORD PTR [ecx + edx*2]
+        movq      xmm7, QWORD PTR [ecx + eax]
+
+        /* Consolidate the results from 8 registers of 8x16bits to 4 of 16x8bits */
+            movdqa      [edi], xmm7 /* Save xmm7 */
+            pxor        xmm7, xmm7
+
+            /* Expand everything to 16 bits */
+            punpcklbw   xmm0, xmm7
+            punpcklbw   xmm1, xmm7
+            punpcklbw   xmm2, xmm7
+            punpcklbw   xmm3, xmm7
+            punpcklbw   xmm4, xmm7
+            punpcklbw   xmm5, xmm7
+            punpcklbw   xmm6, xmm7
+
+            /* Now merge the first 3 */
+            packuswb    xmm0, xmm4
+            packuswb    xmm1, xmm5
+            packuswb    xmm2, xmm6
+
+            /* Restore xmm7 for the final merge into xmm3 */
+            movdqa      xmm6, [edi]
+            punpcklbw   xmm6, xmm7
+            packuswb    xmm3, xmm6
+
+
+        /* Duplicate all the registers */
+        movdqa      xmm4, xmm0
+        movdqa      xmm5, xmm1
+        movdqa      xmm6, xmm2
+        movdqa      xmm7, xmm3
+
+        /* result = abs_diff(a,b) = (a-b)|(b-a) */
+        psubusb     xmm0, xmm1
+        psubusb     xmm2, xmm3
+
+        psubusb     xmm1, xmm4
+        psubusb     xmm3, xmm6
+
+        por         xmm0, xmm1
+        por         xmm2, xmm3
+
+        /* Expand the 32x8bits in 2 registers to 32x16bits in 4 registers */
+        pxor        xmm7, xmm7
+
+        movdqa      xmm1, xmm0
+        movdqa      xmm3, xmm2
+        
+        punpcklbw   xmm0, xmm7
+        punpckhbw   xmm1, xmm7
+        punpcklbw   xmm2, xmm7
+        punpckhbw   xmm3, xmm7
+
+        /* Add them up and then xmm0 contains the 8x16bit SadValue array*/
+        paddw       xmm0, xmm1
+        paddw       xmm2, xmm3
+        paddw       xmm0, xmm2
+
+        /* --------------- End of repeat ---------- */
+
+        /* Restore the save sadarray - then xmm0 has sad1, and xmm1 has sad2*/
+        /* pop         xmm1 */
+        movdqa      xmm1, [esi]
+
+                /* Find the maximum sad value */
+
+        /* 
+            Eliminate sad values from each array if they are not max.
+            If any posistion in xmm1 was greater than the one in xmm0
+            It's value is now in xmm0.
+         */
+        psubusw     xmm0, xmm1
+        paddw       xmm0, xmm1
+
+        /* reduce from 8 possibles to 4 with a shift-max */
+        movdqa      xmm1, xmm0
+        psrlq		xmm0, 32
+
+        psubusw     xmm0, xmm1
+        paddw       xmm0, xmm1
+
+        /* reduce from 4 to 2 with another shift-max */
+        movdqa      xmm1, xmm0
+        psrlq		xmm0, 16
+
+        psubusw     xmm0, xmm1
+        paddw       xmm0, xmm1
+        /* reduce to final value with another full register shift-max */
+        movdqa      xmm1, xmm0
+        psrldq      xmm0, 8
+
+        psubusw     xmm0, xmm1
+        paddw       xmm0, xmm1
+
+        /* Put it in the return variable */
+        movd         eax, xmm0
+        and         eax, 0xffff
+        mov         SadValue, eax
+
+
     };
 
-    return MaxSad;
-
+    return SadValue;
+ 
 
 #endif
 }
@@ -1457,7 +1542,7 @@ void dsp_sse2_init(DspFunctions *funcs)
   funcs->sub8x8_128 = sub8x8_128__sse2;
   funcs->sub8x8avg2 = sub8x8avg2__sse2;
   funcs->row_sad8 = row_sad8__sse2;
-  //funcs->col_sad8x8 = col_sad8x8__sse2;
+  funcs->col_sad8x8 = col_sad8x8__sse2;
   //funcs->sad8x8 = sad8x8__sse2;
   //funcs->sad8x8_thres = sad8x8_thres__sse2;
   //funcs->sad8x8_xy2_thres = sad8x8_xy2_thres__sse2;
