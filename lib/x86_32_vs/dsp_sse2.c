@@ -24,7 +24,10 @@
 #endif
 
 
-static const ogg_int64_t V128 = 0x0080008000800080LL;
+//static const ogg_int64_t V128 = 0x0080008000800080LL;
+
+static __declspec(align(16)) const unsigned int V128_8x16bits[4] = { 0x00800080, 0x00800080, 0x00800080, 0x00800080 };
+static const unsigned int* V128_8x16bitsPtr = V128_8x16bits;
 
 static void sub8x8__sse2 (unsigned char *FiltPtr, unsigned char *ReconPtr,
                   ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine,
@@ -216,142 +219,214 @@ static void sub8x8_128__sse2 (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
 #else
     __asm {
         align 16
+        
+        pxor		xmm0, xmm0	
+        mov         edx, V128_8x16bitsPtr
+        movdqa      xmm7, [edx]
 
-        pxor		mm7, mm7		
+        /* Setup the parameters */
+        mov         esi, FiltPtr
+        mov         edi, DctInputPtr
+        mov         eax, PixelsPerLine
+        lea         ebx, [eax + eax*2]      ;   /* ebx = 3 * PixelsPerLine */
 
-        mov         eax, FiltPtr
-        mov         ebx, DctInputPtr
+        /* 
+            Read the first 4 lots of 8x8bits from FiltPtr into the 
+             low 64 bits of the registers. Then expand out into
+             8x16bits to fill all 128 bits of the register        
+        */
+        movq        xmm1, QWORD PTR [esi]
+        punpcklbw   xmm1, xmm0
 
-        movq		mm1, V128
+        movq        xmm2, QWORD PTR [esi + eax]
+        punpcklbw   xmm2, xmm0
 
-        /*  ITERATION 1 */		
-        movq		mm0, [eax]		/* mm0 = FiltPtr */
-        movq		mm2, mm0		/* dup to prepare for up conversion */
-        /* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
-        punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
-        /* start calculation */
-        psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
-        psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
-        movq		[ebx], mm0		/* write answer out */
-        movq		[8 + ebx], mm2		/* write answer out */
-        /* Increment pointers */
-        add		ebx, 16		
-        add		eax, PixelsPerLine	
+        movq        xmm3, QWORD PTR [esi + eax * 2]
+        punpcklbw   xmm3, xmm0
 
+        movq        xmm4, QWORD PTR [esi + ebx]
+        punpcklbw   xmm4, xmm0
 
-        /*  ITERATION 2 */		
-        movq		mm0, [eax]		/* mm0 = FiltPtr */
-        movq		mm2, mm0		/* dup to prepare for up conversion */
-        /* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
-        punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
-        /* start calculation */
-        psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
-        psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
-        movq		[ebx], mm0		/* write answer out */
-        movq		[8 + ebx], mm2		/* write answer out */
-        /* Increment pointers */
-        add		ebx, 16		
-        add		eax, PixelsPerLine	
-
-
-        /*  ITERATION 3 */		
-        movq		mm0, [eax]		/* mm0 = FiltPtr */
-        movq		mm2, mm0		/* dup to prepare for up conversion */
-        /* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
-        punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
-        /* start calculation */
-        psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
-        psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
-        movq		[ebx], mm0		/* write answer out */
-        movq		[8 + ebx], mm2		/* write answer out */
-        /* Increment pointers */
-        add		ebx, 16		
-        add		eax, PixelsPerLine	
+        /* Subtract 128 16bitwise and write*/
+        psubw       xmm1, xmm7
+        movdqa      [edi], xmm1
+        psubw       xmm2, xmm7
+        movdqa      [edi + 16], xmm2
+        psubw       xmm3, xmm7
+        movdqa      [edi + 32], xmm3
+        psubw       xmm4, xmm7
+        movdqa      [edi + 48], xmm4
 
 
-        /*  ITERATION 4 */		
-        movq		mm0, [eax]		/* mm0 = FiltPtr */
-        movq		mm2, mm0		/* dup to prepare for up conversion */
-        /* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
-        punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
-        /* start calculation */
-        psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
-        psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
-        movq		[ebx], mm0		/* write answer out */
-        movq		[8 + ebx], mm2		/* write answer out */
-        /* Increment pointers */
-        add		ebx, 16		
-        add		eax, PixelsPerLine	
+        /* Advance the source and dest pointer for the next 4 iterations */
+        lea         esi, [esi + eax * 4]
+        add         edi, 64
 
+        /* Repeat of above for second round */
+        movq        xmm1, QWORD PTR [esi]
+        punpcklbw   xmm1, xmm0
 
-        /*  ITERATION 5 */		
-        movq		mm0, [eax]		/* mm0 = FiltPtr */
-        movq		mm2, mm0		/* dup to prepare for up conversion */
-        /* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
-        punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
-        /* start calculation */
-        psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
-        psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
-        movq		[ebx], mm0		/* write answer out */
-        movq		[8 + ebx], mm2		/* write answer out */
-        /* Increment pointers */
-        add		ebx, 16		
-        add		eax, PixelsPerLine	
+        movq        xmm2, QWORD PTR [esi + eax]
+        punpcklbw   xmm2, xmm0
 
+        movq        xmm3, QWORD PTR [esi + eax * 2]
+        punpcklbw   xmm3, xmm0
 
-        /*  ITERATION 6 */		
-        movq		mm0, [eax]		/* mm0 = FiltPtr */
-        movq		mm2, mm0		/* dup to prepare for up conversion */
-        /* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
-        punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
-        /* start calculation */
-        psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
-        psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
-        movq		[ebx], mm0		/* write answer out */
-        movq		[8 + ebx], mm2		/* write answer out */
-        /* Increment pointers */
-        add		ebx, 16		
-        add		eax, PixelsPerLine	
+        movq        xmm4, QWORD PTR [esi + ebx]
+        punpcklbw   xmm4, xmm0
 
-
-        /*  ITERATION 7 */		
-        movq		mm0, [eax]		/* mm0 = FiltPtr */
-        movq		mm2, mm0		/* dup to prepare for up conversion */
-        /* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
-        punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
-        /* start calculation */
-        psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
-        psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
-        movq		[ebx], mm0		/* write answer out */
-        movq		[8 + ebx], mm2		/* write answer out */
-        /* Increment pointers */
-        add		ebx, 16		
-        add		eax, PixelsPerLine	
-
-
-        /*  ITERATION 8 */		
-        movq		mm0, [eax]		/* mm0 = FiltPtr */
-        movq		mm2, mm0		/* dup to prepare for up conversion */
-        /* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
-        punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
-        /* start calculation */
-        psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
-        psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
-        movq		[ebx], mm0		/* write answer out */
-        movq		[8 + ebx], mm2		/* write answer out */
-        /* Increment pointers */
-        add		ebx, 16		
-        add		eax, PixelsPerLine	
+        /* Subtract 128 16bitwise and write*/
+        psubw       xmm1, xmm7
+        movdqa      [edi], xmm1
+        psubw       xmm2, xmm7
+        movdqa      [edi + 16], xmm2
+        psubw       xmm3, xmm7
+        movdqa      [edi + 32], xmm3
+        psubw       xmm4, xmm7
+        movdqa      [edi + 48], xmm4
 
     };
+
+
+
+    //__asm {
+    //    align 16
+
+    //    pxor		mm7, mm7		
+
+    //    mov         eax, FiltPtr
+    //    mov         ebx, DctInputPtr
+
+    //    movq		mm1, V128
+
+    //    /*  ITERATION 1 */		
+    //    movq		mm0, [eax]		/* mm0 = FiltPtr */
+    //    movq		mm2, mm0		/* dup to prepare for up conversion */
+    //    /* convert from UINT8 to INT16 */
+    //    punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
+    //    punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
+    //    /* start calculation */
+    //    psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
+    //    psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
+    //    movq		[ebx], mm0		/* write answer out */
+    //    movq		[8 + ebx], mm2		/* write answer out */
+    //    /* Increment pointers */
+    //    add		ebx, 16		
+    //    add		eax, PixelsPerLine	
+
+
+    //    /*  ITERATION 2 */		
+    //    movq		mm0, [eax]		/* mm0 = FiltPtr */
+    //    movq		mm2, mm0		/* dup to prepare for up conversion */
+    //    /* convert from UINT8 to INT16 */
+    //    punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
+    //    punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
+    //    /* start calculation */
+    //    psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
+    //    psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
+    //    movq		[ebx], mm0		/* write answer out */
+    //    movq		[8 + ebx], mm2		/* write answer out */
+    //    /* Increment pointers */
+    //    add		ebx, 16		
+    //    add		eax, PixelsPerLine	
+
+
+    //    /*  ITERATION 3 */		
+    //    movq		mm0, [eax]		/* mm0 = FiltPtr */
+    //    movq		mm2, mm0		/* dup to prepare for up conversion */
+    //    /* convert from UINT8 to INT16 */
+    //    punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
+    //    punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
+    //    /* start calculation */
+    //    psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
+    //    psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
+    //    movq		[ebx], mm0		/* write answer out */
+    //    movq		[8 + ebx], mm2		/* write answer out */
+    //    /* Increment pointers */
+    //    add		ebx, 16		
+    //    add		eax, PixelsPerLine	
+
+
+    //    /*  ITERATION 4 */		
+    //    movq		mm0, [eax]		/* mm0 = FiltPtr */
+    //    movq		mm2, mm0		/* dup to prepare for up conversion */
+    //    /* convert from UINT8 to INT16 */
+    //    punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
+    //    punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
+    //    /* start calculation */
+    //    psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
+    //    psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
+    //    movq		[ebx], mm0		/* write answer out */
+    //    movq		[8 + ebx], mm2		/* write answer out */
+    //    /* Increment pointers */
+    //    add		ebx, 16		
+    //    add		eax, PixelsPerLine	
+
+
+    //    /*  ITERATION 5 */		
+    //    movq		mm0, [eax]		/* mm0 = FiltPtr */
+    //    movq		mm2, mm0		/* dup to prepare for up conversion */
+    //    /* convert from UINT8 to INT16 */
+    //    punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
+    //    punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
+    //    /* start calculation */
+    //    psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
+    //    psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
+    //    movq		[ebx], mm0		/* write answer out */
+    //    movq		[8 + ebx], mm2		/* write answer out */
+    //    /* Increment pointers */
+    //    add		ebx, 16		
+    //    add		eax, PixelsPerLine	
+
+
+    //    /*  ITERATION 6 */		
+    //    movq		mm0, [eax]		/* mm0 = FiltPtr */
+    //    movq		mm2, mm0		/* dup to prepare for up conversion */
+    //    /* convert from UINT8 to INT16 */
+    //    punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
+    //    punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
+    //    /* start calculation */
+    //    psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
+    //    psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
+    //    movq		[ebx], mm0		/* write answer out */
+    //    movq		[8 + ebx], mm2		/* write answer out */
+    //    /* Increment pointers */
+    //    add		ebx, 16		
+    //    add		eax, PixelsPerLine	
+
+
+    //    /*  ITERATION 7 */		
+    //    movq		mm0, [eax]		/* mm0 = FiltPtr */
+    //    movq		mm2, mm0		/* dup to prepare for up conversion */
+    //    /* convert from UINT8 to INT16 */
+    //    punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
+    //    punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
+    //    /* start calculation */
+    //    psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
+    //    psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
+    //    movq		[ebx], mm0		/* write answer out */
+    //    movq		[8 + ebx], mm2		/* write answer out */
+    //    /* Increment pointers */
+    //    add		ebx, 16		
+    //    add		eax, PixelsPerLine	
+
+
+    //    /*  ITERATION 8 */		
+    //    movq		mm0, [eax]		/* mm0 = FiltPtr */
+    //    movq		mm2, mm0		/* dup to prepare for up conversion */
+    //    /* convert from UINT8 to INT16 */
+    //    punpcklbw		mm0, mm7		/* mm0 = INT16(FiltPtr) */
+    //    punpckhbw		mm2, mm7		/* mm2 = INT16(FiltPtr) */
+    //    /* start calculation */
+    //    psubw		mm0, mm1		/* mm0 = FiltPtr - 128 */
+    //    psubw		mm2, mm1		/* mm2 = FiltPtr - 128 */
+    //    movq		[ebx], mm0		/* write answer out */
+    //    movq		[8 + ebx], mm2		/* write answer out */
+    //    /* Increment pointers */
+    //    add		ebx, 16		
+    //    add		eax, PixelsPerLine	
+
+    //};
  
 #endif
 }
@@ -1528,7 +1603,7 @@ void dsp_sse2_init(DspFunctions *funcs)
 {
   TH_DEBUG("enabling accelerated x86_32 mmx dsp functions.\n");
   funcs->sub8x8 = sub8x8__sse2;
-  //funcs->sub8x8_128 = sub8x8_128__sse2;
+  funcs->sub8x8_128 = sub8x8_128__sse2;
   //funcs->sub8x8avg2 = sub8x8avg2__sse2;
   //funcs->row_sad8 = row_sad8__sse2;
   //funcs->col_sad8x8 = col_sad8x8__sse2;
