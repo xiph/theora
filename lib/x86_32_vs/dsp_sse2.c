@@ -16,7 +16,7 @@
 #include "codec_internal.h"
 #include "dsp.h"
 
-#if 0
+#if 1
 //These are to let me selectively enable the C versions, these are needed
 #define DSP_OP_AVG(a,b) ((((int)(a)) + ((int)(b)))/2)
 #define DSP_OP_DIFF(a,b) (((int)(a)) - ((int)(b)))
@@ -355,6 +355,11 @@ static void sub8x8avg2__sse2 (unsigned char *FiltPtr, unsigned char *ReconPtr1,
         punpcklbw   xmm6, xmm0
 
         /* Average ReconPtr1 and 2 */
+        /*  
+            //DON'T USE THESE, THEY AREN'T EQUIVALENT, THEY ADD 1 TO THE SUM
+            pavgw       xmm1, xmm3
+            pavgw       xmm2, xmm4
+         */
         paddw       xmm1, xmm3
         paddw       xmm2, xmm4
         psrlw       xmm1, 1
@@ -394,10 +399,16 @@ static void sub8x8avg2__sse2 (unsigned char *FiltPtr, unsigned char *ReconPtr1,
         punpcklbw   xmm6, xmm0
 
         /* Average ReconPtr1 and 2 */
+        /*  
+            //DON'T USE THESE, THEY AREN'T EQUIVALENT, THEY ADD 1 TO THE SUM
+            pavgw       xmm1, xmm3
+            pavgw       xmm2, xmm4
+         */
         paddw       xmm1, xmm3
         paddw       xmm2, xmm4
         psrlw       xmm1, 1
         psrlw       xmm2, 1
+
 
         /* Do Result = FilterPtr[i] - avg(ReconPtr[i], ReconPtr[i]) */
         psubw       xmm5, xmm1
@@ -434,10 +445,16 @@ static void sub8x8avg2__sse2 (unsigned char *FiltPtr, unsigned char *ReconPtr1,
         punpcklbw   xmm6, xmm0
 
         /* Average ReconPtr1 and 2 */
+        /*  
+            //DON'T USE THESE, THEY AREN'T EQUIVALENT, THEY ADD 1 TO THE SUM
+            pavgw       xmm1, xmm3
+            pavgw       xmm2, xmm4
+         */
         paddw       xmm1, xmm3
         paddw       xmm2, xmm4
         psrlw       xmm1, 1
         psrlw       xmm2, 1
+
 
         /* Do Result = FilterPtr[i] - avg(ReconPtr[i], ReconPtr[i]) */
         psubw       xmm5, xmm1
@@ -475,10 +492,16 @@ static void sub8x8avg2__sse2 (unsigned char *FiltPtr, unsigned char *ReconPtr1,
         punpcklbw   xmm6, xmm0
 
         /* Average ReconPtr1 and 2 */
+        /*  
+            //DON'T USE THESE, THEY AREN'T EQUIVALENT, THEY ADD 1 TO THE SUM
+            pavgw       xmm1, xmm3
+            pavgw       xmm2, xmm4
+         */
         paddw       xmm1, xmm3
         paddw       xmm2, xmm4
         psrlw       xmm1, 1
         psrlw       xmm2, 1
+
 
         /* Do Result = FilterPtr[i] - avg(ReconPtr[i], ReconPtr[i]) */
         psubw       xmm5, xmm1
@@ -523,51 +546,98 @@ static ogg_uint32_t row_sad8__sse2 (unsigned char *Src1, unsigned char *Src2)
   return SadValue;
 
 #else
-  ogg_uint32_t MaxSad;
+  ogg_uint32_t SadValue;
 
-  
+
   __asm {
+
     align       16
     mov         ebx, Src1
     mov         ecx, Src2
 
+    pxor        xmm0, xmm0
 
-    pxor		mm6, mm6		;	/* zero out mm6 for unpack */
-    pxor		mm7, mm7		;	/* zero out mm7 for unpack */
-    movq		mm0, [ebx]		;	/* take 8 bytes */
-    movq		mm1, [ecx]		;	
+    /* Load all the data */
+    movq      xmm1, QWORD PTR [ebx]
+    movq      xmm2, QWORD PTR [ecx]
 
-    movq		mm2, mm0		;	
-    psubusb		mm0, mm1		;	/* A - B */
-    psubusb		mm1, mm2		;	/* B - A */
-    por		mm0, mm1		;	/* and or gives abs difference */
+    /* abs_diff(a,b) = (a-b)|(b-a) */
+    movdqa      xmm3, xmm1
+    psubusb     xmm1, xmm2
+    psubusb     xmm2, xmm3
+    por         xmm1, xmm2
 
-    movq		mm1, mm0		;	
+    /* Extend to int16 */
+    punpcklbw   xmm1, xmm0
 
-    punpcklbw		mm0, mm6		;	/* ; unpack low four bytes to higher precision */
-    punpckhbw		mm1, mm7		;	/* ; unpack high four bytes to higher precision */
+    /* Shift each block of 64bits right by 32 so they align for adding */
+    movdqa      xmm2, xmm1
+    psrlq       xmm1, 32
+    paddw       xmm2, xmm1
 
-    movq		mm2, mm0		;	
-    movq		mm3, mm1		;	
-    psrlq		mm2, 32		;	/* fold and add */
-    psrlq		mm3, 32		;	
-    paddw		mm0, mm2		;	
-    paddw		mm1, mm3		;	
-    movq		mm2, mm0		;	
-    movq		mm3, mm1		;	
-    psrlq		mm2, 16		;	
-    psrlq		mm3, 16		;	
-    paddw		mm0, mm2		;	
-    paddw		mm1, mm3		;	
+    /* Shift 16 to align again  and add */
+    movdqa      xmm3, xmm2
+    psrlq       xmm2, 16
+    paddw       xmm3, xmm2
 
-    psubusw		mm1, mm0		;	
-    paddw		mm1, mm0		;	/* mm1 = max(mm1, mm0) */
-    movd		eax, mm1		;
+    /* Shift the whole register so the 2 results line up in the lowest 16bits */
+    movdqa      xmm1, xmm3
+    psrldq      xmm3, 8
 
+    psubusw     xmm1, xmm3
+    paddw       xmm1, xmm3
+
+    movd         eax, xmm1
     and         eax, 0xffff
-    mov         MaxSad, eax
-  };
-   return MaxSad;
+    mov         SadValue, eax
+
+  }
+
+  return SadValue;
+
+  
+  //__asm {
+  //  align       16
+  //  mov         ebx, Src1
+  //  mov         ecx, Src2
+
+
+  //  pxor		mm6, mm6		;	/* zero out mm6 for unpack */
+  //  pxor		mm7, mm7		;	/* zero out mm7 for unpack */
+  //  movq		mm0, [ebx]		;	/* take 8 bytes */
+  //  movq		mm1, [ecx]		;	
+
+  //  movq		mm2, mm0		;	
+  //  psubusb		mm0, mm1		;	/* A - B */
+  //  psubusb		mm1, mm2		;	/* B - A */
+  //  por		mm0, mm1		;	/* and or gives abs difference */
+
+  //  movq		mm1, mm0		;	
+
+  //  punpcklbw		mm0, mm6		;	/* ; unpack low four bytes to higher precision */
+  //  punpckhbw		mm1, mm7		;	/* ; unpack high four bytes to higher precision */
+
+  //  movq		mm2, mm0		;	
+  //  movq		mm3, mm1		;	
+  //  psrlq		mm2, 32		;	/* fold and add */
+  //  psrlq		mm3, 32		;	
+  //  paddw		mm0, mm2		;	
+  //  paddw		mm1, mm3		;	
+  //  movq		mm2, mm0		;	
+  //  movq		mm3, mm1		;	
+  //  psrlq		mm2, 16		;	
+  //  psrlq		mm3, 16		;	
+  //  paddw		mm0, mm2		;	
+  //  paddw		mm1, mm3		;	
+
+  //  psubusw		mm1, mm0		;	
+  //  paddw		mm1, mm0		;	/* mm1 = max(mm1, mm0) */
+  //  movd		eax, mm1		;
+
+  //  and         eax, 0xffff
+  //  mov         MaxSad, eax
+  //};
+  // return MaxSad;
   
   
   
@@ -1386,7 +1456,7 @@ void dsp_sse2_init(DspFunctions *funcs)
   funcs->sub8x8 = sub8x8__sse2;
   funcs->sub8x8_128 = sub8x8_128__sse2;
   funcs->sub8x8avg2 = sub8x8avg2__sse2;
-  //funcs->row_sad8 = row_sad8__sse2;
+  funcs->row_sad8 = row_sad8__sse2;
   //funcs->col_sad8x8 = col_sad8x8__sse2;
   //funcs->sad8x8 = sad8x8__sse2;
   //funcs->sad8x8_thres = sad8x8_thres__sse2;
