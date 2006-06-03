@@ -415,6 +415,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\lib\x86_32_vs\dsp_sse2.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\lib\encode.c"
 				>
 			</File>

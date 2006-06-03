@@ -413,12 +413,19 @@ void dsp_static_init(DspFunctions *funcs)
   if (cpuflags & CPU_X86_MMX) {
     dsp_mmx_init(funcs);
   }
+
 # ifndef WIN32
-  /* This is implemented for win32 yet */
+  /* This is not implemented for win32 yet */
   if (cpuflags & CPU_X86_MMXEXT) {
     dsp_mmxext_init(funcs);
   }
 # endif
+
+  if (cpuflags & CPU_X86_SSE2) {
+    dsp_sse2_init(funcs);
+  }
+
+
 #endif
 }
 

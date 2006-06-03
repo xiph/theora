@@ -49,7 +49,7 @@ static void EClearFragmentInfo(CP_INSTANCE * cpi){
   if(cpi->DCT_codes )
     _ogg_free( cpi->DCT_codes );
   if(cpi->DCTDataBuffer )
-    _ogg_free( cpi->DCTDataBuffer);
+    _theora_16_byte_aligned_free( cpi->DCTDataBuffer);
   if(cpi->quantized_list)
     _ogg_free( cpi->quantized_list);
   if(cpi->OriginalDC)
@@ -140,7 +140,7 @@ static void EInitFragmentInfo(CP_INSTANCE * cpi){
     _ogg_malloc(64*
                 sizeof(*cpi->DCT_codes));
   cpi->DCTDataBuffer =
-    _ogg_malloc(64*
+    _theora_16_byte_aligned_malloc(64*
                 sizeof(*cpi->DCTDataBuffer));
   cpi->quantized_list =
     _ogg_malloc(64*

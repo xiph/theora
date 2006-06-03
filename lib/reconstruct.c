@@ -105,10 +105,12 @@ void dsp_recon_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)
   funcs->recon_inter8x8 = recon_inter8x8__c;
   funcs->recon_inter8x8_half = recon_inter8x8_half__c;
 #if defined(USE_ASM)
+  if (cpu_flags & CPU_X86_MMX) {
+    dsp_mmx_recon_init(funcs);
+  }
+
   if (cpu_flags & CPU_X86_SSE2) {
     dsp_sse2_recon_init(funcs);
-  } else if (cpu_flags & CPU_X86_MMX) {
-    dsp_mmx_recon_init(funcs);
   }
 #endif
 }

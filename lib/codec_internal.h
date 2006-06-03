@@ -27,10 +27,12 @@
 #include "dsp.h"
 
 #if defined(USE_ASM) && defined(_MSC_VER)
+
 #define _theora_16_byte_aligned_malloc(x) _aligned_malloc((x),16)
 #define _theora_16_byte_aligned_free(x) _aligned_free((x))
 #else
 #define _theora_16_byte_aligned_malloc _ogg_malloc
+#define _theora_16_byte_aligned_free _ogg_free
 #endif
 
 #ifndef LIBOGG2
