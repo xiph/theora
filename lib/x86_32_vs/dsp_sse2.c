@@ -322,260 +322,180 @@ static void sub8x8avg2__sse2 (unsigned char *FiltPtr, unsigned char *ReconPtr1,
     DctInputPtr += 8;
   }
 #else
-
     __asm {
         align 16
 
-            pxor        mm7, mm7
+        pxor        xmm0, xmm0
 
-        mov         eax, FiltPtr
-        mov         ebx, ReconPtr1
-        mov         ecx, ReconPtr2
-        mov         edx, DctInputPtr
-
-        /*  ITERATION 1 */	
-        movq		mm0, [eax]		;	/* mm0 = FiltPtr */
-        movq		mm1, [ebx]		;	/* mm1 = ReconPtr1 */
-        movq		mm4, [ecx]		;	/* mm1 = ReconPtr2 */
-        movq		mm2, mm0		;	/* dup to prepare for up conversion */
-        movq		mm3, mm1		;	/* dup to prepare for up conversion */
-        movq		mm5, mm4		;	/* dup to prepare for up conversion */
-	        ;	/* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		;	/* mm0 = INT16(FiltPtr) */
-        punpcklbw		mm1, mm7		;	/* mm1 = INT16(ReconPtr1) */
-        punpcklbw		mm4, mm7		;	/* mm1 = INT16(ReconPtr2) */
-        punpckhbw		mm2, mm7		;	/* mm2 = INT16(FiltPtr) */
-        punpckhbw		mm3, mm7		;	/* mm3 = INT16(ReconPtr1) */
-        punpckhbw		mm5, mm7		;	/* mm3 = INT16(ReconPtr2) */
-	        ;	/* average ReconPtr1 and ReconPtr2 */
-        paddw		mm1, mm4		;	/* mm1 = ReconPtr1 + ReconPtr2 */
-        paddw		mm3, mm5		;	/* mm3 = ReconPtr1 + ReconPtr2 */
-        psrlw		mm1, 1		;	/* mm1 = (ReconPtr1 + ReconPtr2) / 2 */
-        psrlw		mm3, 1		;	/* mm3 = (ReconPtr1 + ReconPtr2) / 2 */
-        psubw		mm0, mm1		;	/* mm0 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        psubw		mm2, mm3		;	/* mm2 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        movq		[edx], mm0		;	/* write answer out */
-        movq		[8 + edx], mm2		;	/* write answer out */
-	        ;	/* Increment pointers */
-        add		edx, 16		;	
-        add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
-	
-
-        /*  ITERATION 2 */	
-        movq		mm0, [eax]		;	/* mm0 = FiltPtr */
-        movq		mm1, [ebx]		;	/* mm1 = ReconPtr1 */
-        movq		mm4, [ecx]		;	/* mm1 = ReconPtr2 */
-        movq		mm2, mm0		;	/* dup to prepare for up conversion */
-        movq		mm3, mm1		;	/* dup to prepare for up conversion */
-        movq		mm5, mm4		;	/* dup to prepare for up conversion */
-	        ;	/* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		;	/* mm0 = INT16(FiltPtr) */
-        punpcklbw		mm1, mm7		;	/* mm1 = INT16(ReconPtr1) */
-        punpcklbw		mm4, mm7		;	/* mm1 = INT16(ReconPtr2) */
-        punpckhbw		mm2, mm7		;	/* mm2 = INT16(FiltPtr) */
-        punpckhbw		mm3, mm7		;	/* mm3 = INT16(ReconPtr1) */
-        punpckhbw		mm5, mm7		;	/* mm3 = INT16(ReconPtr2) */
-	        ;	/* average ReconPtr1 and ReconPtr2 */
-        paddw		mm1, mm4		;	/* mm1 = ReconPtr1 + ReconPtr2 */
-        paddw		mm3, mm5		;	/* mm3 = ReconPtr1 + ReconPtr2 */
-        psrlw		mm1, 1		;	/* mm1 = (ReconPtr1 + ReconPtr2) / 2 */
-        psrlw		mm3, 1		;	/* mm3 = (ReconPtr1 + ReconPtr2) / 2 */
-        psubw		mm0, mm1		;	/* mm0 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        psubw		mm2, mm3		;	/* mm2 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        movq		[edx], mm0		;	/* write answer out */
-        movq		[8 + edx], mm2		;	/* write answer out */
-	        ;	/* Increment pointers */
-        add		edx, 16		;	
-        add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
+        /* Setup input params */
+        mov         eax, ReconPtr1
+        mov         ebx, ReconPtr2
+        mov         ecx, PixelsPerLine
+        mov         edx, ReconPixelsPerLine
+        mov         esi, FiltPtr
+        mov         edi, DctInputPtr
 
 
-        /*  ITERATION 3 */	
-        movq		mm0, [eax]		;	/* mm0 = FiltPtr */
-        movq		mm1, [ebx]		;	/* mm1 = ReconPtr1 */
-        movq		mm4, [ecx]		;	/* mm1 = ReconPtr2 */
-        movq		mm2, mm0		;	/* dup to prepare for up conversion */
-        movq		mm3, mm1		;	/* dup to prepare for up conversion */
-        movq		mm5, mm4		;	/* dup to prepare for up conversion */
-	        ;	/* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		;	/* mm0 = INT16(FiltPtr) */
-        punpcklbw		mm1, mm7		;	/* mm1 = INT16(ReconPtr1) */
-        punpcklbw		mm4, mm7		;	/* mm1 = INT16(ReconPtr2) */
-        punpckhbw		mm2, mm7		;	/* mm2 = INT16(FiltPtr) */
-        punpckhbw		mm3, mm7		;	/* mm3 = INT16(ReconPtr1) */
-        punpckhbw		mm5, mm7		;	/* mm3 = INT16(ReconPtr2) */
-	        ;	/* average ReconPtr1 and ReconPtr2 */
-        paddw		mm1, mm4		;	/* mm1 = ReconPtr1 + ReconPtr2 */
-        paddw		mm3, mm5		;	/* mm3 = ReconPtr1 + ReconPtr2 */
-        psrlw		mm1, 1		;	/* mm1 = (ReconPtr1 + ReconPtr2) / 2 */
-        psrlw		mm3, 1		;	/* mm3 = (ReconPtr1 + ReconPtr2) / 2 */
-        psubw		mm0, mm1		;	/* mm0 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        psubw		mm2, mm3		;	/* mm2 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        movq		[edx], mm0		;	/* write answer out */
-        movq		[8 + edx], mm2		;	/* write answer out */
-	        ;	/* Increment pointers */
-        add		edx, 16		;	
-        add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
+        /* ITERATION 1&2 */
+
+        /* Read 2 iterations worth of the input arrays */
+        movq        xmm1, QWORD PTR [eax]
+        movq        xmm2, QWORD PTR [eax + edx]
+        movq        xmm3, QWORD PTR [ebx]
+        movq        xmm4, QWORD PTR [ebx + edx]
+        movq        xmm5, QWORD PTR [esi]
+        movq        xmm6, QWORD PTR [esi + ecx]
+
+        /* Extend out to int16's */
+        punpcklbw   xmm1, xmm0
+        punpcklbw   xmm2, xmm0
+        punpcklbw   xmm3, xmm0
+        punpcklbw   xmm4, xmm0
+        punpcklbw   xmm5, xmm0
+        punpcklbw   xmm6, xmm0
+
+        /* Average ReconPtr1 and 2 */
+        paddw       xmm1, xmm3
+        paddw       xmm2, xmm4
+        psrlw       xmm1, 1
+        psrlw       xmm2, 1
+
+        /* Do Result = FilterPtr[i] - avg(ReconPtr[i], ReconPtr[i]) */
+        psubw       xmm5, xmm1
+        psubw       xmm6, xmm2
+
+        /* Write out two iterations worth */
+        movdqa      [edi], xmm5
+        movdqa      [edi + 16], xmm6
+
+        /* Update pointers */
+        lea         eax, [eax + edx*2]
+        lea         ebx, [ebx + edx*2]
+        lea         esi, [esi + ecx*2]
+        add         edi, 32
 
 
-        /*  ITERATION 4 */	
-        movq		mm0, [eax]		;	/* mm0 = FiltPtr */
-        movq		mm1, [ebx]		;	/* mm1 = ReconPtr1 */
-        movq		mm4, [ecx]		;	/* mm1 = ReconPtr2 */
-        movq		mm2, mm0		;	/* dup to prepare for up conversion */
-        movq		mm3, mm1		;	/* dup to prepare for up conversion */
-        movq		mm5, mm4		;	/* dup to prepare for up conversion */
-	        ;	/* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		;	/* mm0 = INT16(FiltPtr) */
-        punpcklbw		mm1, mm7		;	/* mm1 = INT16(ReconPtr1) */
-        punpcklbw		mm4, mm7		;	/* mm1 = INT16(ReconPtr2) */
-        punpckhbw		mm2, mm7		;	/* mm2 = INT16(FiltPtr) */
-        punpckhbw		mm3, mm7		;	/* mm3 = INT16(ReconPtr1) */
-        punpckhbw		mm5, mm7		;	/* mm3 = INT16(ReconPtr2) */
-	        ;	/* average ReconPtr1 and ReconPtr2 */
-        paddw		mm1, mm4		;	/* mm1 = ReconPtr1 + ReconPtr2 */
-        paddw		mm3, mm5		;	/* mm3 = ReconPtr1 + ReconPtr2 */
-        psrlw		mm1, 1		;	/* mm1 = (ReconPtr1 + ReconPtr2) / 2 */
-        psrlw		mm3, 1		;	/* mm3 = (ReconPtr1 + ReconPtr2) / 2 */
-        psubw		mm0, mm1		;	/* mm0 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        psubw		mm2, mm3		;	/* mm2 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        movq		[edx], mm0		;	/* write answer out */
-        movq		[8 + edx], mm2		;	/* write answer out */
-	        ;	/* Increment pointers */
-        add		edx, 16		;	
-        add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
+        /* ITERATION 3&4 */
+
+        /* Read 2 iterations worth of the input arrays */
+        movq        xmm1, QWORD PTR [eax]
+        movq        xmm2, QWORD PTR [eax + edx]
+        movq        xmm3, QWORD PTR [ebx]
+        movq        xmm4, QWORD PTR [ebx + edx]
+        movq        xmm5, QWORD PTR [esi]
+        movq        xmm6, QWORD PTR [esi + ecx]
+
+        /* Extend out to int16's */
+        punpcklbw   xmm1, xmm0
+        punpcklbw   xmm2, xmm0
+        punpcklbw   xmm3, xmm0
+        punpcklbw   xmm4, xmm0
+        punpcklbw   xmm5, xmm0
+        punpcklbw   xmm6, xmm0
+
+        /* Average ReconPtr1 and 2 */
+        paddw       xmm1, xmm3
+        paddw       xmm2, xmm4
+        psrlw       xmm1, 1
+        psrlw       xmm2, 1
+
+        /* Do Result = FilterPtr[i] - avg(ReconPtr[i], ReconPtr[i]) */
+        psubw       xmm5, xmm1
+        psubw       xmm6, xmm2
+
+        /* Write out two iterations worth */
+        movdqa      [edi], xmm5
+        movdqa      [edi + 16], xmm6
+
+        /* Update pointers */
+        lea         eax, [eax + edx*2]
+        lea         ebx, [ebx + edx*2]
+        lea         esi, [esi + ecx*2]
+        add         edi, 32
 
 
-        /*  ITERATION 5 */	
-        movq		mm0, [eax]		;	/* mm0 = FiltPtr */
-        movq		mm1, [ebx]		;	/* mm1 = ReconPtr1 */
-        movq		mm4, [ecx]		;	/* mm1 = ReconPtr2 */
-        movq		mm2, mm0		;	/* dup to prepare for up conversion */
-        movq		mm3, mm1		;	/* dup to prepare for up conversion */
-        movq		mm5, mm4		;	/* dup to prepare for up conversion */
-	        ;	/* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		;	/* mm0 = INT16(FiltPtr) */
-        punpcklbw		mm1, mm7		;	/* mm1 = INT16(ReconPtr1) */
-        punpcklbw		mm4, mm7		;	/* mm1 = INT16(ReconPtr2) */
-        punpckhbw		mm2, mm7		;	/* mm2 = INT16(FiltPtr) */
-        punpckhbw		mm3, mm7		;	/* mm3 = INT16(ReconPtr1) */
-        punpckhbw		mm5, mm7		;	/* mm3 = INT16(ReconPtr2) */
-	        ;	/* average ReconPtr1 and ReconPtr2 */
-        paddw		mm1, mm4		;	/* mm1 = ReconPtr1 + ReconPtr2 */
-        paddw		mm3, mm5		;	/* mm3 = ReconPtr1 + ReconPtr2 */
-        psrlw		mm1, 1		;	/* mm1 = (ReconPtr1 + ReconPtr2) / 2 */
-        psrlw		mm3, 1		;	/* mm3 = (ReconPtr1 + ReconPtr2) / 2 */
-        psubw		mm0, mm1		;	/* mm0 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        psubw		mm2, mm3		;	/* mm2 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        movq		[edx], mm0		;	/* write answer out */
-        movq		[8 + edx], mm2		;	/* write answer out */
-	        ;	/* Increment pointers */
-        add		edx, 16		;	
-        add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
+        
+        /* ITERATION 5&6 */
 
+        /* Read 2 iterations worth of the input arrays */
+        movq        xmm1, QWORD PTR [eax]
+        movq        xmm2, QWORD PTR [eax + edx]
+        movq        xmm3, QWORD PTR [ebx]
+        movq        xmm4, QWORD PTR [ebx + edx]
+        movq        xmm5, QWORD PTR [esi]
+        movq        xmm6, QWORD PTR [esi + ecx]
 
-        /*  ITERATION 6 */	
-        movq		mm0, [eax]		;	/* mm0 = FiltPtr */
-        movq		mm1, [ebx]		;	/* mm1 = ReconPtr1 */
-        movq		mm4, [ecx]		;	/* mm1 = ReconPtr2 */
-        movq		mm2, mm0		;	/* dup to prepare for up conversion */
-        movq		mm3, mm1		;	/* dup to prepare for up conversion */
-        movq		mm5, mm4		;	/* dup to prepare for up conversion */
-	        ;	/* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		;	/* mm0 = INT16(FiltPtr) */
-        punpcklbw		mm1, mm7		;	/* mm1 = INT16(ReconPtr1) */
-        punpcklbw		mm4, mm7		;	/* mm1 = INT16(ReconPtr2) */
-        punpckhbw		mm2, mm7		;	/* mm2 = INT16(FiltPtr) */
-        punpckhbw		mm3, mm7		;	/* mm3 = INT16(ReconPtr1) */
-        punpckhbw		mm5, mm7		;	/* mm3 = INT16(ReconPtr2) */
-	        ;	/* average ReconPtr1 and ReconPtr2 */
-        paddw		mm1, mm4		;	/* mm1 = ReconPtr1 + ReconPtr2 */
-        paddw		mm3, mm5		;	/* mm3 = ReconPtr1 + ReconPtr2 */
-        psrlw		mm1, 1		;	/* mm1 = (ReconPtr1 + ReconPtr2) / 2 */
-        psrlw		mm3, 1		;	/* mm3 = (ReconPtr1 + ReconPtr2) / 2 */
-        psubw		mm0, mm1		;	/* mm0 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        psubw		mm2, mm3		;	/* mm2 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        movq		[edx], mm0		;	/* write answer out */
-        movq		[8 + edx], mm2		;	/* write answer out */
-	        ;	/* Increment pointers */
-        add		edx, 16		;	
-        add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
+        /* Extend out to int16's */
+        punpcklbw   xmm1, xmm0
+        punpcklbw   xmm2, xmm0
+        punpcklbw   xmm3, xmm0
+        punpcklbw   xmm4, xmm0
+        punpcklbw   xmm5, xmm0
+        punpcklbw   xmm6, xmm0
 
+        /* Average ReconPtr1 and 2 */
+        paddw       xmm1, xmm3
+        paddw       xmm2, xmm4
+        psrlw       xmm1, 1
+        psrlw       xmm2, 1
 
-        /*  ITERATION 7 */	
-        movq		mm0, [eax]		;	/* mm0 = FiltPtr */
-        movq		mm1, [ebx]		;	/* mm1 = ReconPtr1 */
-        movq		mm4, [ecx]		;	/* mm1 = ReconPtr2 */
-        movq		mm2, mm0		;	/* dup to prepare for up conversion */
-        movq		mm3, mm1		;	/* dup to prepare for up conversion */
-        movq		mm5, mm4		;	/* dup to prepare for up conversion */
-	        ;	/* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		;	/* mm0 = INT16(FiltPtr) */
-        punpcklbw		mm1, mm7		;	/* mm1 = INT16(ReconPtr1) */
-        punpcklbw		mm4, mm7		;	/* mm1 = INT16(ReconPtr2) */
-        punpckhbw		mm2, mm7		;	/* mm2 = INT16(FiltPtr) */
-        punpckhbw		mm3, mm7		;	/* mm3 = INT16(ReconPtr1) */
-        punpckhbw		mm5, mm7		;	/* mm3 = INT16(ReconPtr2) */
-	        ;	/* average ReconPtr1 and ReconPtr2 */
-        paddw		mm1, mm4		;	/* mm1 = ReconPtr1 + ReconPtr2 */
-        paddw		mm3, mm5		;	/* mm3 = ReconPtr1 + ReconPtr2 */
-        psrlw		mm1, 1		;	/* mm1 = (ReconPtr1 + ReconPtr2) / 2 */
-        psrlw		mm3, 1		;	/* mm3 = (ReconPtr1 + ReconPtr2) / 2 */
-        psubw		mm0, mm1		;	/* mm0 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        psubw		mm2, mm3		;	/* mm2 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        movq		[edx], mm0		;	/* write answer out */
-        movq		[8 + edx], mm2		;	/* write answer out */
-	        ;	/* Increment pointers */
-        add		edx, 16		;	
-        add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
+        /* Do Result = FilterPtr[i] - avg(ReconPtr[i], ReconPtr[i]) */
+        psubw       xmm5, xmm1
+        psubw       xmm6, xmm2
 
+        /* Write out two iterations worth */
+        movdqa      [edi], xmm5
+        movdqa      [edi + 16], xmm6
 
-        /*  ITERATION 8 */	
-        movq		mm0, [eax]		;	/* mm0 = FiltPtr */
-        movq		mm1, [ebx]		;	/* mm1 = ReconPtr1 */
-        movq		mm4, [ecx]		;	/* mm1 = ReconPtr2 */
-        movq		mm2, mm0		;	/* dup to prepare for up conversion */
-        movq		mm3, mm1		;	/* dup to prepare for up conversion */
-        movq		mm5, mm4		;	/* dup to prepare for up conversion */
-	        ;	/* convert from UINT8 to INT16 */
-        punpcklbw		mm0, mm7		;	/* mm0 = INT16(FiltPtr) */
-        punpcklbw		mm1, mm7		;	/* mm1 = INT16(ReconPtr1) */
-        punpcklbw		mm4, mm7		;	/* mm1 = INT16(ReconPtr2) */
-        punpckhbw		mm2, mm7		;	/* mm2 = INT16(FiltPtr) */
-        punpckhbw		mm3, mm7		;	/* mm3 = INT16(ReconPtr1) */
-        punpckhbw		mm5, mm7		;	/* mm3 = INT16(ReconPtr2) */
-	        ;	/* average ReconPtr1 and ReconPtr2 */
-        paddw		mm1, mm4		;	/* mm1 = ReconPtr1 + ReconPtr2 */
-        paddw		mm3, mm5		;	/* mm3 = ReconPtr1 + ReconPtr2 */
-        psrlw		mm1, 1		;	/* mm1 = (ReconPtr1 + ReconPtr2) / 2 */
-        psrlw		mm3, 1		;	/* mm3 = (ReconPtr1 + ReconPtr2) / 2 */
-        psubw		mm0, mm1		;	/* mm0 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        psubw		mm2, mm3		;	/* mm2 = FiltPtr - ((ReconPtr1 + ReconPtr2) / 2) */
-        movq		[edx], mm0		;	/* write answer out */
-        movq		[8 + edx], mm2		;	/* write answer out */
-	        ;	/* Increment pointers */
-        add		edx, 16		;	
-        add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
-
-    };
+        /* Update pointers */
+        lea         eax, [eax + edx*2]
+        lea         ebx, [ebx + edx*2]
+        lea         esi, [esi + ecx*2]
+        add         edi, 32
+        
 
 
 
+        /* ITERATION 7&8 */
+
+        /* Read 2 iterations worth of the input arrays */
+        movq        xmm1, QWORD PTR [eax]
+        movq        xmm2, QWORD PTR [eax + edx]
+        movq        xmm3, QWORD PTR [ebx]
+        movq        xmm4, QWORD PTR [ebx + edx]
+        movq        xmm5, QWORD PTR [esi]
+        movq        xmm6, QWORD PTR [esi + ecx]
+
+        /* Extend out to int16's */
+        punpcklbw   xmm1, xmm0
+        punpcklbw   xmm2, xmm0
+        punpcklbw   xmm3, xmm0
+        punpcklbw   xmm4, xmm0
+        punpcklbw   xmm5, xmm0
+        punpcklbw   xmm6, xmm0
+
+        /* Average ReconPtr1 and 2 */
+        paddw       xmm1, xmm3
+        paddw       xmm2, xmm4
+        psrlw       xmm1, 1
+        psrlw       xmm2, 1
+
+        /* Do Result = FilterPtr[i] - avg(ReconPtr[i], ReconPtr[i]) */
+        psubw       xmm5, xmm1
+        psubw       xmm6, xmm2
+
+        /* Write out two iterations worth */
+        movdqa      [edi], xmm5
+        movdqa      [edi + 16], xmm6
+
+        /* Update pointers */
+        //lea         eax, [eax + edx*2]
+        //lea         ebx, [ebx + edx*2]
+        //lea         esi, [esi + ecx*2]
+        //add         edi, 32
+};        
+
+ 
 
  
 #endif
@@ -1465,7 +1385,7 @@ void dsp_sse2_init(DspFunctions *funcs)
   TH_DEBUG("enabling accelerated x86_32 mmx dsp functions.\n");
   funcs->sub8x8 = sub8x8__sse2;
   funcs->sub8x8_128 = sub8x8_128__sse2;
-  //funcs->sub8x8avg2 = sub8x8avg2__sse2;
+  funcs->sub8x8avg2 = sub8x8avg2__sse2;
   //funcs->row_sad8 = row_sad8__sse2;
   //funcs->col_sad8x8 = col_sad8x8__sse2;
   //funcs->sad8x8 = sad8x8__sse2;
