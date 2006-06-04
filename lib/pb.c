@@ -24,23 +24,23 @@ void ClearTmpBuffers(PB_INSTANCE * pbi){
   if(pbi->ReconDataBuffer)
     _theora_16_byte_aligned_free(pbi->ReconDataBuffer);
   if(pbi->DequantBuffer)
-    _ogg_free(pbi->DequantBuffer);
+    _theora_16_byte_aligned_free(pbi->DequantBuffer);
   if(pbi->TmpDataBuffer)
-    _ogg_free(pbi->TmpDataBuffer);
+    _theora_16_byte_aligned_free(pbi->TmpDataBuffer);
   if(pbi->TmpReconBuffer)
-    _ogg_free(pbi->TmpReconBuffer);
+    _theora_16_byte_aligned_free(pbi->TmpReconBuffer);
   if(pbi->dequant_Y_coeffs)
-    _ogg_free(pbi->dequant_Y_coeffs);
+    _theora_16_byte_aligned_free(pbi->dequant_Y_coeffs);
   if(pbi->dequant_U_coeffs)
-    _ogg_free(pbi->dequant_U_coeffs);
+    _theora_16_byte_aligned_free(pbi->dequant_U_coeffs);
   if(pbi->dequant_V_coeffs)
-    _ogg_free(pbi->dequant_V_coeffs);
+    _theora_16_byte_aligned_free(pbi->dequant_V_coeffs);
   if(pbi->dequant_InterY_coeffs)
-    _ogg_free(pbi->dequant_InterY_coeffs);
+    _theora_16_byte_aligned_free(pbi->dequant_InterY_coeffs);
   if(pbi->dequant_InterU_coeffs)
-    _ogg_free(pbi->dequant_InterU_coeffs);
+    _theora_16_byte_aligned_free(pbi->dequant_InterU_coeffs);
   if(pbi->dequant_InterV_coeffs)
-    _ogg_free(pbi->dequant_InterV_coeffs);
+    _theora_16_byte_aligned_free(pbi->dequant_InterV_coeffs);
 
 
   pbi->ReconDataBuffer=0;
@@ -66,31 +66,31 @@ void InitTmpBuffers(PB_INSTANCE * pbi){
     _theora_16_byte_aligned_malloc(64*sizeof(*pbi->ReconDataBuffer));
 
   pbi->DequantBuffer        =
-    _ogg_malloc(64 * sizeof(*pbi->DequantBuffer));
+    _theora_16_byte_aligned_malloc(64 * sizeof(*pbi->DequantBuffer));
 
   pbi->TmpDataBuffer        =
-    _ogg_malloc(64 * sizeof(*pbi->TmpDataBuffer));
+    _theora_16_byte_aligned_malloc(64 * sizeof(*pbi->TmpDataBuffer));
 
   pbi->TmpReconBuffer       =
-    _ogg_malloc(64 * sizeof(*pbi->TmpReconBuffer));
+    _theora_16_byte_aligned_malloc(64 * sizeof(*pbi->TmpReconBuffer));
 
   pbi->dequant_Y_coeffs     =
-    _ogg_malloc(64 * sizeof(*pbi->dequant_Y_coeffs));
+    _theora_16_byte_aligned_malloc(64 * sizeof(*pbi->dequant_Y_coeffs));
 
   pbi->dequant_U_coeffs    =
-    _ogg_malloc(64 * sizeof(*pbi->dequant_U_coeffs));
+    _theora_16_byte_aligned_malloc(64 * sizeof(*pbi->dequant_U_coeffs));
 
   pbi->dequant_V_coeffs    =
-    _ogg_malloc(64 * sizeof(*pbi->dequant_V_coeffs));
+    _theora_16_byte_aligned_malloc(64 * sizeof(*pbi->dequant_V_coeffs));
 
   pbi->dequant_InterY_coeffs =
-    _ogg_malloc(64 * sizeof(*pbi->dequant_InterY_coeffs));
+    _theora_16_byte_aligned_malloc(64 * sizeof(*pbi->dequant_InterY_coeffs));
 
   pbi->dequant_InterU_coeffs =
-    _ogg_malloc(64 * sizeof(*pbi->dequant_InterU_coeffs));
+    _theora_16_byte_aligned_malloc(64 * sizeof(*pbi->dequant_InterU_coeffs));
 
   pbi->dequant_InterV_coeffs =
-    _ogg_malloc(64 * sizeof(*pbi->dequant_InterV_coeffs));
+    _theora_16_byte_aligned_malloc(64 * sizeof(*pbi->dequant_InterV_coeffs));
 
 }
 

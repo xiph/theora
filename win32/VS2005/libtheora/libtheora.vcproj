@@ -447,6 +447,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\lib\x86_32_vs\idct_mmx.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\lib\x86_32_vs\idct_sse2.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\libtheora.def"
 				>
 			</File>

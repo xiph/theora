@@ -51,7 +51,7 @@ static void EClearFragmentInfo(CP_INSTANCE * cpi){
   if(cpi->DCTDataBuffer )
     _theora_16_byte_aligned_free( cpi->DCTDataBuffer);
   if(cpi->quantized_list)
-    _ogg_free( cpi->quantized_list);
+    _theora_16_byte_aligned_free( cpi->quantized_list);
   if(cpi->OriginalDC)
     _ogg_free( cpi->OriginalDC);
   if(cpi->PartiallyCodedFlags)
@@ -143,7 +143,7 @@ static void EInitFragmentInfo(CP_INSTANCE * cpi){
     _theora_16_byte_aligned_malloc(64*
                 sizeof(*cpi->DCTDataBuffer));
   cpi->quantized_list =
-    _ogg_malloc(64*
+    _theora_16_byte_aligned_malloc(64*
                 sizeof(*cpi->quantized_list));
   cpi->PartiallyCodedFlags =
     _ogg_malloc(cpi->pb.MacroBlocks*
