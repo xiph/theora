@@ -65,6 +65,9 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
          */
 
         /* 16 Iterations at a time  */
+        mov         ecx, 4      /* 4 lots of 16 */
+
+        calc_loop_start:
             /* Read 16x16 bits of quatized_list and dequant_coeffs */
             movdqu      xmm1, [esi]
             movdqu      xmm5, [esi + 16]
@@ -98,115 +101,128 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
             movdqa      [eax + 32], xmm5
             movdqa      [eax + 48], xmm2
 
+            /* Update the pointers */
+            add         esi, 32
+            add         ebx, 32
+            add         eax, 64
 
+        /* Loop check */
+        sub         ecx, 1
+        jnz         calc_loop_start
 
-        /* 16 Iterations at a time  */
-            /* Read 16x16 bits of quatized_list and dequant_coeffs */
-            movdqu      xmm1, [esi + 32]
-            movdqu      xmm5, [esi + 48]
-
-            movdqa      xmm2, [ebx + 32]
-            movdqa      xmm6, [ebx + 48]
-
-            /* Make a copy of xmm1 and xmm5 */
-            movdqa      xmm7, xmm1
-            movdqa      xmm0, xmm5
-
-            /* Multiply */
-            pmullw      xmm1, xmm2
-            pmulhw      xmm2, xmm7
-
-            pmullw      xmm5, xmm6
-            pmulhw      xmm6, xmm0
-
-            /* Interleave the multiplicataion results */
-            movdqa      xmm0, xmm1
-            punpcklwd   xmm1, xmm2      /* Now the low 4 x 32 bits */
-            punpckhwd   xmm0, xmm2      /* The high 4x32 bits */
-
-            movdqa      xmm2, xmm5
-            punpcklwd   xmm5, xmm6
-            punpckhwd   xmm2, xmm6
-
-            /* Write the 16x32 bits of output to temp space */
-            movdqa      [eax + 64], xmm1
-            movdqa      [eax + 80], xmm0
-            movdqa      [eax + 96], xmm5
-            movdqa      [eax + 112], xmm2
-
-        /* 16 Iterations at a time  */
-            /* Read 16x16 bits of quatized_list and dequant_coeffs */
-            movdqu      xmm1, [esi + 64]
-            movdqu      xmm5, [esi + 80]
-
-            movdqa      xmm2, [ebx + 64]
-            movdqa      xmm6, [ebx + 80]
-
-            /* Make a copy of xmm1 and xmm5 */
-            movdqa      xmm7, xmm1
-            movdqa      xmm0, xmm5
-
-            /* Multiply */
-            pmullw      xmm1, xmm2
-            pmulhw      xmm2, xmm7
-
-            pmullw      xmm5, xmm6
-            pmulhw      xmm6, xmm0
-
-            /* Interleave the multiplicataion results */
-            movdqa      xmm0, xmm1
-            punpcklwd   xmm1, xmm2      /* Now the low 4 x 32 bits */
-            punpckhwd   xmm0, xmm2      /* The high 4x32 bits */
-
-            movdqa      xmm2, xmm5
-            punpcklwd   xmm5, xmm6
-            punpckhwd   xmm2, xmm6
-
-            /* Write the 16x32 bits of output to temp space */
-            movdqa      [eax + 128], xmm1
-            movdqa      [eax + 144], xmm0
-            movdqa      [eax + 160], xmm5
-            movdqa      [eax + 176], xmm2
+        /* Restore the pointer to the start of the temp buffer */
+        sub         eax, 256
+   
 
 
 
-        /* 16 Iterations at a time  */
-            /* Read 16x16 bits of quatized_list and dequant_coeffs */
-            movdqu      xmm1, [esi + 96]
-            movdqu      xmm5, [esi + 112]
+        ///* 16 Iterations at a time  */
+        //    /* Read 16x16 bits of quatized_list and dequant_coeffs */
+        //    movdqu      xmm1, [esi + 32]
+        //    movdqu      xmm5, [esi + 48]
 
-            movdqa      xmm2, [ebx + 96]
-            movdqa      xmm6, [ebx + 112]
+        //    movdqa      xmm2, [ebx + 32]
+        //    movdqa      xmm6, [ebx + 48]
 
-            /* Make a copy of xmm1 and xmm5 */
-            movdqa      xmm7, xmm1
-            movdqa      xmm0, xmm5
+        //    /* Make a copy of xmm1 and xmm5 */
+        //    movdqa      xmm7, xmm1
+        //    movdqa      xmm0, xmm5
 
-            /* Multiply */
-            pmullw      xmm1, xmm2
-            pmulhw      xmm2, xmm7
+        //    /* Multiply */
+        //    pmullw      xmm1, xmm2
+        //    pmulhw      xmm2, xmm7
 
-            pmullw      xmm5, xmm6
-            pmulhw      xmm6, xmm0
+        //    pmullw      xmm5, xmm6
+        //    pmulhw      xmm6, xmm0
 
-            /* Interleave the multiplicataion results */
-            movdqa      xmm0, xmm1
-            punpcklwd   xmm1, xmm2      /* Now the low 4 x 32 bits */
-            punpckhwd   xmm0, xmm2      /* The high 4x32 bits */
+        //    /* Interleave the multiplicataion results */
+        //    movdqa      xmm0, xmm1
+        //    punpcklwd   xmm1, xmm2      /* Now the low 4 x 32 bits */
+        //    punpckhwd   xmm0, xmm2      /* The high 4x32 bits */
 
-            movdqa      xmm2, xmm5
-            punpcklwd   xmm5, xmm6
-            punpckhwd   xmm2, xmm6
+        //    movdqa      xmm2, xmm5
+        //    punpcklwd   xmm5, xmm6
+        //    punpckhwd   xmm2, xmm6
 
-            /* Write the 16x32 bits of output to temp space */
-            movdqa      [eax + 192], xmm1
-            movdqa      [eax + 208], xmm0
-            movdqa      [eax + 224], xmm5
-            movdqa      [eax + 240], xmm2
+        //    /* Write the 16x32 bits of output to temp space */
+        //    movdqa      [eax + 64], xmm1
+        //    movdqa      [eax + 80], xmm0
+        //    movdqa      [eax + 96], xmm5
+        //    movdqa      [eax + 112], xmm2
+
+        ///* 16 Iterations at a time  */
+        //    /* Read 16x16 bits of quatized_list and dequant_coeffs */
+        //    movdqu      xmm1, [esi + 64]
+        //    movdqu      xmm5, [esi + 80]
+
+        //    movdqa      xmm2, [ebx + 64]
+        //    movdqa      xmm6, [ebx + 80]
+
+        //    /* Make a copy of xmm1 and xmm5 */
+        //    movdqa      xmm7, xmm1
+        //    movdqa      xmm0, xmm5
+
+        //    /* Multiply */
+        //    pmullw      xmm1, xmm2
+        //    pmulhw      xmm2, xmm7
+
+        //    pmullw      xmm5, xmm6
+        //    pmulhw      xmm6, xmm0
+
+        //    /* Interleave the multiplicataion results */
+        //    movdqa      xmm0, xmm1
+        //    punpcklwd   xmm1, xmm2      /* Now the low 4 x 32 bits */
+        //    punpckhwd   xmm0, xmm2      /* The high 4x32 bits */
+
+        //    movdqa      xmm2, xmm5
+        //    punpcklwd   xmm5, xmm6
+        //    punpckhwd   xmm2, xmm6
+
+        //    /* Write the 16x32 bits of output to temp space */
+        //    movdqa      [eax + 128], xmm1
+        //    movdqa      [eax + 144], xmm0
+        //    movdqa      [eax + 160], xmm5
+        //    movdqa      [eax + 176], xmm2
+
+
+
+        ///* 16 Iterations at a time  */
+        //    /* Read 16x16 bits of quatized_list and dequant_coeffs */
+        //    movdqu      xmm1, [esi + 96]
+        //    movdqu      xmm5, [esi + 112]
+
+        //    movdqa      xmm2, [ebx + 96]
+        //    movdqa      xmm6, [ebx + 112]
+
+        //    /* Make a copy of xmm1 and xmm5 */
+        //    movdqa      xmm7, xmm1
+        //    movdqa      xmm0, xmm5
+
+        //    /* Multiply */
+        //    pmullw      xmm1, xmm2
+        //    pmulhw      xmm2, xmm7
+
+        //    pmullw      xmm5, xmm6
+        //    pmulhw      xmm6, xmm0
+
+        //    /* Interleave the multiplicataion results */
+        //    movdqa      xmm0, xmm1
+        //    punpcklwd   xmm1, xmm2      /* Now the low 4 x 32 bits */
+        //    punpckhwd   xmm0, xmm2      /* The high 4x32 bits */
+
+        //    movdqa      xmm2, xmm5
+        //    punpcklwd   xmm5, xmm6
+        //    punpckhwd   xmm2, xmm6
+
+        //    /* Write the 16x32 bits of output to temp space */
+        //    movdqa      [eax + 192], xmm1
+        //    movdqa      [eax + 208], xmm0
+        //    movdqa      [eax + 224], xmm5
+        //    movdqa      [eax + 240], xmm2
 
         /* Now follow the pattern to write - can't use simd */
-        mov         ebx, 4
-    loop_start:
+        mov         ebx, 8
+    write_loop_start:
         mov         ecx         , [edx]
         mov         esi         , [eax]
         mov         [edi + ecx*4] , esi
@@ -233,37 +249,45 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
         mov         esi         , [eax + 28]
         mov         [edi + ecx*4] , esi
 
-        mov         ecx         , [edx + 32]
-        mov         esi         , [eax + 32]
-        mov         [edi + ecx*4] , esi
-        mov         ecx         , [edx + 36]
-        mov         esi         , [eax + 36]
-        mov         [edi + ecx*4] , esi
-        mov         ecx         , [edx + 40]
-        mov         esi         , [eax + 40]
-        mov         [edi + ecx*4] , esi
-        mov         ecx         , [edx + 44]
-        mov         esi         , [eax + 44]
-        mov         [edi + ecx*4] , esi
+        /* Update the pointers */
+        add         eax, 32
+        add         edx, 32
 
-        mov         ecx         , [edx + 48]
-        mov         esi         , [eax + 48]
-        mov         [edi + ecx*4] , esi
-        mov         ecx         , [edx + 52]
-        mov         esi         , [eax + 52]
-        mov         [edi + ecx*4] , esi
-        mov         ecx         , [edx + 56]
-        mov         esi         , [eax + 56]
-        mov         [edi + ecx*4] , esi
-        mov         ecx         , [edx + 60]
-        mov         esi         , [eax + 60]
-        mov         [edi + ecx*4] , esi
+    /* Check the loop */
+    sub         ebx, 1
+    jnz         write_loop_start
 
-        add         eax, 64
-        add         edx, 64
+        //mov         ecx         , [edx + 32]
+        //mov         esi         , [eax + 32]
+        //mov         [edi + ecx*4] , esi
+        //mov         ecx         , [edx + 36]
+        //mov         esi         , [eax + 36]
+        //mov         [edi + ecx*4] , esi
+        //mov         ecx         , [edx + 40]
+        //mov         esi         , [eax + 40]
+        //mov         [edi + ecx*4] , esi
+        //mov         ecx         , [edx + 44]
+        //mov         esi         , [eax + 44]
+        //mov         [edi + ecx*4] , esi
 
-        sub         ebx, 1
-        jnz         loop_start
+        //mov         ecx         , [edx + 48]
+        //mov         esi         , [eax + 48]
+        //mov         [edi + ecx*4] , esi
+        //mov         ecx         , [edx + 52]
+        //mov         esi         , [eax + 52]
+        //mov         [edi + ecx*4] , esi
+        //mov         ecx         , [edx + 56]
+        //mov         esi         , [eax + 56]
+        //mov         [edi + ecx*4] , esi
+        //mov         ecx         , [edx + 60]
+        //mov         esi         , [eax + 60]
+        //mov         [edi + ecx*4] , esi
+
+        //add         eax, 64
+        //add         edx, 64
+
+        //sub         ebx, 1
+        //jnz         write_loop_start
 
 
     };
