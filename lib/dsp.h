@@ -109,6 +109,7 @@ typedef struct
 
 extern void dsp_dct_init(DspFunctions *funcs, ogg_uint32_t cpu_flags);
 extern void dsp_recon_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
+extern void dsp_idct_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
 
 void dsp_init(DspFunctions *funcs);
 void dsp_static_init(DspFunctions *funcs);
@@ -117,7 +118,11 @@ extern void dsp_mmx_init(DspFunctions *funcs);
 extern void dsp_mmxext_init(DspFunctions *funcs);
 extern void dsp_mmx_fdct_init(DspFunctions *funcs);
 extern void dsp_mmx_recon_init(DspFunctions *funcs);
+
+extern void dsp_sse2_init(DspFunctions *funcs);
 extern void dsp_sse2_recon_init(DspFunctions *funcs);
+extern void dsp_sse2_idct_init(DspFunctions *funcs);
+
 #endif
 
 #define dsp_save_fpu(funcs) (funcs.save_fpu ())
