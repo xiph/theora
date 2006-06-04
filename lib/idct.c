@@ -31,6 +31,9 @@
 #define xC7S1 12785
 
 /* compute the 16 bit signed 1D inverse DCT - spec version */
+
+/* THIS IS NEVER CALLED */
+/*
 static void idct_short__c ( ogg_int16_t * InputData, ogg_int16_t * OutputData ) {
   ogg_int32_t t[8], r;
   ogg_int16_t *y = InputData;
@@ -108,8 +111,8 @@ static void idct_short__c ( ogg_int16_t * InputData, ogg_int16_t * OutputData ) 
   x[7] = r;
 
 }
-
-static void dequant_slow( ogg_int16_t * dequant_coeffs,
+*/
+static void dequant_slow__c( ogg_int16_t * dequant_coeffs,
                    ogg_int16_t * quantized_list,
                    ogg_int32_t * DCT_block) {
   int i;
@@ -119,7 +122,7 @@ static void dequant_slow( ogg_int16_t * dequant_coeffs,
 
 
 
-void IDctSlow(  Q_LIST_ENTRY * InputData,
+void IDctSlow__c(  Q_LIST_ENTRY * InputData,
                 ogg_int16_t *QuantMatrix,
                 ogg_int16_t * OutputData ) {
   ogg_int32_t IntermediateData[64];
@@ -132,7 +135,7 @@ void IDctSlow(  Q_LIST_ENTRY * InputData,
 
   int loop;
 
-  dequant_slow( QuantMatrix, InputData, IntermediateData);
+  dequant_slow__c( QuantMatrix, InputData, IntermediateData);
 
   /* Inverse DCT on the rows now */
   for ( loop = 0; loop < 8; loop++){
@@ -338,7 +341,7 @@ void IDctSlow(  Q_LIST_ENTRY * InputData,
   0  0  0  0  0  0  0  0
 *************************/
 
-static void dequant_slow10( ogg_int16_t * dequant_coeffs,
+static void dequant_slow10__c( ogg_int16_t * dequant_coeffs,
                      ogg_int16_t * quantized_list,
                      ogg_int32_t * DCT_block){
   int i;
@@ -348,7 +351,7 @@ static void dequant_slow10( ogg_int16_t * dequant_coeffs,
 
 }
 
-void IDct10( Q_LIST_ENTRY * InputData,
+void IDct10__c( Q_LIST_ENTRY * InputData,
              ogg_int16_t *QuantMatrix,
              ogg_int16_t * OutputData ){
   ogg_int32_t IntermediateData[64];
@@ -361,7 +364,7 @@ void IDct10( Q_LIST_ENTRY * InputData,
 
   int loop;
 
-  dequant_slow10( QuantMatrix, InputData, IntermediateData);
+  dequant_slow10__c( QuantMatrix, InputData, IntermediateData);
 
   /* Inverse DCT on the rows now */
   for ( loop = 0; loop < 4; loop++){
@@ -540,7 +543,7 @@ void IDct10( Q_LIST_ENTRY * InputData,
   0   0   0  0  0  0  0  0
 **************************/
 
-void IDct1( Q_LIST_ENTRY * InputData,
+void IDct1__c( Q_LIST_ENTRY * InputData,
             ogg_int16_t *QuantMatrix,
             ogg_int16_t * OutputData ){
   int loop;
@@ -552,4 +555,24 @@ void IDct1( Q_LIST_ENTRY * InputData,
   for(loop=0;loop<64;loop++)
     OutputData[loop]=OutD;
 
+}
+
+
+void dsp_idct_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)
+{
+    /* TODO::: Match function order */
+  funcs->IDct1 = IDct1__c;
+  funcs->IDct10 = IDct10__c;
+  funcs->dequant_slow10 = dequant_slow10__c;
+  funcs->IDctSlow = IDctSlow__c;
+  funcs->dequant_slow = dequant_slow__c;
+#if defined(USE_ASM)
+  //if (cpu_flags & CPU_X86_MMX) {
+  //  dsp_mmx_idct_init(funcs);
+  //}
+
+  //if (cpu_flags & CPU_X86_SSE2) {
+  //  dsp_sse2_idct_init(funcs);
+  //}
+#endif
 }

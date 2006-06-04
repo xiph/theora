@@ -409,6 +409,7 @@ void dsp_static_init(DspFunctions *funcs)
 
   dsp_recon_init (funcs, cpuflags);
   dsp_dct_init (funcs, cpuflags);
+  dsp_idct_init (funcs, cpuflags);
 #if defined(USE_ASM)
   if (cpuflags & CPU_X86_MMX) {
     dsp_mmx_init(funcs);

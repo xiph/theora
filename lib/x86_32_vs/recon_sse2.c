@@ -54,6 +54,7 @@ static void copy8x8__sse2 (unsigned char *src,
     __asm {
         align 16
 
+
         /* Load the parameters into the general registers */
         mov         eax, src
         mov         ebx, dest
@@ -152,6 +153,11 @@ static void recon_intra8x8__sse2 (unsigned char *ReconPtr, ogg_int16_t *ChangePt
         mov     ecx, LineStep
         mov     edx, V128x16Ptr
 
+        prefetchnta    [ebx]
+        prefetchnta    [ebx + 32]
+        prefetchnta    [ebx + 64]
+        prefetchnta    [ebx + 96]
+
 
         movdqa      xmm7, [edx]
         /* 8 lots of int16 per register on the first mov */
@@ -164,23 +170,23 @@ static void recon_intra8x8__sse2 (unsigned char *ReconPtr, ogg_int16_t *ChangePt
         movdqa      xmm6, [ebx + 16]
         packsswb    xmm0, xmm6  /*[ebx + 16]*/
         pxor        xmm0, xmm7
-        lea         ebx, [ebx + 32]
+        //lea         ebx, [ebx + 32]
 
         /* Iteration 2 - xmm1*/
-        movdqa      xmm1, [ebx]
-        packsswb    xmm1, [ebx + 16]
+        movdqa      xmm1, [ebx + 32]
+        packsswb    xmm1, [ebx + 48]
         pxor        xmm1, xmm7
-        lea         ebx, [ebx + 32]
+        //lea         ebx, [ebx + 32]
 
         /* Iteration 3 - xmm2 */
-        movdqa      xmm2, [ebx]
-        packsswb    xmm2, [ebx + 16]
+        movdqa      xmm2, [ebx + 64]
+        packsswb    xmm2, [ebx + 80]
         pxor        xmm2, xmm7
-        lea         ebx, [ebx + 32]
+        //lea         ebx, [ebx + 32]
 
         /* Iteration 4 - xmm3 */
-        movdqa      xmm3, [ebx]
-        packsswb    xmm3, [ebx + 16]
+        movdqa      xmm3, [ebx + 96]
+        packsswb    xmm3, [ebx + 112]
         pxor        xmm3, xmm7
         /* lea         ebx, [ebx + 16] */
 

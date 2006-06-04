@@ -715,7 +715,8 @@ extern int GetFrameType(PB_INSTANCE *pbi);
 extern void InitPBInstance(PB_INSTANCE *pbi);
 extern void ClearPBInstance(PB_INSTANCE *pbi);
 
-
+/* ZEN::: Removed, they are in the DSP struct now */
+/*
 extern void IDctSlow(  Q_LIST_ENTRY * InputData,
                        ogg_int16_t *QuantMatrix,
                        ogg_int16_t * OutputData ) ;
@@ -727,7 +728,7 @@ extern void IDct10( Q_LIST_ENTRY * InputData,
 extern void IDct1( Q_LIST_ENTRY * InputData,
                    ogg_int16_t *QuantMatrix,
                    ogg_int16_t * OutputData );
-
+*/
 extern void ReconIntra( PB_INSTANCE *pbi, unsigned char * ReconPtr,
                         ogg_int16_t * ChangePtr, ogg_uint32_t LineStep );
 

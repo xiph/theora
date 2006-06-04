@@ -135,13 +135,17 @@ static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
   /* Invert quantisation and DCT to get pixel data. */
   switch(pbi->FragCoefEOB[FragmentNumber]){
   case 0:case 1:
-    IDct1( pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
+    /* IDct1( pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer ); */
+    dsp_idct_IDct1( pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
     break;
   case 2: case 3:case 4:case 5:case 6:case 7:case 8: case 9:case 10:
-    IDct10( pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
+    /* IDct10( pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer ); */
+    dsp_idct_IDct10( pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
     break;
   default:
-    IDctSlow( pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
+     /* dsp_idct_IDctSlow( pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer ); */
+     dsp_idct_IDctSlow( pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer ); 
+
   }
 
   /* Convert fragment number to a pixel offset in a reconstruction buffer. */
@@ -215,13 +219,16 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
   /* Invert quantisation and DCT to get pixel data. */
   switch(pbi->FragCoefEOB[FragmentNumber]){
   case 0:case 1:
-    IDct1( pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
+    /* IDct1( pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer ); */
+    dsp_idct_IDct1( pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
     break;
   case 2: case 3:case 4:case 5:case 6:case 7:case 8: case 9:case 10:
-    IDct10( pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
+    /* IDct10( pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer ); */
+    dsp_idct_IDct10( pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
     break;
   default:
-    IDctSlow( pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
+    dsp_idct_IDctSlow( pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
+    /* IDctSlow( pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer ); */
   }
 
   /* Convert fragment number to a pixel offset in a reconstruction buffer. */

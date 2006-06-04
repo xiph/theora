@@ -19,6 +19,8 @@
 #define DSP_H
 
 #include <theora/theora.h>
+/*ZEN::: Added for QLIST_ENTRY */
+//#include "codec_internal.h"
 typedef unsigned long int ogg_uint64_t;
 
 typedef struct
@@ -78,6 +80,31 @@ typedef struct
   ogg_uint32_t (*inter8x8_err_xy2)(unsigned char *SrcData, ogg_uint32_t SrcStride,
 		                 unsigned char *RefDataPtr1,
 			         unsigned char *RefDataPtr2, ogg_uint32_t RefStride);
+  /* iDCT Functions */
+
+
+  void (*IDct1)( ogg_int16_t/*Q_LIST_ENTRY*/ * InputData, ogg_int16_t *QuantMatrix,
+                        ogg_int16_t * OutputData );
+
+  void (*dequant_slow10)( ogg_int16_t * dequant_coeffs,
+                     ogg_int16_t * quantized_list,
+                     ogg_int32_t * DCT_block);
+
+  void (*IDct10)( ogg_int16_t/*Q_LIST_ENTRY*/ * InputData,
+             ogg_int16_t *QuantMatrix,
+             ogg_int16_t * OutputData );
+
+  void (*IDctSlow)(  ogg_int16_t/*Q_LIST_ENTRY*/ * InputData,
+                ogg_int16_t *QuantMatrix,
+                ogg_int16_t * OutputData );
+
+  void (*dequant_slow)( ogg_int16_t * dequant_coeffs,
+                   ogg_int16_t * quantized_list,
+                   ogg_int32_t * DCT_block);
+
+
+
+
 } DspFunctions;
 
 extern void dsp_dct_init(DspFunctions *funcs, ogg_uint32_t cpu_flags);
@@ -133,6 +160,22 @@ extern void dsp_sse2_recon_init(DspFunctions *funcs);
 
 #define dsp_inter8x8_err_xy2(funcs,ptr1,str1,ptr2,ptr3,str2) \
 	(funcs.inter8x8_err_xy2 (ptr1,str1,ptr2,ptr3,str2))
+
+#define dsp_idct_IDct1(funcs, ptr1, ptr2, ptr3) \
+            (funcs.IDct1 (ptr1, ptr2, ptr3))
+
+#define dsp_idct_dequant_slow10(funcs, ptr, ptr2, ptr3) \
+            (funcs.dequant_slow10 (ptr1, ptr2, ptr3))
+
+#define dsp_idct_IDct10(funcs, ptr1, ptr2, ptr3) \
+            (funcs.IDct10 (ptr1, ptr2, ptr3))
+
+#define dsp_idct_IDctSlow(funcs, ptr1, ptr2, ptr3) \
+            (funcs.IDctSlow (ptr1, ptr2, ptr3))
+
+#define dsp_idct_dequant_slow(funcs, ptr1, ptr2, ptr3) \
+            (funcs.dequant_slow (ptr1, ptr2, ptr3))
+
 
 
 #endif /* DSP_H */
