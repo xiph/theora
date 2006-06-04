@@ -102,6 +102,15 @@ typedef struct
                    ogg_int16_t * quantized_list,
                    ogg_int32_t * DCT_block);
 
+  /* dct_decode */
+  void (*FilterHoriz)(unsigned char * PixelPtr,
+                        ogg_int32_t LineLength,
+                        ogg_int32_t *BoundingValuePtr);
+
+  void (*FilterVert)(unsigned char * PixelPtr,
+                ogg_int32_t LineLength,
+                ogg_int32_t *BoundingValuePtr);
+
 
 
 
@@ -110,6 +119,8 @@ typedef struct
 extern void dsp_dct_init(DspFunctions *funcs, ogg_uint32_t cpu_flags);
 extern void dsp_recon_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
 extern void dsp_idct_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
+extern void dsp_dct_decode_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
+
 
 void dsp_init(DspFunctions *funcs);
 void dsp_static_init(DspFunctions *funcs);
@@ -180,6 +191,13 @@ extern void dsp_sse2_idct_init(DspFunctions *funcs);
 
 #define dsp_idct_dequant_slow(funcs, ptr1, ptr2, ptr3) \
             (funcs.dequant_slow (ptr1, ptr2, ptr3))
+
+#define dsp_dct_decode_filter_horiz(funcs, ptr1, a1, ptr2) \
+            (funcs.FilterHoriz (ptr1, a1, ptr2))
+
+#define dsp_dct_decode_filter_vert(funcs, ptr1, a1, ptr2) \
+            (funcs.FilterVert (ptr1, a1, ptr2))
+
 
 
 
