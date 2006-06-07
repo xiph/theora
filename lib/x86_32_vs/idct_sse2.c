@@ -45,7 +45,7 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
                    ogg_int16_t * quantized_list,
                    ogg_int32_t * DCT_block) 
 {
-#if 0
+#if 1
 
   int i;
     PERF_BLOCK_START();

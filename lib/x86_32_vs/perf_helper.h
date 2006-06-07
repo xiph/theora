@@ -9,6 +9,8 @@ static unsigned long depth = 0;
 
 extern unsigned __int64 GetCPUTime();
 
+#ifdef PERF_DATA_ON
+
 
 #define PERF_BLOCK_START()  perf_start_time[depth++] = GetCPUTime();
 
@@ -16,7 +18,13 @@ extern unsigned __int64 GetCPUTime();
   if (((y) % (z)) == 0)                                                                             \
   {                                                                                                 \
     printf(s " - %lld from %lld iterations -- @%lld cycles -- min(%lld)\n", x, y, (x) / (y), l);                           \
-  }                                                                                                 
+  }                
+
+#else
+#define PERF_BLOCK_START()
+#define PERF_BLOCK_END(s, x, y, l, z)
+
+#endif
 
 
 

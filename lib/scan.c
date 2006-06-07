@@ -21,6 +21,8 @@
 #include "codec_internal.h"
 #include "dsp.h"
 
+//#include "perf_helper.h"
+
 #define MAX_SEARCH_LINE_LEN                   7
 
 #define SET8_0(ptr) \
@@ -680,6 +682,7 @@ static unsigned char ApplyPakLowPass( PP_INSTANCE *ppi,
 
 }
 
+/* This is a new function factor out of rowdiffscan, maybe needs a better name */
 static ogg_int32_t RowDiffScan_DiffAndThresholding(PP_INSTANCE *ppi,
                          unsigned char * YuvPtr1,
                          unsigned char * YuvPtr2,
@@ -706,6 +709,116 @@ static ogg_int32_t RowDiffScan_DiffAndThresholding(PP_INSTANCE *ppi,
       FragChangedPixels += ppi->SrfThreshTable[Diff+255];
     }
 
+    return FragChangedPixels;
+
+}
+
+/* This is a new function factor out of rowdiffscan, maybe needs a better name */
+static ogg_int32_t RowDiffScan_DiffAndThresholdingFirstFrag(PP_INSTANCE *ppi,
+                         unsigned char * YuvPtr1,
+                         unsigned char * YuvPtr2,
+                         ogg_int16_t   * YUVDiffsPtr,
+                         unsigned char * bits_map_ptr,
+                         signed char   * SgcPtr)
+{
+  ogg_int16_t Diff;     /* Temp local workspace. */
+  ogg_int32_t j; 
+  ogg_int32_t    FragChangedPixels = 0;
+
+  for ( j = 0; j < HFRAGPIXELS; j++ ){
+    /* Take a local copy of the measured difference. */
+    Diff = (int)YuvPtr1[j] - (int)YuvPtr2[j];
+
+    /* Store the actual difference value */
+    YUVDiffsPtr[j] = Diff;
+
+    /* Test against the Level thresholds and record the results */
+    SgcPtr[0] += ppi->SgcThreshTable[Diff+255];
+
+    if (j>0 && ppi->SrfPakThreshTable[Diff+255] )
+      Diff = (int)ApplyPakLowPass( ppi, &YuvPtr1[j] ) -
+        (int)ApplyPakLowPass( ppi, &YuvPtr2[j] );
+
+    /* Test against the SRF thresholds */
+    bits_map_ptr[j] = ppi->SrfThreshTable[Diff+255];
+    FragChangedPixels += ppi->SrfThreshTable[Diff+255];
+  }
+  return FragChangedPixels;
+
+}
+
+
+
+/* This is a new function factor out of rowdiffscan, maybe needs a better name */
+static ogg_int32_t RowDiffScan_DiffAndThresholdingLastFrag(PP_INSTANCE *ppi,
+                         unsigned char * YuvPtr1,
+                         unsigned char * YuvPtr2,
+                         ogg_int16_t   * YUVDiffsPtr,
+                         unsigned char * bits_map_ptr,
+                         signed char   * SgcPtr)
+{
+  ogg_int16_t Diff;     /* Temp local workspace. */
+  ogg_int32_t j; 
+  ogg_int32_t    FragChangedPixels = 0;
+
+  for ( j = 0; j < HFRAGPIXELS; j++ ){
+    /* Take a local copy of the measured difference. */
+    Diff = (int)YuvPtr1[j] - (int)YuvPtr2[j];
+
+    /* Store the actual difference value */
+    YUVDiffsPtr[j] = Diff;
+
+    /* Test against the Level thresholds and record the results */
+    SgcPtr[0] += ppi->SgcThreshTable[Diff+255];
+
+    if (j<7 && ppi->SrfPakThreshTable[Diff+255] )
+      Diff = (int)ApplyPakLowPass( ppi, &YuvPtr1[j] ) -
+        (int)ApplyPakLowPass( ppi, &YuvPtr2[j] );
+
+
+    /* Test against the SRF thresholds */
+    bits_map_ptr[j] = ppi->SrfThreshTable[Diff+255];
+    FragChangedPixels += ppi->SrfThreshTable[Diff+255];
+  }
+  return FragChangedPixels;
+
+}
+
+
+
+
+
+
+/* This is a new function factor out of rowdiffscan, maybe needs a better name */
+static ogg_int32_t RowDiffScan_DiffAndThresholdingMiddleFrag(PP_INSTANCE *ppi,
+                         unsigned char * YuvPtr1,
+                         unsigned char * YuvPtr2,
+                         ogg_int16_t   * YUVDiffsPtr,
+                         unsigned char * bits_map_ptr,
+                         signed char   * SgcPtr)
+{
+  ogg_int16_t Diff;     /* Temp local workspace. */
+  ogg_int32_t j; 
+  ogg_int32_t    FragChangedPixels = 0;
+    for ( j = 0; j < HFRAGPIXELS; j++ ){
+      /* Take a local copy of the measured difference. */
+      Diff = (int)YuvPtr1[j] - (int)YuvPtr2[j];
+
+      /* Store the actual difference value */
+      YUVDiffsPtr[j] = Diff;
+
+      /* Test against the Level thresholds and record the results */
+      SgcPtr[0] += ppi->SgcThreshTable[Diff+255];
+
+      if (ppi->SrfPakThreshTable[Diff+255] )
+        Diff = (int)ApplyPakLowPass( ppi, &YuvPtr1[j] ) -
+          (int)ApplyPakLowPass( ppi, &YuvPtr2[j] );
+
+
+      /* Test against the SRF thresholds */
+      bits_map_ptr[j] = ppi->SrfThreshTable[Diff+255];
+      FragChangedPixels += ppi->SrfThreshTable[Diff+255];
+    }
     return FragChangedPixels;
 
 }
@@ -739,20 +852,13 @@ static void RowDiffScan( PP_INSTANCE *ppi,
         /* Clear down entries in changed locals array */
         SET8_0(ChLocalsPtr);
 
-        for ( j = 0; j < HFRAGPIXELS; j++ ){
-          /* Take a local copy of the measured difference. */
-          Diff = (int)YuvPtr1[j] - (int)YuvPtr2[j];
-
-          /* Store the actual difference value */
-          YUVDiffsPtr[j] = Diff;
-
-          /* Test against the Level thresholds and record the results */
-          SgcPtr[0] += ppi->SgcThreshTable[Diff+255];
-
-          /* Test against the SRF thresholds */
-          bits_map_ptr[j] = ppi->SrfThreshTable[Diff+255];
-          FragChangedPixels += ppi->SrfThreshTable[Diff+255];
-        }
+        FragChangedPixels += RowDiffScan_DiffAndThresholding(        ppi,
+                                                YuvPtr1,
+                                                YuvPtr2,
+                                                YUVDiffsPtr,
+                                                bits_map_ptr,
+                                                SgcPtr);
+                                                
       }else{
         /* If we are breaking out here mark all pixels as changed. */
         if ( *DispFragPtr > BLOCK_NOT_CODED ){
@@ -797,24 +903,14 @@ static void RowDiffScan( PP_INSTANCE *ppi,
       /* Clear down entries in changed locals array */
       SET8_0(ChLocalsPtr);
 
-      for ( j = 0; j < HFRAGPIXELS; j++ ){
-        /* Take a local copy of the measured difference. */
-        Diff = (int)YuvPtr1[j] - (int)YuvPtr2[j];
+      FragChangedPixels += RowDiffScan_DiffAndThresholdingFirstFrag(        
+                                                ppi,
+                                                YuvPtr1,
+                                                YuvPtr2,
+                                                YUVDiffsPtr,
+                                                bits_map_ptr,
+                                                SgcPtr);
 
-        /* Store the actual difference value */
-        YUVDiffsPtr[j] = Diff;
-
-        /* Test against the Level thresholds and record the results */
-        SgcPtr[0] += ppi->SgcThreshTable[Diff+255];
-
-        if (j>0 && ppi->SrfPakThreshTable[Diff+255] )
-          Diff = (int)ApplyPakLowPass( ppi, &YuvPtr1[j] ) -
-            (int)ApplyPakLowPass( ppi, &YuvPtr2[j] );
-
-        /* Test against the SRF thresholds */
-        bits_map_ptr[j] = ppi->SrfThreshTable[Diff+255];
-        FragChangedPixels += ppi->SrfThreshTable[Diff+255];
-      }
     }else{
       /* If we are breaking out here mark all pixels as changed. */
       if ( *DispFragPtr > BLOCK_NOT_CODED ){
@@ -856,25 +952,15 @@ static void RowDiffScan( PP_INSTANCE *ppi,
       if (*DispFragPtr == CANDIDATE_BLOCK){
         /* Clear down entries in changed locals array */
         SET8_0(ChLocalsPtr);
-        for ( j = 0; j < HFRAGPIXELS; j++ ){
-          /* Take a local copy of the measured difference. */
-          Diff = (int)YuvPtr1[j] - (int)YuvPtr2[j];
 
-          /* Store the actual difference value */
-          YUVDiffsPtr[j] = Diff;
+        FragChangedPixels += RowDiffScan_DiffAndThresholdingMiddleFrag(        
+                                                ppi,
+                                                YuvPtr1,
+                                                YuvPtr2,
+                                                YUVDiffsPtr,
+                                                bits_map_ptr,
+                                                SgcPtr);
 
-          /* Test against the Level thresholds and record the results */
-          SgcPtr[0] += ppi->SgcThreshTable[Diff+255];
-
-          if (ppi->SrfPakThreshTable[Diff+255] )
-            Diff = (int)ApplyPakLowPass( ppi, &YuvPtr1[j] ) -
-              (int)ApplyPakLowPass( ppi, &YuvPtr2[j] );
-
-
-          /* Test against the SRF thresholds */
-          bits_map_ptr[j] = ppi->SrfThreshTable[Diff+255];
-          FragChangedPixels += ppi->SrfThreshTable[Diff+255];
-        }
       }else{
         /* If we are breaking out here mark all pixels as changed. */
         if ( *DispFragPtr > BLOCK_NOT_CODED ){
@@ -916,25 +1002,15 @@ static void RowDiffScan( PP_INSTANCE *ppi,
       /* Clear down entries in changed locals array */
       SET8_0(ChLocalsPtr);
 
-      for ( j = 0; j < HFRAGPIXELS; j++ ){
-        /* Take a local copy of the measured difference. */
-        Diff = (int)YuvPtr1[j] - (int)YuvPtr2[j];
-
-        /* Store the actual difference value */
-        YUVDiffsPtr[j] = Diff;
-
-        /* Test against the Level thresholds and record the results */
-        SgcPtr[0] += ppi->SgcThreshTable[Diff+255];
-
-        if (j<7 && ppi->SrfPakThreshTable[Diff+255] )
-          Diff = (int)ApplyPakLowPass( ppi, &YuvPtr1[j] ) -
-            (int)ApplyPakLowPass( ppi, &YuvPtr2[j] );
+      FragChangedPixels += RowDiffScan_DiffAndThresholdingLastFrag(        
+                                                ppi,
+                                                YuvPtr1,
+                                                YuvPtr2,
+                                                YUVDiffsPtr,
+                                                bits_map_ptr,
+                                                SgcPtr);
 
 
-        /* Test against the SRF thresholds */
-        bits_map_ptr[j] = ppi->SrfThreshTable[Diff+255];
-        FragChangedPixels += ppi->SrfThreshTable[Diff+255];
-      }
     }else{
       /* If we are breaking out here mark all pixels as changed.*/
       if ( *DispFragPtr > BLOCK_NOT_CODED ) {
