@@ -36,6 +36,10 @@ static unsigned __int64 perf_dequant_slow_time;
 static unsigned __int64 perf_dequant_slow_count;
 static unsigned __int64 perf_dequant_slow_min;
 
+static unsigned __int64 perf_idct1_time;
+static unsigned __int64 perf_idct1_count;
+static unsigned __int64 perf_idct1_min;
+
 
 static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
                    ogg_int16_t * quantized_list,
@@ -586,14 +590,61 @@ void IDct10__sse2( Q_LIST_ENTRY * InputData,
 void IDct1__sse2( Q_LIST_ENTRY * InputData,
             ogg_int16_t *QuantMatrix,
             ogg_int16_t * OutputData ){
+
+#if 0
   int loop;
 
   ogg_int16_t  OutD;
 
+  PERF_BLOCK_START();
   OutD=(ogg_int16_t) ((ogg_int32_t)(InputData[0]*QuantMatrix[0]+15)>>5);
 
   for(loop=0;loop<64;loop++)
     OutputData[loop]=OutD;
+  PERF_BLOCK_END("IDct1 C", perf_idct1_time, perf_idct1_count,perf_idct1_min, 10000);
+#else
+    static __declspec(align(16)) unsigned char temp[16];
+    static unsigned char* temp_ptr = temp;
+
+    PERF_BLOCK_START();
+    __asm {
+        align       16
+
+        mov     esi, InputData
+        mov     edx, QuantMatrix
+        mov     edi, OutputData
+        mov     eax, temp_ptr
+
+        mov     cx, WORD PTR [esi]
+        add     cx, WORD PTR [edx]
+        add     cx, 15
+        shr     cx, 5
+
+        /* Write it to mem so can get it to xmm reg */
+        mov     [eax], cx
+
+        /* Read it from mem */
+        movdqa xmm0, [eax]
+
+        /* Put this word in all the spaces */
+        pshufd   xmm1, xmm0, 0
+        movdqa   xmm2, xmm1
+        pslldq   xmm2, 2
+        por      xmm1, xmm2
+
+
+        movdqa  [edi], xmm1
+        movdqa  [edi+16], xmm1
+        movdqa  [edi+32], xmm1
+        movdqa  [edi+48], xmm1
+
+
+
+
+
+    }
+    PERF_BLOCK_END("IDct1 C", perf_idct1_time, perf_idct1_count,perf_idct1_min, 10000);
+#endif
 
 }
 
@@ -605,6 +656,11 @@ void dsp_sse2_idct_init (DspFunctions *funcs)
     perf_dequant_slow_time = 0;
     perf_dequant_slow_count = 0;
     perf_dequant_slow_min = -1;
+
+    perf_idct1_time = 0;
+    perf_idct1_count = 0;
+    perf_idct1_min = -1;
+
     /* TODO::: Match function order */
   funcs->dequant_slow = dequant_slow__sse2;
   funcs->IDct1 = IDct1__sse2;
