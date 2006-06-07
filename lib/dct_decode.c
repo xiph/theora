@@ -1243,8 +1243,8 @@ void dsp_dct_decode_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)
   //  dsp_mmx_idct_init(funcs);
   //}
 
-  //if (cpu_flags & CPU_X86_SSE2) {
-  //  dsp_sse2_dct_decode_init(funcs);
-  //}
+  if (cpu_flags & CPU_X86_SSE2) {
+    dsp_sse2_dct_decode_init(funcs);
+  }
 #endif
 }

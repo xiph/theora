@@ -133,6 +133,7 @@ extern void dsp_mmx_recon_init(DspFunctions *funcs);
 extern void dsp_sse2_init(DspFunctions *funcs);
 extern void dsp_sse2_recon_init(DspFunctions *funcs);
 extern void dsp_sse2_idct_init(DspFunctions *funcs);
+extern void dsp_sse2_dct_decode_init(DspFunctions *funcs);
 
 #endif
 

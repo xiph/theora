@@ -19,6 +19,8 @@
 #include "codec_internal.h"
 #include "quant_lookup.h"
 
+#include "perf_helper.h"
+
 #define IdctAdjustBeforeShift 8
 
 /* cos(n*pi/16) or sin(8-n)*pi/16) */
@@ -30,16 +32,23 @@
 #define xC6S2 25080
 #define xC7S1 12785
 
+static unsigned __int64 perf_dequant_slow_time;
+static unsigned __int64 perf_dequant_slow_count;
+static unsigned __int64 perf_dequant_slow_min;
 
 
 static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
                    ogg_int16_t * quantized_list,
                    ogg_int32_t * DCT_block) 
 {
-#if 1
+#if 0
+
   int i;
+    PERF_BLOCK_START();
   for(i=0;i<64;i++)
     DCT_block[dezigzag_index[i]] = quantized_list[i] * dequant_coeffs[i];
+
+  PERF_BLOCK_END("dequant_slow C", perf_dequant_slow_time, perf_dequant_slow_count,perf_dequant_slow_min, 5000);
 #else
 
     static __declspec(align(16)) ogg_int32_t temp_block[64];
@@ -48,7 +57,7 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
 
     /*      quantized list is not aligned */
 
-
+    PERF_BLOCK_START();
     __asm {
         align       16
 
@@ -147,6 +156,7 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
     jnz         write_loop_start
 
     };
+    PERF_BLOCK_END("dequant_slow sse2", perf_dequant_slow_time, perf_dequant_slow_count,perf_dequant_slow_min, 5000);
 #endif
 }
 
@@ -590,6 +600,11 @@ void IDct1__sse2( Q_LIST_ENTRY * InputData,
 
 void dsp_sse2_idct_init (DspFunctions *funcs)
 {
+
+
+    perf_dequant_slow_time = 0;
+    perf_dequant_slow_count = 0;
+    perf_dequant_slow_min = -1;
     /* TODO::: Match function order */
   funcs->dequant_slow = dequant_slow__sse2;
   funcs->IDct1 = IDct1__sse2;

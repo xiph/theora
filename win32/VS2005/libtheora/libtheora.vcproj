@@ -401,6 +401,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\lib\x86_32_vs\dct_decode_sse2.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\lib\dct_encode.c"
 				>
 			</File>
@@ -473,6 +477,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\lib\x86_32_vs\perf_helper.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\lib\pp.c"
 				>
 			</File>
@@ -540,6 +548,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\lib\mcomp.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\lib\x86_32_vs\perf_helper.h"
 				>
 			</File>
 			<File
