@@ -629,20 +629,20 @@ void IDct1__sse2( Q_LIST_ENTRY * InputData,
         /* Put this word in all the spaces */
         pshufd   xmm1, xmm0, 0
         movdqa   xmm2, xmm1
-        pslldq   xmm2, 2
-        por      xmm1, xmm2
+        pslldq   xmm1, 2
+        por      xmm2, xmm1
 
 
         
-        movdqa  [edi], xmm1
-        movdqa  [edi+16], xmm1
-        movdqa  [edi+32], xmm1
-        movdqa  [edi+48], xmm1
+        movdqa  [edi], xmm2
+        movdqa  [edi+16], xmm2
+        movdqa  [edi+32], xmm2
+        movdqa  [edi+48], xmm2
 
-        movdqa  [edi+64], xmm1
-        movdqa  [edi+80], xmm1
-        movdqa  [edi+96], xmm1
-        movdqa  [edi+112], xmm1
+        movdqa  [edi+64], xmm2
+        movdqa  [edi+80], xmm2
+        movdqa  [edi+96], xmm2
+        movdqa  [edi+112], xmm2
 
 
 

@@ -680,6 +680,37 @@ static unsigned char ApplyPakLowPass( PP_INSTANCE *ppi,
 
 }
 
+static ogg_int32_t RowDiffScan_DiffAndThresholding(PP_INSTANCE *ppi,
+                         unsigned char * YuvPtr1,
+                         unsigned char * YuvPtr2,
+                         ogg_int16_t   * YUVDiffsPtr,
+                         unsigned char * bits_map_ptr,
+                         signed char   * SgcPtr)
+{
+  ogg_int16_t Diff;     /* Temp local workspace. */
+  ogg_int32_t j; 
+  ogg_int32_t    FragChangedPixels = 0;
+
+    for ( j = 0; j < HFRAGPIXELS; j++ ){
+      /* Take a local copy of the measured difference. */
+      Diff = (int)YuvPtr1[j] - (int)YuvPtr2[j];
+
+      /* Store the actual difference value */
+      YUVDiffsPtr[j] = Diff;
+
+      /* Test against the Level thresholds and record the results */
+      SgcPtr[0] += ppi->SgcThreshTable[Diff+255];
+
+      /* Test against the SRF thresholds */
+      bits_map_ptr[j] = ppi->SrfThreshTable[Diff+255];
+      FragChangedPixels += ppi->SrfThreshTable[Diff+255];
+    }
+
+    return FragChangedPixels;
+
+}
+
+
 static void RowDiffScan( PP_INSTANCE *ppi,
                          unsigned char * YuvPtr1,
                          unsigned char * YuvPtr2,
