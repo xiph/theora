@@ -616,15 +616,15 @@ void IDct1__sse2( Q_LIST_ENTRY * InputData,
         mov     eax, temp_ptr
 
         mov     cx, WORD PTR [esi]
-        add     cx, WORD PTR [edx]
+        imul    cx, WORD PTR [edx]
         add     cx, 15
-        shr     cx, 5
+        sar     cx, 5
 
         /* Write it to mem so can get it to xmm reg */
         mov     [eax], cx
 
         /* Read it from mem */
-        movdqa xmm0, [eax]
+        movq xmm0, QWORD PTR [eax]
 
         /* Put this word in all the spaces */
         pshufd   xmm1, xmm0, 0
@@ -633,10 +633,18 @@ void IDct1__sse2( Q_LIST_ENTRY * InputData,
         por      xmm1, xmm2
 
 
+        
         movdqa  [edi], xmm1
         movdqa  [edi+16], xmm1
         movdqa  [edi+32], xmm1
         movdqa  [edi+48], xmm1
+
+        movdqa  [edi+64], xmm1
+        movdqa  [edi+80], xmm1
+        movdqa  [edi+96], xmm1
+        movdqa  [edi+112], xmm1
+
+
 
 
 
