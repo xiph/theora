@@ -8,7 +8,7 @@ static unsigned long depth = 0;
 
 
 extern unsigned __int64 GetCPUTime();
-//#define PERF_DATA_ON
+#define PERF_DATA_ON
 #ifdef PERF_DATA_ON
 
 

@@ -45,7 +45,7 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
                    ogg_int16_t * quantized_list,
                    ogg_int32_t * DCT_block) 
 {
-#if 1
+#if 0
 
   int i;
     PERF_BLOCK_START();
@@ -68,6 +68,8 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
         mov     edi, DCT_block          /* int32 */
         mov     edx, zigzag_ptr          /* int32 */
         mov     esi, quantized_list     /* int16 */
+
+        push    ebx
         mov     ebx, dequant_coeffs     /* int16 */
         mov     eax, temp_block_ptr
 
@@ -159,6 +161,7 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
     sub         ebx, 1
     jnz         write_loop_start
 
+    pop     ebx
     };
     PERF_BLOCK_END("dequant_slow sse2", perf_dequant_slow_time, perf_dequant_slow_count,perf_dequant_slow_min, 5000);
 #endif
