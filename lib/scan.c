@@ -691,32 +691,42 @@ static unsigned char ApplyPakLowPass( PP_INSTANCE *ppi,
 
 static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
                                       unsigned char * SrcPtr,
-                                      unsigned char * OutputPtr)
+                                      unsigned short * OutputPtr)
 {
 
 #if 0
     //static __declspec(align(16)) unsigned char temp[8];
     //static unsigned char* temp_ptr = temp;
+    int i;
   for (i = 0; i < 8; i++)
   {
-      unsigned char * SrcPtr1 = SrcPtr[i] - 1;
+      unsigned char * SrcPtr1 = SrcPtr - 1;
       unsigned char * SrcPtr0 = SrcPtr1 - ppi->PlaneStride; /* Note the
                                                                use of
                                                                stride not
                                                                width. */
       unsigned char * SrcPtr2 = SrcPtr1 + ppi->PlaneStride;
 
-      OutputPtr[i] = ( ( (ogg_uint32_t)SrcPtr[i-1-s] +
-                  (ogg_uint32_t)SrcPtr[i-s] +
-                  (ogg_uint32_t)SrcPtr[i-s+1] +
-                  (ogg_uint32_t)SrcPtr[i-1] +
-                  (ogg_uint32_t)SrcPtr[i+1] +
-                  (ogg_uint32_t)SrcPtr[i+s-1] +
-                  (ogg_uint32_t)SrcPtr[i+s] +
-                  (ogg_uint32_t)SrcPtr[i+s+1]   ) >> 3 );
+      //OutputPtr[i] = ( ( (ogg_uint32_t)SrcPtr[i-1-s] +
+      //            (ogg_uint32_t)SrcPtr[i-s] +
+      //            (ogg_uint32_t)SrcPtr[i-s+1] +
+      //            (ogg_uint32_t)SrcPtr[i-1] +
+      //            (ogg_uint32_t)SrcPtr[i+1] +
+      //            (ogg_uint32_t)SrcPtr[i+s-1] +
+      //            (ogg_uint32_t)SrcPtr[i+s] +
+      //            (ogg_uint32_t)SrcPtr[i+s+1]   ) >> 3 );
+
+  OutputPtr[i] =   (unsigned char)( ( (ogg_uint32_t)SrcPtr0[0 + i] +
+              (ogg_uint32_t)SrcPtr0[1 + i] +
+              (ogg_uint32_t)SrcPtr0[2 + i] +
+              (ogg_uint32_t)SrcPtr1[0 + i] +
+              (ogg_uint32_t)SrcPtr1[2 + i] +
+              (ogg_uint32_t)SrcPtr2[0 + i] +
+              (ogg_uint32_t)SrcPtr2[1 + i] +
+              (ogg_uint32_t)SrcPtr2[2 + i]   ) >> 3 );
   }
 
-  return temp_ptr;
+  //return temp_ptr;
 #else
 
   /*                                                            
@@ -779,20 +789,24 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
 
   */
 
-    static __declspec(align(16)) unsigned long Low6BytesMask[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 0x00000000 };
-    static unsigned char* Low6BytesMaskPtr = (unsigned char*)Low6BytesMask;
+    static __declspec(align(16)) unsigned long Low6WordsMask[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 0x00000000 };
+    static unsigned char* Low6WordsMaskPtr = (unsigned char*)Low6WordsMask;
     long    stride = ppi->PlaneStride;
     unsigned char* SrcPtrTopLeft = SrcPtr - stride - 1;
     __asm {
         align           16
 
         mov         esi, SrcPtrTopLeft
-        mov         eax, Low6BytesMaskPtr
+        mov         eax, Low6WordsMaskPtr
         mov         ecx, stride
         mov         edi, OutputPtr
 
+        movdqa      xmm7, [eax]
         pxor        xmm0, xmm0
         pcmpeqw     xmm6, xmm6  /* All 1's */
+
+        /* Create the inverse mask -- xmm6 = ~xmm7 */
+        pxor        xmm6, xmm7
 
         /***************************************/
         /* TOP ROW OF THE 8 SURROUNDING PIXELS */
@@ -806,7 +820,7 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
 
         movq        xmm1, QWORD PTR [esi]
         movq        xmm2, QWORD PTR [esi + 2]       /* this one partly overlaps */
-        movdqa      xmm7, [eax]
+
 
 
         /* Expand to 16 bits */
@@ -837,7 +851,7 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
             psrldq      xmm1, 2
             /* Shift words 5 and 6 to positions 6 and 7 - since
                 we don't care about any of the other positions in this regsiter
-                use the dword 32 bitwise shift which is twice as fast as the 
+                use the qword 64 bitwise shift which is twice as fast as the 
                 dq 128 bitwise one */
             psllq       xmm2, 16
 
@@ -845,7 +859,7 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
             pand        xmm1, xmm7
 
             /* Create the inverse mask -- xmm6 = ~xmm7 */
-            pxor        xmm6, xmm7
+            //pxor        xmm6, xmm7
 
             /* Clear the low 6 bytes of the second register */
             pand        xmm2, xmm6
@@ -874,13 +888,15 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
 
         movq        xmm5, QWORD PTR [esi]
         movq        xmm2, QWORD PTR [esi + 2]       /* this one partly overlaps */
-        movdqa      xmm7, [eax]
+        //movdqa      xmm7, [eax]
+
+
 
 
         /* Expand to 16 bits */
         punpcklbw   xmm5, xmm0
         punpcklbw   xmm2, xmm0
-        movdqa      xmm3, xmm1
+        movdqa      xmm3, xmm5
         movdqa      xmm4, xmm2
 
         /* Shift all 8 items right by 1 lot of 16 bits to get the intermediate sums */
@@ -913,7 +929,7 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
             pand        xmm5, xmm7
 
             /* Create the inverse mask -- xmm6 = ~xmm7 */
-            pxor        xmm6, xmm7
+            //pxor        xmm6, xmm7
 
             /* Clear the low 6 bytes of the second register */
             pand        xmm2, xmm6
@@ -941,7 +957,7 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
 
         movq        xmm1, QWORD PTR [esi]
         movq        xmm2, QWORD PTR [esi + 2]       /* this one partly overlaps */
-        movdqa      xmm7, [eax]
+        //movdqa      xmm7, [eax]
 
 
         /* Expand to 16 bits */
@@ -957,19 +973,19 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
         paddw       xmm2, xmm4
         
         /* Merge the 8 results into 1 register */
-            /* Shift words 2-7 to positions 0-5 */
-            psrldq      xmm1, 2
-            /* Shift words 5 and 6 to positions 6 and 7 - since
+            /* First register has words 0-5 filled with sums */
+
+            /* Shift words 4 and 5 to positions 6 and 7 - since
                 we don't care about any of the other positions in this regsiter
-                use the dword 32 bitwise shift which is twice as fast as the 
+                use the qword 64 bitwise shift which is twice as fast as the 
                 dq 128 bitwise one */
-            //psllq       xmm2, 16
+            psllq       xmm2, 32
 
             /* Clear the high 32 bits in the first register */
             pand        xmm1, xmm7
 
             /* Create the inverse mask -- xmm6 = ~xmm7 */
-            pxor        xmm6, xmm7
+            //pxor        xmm6, xmm7
 
             /* Clear the low 6 bytes of the second register */
             pand        xmm2, xmm6
@@ -1147,27 +1163,10 @@ static ogg_int32_t RowDiffScan_DiffAndThresholdingMiddleFrag(PP_INSTANCE *ppi,
   //PERF_BLOCK_END("RowDiffScan_DiffAndThresholdingMiddleFrag", perf_rds_datmf_time, perf_rds_datmf_time,perf_rds_datmf_time, 10000);
 
 #else
-   /*
-        xmm1 = yuvptr1[0..7]
-        xmm2 = yuvptr2[0..7]
-        xmm3 = TO_16BIT(xmm1)
-        xmm4 = TO_16BIT(xmm4)
-        xmm5 = xmm3 - xmm4 [wordwise]
-        YUVDiffsPtr[0..7] = xmm5
-
-        //Sum into SgcPtr[0] --- need the old Diff's for this. Make sure SgcPtr doesn't alias onto this other stuff we're using
-
-        xmm6 = DoVectorisedPakLowPass  //xmm6 now has the "new" updated Diff's
-
-        //Use the new Diff's to update bits_map_ptr while summing up frag changed pix
-
-
-
-    */
 
     static __declspec(align(16)) unsigned long Some255s[4] = { 0x00ff00ff, 0x00ff00ff, 0x00ff00ff, 0x00ff00ff };
     static __declspec(align(16)) unsigned char temp[48];
-    static unsigned char* temp_ptr = temp;
+    static unsigned short* temp_ptr = (unsigned short*)temp;
     
     static unsigned char* some_255s_ptr = (unsigned char*)Some255s;
     unsigned char* local_sgc_thresh_table = ppi->SgcThreshTable;
@@ -1175,7 +1174,7 @@ static ogg_int32_t RowDiffScan_DiffAndThresholdingMiddleFrag(PP_INSTANCE *ppi,
     unsigned char* local_srf_pak_thresh_table = ppi->SrfPakThreshTable;
 
     
-    unsigned char val, thresh_val;
+    unsigned char thresh_val;
     int i, FragChangedPixels = 0;
 
 
@@ -1200,7 +1199,7 @@ static ogg_int32_t RowDiffScan_DiffAndThresholdingMiddleFrag(PP_INSTANCE *ppi,
         punpcklbw   xmm2, xmm0
 
         /* Subtract the YUV Ptr values */
-        psubsw      xmm1, xmm2
+        psubw      xmm1, xmm2   /*should it be subsw?? */
 
         /* Write out to YUVDiffs */
         movdqu      [edi], xmm1
@@ -1215,20 +1214,20 @@ static ogg_int32_t RowDiffScan_DiffAndThresholdingMiddleFrag(PP_INSTANCE *ppi,
 
     }
 
-    ApplyPakLowPass_Vectorised(ppi, YuvPtr1, temp_ptr + 16);
-    ApplyPakLowPass_Vectorised(ppi, YuvPtr2, temp_ptr + 32);
+    ApplyPakLowPass_Vectorised(ppi, YuvPtr1, temp_ptr + 8); /* Bytes 16-31 */
+    ApplyPakLowPass_Vectorised(ppi, YuvPtr2, temp_ptr + 16); /* Bytes 32 - 47 */
 
     __asm {
         align 16
 
         mov         esi, temp_ptr
-        mov         edi, YUVDiffsPtr  /* Not aligned */
+        //mov         edi, YUVDiffsPtr  /* Not aligned */
         mov         ecx, some_255s_ptr
 
-        
+        //movdqu      xmm3, [esi]  /* Old diffs +255 */
         movdqa      xmm1, [esi + 16]
         movdqa      xmm2, [esi + 32]
-        movdqu      xmm3, [edi]  /* Old diffs */
+        
         movdqa      xmm6, [ecx]
 
         /* New diffs after PakLowPass */
@@ -1245,32 +1244,33 @@ static ogg_int32_t RowDiffScan_DiffAndThresholdingMiddleFrag(PP_INSTANCE *ppi,
 
 
         /* At this point
-                temp_ptr[0..15] = 8 lots of Early loop diffs - 255
-                temp_ptr[16..31] = 8 lots of late loop diffs - 255
+                temp_ptr[0..15] = 8 lots of Early loop diffs + 255
+                temp_ptr[16..31] = 8 lots of late loop diffs + 255
                 temp_ptr[32..47] = who cares */
 
     }
 
 
-    temp_ptr[32] = local_srf_pak_thresh_table[temp_ptr[0]];
-    temp_ptr[33] = local_srf_pak_thresh_table[temp_ptr[1]];
-    temp_ptr[34] = local_srf_pak_thresh_table[temp_ptr[2]];
-    temp_ptr[35] = local_srf_pak_thresh_table[temp_ptr[3]];
-    temp_ptr[36] = local_srf_pak_thresh_table[temp_ptr[4]];
-    temp_ptr[37] = local_srf_pak_thresh_table[temp_ptr[5]];
-    temp_ptr[38] = local_srf_pak_thresh_table[temp_ptr[6]];
-    temp_ptr[39] = local_srf_pak_thresh_table[temp_ptr[7]];
+    /* Apply the pak threash_table and write into temp[32..47] */
+    temp_ptr[16] = local_srf_pak_thresh_table[temp_ptr[0]];
+    temp_ptr[17] = local_srf_pak_thresh_table[temp_ptr[1]];
+    temp_ptr[18] = local_srf_pak_thresh_table[temp_ptr[2]];
+    temp_ptr[19] = local_srf_pak_thresh_table[temp_ptr[3]];
+    temp_ptr[20] = local_srf_pak_thresh_table[temp_ptr[4]];
+    temp_ptr[21] = local_srf_pak_thresh_table[temp_ptr[5]];
+    temp_ptr[22] = local_srf_pak_thresh_table[temp_ptr[6]];
+    temp_ptr[23] = local_srf_pak_thresh_table[temp_ptr[7]];
 
     __asm {
         align       16
 
-        mov         edx, YUVDiffsPtr
+        //mov         edx, YUVDiffsPtr
         mov         esi, temp_ptr
 
-        /* Read back the old diffs */
-        movdqu     xmm4, [edx]
+        /* Read back the old diffs+255 */
+        movdqu     xmm4, [esi]
 
-        /* Read back the new diffs */
+        /* Read back the new diffs+255 */
         movdqa     xmm3, [esi + 16]
         
         /* Read back the pak_threshed values used in the if statement */
@@ -1283,7 +1283,7 @@ static ogg_int32_t RowDiffScan_DiffAndThresholdingMiddleFrag(PP_INSTANCE *ppi,
         /* Compare the pak_thresh values to 0, any word which was 0, will now be set to all 1's in xmm0 
                 the if basically said, if it's zero, leave it alone, otherwise, replace it
                 with the new diff */
-        pcmpeqw     xmm0, xmm3
+        pcmpeqw     xmm0, xmm6
 
         /* On the old diffs, keep all the words where the pak_thresh is zero */
         pand        xmm4, xmm0
@@ -1297,18 +1297,15 @@ static ogg_int32_t RowDiffScan_DiffAndThresholdingMiddleFrag(PP_INSTANCE *ppi,
         /* Merge the old and new diffs */
         por         xmm3, xmm4
 
-        /* Add 255 to the diffs */
-        paddw       xmm3, xmm6
-
         /* Write back out to temp */
         movdqa      [esi + 32], xmm3
     }
 
     for (i = 0; i < 8; i++)
     {
-        val = temp[32 + i];
-        thresh_val = local_srf_thresh_table[val];
-        SgcPtr[0] += local_sgc_thresh_table[val];
+
+        thresh_val = local_srf_thresh_table[temp_ptr[16 + i]];
+        SgcPtr[0] += local_sgc_thresh_table[temp_ptr[i]];
         bits_map_ptr[i] = thresh_val;
         FragChangedPixels += thresh_val;
 
@@ -1316,11 +1313,7 @@ static ogg_int32_t RowDiffScan_DiffAndThresholdingMiddleFrag(PP_INSTANCE *ppi,
 
 
     return FragChangedPixels;
-
-
-
-
-   
+  
 
 
 #endif
