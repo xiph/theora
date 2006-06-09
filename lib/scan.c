@@ -695,9 +695,8 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
 {
 
 #if 0
-    //static __declspec(align(16)) unsigned char temp[8];
-    //static unsigned char* temp_ptr = temp;
-    int i;
+
+  int i;
   for (i = 0; i < 8; i++)
   {
       unsigned char * SrcPtr1 = SrcPtr - 1;
@@ -726,7 +725,7 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
               (ogg_uint32_t)SrcPtr2[2 + i]   ) >> 3 );
   }
 
-  //return temp_ptr;
+
 #else
 
   /*                                                            
@@ -793,6 +792,8 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
     static unsigned char* Low6WordsMaskPtr = (unsigned char*)Low6WordsMask;
     long    stride = ppi->PlaneStride;
     unsigned char* SrcPtrTopLeft = SrcPtr - stride - 1;
+
+
     __asm {
         align           16
 
@@ -858,18 +859,12 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
             /* Clear the high 32 bits in the first register */
             pand        xmm1, xmm7
 
-            /* Create the inverse mask -- xmm6 = ~xmm7 */
-            //pxor        xmm6, xmm7
-
             /* Clear the low 6 bytes of the second register */
             pand        xmm2, xmm6
 
             /* First register now contains all 8 triple sums ie. the sum of the top 3 pixels
                 in each of the eight 3x3 adjacent blocks */
             por         xmm1, xmm2
-
-            
-
 
 
 
@@ -888,9 +883,6 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
 
         movq        xmm5, QWORD PTR [esi]
         movq        xmm2, QWORD PTR [esi + 2]       /* this one partly overlaps */
-        //movdqa      xmm7, [eax]
-
-
 
 
         /* Expand to 16 bits */
@@ -927,9 +919,6 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
 
             /* Clear the high 32 bits in the first register */
             pand        xmm5, xmm7
-
-            /* Create the inverse mask -- xmm6 = ~xmm7 */
-            //pxor        xmm6, xmm7
 
             /* Clear the low 6 bytes of the second register */
             pand        xmm2, xmm6
@@ -984,14 +973,11 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
             /* Clear the high 32 bits in the first register */
             pand        xmm1, xmm7
 
-            /* Create the inverse mask -- xmm6 = ~xmm7 */
-            //pxor        xmm6, xmm7
-
             /* Clear the low 6 bytes of the second register */
             pand        xmm2, xmm6
 
-            /* First register now contains all 8 triple sums ie. the sum of the top 3 pixels
-                in each of the eight 3x3 adjacent blocks */
+            /* First register now contains the sum of the left and right pixel
+                for each of the eight 3x3 adjacent blocks */
             por         xmm1, xmm2
 
 
@@ -1003,13 +989,9 @@ static void ApplyPakLowPass_Vectorised( PP_INSTANCE *ppi,
         /* Divide by 8 */
         psrlw           xmm1, 3
 
+        /* Write it into temp[0..16] */
         movdqa          [edi], xmm1
-
-
-
     }
-
-  
 
 #endif
 }
