@@ -1203,10 +1203,8 @@ static ogg_int32_t RowDiffScan_DiffAndThresholdingMiddleFrag(PP_INSTANCE *ppi,
         align 16
 
         mov         esi, temp_ptr
-        //mov         edi, YUVDiffsPtr  /* Not aligned */
         mov         ecx, some_255s_ptr
 
-        //movdqu      xmm3, [esi]  /* Old diffs +255 */
         movdqa      xmm1, [esi + 16]
         movdqa      xmm2, [esi + 32]
         
@@ -1261,7 +1259,6 @@ static ogg_int32_t RowDiffScan_DiffAndThresholdingMiddleFrag(PP_INSTANCE *ppi,
         pxor        xmm0, xmm0
         pcmpeqw     xmm7, xmm7      /* All 1's */
 
-
         /* Compare the pak_thresh values to 0, any word which was 0, will now be set to all 1's in xmm0 
                 the if basically said, if it's zero, leave it alone, otherwise, replace it
                 with the new diff */
@@ -1292,7 +1289,6 @@ static ogg_int32_t RowDiffScan_DiffAndThresholdingMiddleFrag(PP_INSTANCE *ppi,
         FragChangedPixels += thresh_val;
 
     }
-
 
     return FragChangedPixels;
   
