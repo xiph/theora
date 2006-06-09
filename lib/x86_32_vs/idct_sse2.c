@@ -40,6 +40,10 @@ static unsigned __int64 perf_idct1_time;
 static unsigned __int64 perf_idct1_count;
 static unsigned __int64 perf_idct1_min;
 
+static unsigned __int64 perf_dequant_slow10_time;
+static unsigned __int64 perf_dequant_slow10_count;
+static unsigned __int64 perf_dequant_slow10_min;
+
 
 static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
                    ogg_int16_t * quantized_list,
@@ -391,17 +395,126 @@ void IDctSlow__sse2(  Q_LIST_ENTRY * InputData,
 static void dequant_slow10__sse2( ogg_int16_t * dequant_coeffs,
                      ogg_int16_t * quantized_list,
                      ogg_int32_t * DCT_block){
+#if 0
   int i;
+  PERF_BLOCK_START();
   memset(DCT_block,0, 128);
   for(i=0;i<10;i++)
     DCT_block[dezigzag_index[i]] = quantized_list[i] * dequant_coeffs[i];
+
+  PERF_BLOCK_END("dequant_slow10 C", perf_dequant_slow10_time, perf_dequant_slow10_count,perf_dequant_slow10_min, 10000);
+#else
+
+    static __declspec(align(16)) unsigned char temp_block[40];
+    static unsigned char* temp_block_ptr = temp_block;
+    static ogg_int32_t* zigzag_ptr = dezigzag_index;
+
+    PERF_BLOCK_START();
+     __asm {
+
+        align       16
+        mov         edi, DCT_block
+        mov         esi, quantized_list
+        mov         edx, dequant_coeffs
+        mov         eax, temp_block_ptr
+
+        pxor        xmm0, xmm0
+
+        movdqa      [edi], xmm0
+        movdqa      [edi+16], xmm0
+        movdqa      [edi+32], xmm0
+        movdqa      [edi+48], xmm0
+        movdqa      [edi+64], xmm0
+        movdqa      [edi+80], xmm0
+        movdqa      [edi+96], xmm0
+        movdqa      [edi+112], xmm0
+
+        movdqu      xmm1, [esi]
+        movdqu      xmm2, [esi + 16]        /* These can maybe be modq 's */
+        movdqa      xmm3, [edx]
+        movdqa      xmm4, [edx + 16]
+
+
+
+        /* Make a copy of xmm1 and xmm2 */
+        movdqa      xmm5, xmm1
+        movdqa      xmm6, xmm2
+
+        /* Multiply */
+        pmullw      xmm1, xmm3
+        pmulhw      xmm3, xmm5
+
+        pmullw      xmm2, xmm4
+        pmulhw      xmm4, xmm6
+
+        /* Interleave the multiplicataion results */
+        movdqa      xmm0, xmm1
+        punpcklwd   xmm1, xmm3      /* Now the low 4 x 32 bits */
+        punpckhwd   xmm0, xmm3      /* The high 4x32 bits */
+
+        movdqa      xmm6, xmm2
+        punpcklwd   xmm2, xmm4
+        punpckhwd   xmm6, xmm4
+
+        /* Write to temp */
+
+        movdqa      [eax], xmm1
+        movdqa      [eax + 16], xmm0
+        movdqa      [eax + 32], xmm2
+        movdqa      [eax + 48], xmm6
+
+        /* Get the zigzag pointer */
+        mov         edx, zigzag_ptr
+
+
+
+        mov         ecx         , [edx]
+        mov         esi         , [eax]
+        mov         [edi + ecx*4] , esi
+
+        mov         ecx         , [edx + 4]
+        mov         esi         , [eax + 4]
+        mov         [edi + ecx*4] , esi
+
+        mov         ecx         , [edx + 8]
+        mov         esi         , [eax + 8]
+        mov         [edi + ecx*4] , esi
+
+        mov         ecx         , [edx + 12]
+        mov         esi         , [eax + 12]
+        mov         [edi + ecx*4] , esi
+
+        mov         ecx         , [edx + 16]
+        mov         esi         , [eax + 16]
+        mov         [edi + ecx*4] , esi
+        mov         ecx         , [edx + 20]
+        mov         esi         , [eax + 20]
+        mov         [edi + ecx*4] , esi
+        mov         ecx         , [edx + 24]
+        mov         esi         , [eax + 24]
+        mov         [edi + ecx*4] , esi
+        mov         ecx         , [edx + 28]
+        mov         esi         , [eax + 28]
+        mov         [edi + ecx*4] , esi
+
+        mov         ecx         , [edx + 32]
+        mov         esi         , [eax + 32]
+        mov         [edi + ecx*4] , esi
+        mov         ecx         , [edx + 36]
+        mov         esi         , [eax + 36]
+        mov         [edi + ecx*4] , esi
+
+
+     }
+     PERF_BLOCK_END("dequant_slow10 sse2", perf_dequant_slow10_time, perf_dequant_slow10_count,perf_dequant_slow10_min, 5000);
+#endif
 
 }
 
 void IDct10__sse2( Q_LIST_ENTRY * InputData,
              ogg_int16_t *QuantMatrix,
              ogg_int16_t * OutputData ){
-  ogg_int32_t IntermediateData[64];
+  __declspec(align(16)) ogg_int32_t IntermediateData[64];
   ogg_int32_t * ip = IntermediateData;
   ogg_int16_t * op = OutputData;
 
@@ -654,7 +767,7 @@ void IDct1__sse2( Q_LIST_ENTRY * InputData,
 
 
     }
-    PERF_BLOCK_END("IDct1 C", perf_idct1_time, perf_idct1_count,perf_idct1_min, 10000);
+    PERF_BLOCK_END("IDct1 sse2", perf_idct1_time, perf_idct1_count,perf_idct1_min, 10000);
 #endif
 
 }
@@ -667,6 +780,10 @@ void dsp_sse2_idct_init (DspFunctions *funcs)
     perf_dequant_slow_time = 0;
     perf_dequant_slow_count = 0;
     perf_dequant_slow_min = -1;
+
+    perf_dequant_slow10_time = 0;
+    perf_dequant_slow10_count = 0;
+    perf_dequant_slow10_min = -1;
 
     perf_idct1_time = 0;
     perf_idct1_count = 0;
