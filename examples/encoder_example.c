@@ -21,8 +21,9 @@
 #define _LARGEFILE64_SOURCE
 #define _FILE_OFFSET_BITS 64
 
+#define FIXED_SERIAL_NO
 /* Define to give performance data win32 only*/
-//#define THEORA_PERF_DATA 
+#define THEORA_PERF_DATA 
 #ifdef THEORA_PERF_DATA
 #include <windows.h>
 #endif
@@ -318,9 +319,9 @@ static void id_file(char *f){
 int spinner=0;
 char *spinascii="|/-\\";
 void spinnit(void){
-  spinner++;
-  if(spinner==4)spinner=0;
-  fprintf(stderr,"\r%c",spinascii[spinner]);
+  //spinner++;
+  //if(spinner==4)spinner=0;
+  //fprintf(stderr,"\r%c",spinascii[spinner]);
 }
 
 int fetch_and_process_audio(FILE *audio,ogg_page *audiopage,
@@ -663,8 +664,13 @@ int main(int argc,char *argv[]){
   {
     /* need two inequal serial numbers */
     int serial1, serial2;
+#ifdef FIXED_SERIAL_NO
+    serial1 = 1;
+    serial2 = 2;
+#else
     serial1 = rand();
     serial2 = rand();
+#endif
     if (serial1 == serial2) serial2++;
     ogg_stream_init(&to,serial1);
     ogg_stream_init(&vo,serial2);
@@ -859,9 +865,9 @@ int main(int argc,char *argv[]){
         else
           akbps=rint(audio_bytesout*8./timebase*.001);
         
-        fprintf(stderr,
-                "\r      %d:%02d:%02d.%02d audio: %dkbps video: %dkbps                 ",
-                hours,minutes,seconds,hundredths,akbps,vkbps);
+        //fprintf(stderr,
+        //        "\r      %d:%02d:%02d.%02d audio: %dkbps video: %dkbps                 ",
+        //        hours,minutes,seconds,hundredths,akbps,vkbps);
       }
     }
 

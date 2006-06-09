@@ -136,6 +136,7 @@
 				RuntimeLibrary="0"
 				BufferSecurityCheck="false"
 				UsePrecompiledHeader="0"
+				AssemblerOutput="4"
 				WarningLevel="4"
 				Detect64BitPortabilityProblems="true"
 				DebugInformationFormat="3"
@@ -502,6 +503,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\lib\scan.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\lib\x86_32_vs\scan_sse2.c"
 				>
 			</File>
 			<File

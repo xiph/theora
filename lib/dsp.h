@@ -19,8 +19,10 @@
 #define DSP_H
 
 #include <theora/theora.h>
-/*ZEN::: Added for QLIST_ENTRY */
-//#include "codec_internal.h"
+
+
+struct PP_INSTANCE;
+
 typedef unsigned long int ogg_uint64_t;
 
 typedef struct
@@ -112,6 +114,16 @@ typedef struct
                 ogg_int32_t *BoundingValuePtr);
 
 
+  void (*RowDiffScan)( struct PP_INSTANCE *ppi,
+                         unsigned char * YuvPtr1,
+                         unsigned char * YuvPtr2,
+                         ogg_int16_t   * YUVDiffsPtr,
+                         unsigned char * bits_map_ptr,
+                         signed char   * SgcPtr,
+                         signed char   * DispFragPtr,
+                         unsigned char * FDiffPixels,
+                         ogg_int32_t   * RowDiffsPtr,
+                         unsigned char * ChLocalsPtr, int EdgeRow );
 
 
 } DspFunctions;
@@ -120,6 +132,7 @@ extern void dsp_dct_init(DspFunctions *funcs, ogg_uint32_t cpu_flags);
 extern void dsp_recon_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
 extern void dsp_idct_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
 extern void dsp_dct_decode_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
+extern void dsp_scan_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
 
 
 void dsp_init(DspFunctions *funcs);
@@ -134,6 +147,7 @@ extern void dsp_sse2_init(DspFunctions *funcs);
 extern void dsp_sse2_recon_init(DspFunctions *funcs);
 extern void dsp_sse2_idct_init(DspFunctions *funcs);
 extern void dsp_sse2_dct_decode_init(DspFunctions *funcs);
+extern void dsp_sse2_scan_init(DspFunctions *funcs);
 
 #endif
 
@@ -199,7 +213,8 @@ extern void dsp_sse2_dct_decode_init(DspFunctions *funcs);
 #define dsp_dct_decode_filter_vert(funcs, ptr1, a1, ptr2) \
             (funcs.FilterVert (ptr1, a1, ptr2))
 
-
+#define dsp_scan_row_diff_scan(funcs, ptr1, ptr2, ptr3, ptr4, ptr5, ptr6, ptr7, ptr8, ptr9, ptr10, a1)  \
+            (funcs.RowDiffScan(ptr1, ptr2, ptr3, ptr4, ptr5, ptr6, ptr7, ptr8, ptr9, ptr10, a1))
 
 
 #endif /* DSP_H */

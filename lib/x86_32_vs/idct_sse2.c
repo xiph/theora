@@ -173,6 +173,8 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
 
 
 
+
+
 void IDctSlow__sse2(  Q_LIST_ENTRY * InputData,
                 ogg_int16_t *QuantMatrix,
                 ogg_int16_t * OutputData ) {
@@ -395,6 +397,7 @@ void IDctSlow__sse2(  Q_LIST_ENTRY * InputData,
 static void dequant_slow10__sse2( ogg_int16_t * dequant_coeffs,
                      ogg_int16_t * quantized_list,
                      ogg_int32_t * DCT_block){
+
 #if 0
   int i;
   PERF_BLOCK_START();
