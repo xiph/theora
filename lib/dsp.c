@@ -412,6 +412,7 @@ void dsp_static_init(DspFunctions *funcs)
   dsp_idct_init (funcs, cpuflags);
   dsp_dct_decode_init(funcs, cpuflags);
   dsp_scan_init(funcs, cpuflags);
+  dsp_quant_init(funcs, cpuflags);
 #if defined(USE_ASM)
   if (cpuflags & CPU_X86_MMX) {
     dsp_mmx_init(funcs);
@@ -423,11 +424,11 @@ void dsp_static_init(DspFunctions *funcs)
     dsp_mmxext_init(funcs);
   }
 # endif
-
+#ifndef USE_NO_SSE2
   if (cpuflags & CPU_X86_SSE2) {
     dsp_sse2_init(funcs);
   }
-
+#endif
 
 #endif
 }

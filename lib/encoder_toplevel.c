@@ -47,7 +47,7 @@ static void EClearFragmentInfo(CP_INSTANCE * cpi){
   if(cpi->MVList)
     _ogg_free(cpi->MVList);
   if(cpi->DCT_codes )
-    _ogg_free( cpi->DCT_codes );
+    _theora_16_byte_aligned_free( cpi->DCT_codes );
   if(cpi->DCTDataBuffer )
     _theora_16_byte_aligned_free( cpi->DCTDataBuffer);
   if(cpi->quantized_list)
@@ -137,7 +137,7 @@ static void EInitFragmentInfo(CP_INSTANCE * cpi){
     _ogg_malloc(cpi->pb.UnitFragments*
                 sizeof(cpi->MVList));
   cpi->DCT_codes =
-    _ogg_malloc(64*
+    _theora_16_byte_aligned_malloc(64*
                 sizeof(*cpi->DCT_codes));
   cpi->DCTDataBuffer =
     _theora_16_byte_aligned_malloc(64*
@@ -777,7 +777,12 @@ int theora_encode_init(theora_state *th, theora_info *c){
   memset(th, 0, sizeof(*th));
   /*Currently only the 4:2:0 format is supported.*/
   if(c->pixelformat!=OC_PF_420)return OC_IMPL;
-  th->internal_encode=cpi=_ogg_calloc(1,sizeof(*cpi));
+  
+  /* th->internal_encode=cpi=_ogg_calloc(1,sizeof(*cpi)); */
+  /* ZEN::: Need 16 byte alignment and calloc doesn't cut it */
+  th->internal_encode=cpi=_theora_16_byte_aligned_malloc(sizeof(*cpi));
+  memset(cpi, 0, sizeof(*cpi));
+  /* Equivalent of calloc */
 
   dsp_static_init (&cpi->dsp);
   memcpy (&cpi->pb.dsp, &cpi->dsp, sizeof(DspFunctions));
@@ -1216,6 +1221,7 @@ void theora_encoder_clear (CP_INSTANCE * cpi){
     
     oggpackB_writeclear(cpi->oggbuffer);
     _ogg_free(cpi->oggbuffer);
-    _ogg_free(cpi);
+    /*_ogg_free(cpi); */
+    _theora_16_byte_aligned_free(cpi);
   }
 }

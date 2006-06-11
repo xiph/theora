@@ -453,9 +453,9 @@ typedef struct PB_INSTANCE {
 
   ogg_int16_t   *DequantBuffer;
 
-  ogg_int32_t    fp_quant_InterUV_coeffs[64];
-  ogg_int32_t    fp_quant_InterUV_round[64];
-  ogg_int32_t    fp_ZeroBinSize_InterUV[64];
+  __declspec(align(16)) ogg_int32_t    fp_quant_InterUV_coeffs[64];
+  __declspec(align(16)) ogg_int32_t    fp_quant_InterUV_round[64];
+  __declspec(align(16)) ogg_int32_t    fp_ZeroBinSize_InterUV[64];
 
   ogg_int16_t   *TmpReconBuffer;
   ogg_int16_t   *TmpDataBuffer;
@@ -467,12 +467,12 @@ typedef struct PB_INSTANCE {
   /* Dequantiser and rounding tables */
   ogg_uint32_t   QThreshTable[Q_TABLE_SIZE];
   Q_LIST_ENTRY   DcScaleFactorTable[Q_TABLE_SIZE];
-  Q_LIST_ENTRY   Y_coeffs[64];
-  Q_LIST_ENTRY   U_coeffs[64];
-  Q_LIST_ENTRY   V_coeffs[64];
-  Q_LIST_ENTRY   InterY_coeffs[64];
-  Q_LIST_ENTRY   InterU_coeffs[64];
-  Q_LIST_ENTRY   InterV_coeffs[64];
+  __declspec(align(16)) Q_LIST_ENTRY   Y_coeffs[64];
+  __declspec(align(16)) Q_LIST_ENTRY   U_coeffs[64];
+  __declspec(align(16)) Q_LIST_ENTRY   V_coeffs[64];
+  __declspec(align(16)) Q_LIST_ENTRY   InterY_coeffs[64];
+  __declspec(align(16)) Q_LIST_ENTRY   InterU_coeffs[64];
+  __declspec(align(16)) Q_LIST_ENTRY   InterV_coeffs[64];
   Q_LIST_ENTRY  *dequant_Y_coeffs;
   Q_LIST_ENTRY  *dequant_U_coeffs;
   Q_LIST_ENTRY  *dequant_V_coeffs;
@@ -480,10 +480,10 @@ typedef struct PB_INSTANCE {
   Q_LIST_ENTRY  *dequant_InterU_coeffs;
   Q_LIST_ENTRY  *dequant_InterV_coeffs;
   Q_LIST_ENTRY  *dequant_coeffs;        /* currently active quantizer */
-  unsigned int   zigzag_index[64];
-  ogg_int32_t    quant_Y_coeffs[64];
-  ogg_int32_t    quant_UV_coeffs[64];
-  ogg_int32_t    fp_quant_Y_coeffs[64]; /* used in reiniting quantizers */
+  __declspec(align(16)) unsigned int   zigzag_index[64];
+  __declspec(align(16)) ogg_int32_t    quant_Y_coeffs[64];
+  __declspec(align(16)) ogg_int32_t    quant_UV_coeffs[64];
+  __declspec(align(16)) ogg_int32_t    fp_quant_Y_coeffs[64]; /* used in reiniting quantizers */
 
   HUFF_ENTRY    *HuffRoot_VP3x[NUM_HUFF_TABLES];
   ogg_uint32_t  *HuffCodeArray_VP3x[NUM_HUFF_TABLES];
@@ -491,14 +491,14 @@ typedef struct PB_INSTANCE {
   const unsigned char *ExtraBitLengths_VP3x;
 
   /* Quantiser and rounding tables */
-  ogg_int32_t    fp_quant_UV_coeffs[64];
-  ogg_int32_t    fp_quant_Inter_coeffs[64];
-  ogg_int32_t    fp_quant_Y_round[64];
-  ogg_int32_t    fp_quant_UV_round[64];
-  ogg_int32_t    fp_quant_Inter_round[64];
-  ogg_int32_t    fp_ZeroBinSize_Y[64];
-  ogg_int32_t    fp_ZeroBinSize_UV[64];
-  ogg_int32_t    fp_ZeroBinSize_Inter[64];
+  __declspec(align(16)) ogg_int32_t    fp_quant_UV_coeffs[64];
+  __declspec(align(16)) ogg_int32_t    fp_quant_Inter_coeffs[64];
+  __declspec(align(16)) ogg_int32_t    fp_quant_Y_round[64];
+  __declspec(align(16)) ogg_int32_t    fp_quant_UV_round[64];
+  __declspec(align(16)) ogg_int32_t    fp_quant_Inter_round[64];
+  __declspec(align(16)) ogg_int32_t    fp_ZeroBinSize_Y[64];
+  __declspec(align(16)) ogg_int32_t    fp_ZeroBinSize_UV[64];
+  __declspec(align(16)) ogg_int32_t    fp_ZeroBinSize_Inter[64];
   ogg_int32_t   *fquant_coeffs;
   ogg_int32_t   *fquant_round;
   ogg_int32_t   *fquant_ZbSize;
@@ -688,7 +688,11 @@ typedef struct CP_INSTANCE {
 
   /* instances (used for reconstructing buffers and to hold tokens etc.) */
   PP_INSTANCE       pp;   /* preprocessor */
-  PB_INSTANCE       pb;   /* playback */
+
+  /* ZEN::: Since there are things in PB_INSTANCE that are 16 byte aligned, we
+        have to make sure the base address is also 16 byte aligned or the alignment
+        won't work */
+  __declspec(align(16))PB_INSTANCE       pb;   /* playback */
 
   /* ogg bitpacker for use in packet coding, other API state */
   oggpack_buffer   *oggbuffer;

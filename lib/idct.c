@@ -572,9 +572,10 @@ void dsp_idct_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)
   //if (cpu_flags & CPU_X86_MMX) {
   //  dsp_mmx_idct_init(funcs);
   //}
-
+#ifndef USE_NO_SSE2
   if (cpu_flags & CPU_X86_SSE2) {
     dsp_sse2_idct_init(funcs);
   }
+#endif
 #endif
 }

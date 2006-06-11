@@ -22,6 +22,9 @@
 
 
 struct PP_INSTANCE;
+struct PB_INSTANCE;
+
+//typedef ogg_int16_t Q_LIST_ENTRY;
 
 typedef unsigned long int ogg_uint64_t;
 
@@ -96,12 +99,12 @@ typedef struct
              ogg_int16_t *QuantMatrix,
              ogg_int16_t * OutputData );
 
-  void (*IDctSlow)(  ogg_int16_t/*Q_LIST_ENTRY*/ * InputData,
+  void (*IDctSlow)(  ogg_int16_t /*Q_LIST_ENTRY*/ * InputData,
                 ogg_int16_t *QuantMatrix,
                 ogg_int16_t * OutputData );
 
   void (*dequant_slow)( ogg_int16_t * dequant_coeffs,
-                   ogg_int16_t * quantized_list,
+                   ogg_int16_t /*Q_LIST_ENTRY*/ * quantized_list,
                    ogg_int32_t * DCT_block);
 
   /* dct_decode */
@@ -114,6 +117,7 @@ typedef struct
                 ogg_int32_t *BoundingValuePtr);
 
 
+  /* Scan */
   void (*RowDiffScan)( struct PP_INSTANCE *ppi,
                          unsigned char * YuvPtr1,
                          unsigned char * YuvPtr2,
@@ -125,6 +129,11 @@ typedef struct
                          ogg_int32_t   * RowDiffsPtr,
                          unsigned char * ChLocalsPtr, int EdgeRow );
 
+  /* Quant */
+  void (*quantize)( struct PB_INSTANCE *pbi,
+               ogg_int16_t * DCT_block,
+               ogg_int16_t /*Q_LIST_ENTRY*/ * quantized_list);
+
 
 } DspFunctions;
 
@@ -133,6 +142,7 @@ extern void dsp_recon_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
 extern void dsp_idct_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
 extern void dsp_dct_decode_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
 extern void dsp_scan_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
+extern void dsp_quant_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
 
 
 void dsp_init(DspFunctions *funcs);
@@ -148,6 +158,7 @@ extern void dsp_sse2_recon_init(DspFunctions *funcs);
 extern void dsp_sse2_idct_init(DspFunctions *funcs);
 extern void dsp_sse2_dct_decode_init(DspFunctions *funcs);
 extern void dsp_sse2_scan_init(DspFunctions *funcs);
+extern void dsp_sse2_quant_init(DspFunctions *funcs);
 
 #endif
 
@@ -215,6 +226,9 @@ extern void dsp_sse2_scan_init(DspFunctions *funcs);
 
 #define dsp_scan_row_diff_scan(funcs, ptr1, ptr2, ptr3, ptr4, ptr5, ptr6, ptr7, ptr8, ptr9, ptr10, a1)  \
             (funcs.RowDiffScan(ptr1, ptr2, ptr3, ptr4, ptr5, ptr6, ptr7, ptr8, ptr9, ptr10, a1))
+
+#define dsp_quant_quantize(funcs, ptr1, ptr2, ptr3) \
+            (funcs.quantize(ptr1, ptr2, ptr3))
 
 
 #endif /* DSP_H */

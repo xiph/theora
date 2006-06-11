@@ -17,6 +17,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "dsp.h"
+#include "cpu.h"
 #include "codec_internal.h"
 #include "quant_lookup.h"
 
@@ -560,7 +562,7 @@ void select_InterUV_quantiser ( PB_INSTANCE *pbi ){
   pbi->fquant_ZbSize = pbi->fp_ZeroBinSize_InterUV;
 }
 
-void quantize( PB_INSTANCE *pbi,
+void quantize__c( PB_INSTANCE *pbi,
                ogg_int16_t * DCT_block,
                Q_LIST_ENTRY * quantized_list){
   ogg_uint32_t  i;              /* Row index */
@@ -870,4 +872,23 @@ void UpdateQC( CP_INSTANCE *cpi, ogg_uint32_t NewQ ){
   /* Re-initialise the Q tables for forward and reverse transforms. */
   init_quantizer ( cpi, qscale, (unsigned char) pbi->FrameQIndex );
   init_dequantizer ( pbi, qscale, (unsigned char) pbi->FrameQIndex );
+}
+
+void dsp_quant_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)
+{
+    funcs->quantize = quantize__c;
+  //funcs->copy8x8 = copy8x8__c;
+  //funcs->recon_intra8x8 = recon_intra8x8__c;
+  //funcs->recon_inter8x8 = recon_inter8x8__c;
+  //funcs->recon_inter8x8_half = recon_inter8x8_half__c;
+#if defined(USE_ASM)
+  //if (cpu_flags & CPU_X86_MMX) {
+  //  dsp_mmx_scan_init(funcs);
+  //}
+#ifndef USE_NO_SSE2
+  if (cpu_flags & CPU_X86_SSE2) {
+    dsp_sse2_quant_init(funcs);
+  }
+#endif
+#endif
 }

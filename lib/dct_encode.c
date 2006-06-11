@@ -450,7 +450,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
   dsp_fdct_short(cpi->dsp, cpi->DCTDataBuffer, cpi->DCT_codes );
 
   /* Quantize that transform data. */
-  quantize ( &cpi->pb, cpi->DCT_codes, cpi->pb.QFragData[FragIndex] );
+  dsp_quant_quantize (cpi->dsp, &cpi->pb, cpi->DCT_codes, cpi->pb.QFragData[FragIndex] );
 
   if ( (cpi->pb.CodingMode == CODE_INTER_NO_MV) &&
        ( AllZeroDctData(cpi->pb.QFragData[FragIndex]) ) ) {
