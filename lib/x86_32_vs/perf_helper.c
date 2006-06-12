@@ -5,6 +5,7 @@ unsigned __int64 GetCPUTime()
     unsigned long lower;
     unsigned __int64 ret;
     __asm {
+        align 16
         RDTSC
         mov     upper, edx
         mov     lower, eax

@@ -52,7 +52,7 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
 #if 0
 
   int i;
-    PERF_BLOCK_START();
+    //PERF_BLOCK_START();
   for(i=0;i<64;i++)
     DCT_block[dezigzag_index[i]] = quantized_list[i] * dequant_coeffs[i];
 
@@ -65,7 +65,7 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
 
     /*      quantized list is not aligned */
 
-    PERF_BLOCK_START();
+   // PERF_BLOCK_START();
     __asm {
         align       16
 
@@ -167,7 +167,7 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
 
     pop     ebx
     };
-    PERF_BLOCK_END("dequant_slow sse2", perf_dequant_slow_time, perf_dequant_slow_count,perf_dequant_slow_min, 5000);
+   // PERF_BLOCK_END("dequant_slow sse2", perf_dequant_slow_time, perf_dequant_slow_count,perf_dequant_slow_min, 5000);
 #endif
 }
 
@@ -400,7 +400,7 @@ static void dequant_slow10__sse2( ogg_int16_t * dequant_coeffs,
 
 #if 0
   int i;
-  PERF_BLOCK_START();
+  //PERF_BLOCK_START();
   memset(DCT_block,0, 128);
   for(i=0;i<10;i++)
     DCT_block[dezigzag_index[i]] = quantized_list[i] * dequant_coeffs[i];
@@ -412,7 +412,7 @@ static void dequant_slow10__sse2( ogg_int16_t * dequant_coeffs,
     static unsigned char* temp_block_ptr = temp_block;
     static ogg_int32_t* zigzag_ptr = dezigzag_index;
 
-    PERF_BLOCK_START();
+    //PERF_BLOCK_START();
      __asm {
 
         align       16
@@ -509,7 +509,7 @@ static void dequant_slow10__sse2( ogg_int16_t * dequant_coeffs,
 
 
      }
-     PERF_BLOCK_END("dequant_slow10 sse2", perf_dequant_slow10_time, perf_dequant_slow10_count,perf_dequant_slow10_min, 5000);
+     //PERF_BLOCK_END("dequant_slow10 sse2", perf_dequant_slow10_time, perf_dequant_slow10_count,perf_dequant_slow10_min, 5000);
 #endif
 
 }
@@ -725,7 +725,7 @@ void IDct1__sse2( Q_LIST_ENTRY * InputData,
     static __declspec(align(16)) unsigned char temp[16];
     static unsigned char* temp_ptr = temp;
 
-    PERF_BLOCK_START();
+    //PERF_BLOCK_START();
     __asm {
         align       16
 
@@ -770,7 +770,7 @@ void IDct1__sse2( Q_LIST_ENTRY * InputData,
 
 
     }
-    PERF_BLOCK_END("IDct1 sse2", perf_idct1_time, perf_idct1_count,perf_idct1_min, 10000);
+    //PERF_BLOCK_END("IDct1 sse2", perf_idct1_time, perf_idct1_count,perf_idct1_min, 10000);
 #endif
 
 }

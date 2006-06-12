@@ -19,6 +19,7 @@
 
 #include "codec_internal.h"
 #include "dsp.h"
+#include "perf_helper.h"
 
 #if 0
 //These are to let me selectively enable the C versions, these are needed
@@ -29,6 +30,11 @@
 
 
 static const ogg_int64_t V128 = 0x0080008000800080LL;
+
+
+static unsigned __int64 perf_sad8x8_time;
+static unsigned __int64 perf_sad8x8_count;
+static unsigned __int64 perf_sad8x8_min;
 
 static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
                   ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine,
@@ -934,6 +940,7 @@ static ogg_uint32_t sad8x8__mmx (unsigned char *ptr1, ogg_uint32_t stride1,
 #else
   ogg_uint32_t  DiffVal;
 
+  PERF_BLOCK_START();
   __asm {
     align  16
 
@@ -1101,6 +1108,7 @@ static ogg_uint32_t sad8x8__mmx (unsigned char *ptr1, ogg_uint32_t stride1,
     mov         DiffVal, eax
   };
 
+  PERF_BLOCK_END("sad8x8 mmx - ", perf_sad8x8_time, perf_sad8x8_count,perf_sad8x8_min, 50000);
   return DiffVal;
 
  
@@ -1602,5 +1610,11 @@ void dsp_mmx_init(DspFunctions *funcs)
   funcs->intra8x8_err = intra8x8_err__mmx;
   funcs->inter8x8_err = inter8x8_err__mmx;
   funcs->inter8x8_err_xy2 = inter8x8_err_xy2__mmx;
+
+  perf_sad8x8_time = 0;
+ perf_sad8x8_count = 0;
+perf_sad8x8_min = -1;
 }
+
+
 

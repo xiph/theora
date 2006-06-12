@@ -15,6 +15,7 @@
 
 #include "codec_internal.h"
 #include "dsp.h"
+#include "perf_helper.h"
 
 #if 1
 //These are to let me selectively enable the C versions, these are needed
@@ -23,6 +24,11 @@
 #define DSP_OP_ABS_DIFF(a,b) abs((((int)(a)) - ((int)(b))))
 #endif
 
+
+
+static unsigned __int64 perf_sad8x8_time;
+static unsigned __int64 perf_sad8x8_count;
+static unsigned __int64 perf_sad8x8_min;
 
 //static const ogg_int64_t V128 = 0x0080008000800080LL;
 
@@ -873,6 +879,8 @@ static ogg_uint32_t sad8x8__sse2 (unsigned char *ptr1, ogg_uint32_t stride1,
   ogg_uint32_t  i;
   ogg_uint32_t  sad = 0;
 
+  PERF_BLOCK_START();
+
   for (i=8; i; i--) {
     sad += DSP_OP_ABS_DIFF(ptr1[0], ptr2[0]);
     sad += DSP_OP_ABS_DIFF(ptr1[1], ptr2[1]);
@@ -888,18 +896,112 @@ static ogg_uint32_t sad8x8__sse2 (unsigned char *ptr1, ogg_uint32_t stride1,
     ptr2 += stride2;
   }
 
-  return sad;
-#else
+  PERF_BLOCK_END("sad8x8 C - ", perf_sad8x8_time, perf_sad8x8_count,perf_sad8x8_min, 50000);
 
+  return sad;
+#elif 1
   ogg_uint32_t  DiffVal;
 
+ PERF_BLOCK_START();
   __asm {
     align  16
 
     mov         eax, ptr1
     mov         ebx, ptr2
+
+
     mov         ecx, stride1
     mov         edx, stride2
+
+    pxor      xmm2, xmm2 /* Result */    
+    pxor      xmm3, xmm3
+
+    mov         edi, 4
+
+loop_start:
+        movq      xmm0, QWORD PTR [eax]
+        movq      xmm1, QWORD PTR [eax + ecx]
+
+
+        movq      xmm4, QWORD PTR [ebx]
+        movq      xmm5, QWORD PTR [ebx + edx]
+
+        /* Absolute difference */
+        movq        xmm6, xmm0
+        movq        xmm7, xmm1
+        psubusb     xmm0, xmm4
+        psubusb     xmm1, xmm5
+        psubusb     xmm4, xmm6
+        psubusb     xmm5, xmm7
+        por         xmm0, xmm4
+        por         xmm1, xmm5
+
+        /* Expand to 16 bits */
+        punpcklbw   xmm0, xmm3
+        punpcklbw   xmm1, xmm3
+
+        /* Accumulate */
+        paddw       xmm0, xmm1
+        paddw       xmm2, xmm0
+
+        lea         eax, [eax + 2*ecx]
+        lea         ebx, [ebx + 2*edx]
+        sub     edi, 1
+        jnz     loop_start
+
+        
+    /*---------------------------*/
+
+
+    /* Add the items in the result */
+    movdqa      xmm0, xmm2
+    psrlq       xmm2, 32
+
+    paddw       xmm0, xmm2
+
+
+    movdqa      xmm2, xmm0
+    psrlq       xmm0, 16
+
+    paddw       xmm2, xmm0
+
+    movdqa      xmm0, xmm2
+    psrldq      xmm2, 8
+    paddw       xmm0, xmm2
+
+    /* Put it in the return variable */
+
+    movd        eax, xmm0
+    and         eax, 0xffff
+    mov         DiffVal, eax
+
+
+  };
+
+ PERF_BLOCK_END("sad8x8 sse2 - ", perf_sad8x8_time, perf_sad8x8_count,perf_sad8x8_min, 50000);
+    return DiffVal;
+   
+ 
+
+
+#else
+
+   
+
+  ogg_uint32_t  DiffVal;
+
+ PERF_BLOCK_START();
+  __asm {
+    align  16
+
+    mov         eax, ptr1
+    mov         ebx, ptr2
+
+
+    mov         ecx, stride1
+    mov         edx, stride2
+
+
     lea         edi, [ecx + ecx*2]
     lea         esi, [edx + edx*2]
 
@@ -1023,6 +1125,9 @@ static ogg_uint32_t sad8x8__sse2 (unsigned char *ptr1, ogg_uint32_t stride1,
         
     /*---------------------------*/
 
+    /* Load the address of temp */
+    //mov         edx, temp_ptr
+
     /* Add the items in the result */
     movdqa      xmm0, xmm2
     psrlq       xmm2, 32
@@ -1040,13 +1145,17 @@ static ogg_uint32_t sad8x8__sse2 (unsigned char *ptr1, ogg_uint32_t stride1,
     paddw       xmm0, xmm2
 
     /* Put it in the return variable */
+
     movd        eax, xmm0
     and         eax, 0xffff
     mov         DiffVal, eax
 
 
   };
+
+ PERF_BLOCK_END("sad8x8 sse2 - ", perf_sad8x8_time, perf_sad8x8_count,perf_sad8x8_min, 50000);
     return DiffVal;
+   
  
 
 #endif
@@ -1532,11 +1641,24 @@ void dsp_sse2_init(DspFunctions *funcs)
   funcs->sub8x8avg2 = sub8x8avg2__sse2;
   funcs->row_sad8 = row_sad8__sse2;
   funcs->col_sad8x8 = col_sad8x8__sse2;
+  
+  
+  /* The mmx versions are faster right now */
   funcs->sad8x8 = sad8x8__sse2;
   funcs->sad8x8_thres = sad8x8_thres__sse2;
+ 
+  
+  
   //funcs->sad8x8_xy2_thres = sad8x8_xy2_thres__sse2;
   //funcs->intra8x8_err = intra8x8_err__sse2;
   //funcs->inter8x8_err = inter8x8_err__sse2;
   //funcs->inter8x8_err_xy2 = inter8x8_err_xy2__sse2;
+
+
+
+  
+perf_sad8x8_time = 0;
+ perf_sad8x8_count = 0;
+perf_sad8x8_min = -1;
 }
 

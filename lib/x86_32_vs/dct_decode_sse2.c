@@ -26,7 +26,7 @@ static void FilterHoriz__sse2(unsigned char * PixelPtr,
 
   ogg_int32_t j;
   ogg_int32_t FiltVal;
-  PERF_BLOCK_START();
+  //PERF_BLOCK_START();
   for ( j = 0; j < 8; j++ ){
     FiltVal =
       ( PixelPtr[0] ) -
@@ -42,7 +42,7 @@ static void FilterHoriz__sse2(unsigned char * PixelPtr,
     PixelPtr += LineLength;
     
   }
-  PERF_BLOCK_END("filter horiz C", perf_filter_horiz_time, perf_filter_horiz_count,perf_filter_horiz_min, 10000);
+  //PERF_BLOCK_END("filter horiz C", perf_filter_horiz_time, perf_filter_horiz_count,perf_filter_horiz_min, 10000);
 
 #else
     static __declspec(align(16)) unsigned char temp[128];

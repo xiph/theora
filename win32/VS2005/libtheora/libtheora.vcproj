@@ -19,7 +19,7 @@
 			Name="Debug|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="Debug"
-			ConfigurationType="2"
+			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			CharacterSet="2"
 			>
@@ -63,21 +63,10 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLinkerTool"
-				OutputFile="$(OutDir)/libtheora.dll"
-				LinkIncremental="2"
-				ModuleDefinitionFile="..\..\libtheora.def"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile="$(OutDir)/libtheora.pdb"
-				SubSystem="2"
-				ImportLibrary="$(OutDir)/libtheora.lib"
-				TargetMachine="1"
+				Name="VCLibrarianTool"
 			/>
 			<Tool
 				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -87,12 +76,6 @@
 			/>
 			<Tool
 				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -129,9 +112,9 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
-				WholeProgramOptimization="false"
+				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include;..\..\..\lib;G:\Dev\xiph\zens_sdk\lib\libtheora-playtime\lib\x86_32_vs"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS; USE_ASM"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS; USE_ASM; USE_NO_SSE"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"

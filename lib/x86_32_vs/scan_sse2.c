@@ -722,7 +722,7 @@ static void RowDiffScan__sse2( PP_INSTANCE *ppi,
   ogg_int32_t    FragChangedPixels;
 
   ogg_int16_t Diff;     /* Temp local workspace. */
-  PERF_BLOCK_START();
+  //PERF_BLOCK_START();
   /* Cannot use kernel if at edge or if PAK disabled */
   if ( (!ppi->PAKEnabled) || EdgeRow ){
     for ( i = 0; i < ppi->PlaneWidth; i += HFRAGPIXELS ){
@@ -921,7 +921,7 @@ static void RowDiffScan__sse2( PP_INSTANCE *ppi,
 
   }
 
-  PERF_BLOCK_END("RowDiffScan ", perf_rds_datmf_time, perf_rds_datmf_count, perf_rds_datmf_min, 10000);
+  //PERF_BLOCK_END("RowDiffScan ", perf_rds_datmf_time, perf_rds_datmf_count, perf_rds_datmf_min, 10000);
 }
 
 

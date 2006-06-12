@@ -31,7 +31,7 @@ void quantize__sse2( PB_INSTANCE *pbi,
                ogg_int16_t * DCT_block,
                Q_LIST_ENTRY * quantized_list){
 
-#if 0
+#if 1
   ogg_uint32_t  i;              /* Row index */
   Q_LIST_ENTRY  val;            /* Quantised value. */
 
@@ -175,7 +175,7 @@ static unsigned char* temp_ptr = temp;
   ogg_uint32_t * ZigZagPtr = (ogg_uint32_t *)pbi->zigzag_index;
   
 
-  PERF_BLOCK_START();
+  //PERF_BLOCK_START();
  
 
   __asm {
@@ -430,7 +430,7 @@ static unsigned char* temp_ptr = temp;
 
   }
 
-  PERF_BLOCK_END("quantize sse2", perf_quant_time, perf_quant_count, perf_quant_min, 20000);
+  //PERF_BLOCK_END("quantize sse2", perf_quant_time, perf_quant_count, perf_quant_min, 20000);
 
 #endif
 }
