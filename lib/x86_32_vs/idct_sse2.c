@@ -44,12 +44,12 @@
 //static unsigned __int64 perf_dequant_slow10_count;
 //static unsigned __int64 perf_dequant_slow10_min;
 
-static perf_info dequant_slow_c;
-static perf_info dequant_slow_sse2;
-static perf_info idct1_c;
-static perf_info idct1_sse2;
-static perf_info dequant_slow10_c;
-static perf_info dequant_slow10_sse2;
+static perf_info dequant_slow_c_perf;
+static perf_info dequant_slow_sse2_perf;
+static perf_info idct1_c_perf;
+static perf_info idct1_sse2_perf;
+static perf_info dequant_slow10_c_perf;
+static perf_info dequant_slow10_sse2_perf;
 
 
 static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
@@ -59,11 +59,11 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
 #if 0
 
   int i;
-  PERF_BLOCK_START();
+  //PERF_BLOCK_START();
   for(i=0;i<64;i++)
     DCT_block[dezigzag_index[i]] = quantized_list[i] * dequant_coeffs[i];
 
-  PERF_BLOCK_END("dequant_slow C", dequant_slow_c, 1000);
+  //PERF_BLOCK_END("dequant_slow C", dequant_slow_c_perf, 1000);
 #else
 
     static __declspec(align(16)) ogg_int32_t temp_block[64];
@@ -72,7 +72,7 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
 
     /*      quantized list is not aligned */
 
-   PERF_BLOCK_START();
+   //PERF_BLOCK_START();
     __asm {
         align       16
 
@@ -174,7 +174,7 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
 
     pop     ebx
     };
-   PERF_BLOCK_END("dequant_slow sse2", dequant_slow_sse2, 1000);
+   //PERF_BLOCK_END("dequant_slow sse2", dequant_slow_sse2_perf, 1000);
 #endif
 }
 
@@ -407,19 +407,19 @@ static void dequant_slow10__sse2( ogg_int16_t * dequant_coeffs,
 
 #if 0
   int i;
-  //PERF_BLOCK_START();
+  PERF_BLOCK_START();
   memset(DCT_block,0, 128);
   for(i=0;i<10;i++)
     DCT_block[dezigzag_index[i]] = quantized_list[i] * dequant_coeffs[i];
 
-  PERF_BLOCK_END("dequant_slow10 C", perf_dequant_slow10_time, perf_dequant_slow10_count,perf_dequant_slow10_min, 10000);
+  PERF_BLOCK_END("dequant_slow10 C", dequant_slow10_c_perf, 10000);
 #else
 
     static __declspec(align(16)) unsigned char temp_block[40];
     static unsigned char* temp_block_ptr = temp_block;
     static ogg_int32_t* zigzag_ptr = dezigzag_index;
 
-    //PERF_BLOCK_START();
+    PERF_BLOCK_START();
      __asm {
 
         align       16
@@ -516,6 +516,7 @@ static void dequant_slow10__sse2( ogg_int16_t * dequant_coeffs,
 
 
      }
+	 PERF_BLOCK_END("dequant_slow10 sse2", dequant_slow10_sse2_perf, 10000);
      //PERF_BLOCK_END("dequant_slow10 sse2", perf_dequant_slow10_time, perf_dequant_slow10_count,perf_dequant_slow10_min, 5000);
 #endif
 
@@ -786,25 +787,26 @@ void IDct1__sse2( Q_LIST_ENTRY * InputData,
 void dsp_sse2_idct_init (DspFunctions *funcs)
 {
 
-	/* Required, no C, but calls the sse2 version */
+	/* Required, no sse2, but calls the sse2 version of a child function */
 	funcs->IDctSlow = IDctSlow__sse2;
+	funcs->IDct10 = IDct10__sse2;
 
 
     
   funcs->dequant_slow = dequant_slow__sse2;
   //funcs->IDct1 = IDct1__sse2;
-  //funcs->dequant_slow10 = dequant_slow10__sse2;
+  funcs->dequant_slow10 = dequant_slow10__sse2;
   //funcs->dequant_slow = dequant_slow__sse2;
 
 
-	ClearPerfData(&dequant_slow_c);
-	ClearPerfData(&dequant_slow_sse2);
-	ClearPerfData(&idct1_c);
-	ClearPerfData(&idct1_sse2);
-	ClearPerfData(&dequant_slow10_c);
-	ClearPerfData(&dequant_slow10_sse2);
+	ClearPerfData(&dequant_slow_c_perf);
+	ClearPerfData(&dequant_slow_sse2_perf);
+	ClearPerfData(&idct1_c_perf);
+	ClearPerfData(&idct1_sse2_perf);
+	ClearPerfData(&dequant_slow10_c_perf);
+	ClearPerfData(&dequant_slow10_sse2_perf);
   /* ---------- Not written ------------ */
   
-  //funcs->IDct10 = IDct10__sse2;
+  
 
 }
