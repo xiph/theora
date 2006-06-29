@@ -25,7 +25,7 @@
 #endif
 
 
-
+static perf_info sub8x8avg2_sse2_perf;
 static perf_info sub8x8_sse2_perf;
 static perf_info sub8x8_128_sse2_perf;
 
@@ -225,7 +225,7 @@ static void sub8x8_128__sse2 (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
   }
 
 #else
-	PERF_BLOCK_START();
+	//PERF_BLOCK_START();
     __asm {
         align 16
         
@@ -297,7 +297,7 @@ static void sub8x8_128__sse2 (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
 
     };
 
-	PERF_BLOCK_END("sub8x8_128 sse2", sub8x8_128_sse2_perf, 10000);
+	//PERF_BLOCK_END("sub8x8_128 sse2", sub8x8_128_sse2_perf, 10000);
 
  
 #endif
@@ -333,6 +333,7 @@ static void sub8x8avg2__sse2 (unsigned char *FiltPtr, unsigned char *ReconPtr1,
     DctInputPtr += 8;
   }
 #else
+	 PERF_BLOCK_START();
     __asm {
         align 16
 
@@ -528,6 +529,8 @@ static void sub8x8avg2__sse2 (unsigned char *FiltPtr, unsigned char *ReconPtr1,
         //lea         esi, [esi + ecx*2]
         //add         edi, 32
 };        
+
+PERF_BLOCK_END("sub8x8avg2 sse2", sub8x8avg2_sse2_perf, 10000);
 
  
 
@@ -1641,7 +1644,7 @@ void dsp_sse2_init(DspFunctions *funcs)
   TH_DEBUG("enabling accelerated x86_32 sse2 dsp functions.\n");
   funcs->sub8x8 = sub8x8__sse2;
   funcs->sub8x8_128 = sub8x8_128__sse2;
-  //funcs->sub8x8avg2 = sub8x8avg2__sse2;
+  funcs->sub8x8avg2 = sub8x8avg2__sse2;
   //funcs->row_sad8 = row_sad8__sse2;
   //funcs->col_sad8x8 = col_sad8x8__sse2;
   
@@ -1659,6 +1662,7 @@ void dsp_sse2_init(DspFunctions *funcs)
 
   ClearPerfData(&sub8x8_sse2_perf);
   ClearPerfData(&sub8x8_128_sse2_perf);
+  ClearPerfData(&sub8x8avg2_sse2_perf);
 
 
 
