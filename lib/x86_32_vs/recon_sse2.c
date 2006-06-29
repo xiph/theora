@@ -607,9 +607,11 @@ static void recon_inter8x8_half__sse2 (unsigned char *ReconPtr, unsigned char *R
 void dsp_sse2_recon_init(DspFunctions *funcs)
 {
   TH_DEBUG("enabling accelerated x86_32 sse2 recon functions.\n");
-  funcs->copy8x8 = copy8x8__sse2;
-  funcs->recon_intra8x8 = recon_intra8x8__sse2;
-  funcs->recon_inter8x8 = recon_inter8x8__sse2;
-  funcs->recon_inter8x8_half = recon_inter8x8_half__sse2;
+
+
+  //funcs->copy8x8 = copy8x8__sse2;
+  //funcs->recon_intra8x8 = recon_intra8x8__sse2;
+  //funcs->recon_inter8x8 = recon_inter8x8__sse2;
+  //funcs->recon_inter8x8_half = recon_inter8x8_half__sse2;
 }
 

@@ -1635,20 +1635,20 @@ static ogg_uint32_t inter8x8_err_xy2__sse2 (unsigned char *SrcData, ogg_uint32_t
 
 void dsp_sse2_init(DspFunctions *funcs)
 {
-  TH_DEBUG("enabling accelerated x86_32 mmx dsp functions.\n");
-  funcs->sub8x8 = sub8x8__sse2;
-  funcs->sub8x8_128 = sub8x8_128__sse2;
-  funcs->sub8x8avg2 = sub8x8avg2__sse2;
-  funcs->row_sad8 = row_sad8__sse2;
-  funcs->col_sad8x8 = col_sad8x8__sse2;
+  TH_DEBUG("enabling accelerated x86_32 sse2 dsp functions.\n");
+  //funcs->sub8x8 = sub8x8__sse2;
+  //funcs->sub8x8_128 = sub8x8_128__sse2;
+  //funcs->sub8x8avg2 = sub8x8avg2__sse2;
+  //funcs->row_sad8 = row_sad8__sse2;
+  //funcs->col_sad8x8 = col_sad8x8__sse2;
   
   
   /* The mmx versions are faster right now */
-  funcs->sad8x8 = sad8x8__sse2;
-  funcs->sad8x8_thres = sad8x8_thres__sse2;
+  //funcs->sad8x8 = sad8x8__sse2;
+  //funcs->sad8x8_thres = sad8x8_thres__sse2;
  
   
-  
+  /* -------------- Not written --------- */
   //funcs->sad8x8_xy2_thres = sad8x8_xy2_thres__sse2;
   //funcs->intra8x8_err = intra8x8_err__sse2;
   //funcs->inter8x8_err = inter8x8_err__sse2;

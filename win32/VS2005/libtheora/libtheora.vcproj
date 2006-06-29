@@ -114,7 +114,7 @@
 				OmitFramePointers="true"
 				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include;..\..\..\lib;G:\Dev\xiph\zens_sdk\lib\libtheora-playtime\lib\x86_32_vs"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS; USE_ASM; USE_NO_SSE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS; USE_ASM"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"

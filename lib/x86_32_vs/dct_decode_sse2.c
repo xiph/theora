@@ -188,6 +188,6 @@ void dsp_sse2_dct_decode_init(DspFunctions *funcs)
   TH_DEBUG("enabling accelerated x86_32 mmx dsp functions.\n");
 
   ClearPerfData(&filter_horiz_perf);
-  funcs->FilterHoriz = FilterHoriz__sse2;
+  //funcs->FilterHoriz = FilterHoriz__sse2;
 
 }

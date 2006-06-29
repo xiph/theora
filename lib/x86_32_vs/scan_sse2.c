@@ -928,6 +928,8 @@ static void RowDiffScan__sse2( PP_INSTANCE *ppi,
 void dsp_sse2_scan_init(DspFunctions *funcs)
 {
   TH_DEBUG("enabling accelerated x86_32 sse2 scan functions.\n");
-  funcs->RowDiffScan = RowDiffScan__sse2;
+
+
+  //funcs->RowDiffScan = RowDiffScan__sse2;
 
 }

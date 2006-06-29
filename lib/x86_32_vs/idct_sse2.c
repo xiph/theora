@@ -781,12 +781,15 @@ void dsp_sse2_idct_init (DspFunctions *funcs)
 
 
 
-    /* TODO::: Match function order */
-  funcs->dequant_slow = dequant_slow__sse2;
-  funcs->IDct1 = IDct1__sse2;
-  funcs->IDct10 = IDct10__sse2;
-  funcs->dequant_slow10 = dequant_slow10__sse2;
-  funcs->IDctSlow = IDctSlow__sse2;
-  funcs->dequant_slow = dequant_slow__sse2;
+    
+  //funcs->dequant_slow = dequant_slow__sse2;
+  //funcs->IDct1 = IDct1__sse2;
+  //funcs->dequant_slow10 = dequant_slow10__sse2;
+  //funcs->dequant_slow = dequant_slow__sse2;
+
+
+  /* ---------- Not written ------------ */
+  //funcs->IDctSlow = IDctSlow__sse2;
+  //funcs->IDct10 = IDct10__sse2;
 
 }
