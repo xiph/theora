@@ -48,7 +48,7 @@ static void FilterHoriz__sse2(unsigned char * PixelPtr,
     static __declspec(align(16)) unsigned char temp[128];
     static unsigned char* temp_ptr = temp; 
 
-  PERF_BLOCK_START();
+  //PERF_BLOCK_START();
     __asm {
         align           16
         mov             esi, PixelPtr
@@ -153,7 +153,7 @@ static void FilterHoriz__sse2(unsigned char * PixelPtr,
         pop             ebp
     }
     
-	PERF_BLOCK_END("filter horiz sse2", filter_horiz_perf, 10000);
+	//PERF_BLOCK_END("filter horiz sse2", filter_horiz_perf, 10000);
 #endif
 }
 

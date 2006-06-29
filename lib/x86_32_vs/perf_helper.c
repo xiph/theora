@@ -24,5 +24,4 @@ void ClearPerfData(perf_info* inoutData)
 	inoutData->sum = 0;
 	inoutData->count = 0;
 	inoutData->min = (unsigned __int64)-1;
-	inoutData->max = 0;
 }

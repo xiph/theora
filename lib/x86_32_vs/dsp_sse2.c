@@ -26,9 +26,7 @@
 
 
 
-//static unsigned __int64 perf_sad8x8_time;
-//static unsigned __int64 perf_sad8x8_count;
-//static unsigned __int64 perf_sad8x8_min;
+static perf_info sub8x8_sse2_perf;
 
 
 
@@ -63,7 +61,7 @@ static void sub8x8__sse2 (unsigned char *FiltPtr, unsigned char *ReconPtr,
     DctInputPtr += 8;
   }
 #else
-
+	PERF_BLOCK_START();
     __asm {
         align 16
 
@@ -193,6 +191,8 @@ static void sub8x8__sse2 (unsigned char *FiltPtr, unsigned char *ReconPtr,
 
 
     };
+
+	PERF_BLOCK_END("sub8x8 sse2", sub8x8_sse2_perf, 10000);
 
 
 #endif
@@ -1636,7 +1636,7 @@ static ogg_uint32_t inter8x8_err_xy2__sse2 (unsigned char *SrcData, ogg_uint32_t
 void dsp_sse2_init(DspFunctions *funcs)
 {
   TH_DEBUG("enabling accelerated x86_32 sse2 dsp functions.\n");
-  //funcs->sub8x8 = sub8x8__sse2;
+  funcs->sub8x8 = sub8x8__sse2;
   //funcs->sub8x8_128 = sub8x8_128__sse2;
   //funcs->sub8x8avg2 = sub8x8avg2__sse2;
   //funcs->row_sad8 = row_sad8__sse2;
@@ -1653,6 +1653,8 @@ void dsp_sse2_init(DspFunctions *funcs)
   //funcs->intra8x8_err = intra8x8_err__sse2;
   //funcs->inter8x8_err = inter8x8_err__sse2;
   //funcs->inter8x8_err_xy2 = inter8x8_err_xy2__sse2;
+
+  ClearPerfData(&sub8x8_sse2_perf);
 
 
 

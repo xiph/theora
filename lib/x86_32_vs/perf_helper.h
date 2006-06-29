@@ -11,7 +11,7 @@ typedef struct {
     unsigned __int64 sum;
     unsigned __int64 count;
     unsigned __int64 min;
-	unsigned __int64 max;
+
 
 } perf_info;
 
@@ -27,12 +27,11 @@ extern void ClearPerfData(perf_info* inoutData);
 #define PERF_BLOCK_END(s, perf, z)                                                               \
         perf_temp = (GetCPUTime() - perf_start_time[--depth]);                                      \
         (perf.min) = ((perf.min) > perf_temp) ? perf_temp : (perf.min);                                                  \
-		(perf.max) = ((perf.max) > perf_temp) ? (perf.max) : perf_temp;                                  \
         perf.sum += perf_temp;                                                                             \
         (perf.count)++;                                                                                      \
   if (((perf.count) % (z)) == 0)                                                                             \
   {                                                                                                 \
-    printf(s " - %lld from %lld iterations -- @%lld cycles -- min(%lld) -- max(%lld)\n", perf.sum, perf.count, (perf.sum) / (perf.count), perf.min, perf.max);    \
+    printf(s " - %lld from %lld iterations -- @%lld cycles -- min(%lld)\n", perf.sum, perf.count, (perf.sum) / (perf.count), perf.min);    \
   }                
 
 #else

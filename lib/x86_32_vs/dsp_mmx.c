@@ -32,9 +32,7 @@
 static const ogg_int64_t V128 = 0x0080008000800080LL;
 
 
-static unsigned __int64 perf_sad8x8_time;
-static unsigned __int64 perf_sad8x8_count;
-static unsigned __int64 perf_sad8x8_min;
+static perf_info sub8x8_mmx_perf;
 
 static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
                   ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine,
@@ -62,6 +60,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
     DctInputPtr += 8;
   }
 #else
+	PERF_BLOCK_START();
     __asm {
         align 16
 
@@ -245,6 +244,8 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
      
 
     };
+
+	PERF_BLOCK_END("sub8x8 mmx", sub8x8_mmx_perf, 10000);
  
 #endif
 }
@@ -1611,9 +1612,7 @@ void dsp_mmx_init(DspFunctions *funcs)
   funcs->inter8x8_err = inter8x8_err__mmx;
   funcs->inter8x8_err_xy2 = inter8x8_err_xy2__mmx;
 
-  perf_sad8x8_time = 0;
- perf_sad8x8_count = 0;
-perf_sad8x8_min = -1;
+  ClearPerfData(&sub8x8_mmx_perf);
 }
 
 
