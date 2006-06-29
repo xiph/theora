@@ -32,17 +32,17 @@
 #define xC6S2 25080
 #define xC7S1 12785
 
-static unsigned __int64 perf_dequant_slow_time;
-static unsigned __int64 perf_dequant_slow_count;
-static unsigned __int64 perf_dequant_slow_min;
-
-static unsigned __int64 perf_idct1_time;
-static unsigned __int64 perf_idct1_count;
-static unsigned __int64 perf_idct1_min;
-
-static unsigned __int64 perf_dequant_slow10_time;
-static unsigned __int64 perf_dequant_slow10_count;
-static unsigned __int64 perf_dequant_slow10_min;
+//static unsigned __int64 perf_dequant_slow_time;
+//static unsigned __int64 perf_dequant_slow_count;
+//static unsigned __int64 perf_dequant_slow_min;
+//
+//static unsigned __int64 perf_idct1_time;
+//static unsigned __int64 perf_idct1_count;
+//static unsigned __int64 perf_idct1_min;
+//
+//static unsigned __int64 perf_dequant_slow10_time;
+//static unsigned __int64 perf_dequant_slow10_count;
+//static unsigned __int64 perf_dequant_slow10_min;
 
 
 static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
@@ -780,17 +780,6 @@ void dsp_sse2_idct_init (DspFunctions *funcs)
 {
 
 
-    perf_dequant_slow_time = 0;
-    perf_dequant_slow_count = 0;
-    perf_dequant_slow_min = -1;
-
-    perf_dequant_slow10_time = 0;
-    perf_dequant_slow10_count = 0;
-    perf_dequant_slow10_min = -1;
-
-    perf_idct1_time = 0;
-    perf_idct1_count = 0;
-    perf_idct1_min = -1;
 
     /* TODO::: Match function order */
   funcs->dequant_slow = dequant_slow__sse2;

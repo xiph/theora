@@ -940,7 +940,7 @@ static ogg_uint32_t sad8x8__mmx (unsigned char *ptr1, ogg_uint32_t stride1,
 #else
   ogg_uint32_t  DiffVal;
 
-  PERF_BLOCK_START();
+  //PERF_BLOCK_START();
   __asm {
     align  16
 
@@ -1108,7 +1108,7 @@ static ogg_uint32_t sad8x8__mmx (unsigned char *ptr1, ogg_uint32_t stride1,
     mov         DiffVal, eax
   };
 
-  PERF_BLOCK_END("sad8x8 mmx - ", perf_sad8x8_time, perf_sad8x8_count,perf_sad8x8_min, 50000);
+  //PERF_BLOCK_END("sad8x8 mmx - ", perf_sad8x8_time, perf_sad8x8_count,perf_sad8x8_min, 50000);
   return DiffVal;
 
  

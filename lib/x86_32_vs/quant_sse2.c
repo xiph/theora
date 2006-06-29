@@ -22,9 +22,9 @@
 
 #include "perf_helper.h"
 
-static unsigned __int64 perf_quant_time;
-static unsigned __int64 perf_quant_min;
-static unsigned __int64 perf_quant_count;
+//static unsigned __int64 perf_quant_time;
+//static unsigned __int64 perf_quant_min;
+//static unsigned __int64 perf_quant_count;
 
 
 void quantize__sse2( PB_INSTANCE *pbi,
@@ -42,7 +42,7 @@ void quantize__sse2( PB_INSTANCE *pbi,
   ogg_uint32_t * ZigZagPtr = (ogg_uint32_t *)pbi->zigzag_index;
   ogg_int32_t temp;
 
-  PERF_BLOCK_START();
+  //PERF_BLOCK_START();
   /* Set the quantized_list to default to 0 */
   memset( quantized_list, 0, 64 * sizeof(Q_LIST_ENTRY) );
 
@@ -158,7 +158,7 @@ void quantize__sse2( PB_INSTANCE *pbi,
     ZigZagPtr += 8;
   }
 
-  PERF_BLOCK_END("quantize C", perf_quant_time, perf_quant_count, perf_quant_min, 20000);
+  //PERF_BLOCK_END("quantize C", perf_quant_time, perf_quant_count, perf_quant_min, 20000);
 
 #else
 static __declspec(align(16)) unsigned short Some511s[8] = { 0x01FF, 0x01FF, 0x01FF, 0x01FF, 0x01FF, 0x01FF, 0x01FF, 0x01FF };
@@ -440,9 +440,7 @@ void dsp_sse2_quant_init(DspFunctions *funcs)
 {
 #ifndef USE_NO_SSE2
   TH_DEBUG("enabling accelerated x86_32 sse2 quant functions.\n");
-  perf_quant_time = 0;
-  perf_quant_min = -1;
-  perf_quant_count = 0;
+
   funcs->quantize = quantize__sse2;
 
 #endif

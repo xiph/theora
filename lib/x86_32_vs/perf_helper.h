@@ -6,35 +6,38 @@ static unsigned __int64 perf_start_time[4096];
 static unsigned __int64 perf_temp;
 static unsigned long depth = 0;
 
-/*
-//typedef struct {
-//    unsigned __int64 sum;
-//    unsigned __int64 count;
-//    unsigned __int64 min;
-//
-//} perf_info;
-*/
+
+typedef struct {
+    unsigned __int64 sum;
+    unsigned __int64 count;
+    unsigned __int64 min;
+	unsigned __int64 max;
+
+} perf_info;
+
 
 extern unsigned __int64 GetCPUTime();
+extern void ClearPerfData(perf_info* inoutData);
 #define PERF_DATA_ON
 #ifdef PERF_DATA_ON
 
 
 #define PERF_BLOCK_START()  perf_start_time[depth++] = GetCPUTime();
 
-#define PERF_BLOCK_END(s, x, y, l, z)                                                               \
+#define PERF_BLOCK_END(s, perf, z)                                                               \
         perf_temp = (GetCPUTime() - perf_start_time[--depth]);                                      \
-        (l) = ((l) > perf_temp) ? perf_temp : (l);                                                  \
-        x += perf_temp;                                                                             \
-        (y)++;                                                                                      \
-  if (((y) % (z)) == 0)                                                                             \
+        (perf.min) = ((perf.min) > perf_temp) ? perf_temp : (perf.min);                                                  \
+		(perf.max) = ((perf.max) > perf_temp) ? (perf.max) : perf_temp;                                  \
+        perf.sum += perf_temp;                                                                             \
+        (perf.count)++;                                                                                      \
+  if (((perf.count) % (z)) == 0)                                                                             \
   {                                                                                                 \
-    printf(s " - %lld from %lld iterations -- @%lld cycles -- min(%lld)\n", x, y, (x) / (y), l);    \
+    printf(s " - %lld from %lld iterations -- @%lld cycles -- min(%lld) -- max(%lld)\n", perf.sum, perf.count, (perf.sum) / (perf.count), perf.min, perf.max);    \
   }                
 
 #else
 #define PERF_BLOCK_START()
-#define PERF_BLOCK_END(s, x, y, l, z)
+#define PERF_BLOCK_END(s, perf, z)
 
 #endif
 

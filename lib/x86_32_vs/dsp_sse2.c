@@ -26,9 +26,11 @@
 
 
 
-static unsigned __int64 perf_sad8x8_time;
-static unsigned __int64 perf_sad8x8_count;
-static unsigned __int64 perf_sad8x8_min;
+//static unsigned __int64 perf_sad8x8_time;
+//static unsigned __int64 perf_sad8x8_count;
+//static unsigned __int64 perf_sad8x8_min;
+
+
 
 //static const ogg_int64_t V128 = 0x0080008000800080LL;
 
@@ -902,7 +904,6 @@ static ogg_uint32_t sad8x8__sse2 (unsigned char *ptr1, ogg_uint32_t stride1,
 #elif 1
   ogg_uint32_t  DiffVal;
 
- PERF_BLOCK_START();
   __asm {
     align  16
 
@@ -978,7 +979,6 @@ loop_start:
 
   };
 
- PERF_BLOCK_END("sad8x8 sse2 - ", perf_sad8x8_time, perf_sad8x8_count,perf_sad8x8_min, 50000);
     return DiffVal;
    
  
@@ -1657,8 +1657,6 @@ void dsp_sse2_init(DspFunctions *funcs)
 
 
   
-perf_sad8x8_time = 0;
- perf_sad8x8_count = 0;
-perf_sad8x8_min = -1;
+
 }
 

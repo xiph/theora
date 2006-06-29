@@ -12,9 +12,9 @@
 //static __declspec(align(16)) const unsigned int TripleMask[4] = { 0x0000FFFF, 0xFFFF0000, 0x0000FFFF, 0xFFFF0000 };
 //static const unsigned int* PTripleMaskPtr = TripleMask;
 
-static unsigned __int64 perf_filter_horiz_time;
-static unsigned __int64 perf_filter_horiz_min;
-static unsigned __int64 perf_filter_horiz_count;
+
+
+perf_info filter_horiz_perf;
 
 static void FilterHoriz__sse2(unsigned char * PixelPtr,
                         ogg_int32_t LineLength,
@@ -42,7 +42,7 @@ static void FilterHoriz__sse2(unsigned char * PixelPtr,
     PixelPtr += LineLength;
     
   }
-  //PERF_BLOCK_END("filter horiz C", perf_filter_horiz_time, perf_filter_horiz_count,perf_filter_horiz_min, 10000);
+  //PERF_BLOCK_END("filter horiz C", filter_horiz_perf, 10000);
 
 #else
     static __declspec(align(16)) unsigned char temp[128];
@@ -187,9 +187,7 @@ void dsp_sse2_dct_decode_init(DspFunctions *funcs)
 {
   TH_DEBUG("enabling accelerated x86_32 mmx dsp functions.\n");
 
-  perf_filter_horiz_time = 0;
-  perf_filter_horiz_min = -1;
-  perf_filter_horiz_count = 0;
+  ClearPerfData(&filter_horiz_perf);
   funcs->FilterHoriz = FilterHoriz__sse2;
 
 }
