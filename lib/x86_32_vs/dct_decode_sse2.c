@@ -14,19 +14,19 @@
 
 
 
-perf_info filter_horiz_perf;
+static perf_info filter_horiz_perf;
 
 static void FilterHoriz__sse2(unsigned char * PixelPtr,
                         ogg_int32_t LineLength,
                         ogg_int32_t *BoundingValuePtr){
 
-#if 1
+#if 0
   
   
 
   ogg_int32_t j;
   ogg_int32_t FiltVal;
-  //PERF_BLOCK_START();
+  PERF_BLOCK_START();
   for ( j = 0; j < 8; j++ ){
     FiltVal =
       ( PixelPtr[0] ) -
@@ -42,7 +42,7 @@ static void FilterHoriz__sse2(unsigned char * PixelPtr,
     PixelPtr += LineLength;
     
   }
-  //PERF_BLOCK_END("filter horiz C", filter_horiz_perf, 10000);
+  PERF_BLOCK_END("filter horiz C", filter_horiz_perf, 10000);
 
 #else
     static __declspec(align(16)) unsigned char temp[128];
@@ -152,7 +152,8 @@ static void FilterHoriz__sse2(unsigned char * PixelPtr,
         pop             ebx
         pop             ebp
     }
-    PERF_BLOCK_END("filter horiz sse2", perf_filter_horiz_time, perf_filter_horiz_count, perf_filter_horiz_min, 10000);
+    
+	PERF_BLOCK_END("filter horiz sse2", filter_horiz_perf, 10000);
 #endif
 }
 
@@ -188,6 +189,6 @@ void dsp_sse2_dct_decode_init(DspFunctions *funcs)
   TH_DEBUG("enabling accelerated x86_32 mmx dsp functions.\n");
 
   ClearPerfData(&filter_horiz_perf);
-  //funcs->FilterHoriz = FilterHoriz__sse2;
+  funcs->FilterHoriz = FilterHoriz__sse2;
 
 }
