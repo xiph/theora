@@ -31,7 +31,7 @@
 
 static const ogg_int64_t V128 = 0x0080008000800080LL;
 
-
+static perf_info col_sad8x8_mmx_perf;
 static perf_info row_sad8_mmx_perf;
 static perf_info sub8x8avg2_mmx_perf;
 static perf_info sub8x8_mmx_perf;
@@ -741,7 +741,7 @@ static ogg_uint32_t row_sad8__mmx (unsigned char *Src1, unsigned char *Src2)
 
   ogg_uint32_t MaxSad;
 
-  PERF_BLOCK_START();
+  //PERF_BLOCK_START();
   
   __asm {
     align       16
@@ -785,7 +785,7 @@ static ogg_uint32_t row_sad8__mmx (unsigned char *Src1, unsigned char *Src2)
     mov         MaxSad, eax
   };
 
-  PERF_BLOCK_END("row_sad8 mmx", row_sad8_mmx_perf, 200000);
+  //PERF_BLOCK_END("row_sad8 mmx", row_sad8_mmx_perf, 200000);
    return MaxSad;
   
   
@@ -847,7 +847,7 @@ static ogg_uint32_t col_sad8x8__mmx (unsigned char *Src1, unsigned char *Src2,
 #else
   ogg_uint32_t MaxSad;
 
-
+	//PERF_BLOCK_START();
     __asm {
         align       16
         mov         ebx, Src1
@@ -920,6 +920,7 @@ static ogg_uint32_t col_sad8x8__mmx (unsigned char *Src1, unsigned char *Src2,
         mov         MaxSad, eax
     };
 
+	//PERF_BLOCK_END("col_sad8x8 mmx", col_sad8x8_mmx_perf, 30000);
     return MaxSad;
 
 
@@ -1628,6 +1629,7 @@ void dsp_mmx_init(DspFunctions *funcs)
   ClearPerfData(&sub8x8_128_mmx_perf);
   ClearPerfData(&sub8x8avg2_mmx_perf);
   ClearPerfData(&row_sad8_mmx_perf);
+  ClearPerfData(&col_sad8x8_mmx_perf);
 }
 
 

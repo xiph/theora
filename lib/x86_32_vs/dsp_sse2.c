@@ -24,7 +24,7 @@
 #define DSP_OP_ABS_DIFF(a,b) abs((((int)(a)) - ((int)(b))))
 #endif
 
-
+static perf_info col_sad8x8_sse2_perf;
 static perf_info row_sad8_sse2_perf;
 static perf_info sub8x8avg2_sse2_perf;
 static perf_info sub8x8_sse2_perf;
@@ -563,7 +563,7 @@ static ogg_uint32_t row_sad8__sse2 (unsigned char *Src1, unsigned char *Src2)
 #else
   ogg_uint32_t SadValue;
 
-  PERF_BLOCK_START();
+  //PERF_BLOCK_START();
 
 
   __asm {
@@ -611,7 +611,7 @@ static ogg_uint32_t row_sad8__sse2 (unsigned char *Src1, unsigned char *Src2)
 
   }
 
-  PERF_BLOCK_END("row_sad8 sse2", row_sad8_sse2_perf, 200000);
+  //PERF_BLOCK_END("row_sad8 sse2", row_sad8_sse2_perf, 200000);
   return SadValue;
 
 
@@ -678,7 +678,7 @@ static ogg_uint32_t col_sad8x8__sse2 (unsigned char *Src1, unsigned char *Src2,
     /* TODO::: It may not be worth contracting to 8 bit in the middle 
                 The conversion back and forth possibly outweighs the saving */
 
-
+	//PERF_BLOCK_START();
     __asm {
         align       16
         
@@ -877,6 +877,7 @@ static ogg_uint32_t col_sad8x8__sse2 (unsigned char *Src1, unsigned char *Src2,
 
     };
 
+	//PERF_BLOCK_END("col_sad8x8 sse2", col_sad8x8_sse2_perf, 30000);
     return SadValue;
  
 
@@ -1653,7 +1654,7 @@ void dsp_sse2_init(DspFunctions *funcs)
   /* The mmx version is slightly faster */
   //funcs->row_sad8 = row_sad8__sse2;
 
-
+  /* The mmx version is much faster */
   //funcs->col_sad8x8 = col_sad8x8__sse2;
   
   
@@ -1672,6 +1673,7 @@ void dsp_sse2_init(DspFunctions *funcs)
   ClearPerfData(&sub8x8_128_sse2_perf);
   ClearPerfData(&sub8x8avg2_sse2_perf);
   ClearPerfData(&row_sad8_sse2_perf);
+  ClearPerfData(&col_sad8x8_sse2_perf);
 
 
 
