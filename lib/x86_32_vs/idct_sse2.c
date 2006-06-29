@@ -44,6 +44,13 @@
 //static unsigned __int64 perf_dequant_slow10_count;
 //static unsigned __int64 perf_dequant_slow10_min;
 
+static perf_info dequant_slow_c;
+static perf_info dequant_slow_sse2;
+static perf_info idct1_c;
+static perf_info idct1_sse2;
+static perf_info dequant_slow10_c;
+static perf_info dequant_slow10_sse2;
+
 
 static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
                    ogg_int16_t * quantized_list,
@@ -52,11 +59,11 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
 #if 0
 
   int i;
-    //PERF_BLOCK_START();
+  PERF_BLOCK_START();
   for(i=0;i<64;i++)
     DCT_block[dezigzag_index[i]] = quantized_list[i] * dequant_coeffs[i];
 
-  PERF_BLOCK_END("dequant_slow C", perf_dequant_slow_time, perf_dequant_slow_count,perf_dequant_slow_min, 5000);
+  PERF_BLOCK_END("dequant_slow C", dequant_slow_c, 1000);
 #else
 
     static __declspec(align(16)) ogg_int32_t temp_block[64];
@@ -65,7 +72,7 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
 
     /*      quantized list is not aligned */
 
-   // PERF_BLOCK_START();
+   PERF_BLOCK_START();
     __asm {
         align       16
 
@@ -167,7 +174,7 @@ static void dequant_slow__sse2( ogg_int16_t * dequant_coeffs,
 
     pop     ebx
     };
-   // PERF_BLOCK_END("dequant_slow sse2", perf_dequant_slow_time, perf_dequant_slow_count,perf_dequant_slow_min, 5000);
+   PERF_BLOCK_END("dequant_slow sse2", dequant_slow_sse2, 1000);
 #endif
 }
 
@@ -779,17 +786,25 @@ void IDct1__sse2( Q_LIST_ENTRY * InputData,
 void dsp_sse2_idct_init (DspFunctions *funcs)
 {
 
+	/* Required, no C, but calls the sse2 version */
+	funcs->IDctSlow = IDctSlow__sse2;
 
 
     
-  //funcs->dequant_slow = dequant_slow__sse2;
+  funcs->dequant_slow = dequant_slow__sse2;
   //funcs->IDct1 = IDct1__sse2;
   //funcs->dequant_slow10 = dequant_slow10__sse2;
   //funcs->dequant_slow = dequant_slow__sse2;
 
 
+	ClearPerfData(&dequant_slow_c);
+	ClearPerfData(&dequant_slow_sse2);
+	ClearPerfData(&idct1_c);
+	ClearPerfData(&idct1_sse2);
+	ClearPerfData(&dequant_slow10_c);
+	ClearPerfData(&dequant_slow10_sse2);
   /* ---------- Not written ------------ */
-  //funcs->IDctSlow = IDctSlow__sse2;
+  
   //funcs->IDct10 = IDct10__sse2;
 
 }
