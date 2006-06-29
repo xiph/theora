@@ -31,6 +31,8 @@
 
 static const ogg_int64_t V128 = 0x0080008000800080LL;
 
+
+static perf_info row_sad8_mmx_perf;
 static perf_info sub8x8avg2_mmx_perf;
 static perf_info sub8x8_mmx_perf;
 static perf_info sub8x8_128_mmx_perf;
@@ -453,7 +455,7 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
     DctInputPtr += 8;
   }
 #else
-    PERF_BLOCK_START();
+    //PERF_BLOCK_START();
     __asm {
         align 16
 
@@ -705,7 +707,7 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
 
     };
 
-	PERF_BLOCK_END("sub8x8avg2 mmx", sub8x8avg2_mmx_perf, 10000);
+	//PERF_BLOCK_END("sub8x8avg2 mmx", sub8x8avg2_mmx_perf, 10000);
 
 
 
@@ -736,8 +738,10 @@ static ogg_uint32_t row_sad8__mmx (unsigned char *Src1, unsigned char *Src2)
   return SadValue;
 
 #else
+
   ogg_uint32_t MaxSad;
 
+  PERF_BLOCK_START();
   
   __asm {
     align       16
@@ -780,6 +784,8 @@ static ogg_uint32_t row_sad8__mmx (unsigned char *Src1, unsigned char *Src2)
     and         eax, 0xffff
     mov         MaxSad, eax
   };
+
+  PERF_BLOCK_END("row_sad8 mmx", row_sad8_mmx_perf, 200000);
    return MaxSad;
   
   
@@ -1621,6 +1627,7 @@ void dsp_mmx_init(DspFunctions *funcs)
   ClearPerfData(&sub8x8_mmx_perf);
   ClearPerfData(&sub8x8_128_mmx_perf);
   ClearPerfData(&sub8x8avg2_mmx_perf);
+  ClearPerfData(&row_sad8_mmx_perf);
 }
 
 

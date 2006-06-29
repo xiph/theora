@@ -25,6 +25,7 @@
 #endif
 
 
+static perf_info row_sad8_sse2_perf;
 static perf_info sub8x8avg2_sse2_perf;
 static perf_info sub8x8_sse2_perf;
 static perf_info sub8x8_128_sse2_perf;
@@ -333,7 +334,7 @@ static void sub8x8avg2__sse2 (unsigned char *FiltPtr, unsigned char *ReconPtr1,
     DctInputPtr += 8;
   }
 #else
-	 PERF_BLOCK_START();
+	 //PERF_BLOCK_START();
     __asm {
         align 16
 
@@ -530,7 +531,7 @@ static void sub8x8avg2__sse2 (unsigned char *FiltPtr, unsigned char *ReconPtr1,
         //add         edi, 32
 };        
 
-PERF_BLOCK_END("sub8x8avg2 sse2", sub8x8avg2_sse2_perf, 10000);
+//PERF_BLOCK_END("sub8x8avg2 sse2", sub8x8avg2_sse2_perf, 10000);
 
  
 
@@ -561,6 +562,8 @@ static ogg_uint32_t row_sad8__sse2 (unsigned char *Src1, unsigned char *Src2)
 
 #else
   ogg_uint32_t SadValue;
+
+  PERF_BLOCK_START();
 
 
   __asm {
@@ -608,6 +611,7 @@ static ogg_uint32_t row_sad8__sse2 (unsigned char *Src1, unsigned char *Src2)
 
   }
 
+  PERF_BLOCK_END("row_sad8 sse2", row_sad8_sse2_perf, 200000);
   return SadValue;
 
 
@@ -1645,7 +1649,11 @@ void dsp_sse2_init(DspFunctions *funcs)
   funcs->sub8x8 = sub8x8__sse2;
   funcs->sub8x8_128 = sub8x8_128__sse2;
   funcs->sub8x8avg2 = sub8x8avg2__sse2;
+
+  /* The mmx version is slightly faster */
   //funcs->row_sad8 = row_sad8__sse2;
+
+
   //funcs->col_sad8x8 = col_sad8x8__sse2;
   
   
@@ -1663,6 +1671,7 @@ void dsp_sse2_init(DspFunctions *funcs)
   ClearPerfData(&sub8x8_sse2_perf);
   ClearPerfData(&sub8x8_128_sse2_perf);
   ClearPerfData(&sub8x8avg2_sse2_perf);
+  ClearPerfData(&row_sad8_sse2_perf);
 
 
 
