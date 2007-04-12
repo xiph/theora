@@ -9,7 +9,12 @@
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
-*/
+
+  function:
+    last mod: $Id$
+
+ ********************************************************************/
+
 /*MMX acceleration of fragment reconstruction for motion compensation.
   Originally written by Rudolf Marek.*/
 #include "x86int.h"

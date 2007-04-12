@@ -9,7 +9,12 @@
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
-*/
+
+  function:
+    last mod: $Id$
+
+ ********************************************************************/
+
 /*MMX acceleration of complete fragment reconstruction algorithm.
   Originally written by Rudolf Marek.*/
 #include "x86int.h"

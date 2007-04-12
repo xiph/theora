@@ -5,13 +5,17 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 1999-2001                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
+ ********************************************************************
+
+  function:
+    last mod: $Id$
+
  ********************************************************************/
 
 /* mmx fdct implementation */
-/* $Id$ */
 
 #include "theora/theora.h"
 #include "codec_internal.h"
