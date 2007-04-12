@@ -1,0 +1,5 @@
+debian/tmp/usr/include/theora/theora.h
+debian/tmp/usr/lib/libtheora.a
+debian/tmp/usr/lib/libtheora.la
+debian/tmp/usr/lib/libtheora.so
+debian/tmp/usr/lib/pkgconfig/theora.pc
