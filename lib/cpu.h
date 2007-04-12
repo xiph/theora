@@ -9,7 +9,11 @@
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
-*/
+ function:
+    last mod: $Id$
+
+ ********************************************************************/
+
 #if !defined(_x86_cpu_H)
 # define _x86_cpu_H (1)
 #include "internal.h"

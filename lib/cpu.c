@@ -8,9 +8,15 @@
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
+ ********************************************************************
+ 
+ CPU capability detection for x86 processors.
+  Originally written by Rudolf Marek.
+  
+ function:
+  last mod: $Id$
+
  ********************************************************************/
-/*CPU capability detection for x86 processors.
-  Originally written by Rudolf Marek.*/
 
 #include "cpu.h"
 
