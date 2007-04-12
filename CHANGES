@@ -1,6 +1,8 @@
 libtheora 1.0alpha8 (unreleased)
 
- - no changes yet -
+ - Switch to new spec compliant decoder from theora-exp branch
+ - Add support to the encoder for using 6 different (static) matricies
+ - more assembly optimizations
 
 libtheora 1.0alpha7 (2006 June 20)
 
