@@ -229,6 +229,15 @@ if test x$HAVE_OSS != xyes; then
   AC_MSG_WARN([OSS audio support not found -- not compiling player_example])
 fi
 
+dnl check for libpng
+HAVE_PNG=no
+if test "x$HAVE_PKG_CONFIG" = "xyes"
+then
+  PKG_CHECK_MODULES(PNG, libpng, HAVE_PNG=yes, HAVE_PNG=no)
+fi
+AC_SUBST(PNG_CFLAGS)
+AC_SUBST(PNG_LIBS)
+
 dnl --------------------------------------------------
 dnl Overall build configuration options
 dnl --------------------------------------------------
@@ -289,6 +298,9 @@ AC_SUBST(GETOPT_OBJS)
 
 if test x$HAVE_SDL = xyes -a x$HAVE_OSS = xyes -a x$HAVE_VORBIS = xyes; then
   BUILDABLE_EXAMPLES="$BUILDABLE_EXAMPLES player_example"
+fi
+if test x$HAVE_PNG = xyes; then
+  BUILDABLE_EXAMPLES="$BUILDABLE_EXAMPLES png2theora"
 fi
 AC_SUBST(BUILDABLE_EXAMPLES)
 
