@@ -41,7 +41,6 @@ encoder_sources = \
 	enc/mcomp.c \
 	enc/misc_common.c \
 	enc/pb.c \
-	enc/pp.c \
 	enc/reconstruct.c \
 	enc/scan.c \
 	enc/dsp.c
@@ -114,7 +113,6 @@ noinst_HEADERS = \
 	enc/encoder_lookup.h \
 	enc/encoder_huffman.h \
 	enc/hufftables.h \
-	enc/pp.h \
 	enc/quant_lookup.h \
 	enc/toplevel_lookup.h \
 	enc/dsp.h \
