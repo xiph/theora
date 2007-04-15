@@ -2048,7 +2048,7 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
         if(pipe.loop_filter){
           sdelay+=notstart;
           edelay+=notdone;
-          oc_state_loop_filter_frag_rows(&_dec->state,pipe.bounding_values+256,
+          oc_state_loop_filter_frag_rows(&_dec->state,pipe.bounding_values,
            refi,pli,pipe.fragy0[pli]-sdelay,pipe.fragy_end[pli]-edelay);
         }
         /*To fill the borders, we have an additional two pixel delay, since a

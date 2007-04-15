@@ -37,5 +37,6 @@ void oc_restore_fpu_mmx(void);
 void oc_idct8x8_mmx(ogg_int16_t _y[64]);
 void oc_idct8x8_10_mmx(ogg_int16_t _y[64]);
 void oc_fill_idct_constants_mmx(void);
-
+void oc_state_loop_filter_frag_rows_mmx(oc_theora_state *_state,int *_bv,                                                    
+  int _refi,int _pli,int _fragy0,int _fragy_end);
 #endif

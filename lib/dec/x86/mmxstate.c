@@ -22,6 +22,18 @@
 
 #if defined(USE_ASM)
 
+static const __attribute__((aligned(8),used)) ogg_int64_t V3=
+ 0x0003000300030003LL; 
+static const __attribute__((aligned(8),used)) ogg_int64_t V4=
+ 0x0004000400040004LL; 
+static const __attribute__((aligned(8),used)) ogg_int64_t V100=
+ 0x0100010001000100LL;
+  
+#if defined(__APPLE__)
+#define MANGLE(x) "_"#x
+#else
+#define MANGLE(x) #x
+#endif
 
 static const __attribute__((aligned(8),used)) int OC_FZIG_ZAGMMX[64]={
    0, 8, 1, 2, 9,16,24,17,
@@ -266,4 +278,221 @@ void oc_state_frag_copy_mmx(const oc_theora_state *_state,const int *_fragis,
   /*This needs to be removed when decode specific functions are implemented:*/
   __asm__ __volatile__("emms\n\t");
 }
+
+static void loop_filter_v_mmx(unsigned char *_pix,int _ystride,int *_bv){
+  _pix-=_ystride*2;
+  
+  __asm__ __volatile__(
+    "pxor %%mm0,%%mm0\n"  	/* mm0 = 0 */
+    "movq (%0),%%mm7\n"	/* mm7 = _pix[0..8] */
+    "lea (%1,%1,2),%%esi\n"	/* esi = _ystride*3 */
+    "movq (%0,%%esi),%%mm4\n" /* mm4 = _pix[0..8]+_ystride*3] */
+    "movq %%mm7,%%mm6\n"	/* mm6 = _pix[0..8] */
+    "punpcklbw %%mm0,%%mm6\n" /* expand unsigned _pix[0..3] to 16 bits */
+    "movq %%mm4,%%mm5\n"
+    "punpckhbw %%mm0,%%mm7\n" /* expand unsigned _pix[4..8] to 16 bits */
+    "punpcklbw %%mm0,%%mm4\n" /* expand other arrays too */
+    "punpckhbw %%mm0,%%mm5\n"
+    "psubw %%mm4,%%mm6\n" /* mm6 = mm6 - mm4 */
+    "psubw %%mm5,%%mm7\n" /* mm7 = mm7 - mm5 */
+    			/* mm7:mm6 = _p[0]-_p[_ystride*3] */
+    "movq (%0,%1),%%mm4\n"   /* mm4 = _pix[0..8+_ystride] */
+    "movq %%mm4,%%mm5\n"
+    "movq (%0,%1,2),%%mm2\n" /* mm2 = _pix[0..8]+_ystride*2] */
+    "movq %%mm2,%%mm3\n"
+    "movq %%mm2,%%mm1\n" //ystride*2
+    "punpckhbw %%mm0,%%mm5\n"
+    "punpcklbw %%mm0,%%mm4\n" 
+    "punpckhbw %%mm0,%%mm3\n"
+    "punpcklbw %%mm0,%%mm2\n"
+    "psubw %%mm5,%%mm3\n" 
+    "psubw %%mm4,%%mm2\n" 
+    			/* mm3:mm2 = (_pix[_ystride*2]-_pix[_ystride]); */
+    "PMULLW "MANGLE(V3)",%%mm3\n" 		/* *3 */
+    "PMULLW "MANGLE(V3)",%%mm2\n" 		/* *3 */
+    "paddw %%mm7,%%mm3\n"   /* highpart */
+    "paddw %%mm6,%%mm2\n"/* lowpart of _pix[0]-_pix[_ystride*3]+3*(_pix[_ystride*2]-_pix[_ystride]);  */
+    "paddw "MANGLE(V4)",%%mm3\n"  /* add 4 */
+    "paddw "MANGLE(V4)",%%mm2\n"  /* add 4 */
+    "psraw $3,%%mm3\n"  /* >>3 f coefs high */
+    "psraw $3,%%mm2\n"  /* >>3 f coefs low */
+    "paddw "MANGLE(V100)",%%mm3\n"  /* add 256 */
+    "paddw "MANGLE(V100)",%%mm2\n"  /* add 256 */
+
+    " pextrw $0,%%mm2,%%esi\n"  /* In MM4:MM0 we have f coefs (16bits) */
+    " pextrw $1,%%mm2,%%edi\n"  /* now perform MM7:MM6 = *(_bv+ f) */
+    " pinsrw $0,(%2,%%esi,4),%%mm6\n"
+    " pinsrw $1,(%2,%%edi,4),%%mm6\n"
+
+    " pextrw $2,%%mm2,%%esi\n"
+    " pextrw $3,%%mm2,%%edi\n"
+    " pinsrw $2,(%2,%%esi,4),%%mm6\n"
+    " pinsrw $3,(%2,%%edi,4),%%mm6\n"
+
+    " pextrw $0,%%mm3,%%esi\n" 
+    " pextrw $1,%%mm3,%%edi\n"
+    " pinsrw $0,(%2,%%esi,4),%%mm7\n"
+    " pinsrw $1,(%2,%%edi,4),%%mm7\n"
+
+    " pextrw $2,%%mm3,%%esi\n"
+    " pextrw $3,%%mm3,%%edi\n"
+    " pinsrw $2,(%2,%%esi,4),%%mm7\n"
+    " pinsrw $3, (%2,%%edi,4),%%mm7\n"   //MM7 MM6   f=*(_bv+(f+4>>3));
+
+    "paddw %%mm6,%%mm4\n"  /* (_pix[_ystride]+f); */
+    "paddw %%mm7,%%mm5\n"  /* (_pix[_ystride]+f); */
+    "movq %%mm1,%%mm2\n"
+    "punpcklbw %%mm0,%%mm1\n"
+    "punpckhbw %%mm0,%%mm2\n" //[ystride*2]
+    "psubw %%mm6,%%mm1\n" /* (_pix[_ystride*2]-f); */
+    "psubw %%mm7,%%mm2\n" /* (_pix[_ystride*2]-f); */
+    "packuswb %%mm2,%%mm1\n"
+    "packuswb %%mm5,%%mm4\n"
+    "movq %%mm1,(%0,%1,2)\n" /* _pix[_ystride*2]= */
+    "movq %%mm4,(%0,%1)\n" /* _pix[_ystride]= */
+    "emms\n"
+    : 
+    : "r" (_pix), "r" (_ystride), "r" (_bv)
+    : "esi", "edi" , "memory"
+  );
+
+}
+
+
+
+#define OC_LOOP_H_4x4 \
+__asm__ __volatile__( \
+"lea (%1,%1,2),%%esi\n"	 /* esi = _ystride*3 */  \
+"movd (%0), %%mm0\n"		/* 0 0 0 0 3 2 1 0 */ \
+"movd (%0,%1),%%mm1\n"    	/* 0 0 0 0 7 6 5 4 */ \
+"movd (%0,%1,2),%%mm2\n"  	/* 0 0 0 0 b a 9 8 */ \
+"movd (%0,%%esi),%%mm3\n" 	/* 0 0 0 0 f e d c */ \
+"punpcklbw %%mm1,%%mm0\n" 	/* mm0 = 7 3 6 2 5 1 4 0 */ \
+"punpcklbw %%mm3,%%mm2\n" 	/* mm2 = f b e a d 9 c 8 */ \
+"movq %%mm0,%%mm1\n"	 	/* mm1 = 7 3 6 2 5 1 4 0 */ \
+"punpcklwd %%mm2,%%mm1\n"	/* mm1 = d 9 5 1 c 8 4 0 */ \
+"punpckhwd %%mm2,%%mm0\n"	/* mm0 = f b 7 3 e a 6 2 */ \
+"pxor %%mm7,%%mm7\n" \
+"movq %%mm1,%%mm5\n" 		/* mm5 = d 9 5 1 c 8 4 0 */ \
+"punpckhbw %%mm7,%%mm5\n"	/* mm5 = 0 d 0 9 0 5 0 1 = pix[1]*/ \
+"punpcklbw %%mm7,%%mm1\n"	/* mm1 = 0 c 0 8 0 4 0 0 = pix[0]*/ \
+"movq %%mm0,%%mm3\n" 		/* mm3 = f b 7 3 e a 6 2 */ \
+"punpckhbw %%mm7,%%mm3\n"	/* mm3 = 0 f 0 b 0 7 0 3 = pix[3]*/ \
+"punpcklbw %%mm7,%%mm0\n"    	/* mm0 = 0 e 0 a 0 6 0 2 = pix[2]*/ \
+ \
+"psubw %%mm3,%%mm1\n"		/* mm1 = pix[0]-pix[3] mm1 - mm3 */ \
+"movq %%mm0,%%mm7\n"		/* mm7 = pix[2]*/ \
+"psubw %%mm5,%%mm0\n" 		/* mm0 = pix[2]-pix[1] mm0 - mm5*/ \
+"PMULLW "MANGLE(V3)",%%mm0\n" 		/* *3 */ \
+"paddw %%mm0,%%mm1\n" 		/* mm1 has f[0] ... f[4]*/ \
+"paddw "MANGLE(V4)",%%mm1\n"  /* add 4 */ \
+"psraw $3,%%mm1\n"  	/* >>3 */ \
+"paddw "MANGLE(V100)",%%mm1\n"  /* add 256 */ \
+" pextrw $0,%%mm1,%%esi\n"  /* In MM1 we have 4 f coefs (16bits) */ \
+" pextrw $1,%%mm1,%%edi\n"  /* now perform MM4 = *(_bv+ f) */ \
+" pinsrw $0,(%2,%%esi,4),%%mm4\n" \
+" pextrw $2,%%mm1,%%esi\n" \
+" pinsrw $1,(%2,%%edi,4),%%mm4\n" \
+" pextrw $3,%%mm1,%%edi\n" \
+" pinsrw $2,(%2,%%esi,4),%%mm4\n" \
+" pinsrw $3,(%2,%%edi,4),%%mm4\n" /* new f vals loaded */ \
+"pxor %%mm0,%%mm0\n" \
+" paddw %%mm4,%%mm5\n"	/*(_pix[1]+f);*/ \
+" psubw %%mm4,%%mm7\n" /* (_pix[2]-f); */ \
+" packuswb %%mm0,%%mm5\n" /* mm5 = x x x x newpix1 */ \
+" packuswb %%mm0,%%mm7\n" /* mm7 = x x x x newpix2 */  \
+" punpcklbw %%mm7,%%mm5\n" /* 2 1 2 1 2 1 2 1 */ \
+" movd %%mm5,%%eax\n" /* eax = newpix21 */ \
+" movw %%ax,1(%0)\n" \
+" psrlq $32,%%mm5\n" /* why is so big stall here ? */ \
+" shrl $16,%%eax\n" \
+" lea 1(%0,%1,2),%%edi\n" \
+" movw %%ax,1(%0,%1,1)\n" \
+" movd %%mm5,%%eax\n"  /* eax = newpix21 high part */ \
+" lea (%1,%1,2),%%esi\n" \
+" movw %%ax,(%%edi)\n" \
+" shrl $16,%%eax\n" \
+" movw %%ax,1(%0,%%esi)\n" \
+" emms\n" \
+: \
+: "r" (_pix), "r" (_ystride), "r" (_bv) \
+: "esi", "edi" , "memory", "eax" \
+); \
+
+/* this code implements loop_filter_h
+   data are striped p0 p1 p2 p3 ... p0 p1 p2 p3 ...
+   in order to load all (four) p0's to one register we must transpose
+   the values in four mmx regs. When halfs is done we repeat for rest.
+  
+TODO: some instruction stalls can be avoided
+
+*/
+
+static void loop_filter_h_mmx(unsigned char *_pix,int _ystride,int *_bv){
+  _pix-=2;
+  OC_LOOP_H_4x4
+  _pix+=_ystride*4;
+  OC_LOOP_H_4x4
+}
+
+/*Apply the loop filter to a given set of fragment rows in the given plane.
+  The filter may be run on the bottom edge, affecting pixels in the next row of
+   fragments, so this row also needs to be available.
+  _bv:        The bounding values array.
+  _refi:      The index of the frame buffer to filter.
+  _pli:       The color plane to filter.
+  _fragy0:    The Y coordinate of the first fragment row to filter.
+  _fragy_end: The Y coordinate of the fragment row to stop filtering at.*/
+  
+/*  we copy whole function because mmx routines will be inlined 4 times 
+    also _bv pointer should not be added with 256 because then we can use
+    non negative index in MMX code and we get rid of sign extension instructions
+*/
+
+void oc_state_loop_filter_frag_rows_mmx(oc_theora_state *_state,int *_bv,
+ int _refi,int _pli,int _fragy0,int _fragy_end){
+  th_img_plane  *iplane;
+  oc_fragment_plane *fplane;
+  oc_fragment       *frag_top;
+  oc_fragment       *frag0;
+  oc_fragment       *frag;
+  oc_fragment       *frag_end;
+  oc_fragment       *frag0_end;
+  oc_fragment       *frag_bot;
+  iplane=_state->ref_frame_bufs[_refi]+_pli;
+  fplane=_state->fplanes+_pli;
+  /*The following loops are constructed somewhat non-intuitively on purpose.
+    The main idea is: if a block boundary has at least one coded fragment on
+     it, the filter is applied to it.
+    However, the order that the filters are applied in matters, and VP3 chose
+     the somewhat strange ordering used below.*/
+  frag_top=_state->frags+fplane->froffset;
+  frag0=frag_top+_fragy0*fplane->nhfrags;
+  frag0_end=frag0+(_fragy_end-_fragy0)*fplane->nhfrags;
+  frag_bot=_state->frags+fplane->froffset+fplane->nfrags;
+  while(frag0<frag0_end){
+    frag=frag0;
+    frag_end=frag+fplane->nhfrags;
+    while(frag<frag_end){
+      if(frag->coded){
+        if(frag>frag0){
+          loop_filter_h_mmx(frag->buffer[_refi],iplane->ystride,_bv);
+        }
+        if(frag0>frag_top){
+          loop_filter_v_mmx(frag->buffer[_refi],iplane->ystride,_bv);
+        }
+        if(frag+1<frag_end&&!(frag+1)->coded){
+          loop_filter_h_mmx(frag->buffer[_refi]+8,iplane->ystride,_bv);
+        }
+        if(frag+fplane->nhfrags<frag_bot&&!(frag+fplane->nhfrags)->coded){
+          loop_filter_v_mmx((frag+fplane->nhfrags)->buffer[_refi],
+           iplane->ystride,_bv);
+        }
+      }
+      frag++;
+    }
+    frag0+=fplane->nhfrags;
+  }
+}
+
 #endif

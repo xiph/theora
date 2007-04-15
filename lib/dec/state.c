@@ -27,8 +27,6 @@
 # include "png.h"
 #endif
 
-
-
 void oc_restore_fpu(const oc_theora_state *_state){
   _state->opt_vtable.restore_fpu();
 }
@@ -531,6 +529,8 @@ void oc_state_vtable_init_c(oc_theora_state *_state){
   _state->opt_vtable.state_frag_copy=oc_state_frag_copy_c;
   _state->opt_vtable.state_frag_recon=oc_state_frag_recon_c;
   _state->opt_vtable.restore_fpu=oc_restore_fpu_c;
+  _state->opt_vtable.oc_state_loop_filter_frag_rows=
+                       oc_state_loop_filter_frag_rows_c;
 }
 
 /*Initialize the accelerated function pointers.*/
@@ -939,7 +939,7 @@ void oc_state_frag_copy_c(const oc_theora_state *_state,const int *_fragis,
   }
 }
 
-static void loop_filter_h(unsigned char *_pix,int _ystride,int *_bv){
+void loop_filter_h_c(unsigned char *_pix,int _ystride,int *_bv){
   int y;
   _pix-=2;
   for(y=0;y<8;y++){
@@ -952,7 +952,7 @@ static void loop_filter_h(unsigned char *_pix,int _ystride,int *_bv){
   }
 }
 
-static void loop_filter_v(unsigned char *_pix,int _ystride,int *_bv){
+void loop_filter_v_c(unsigned char *_pix,int _ystride,int *_bv){
   int y;
   _pix-=_ystride*2;
   for(y=0;y<8;y++){
@@ -996,6 +996,12 @@ int oc_state_loop_filter_init(oc_theora_state *_state,int *_bv){
   _fragy_end: The Y coordinate of the fragment row to stop filtering at.*/
 void oc_state_loop_filter_frag_rows(oc_theora_state *_state,int *_bv,
  int _refi,int _pli,int _fragy0,int _fragy_end){
+   _state->opt_vtable.oc_state_loop_filter_frag_rows(_state,_bv,_refi,
+                _pli,_fragy0,_fragy_end);
+}
+
+void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
+ int _refi,int _pli,int _fragy0,int _fragy_end){  
   th_img_plane  *iplane;
   oc_fragment_plane *fplane;
   oc_fragment       *frag_top;
@@ -1004,6 +1010,7 @@ void oc_state_loop_filter_frag_rows(oc_theora_state *_state,int *_bv,
   oc_fragment       *frag_end;
   oc_fragment       *frag0_end;
   oc_fragment       *frag_bot;
+  _bv+=256;
   iplane=_state->ref_frame_bufs[_refi]+_pli;
   fplane=_state->fplanes+_pli;
   /*The following loops are constructed somewhat non-intuitively on purpose.
@@ -1021,16 +1028,16 @@ void oc_state_loop_filter_frag_rows(oc_theora_state *_state,int *_bv,
     while(frag<frag_end){
       if(frag->coded){
         if(frag>frag0){
-          loop_filter_h(frag->buffer[_refi],iplane->ystride,_bv);
+          loop_filter_h_c(frag->buffer[_refi],iplane->ystride,_bv);
         }
         if(frag0>frag_top){
-          loop_filter_v(frag->buffer[_refi],iplane->ystride,_bv);
+          loop_filter_v_c(frag->buffer[_refi],iplane->ystride,_bv);
         }
         if(frag+1<frag_end&&!(frag+1)->coded){
-          loop_filter_h(frag->buffer[_refi]+8,iplane->ystride,_bv);
+          loop_filter_h_c(frag->buffer[_refi]+8,iplane->ystride,_bv);
         }
         if(frag+fplane->nhfrags<frag_bot&&!(frag+fplane->nhfrags)->coded){
-          loop_filter_v((frag+fplane->nhfrags)->buffer[_refi],
+          loop_filter_v_c((frag+fplane->nhfrags)->buffer[_refi],
            iplane->ystride,_bv);
         }
       }
@@ -1048,7 +1055,7 @@ void oc_state_loop_filter(oc_theora_state *_state,int _frame){
   framei=_state->ref_frame_idx[_frame];
   if(oc_state_loop_filter_init(_state,bounding_values+256))return;
   for(pli=0;pli<3;pli++){
-    oc_state_loop_filter_frag_rows(_state,bounding_values+256,
+    oc_state_loop_filter_frag_rows(_state,bounding_values,
      framei,pli,0,_state->fplanes[pli].nvfrags);
   }
 }
