@@ -528,9 +528,9 @@ void oc_state_vtable_init_c(oc_theora_state *_state){
   _state->opt_vtable.frag_recon_inter2=oc_frag_recon_inter2_c;
   _state->opt_vtable.state_frag_copy=oc_state_frag_copy_c;
   _state->opt_vtable.state_frag_recon=oc_state_frag_recon_c;
+  _state->opt_vtable.state_loop_filter_frag_rows=
+   oc_state_loop_filter_frag_rows_c;
   _state->opt_vtable.restore_fpu=oc_restore_fpu_c;
-  _state->opt_vtable.oc_state_loop_filter_frag_rows=
-                       oc_state_loop_filter_frag_rows_c;
 }
 
 /*Initialize the accelerated function pointers.*/
@@ -939,7 +939,7 @@ void oc_state_frag_copy_c(const oc_theora_state *_state,const int *_fragis,
   }
 }
 
-void loop_filter_h_c(unsigned char *_pix,int _ystride,int *_bv){
+static void loop_filter_h(unsigned char *_pix,int _ystride,int *_bv){
   int y;
   _pix-=2;
   for(y=0;y<8;y++){
@@ -952,7 +952,7 @@ void loop_filter_h_c(unsigned char *_pix,int _ystride,int *_bv){
   }
 }
 
-void loop_filter_v_c(unsigned char *_pix,int _ystride,int *_bv){
+static void loop_filter_v(unsigned char *_pix,int _ystride,int *_bv){
   int y;
   _pix-=_ystride*2;
   for(y=0;y<8;y++){
@@ -967,15 +967,12 @@ void loop_filter_v_c(unsigned char *_pix,int _ystride,int *_bv){
 
 /*Initialize the bounding values array used by the loop filter.
   _bv: Storage for the array.
-       The total array size should be 512, but this pointer should point to the
-         256th entry, as that is more convenient for the filter functions.
   Return: 0 on success, or a non-zero value if no filtering need be applied.*/
 int oc_state_loop_filter_init(oc_theora_state *_state,int *_bv){
   int flimit;
   int i;
   flimit=_state->loop_filter_limits[_state->qis[0]];
   if(flimit==0)return 1;
-  _bv-=256;
   memset(_bv,0,sizeof(_bv[0])*512);
   for(i=0;i<flimit;i++){
     _bv[256-i-flimit]=i-flimit;
@@ -996,13 +993,13 @@ int oc_state_loop_filter_init(oc_theora_state *_state,int *_bv){
   _fragy_end: The Y coordinate of the fragment row to stop filtering at.*/
 void oc_state_loop_filter_frag_rows(oc_theora_state *_state,int *_bv,
  int _refi,int _pli,int _fragy0,int _fragy_end){
-   _state->opt_vtable.oc_state_loop_filter_frag_rows(_state,_bv,_refi,
-                _pli,_fragy0,_fragy_end);
+  _state->opt_vtable.state_loop_filter_frag_rows(_state,_bv,_refi,_pli,
+   _fragy0,_fragy_end);
 }
 
 void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
  int _refi,int _pli,int _fragy0,int _fragy_end){  
-  th_img_plane  *iplane;
+  th_img_plane      *iplane;
   oc_fragment_plane *fplane;
   oc_fragment       *frag_top;
   oc_fragment       *frag0;
@@ -1028,16 +1025,16 @@ void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
     while(frag<frag_end){
       if(frag->coded){
         if(frag>frag0){
-          loop_filter_h_c(frag->buffer[_refi],iplane->ystride,_bv);
+          loop_filter_h(frag->buffer[_refi],iplane->ystride,_bv);
         }
         if(frag0>frag_top){
-          loop_filter_v_c(frag->buffer[_refi],iplane->ystride,_bv);
+          loop_filter_v(frag->buffer[_refi],iplane->ystride,_bv);
         }
         if(frag+1<frag_end&&!(frag+1)->coded){
-          loop_filter_h_c(frag->buffer[_refi]+8,iplane->ystride,_bv);
+          loop_filter_h(frag->buffer[_refi]+8,iplane->ystride,_bv);
         }
         if(frag+fplane->nhfrags<frag_bot&&!(frag+fplane->nhfrags)->coded){
-          loop_filter_v_c((frag+fplane->nhfrags)->buffer[_refi],
+          loop_filter_v((frag+fplane->nhfrags)->buffer[_refi],
            iplane->ystride,_bv);
         }
       }
@@ -1053,7 +1050,7 @@ void oc_state_loop_filter(oc_theora_state *_state,int _frame){
   int framei;
   int pli;
   framei=_state->ref_frame_idx[_frame];
-  if(oc_state_loop_filter_init(_state,bounding_values+256))return;
+  if(oc_state_loop_filter_init(_state,bounding_values))return;
   for(pli=0;pli<3;pli++){
     oc_state_loop_filter_frag_rows(_state,bounding_values,
      framei,pli,0,_state->fplanes[pli].nvfrags);

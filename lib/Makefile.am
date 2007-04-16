@@ -49,22 +49,22 @@ encoder_sources = \
 if CPU_x86_64
 arch_dir = enc/x86_64
 encoder_arch_sources= \
-	$(arch_dir)/dct_decode_mmx.c \
-	$(arch_dir)/dsp_mmx.c \
-	$(arch_dir)/dsp_mmxext.c \
-	$(arch_dir)/recon_mmx.c \
-	$(arch_dir)/idct_mmx.c \
-	$(arch_dir)/fdct_mmx.c
+	$(enc_arch_dir)/dct_decode_mmx.c \
+	$(enc_arch_dir)/dsp_mmx.c \
+	$(enc_arch_dir)/dsp_mmxext.c \
+	$(enc_arch_dir)/recon_mmx.c \
+	$(enc_arch_dir)/idct_mmx.c \
+	$(enc_arch_dir)/fdct_mmx.c
 else
 if CPU_x86_32
 arch_dir = enc/x86_32
 encoder_arch_sources= \
-	$(arch_dir)/dct_decode_mmx.c \
-	$(arch_dir)/dsp_mmx.c \
-	$(arch_dir)/dsp_mmxext.c \
-	$(arch_dir)/recon_mmx.c \
-	$(arch_dir)/idct_mmx.c \
-	$(arch_dir)/fdct_mmx.c
+	$(enc_arch_dir)/dct_decode_mmx.c \
+	$(enc_arch_dir)/dsp_mmx.c \
+	$(enc_arch_dir)/dsp_mmxext.c \
+	$(enc_arch_dir)/recon_mmx.c \
+	$(enc_arch_dir)/idct_mmx.c \
+	$(enc_arch_dir)/fdct_mmx.c
 endif
 endif
 

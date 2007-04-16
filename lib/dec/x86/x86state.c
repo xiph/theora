@@ -29,14 +29,9 @@ void oc_state_vtable_init_x86(oc_theora_state *_state){
     _state->opt_vtable.frag_recon_inter2=oc_frag_recon_inter2_mmx;
     _state->opt_vtable.state_frag_copy=oc_state_frag_copy_mmx;
     _state->opt_vtable.state_frag_recon=oc_state_frag_recon_mmx;
+    _state->opt_vtable.state_loop_filter_frag_rows=
+     oc_state_loop_filter_frag_rows_mmx;
     _state->opt_vtable.restore_fpu=oc_restore_fpu_mmx;
-    
-    /* loop filter code uses some MMXext instructions which are not present on 
-       early processors (Pentium II and AMD K6) */
-    if(_state->cpu_flags&OC_CPU_X86_MMXEXT){
-      _state->opt_vtable.oc_state_loop_filter_frag_rows=
-                     oc_state_loop_filter_frag_rows_mmx;
-    }  
   }
   else oc_state_vtable_init_c(_state);
 }
