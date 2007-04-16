@@ -47,7 +47,7 @@ encoder_sources = \
 	enc/dsp.c
 	
 if CPU_x86_64
-arch_dir = enc/x86_64
+enc_arch_dir = enc/x86_64
 encoder_arch_sources= \
 	$(enc_arch_dir)/dct_decode_mmx.c \
 	$(enc_arch_dir)/dsp_mmx.c \
@@ -57,7 +57,7 @@ encoder_arch_sources= \
 	$(enc_arch_dir)/fdct_mmx.c
 else
 if CPU_x86_32
-arch_dir = enc/x86_32
+enc_arch_dir = enc/x86_32
 encoder_arch_sources= \
 	$(enc_arch_dir)/dct_decode_mmx.c \
 	$(enc_arch_dir)/dsp_mmx.c \

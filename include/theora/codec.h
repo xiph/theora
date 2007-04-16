@@ -19,11 +19,10 @@
  * 
  * \section intro Introduction
  *
- * This is the documentation for the <tt>libtheoradec</tt> and
- *  <tt>libtheoraenc</tt> C API.
- * These were written to replace <tt>libtheora</tt>, the current reference
- *  implementation for <a href="http://www.theora.org/">Theora</a>, a free,
- *  patent-unencumbered video codec.
+ * This is the documentation for <tt>libtheora</tt> C API.
+ * The current reference
+ * implementation for <a href="http://www.theora.org/">Theora</a>, a free,
+ * patent-unencumbered video codec.
  * Theora is derived from On2's VP3 codec with additional features and
  *  integration for Ogg multimedia formats by
  *  <a href="http://www.xiph.org/">the Xiph.Org Foundation</a>.
@@ -35,9 +34,6 @@
  *
  * The functions documented here are actually subdivided into two separate
  *  libraries:
- * - <tt>libtheoraenc</tt>, containing routines exclusive to the encoder.
- *   You must link to this if you use any of the functions listed in
- *    \ref encfuncs.
  * - <tt>libtheoradec</tt>, contains the decoder and shared routines.
  *   You must link to this if you use any of the functions listed in
  *    this API, i.e., those listed in \ref basefuncs and \ref decfuncs.*/
