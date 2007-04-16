@@ -1044,19 +1044,6 @@ void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
   }
 }
 
-/*Apply the complete loop filter to the given frame.*/
-void oc_state_loop_filter(oc_theora_state *_state,int _frame){
-  int bounding_values[512];
-  int framei;
-  int pli;
-  framei=_state->ref_frame_idx[_frame];
-  if(oc_state_loop_filter_init(_state,bounding_values))return;
-  for(pli=0;pli<3;pli++){
-    oc_state_loop_filter_frag_rows(_state,bounding_values,
-     framei,pli,0,_state->fplanes[pli].nvfrags);
-  }
-}
-
 #if defined(OC_DUMP_IMAGES)
 int oc_state_dump_frame(const oc_theora_state *_state,int _frame,
  const char *_suf){
