@@ -85,8 +85,10 @@ inteltest:
     if(edx&0x02000000)flags|=OC_CPU_X86_MMXEXT|OC_CPU_X86_SSE;
     if(edx&0x04000000)flags|=OC_CPU_X86_SSE2;
   }
-  else if(ebx==0x68747541&&edx==0x69746e65&&ecx==0x444d4163){
+  else if(ebx==0x68747541&&edx==0x69746e65&&ecx==0x444d4163 ||
+          ebx==0x646f6547&&edx==0x79622065&&ecx==0x43534e20){
     /*AMD:*/
+    /*Geode:*/
     cpuid(0x80000000,eax,ebx,ecx,edx);
     if(eax<0x80000001)goto inteltest;
     cpuid(0x80000001,eax,ebx,ecx,edx);
