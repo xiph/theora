@@ -51,11 +51,11 @@ static int oc_info_unpack(oggpack_buffer *_opb,th_info *_info){
   _info->version_minor=(unsigned char)val;
   theora_read(_opb,8,&val);
   _info->version_subminor=(unsigned char)val;
+  /*verify we can parse this bitstream version.
+     We accept earlier minors and all subminors, by spec*/
   if(_info->version_major>TH_VERSION_MAJOR||
    _info->version_major==TH_VERSION_MAJOR&&
-   (_info->version_minor>TH_VERSION_MINOR||
-   _info->version_minor==TH_VERSION_MINOR&&
-   _info->version_subminor>TH_VERSION_SUB)){
+   _info->version_minor>TH_VERSION_MINOR){
     return TH_EVERSION;
   }
   /*Read the encoded frame description.*/
