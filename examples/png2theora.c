@@ -55,7 +55,7 @@ static int video_quality = 63;
 
 static int theora_initialized = 0;
 
-static FILE *ogg_fp;
+static FILE *ogg_fp = NULL;
 static ogg_stream_state ogg_os;
 
 static theora_state theora_td;
@@ -254,20 +254,22 @@ theora_close(void)
 {
   ogg_packet op;
   ogg_page og;
+
+  if (theora_initialized) {
+    theora_encode_packetout(&theora_td, 1, &op);
+    if(ogg_stream_pageout(&ogg_os, &og)) {
+      fwrite(og.header, og.header_len, 1, ogg_fp);
+      fwrite(og.body, og.body_len, 1, ogg_fp);
+    }
   
-  theora_encode_packetout(&theora_td, 1, &op);
-  if(ogg_stream_pageout(&ogg_os, &og)) {
-    fwrite(og.header, og.header_len, 1, ogg_fp);
-    fwrite(og.body, og.body_len, 1, ogg_fp);
+    theora_info_clear(&theora_ti);
+    theora_clear(&theora_td);
+  
+    fflush(ogg_fp);
+    fclose(ogg_fp);
   }
   
-  theora_info_clear(&theora_ti);
-  theora_clear(&theora_td);
-  
   ogg_stream_clear(&ogg_os);
-  
-  fflush(ogg_fp);
-  fclose(ogg_fp);
 }
 
 static unsigned char
@@ -472,8 +474,7 @@ main(int argc, char *argv[])
     sprintf(input_png, "%s/%s", input_directory, png_files[i]->d_name);
     
     if(png_read(input_png, &w, &h, &yuv)) {
-      if(theora_initialized)
-        theora_close();
+      theora_close();
       exit(1);
     }
     
