@@ -61,7 +61,7 @@ static ogg_stream_state ogg_os;
 static theora_state theora_td;
 static theora_info theora_ti;
 
-const char *input_filter;
+static char *input_filter;
 
 const char *optstring = "o:h:v:V:s:S:f:F:";
 struct option options [] = {
@@ -387,7 +387,7 @@ png_read(const char *pathname, unsigned int *w, unsigned int *h, unsigned char *
   return 0;
 }
 
-static int include_files (struct dirent *de)
+static int include_files (const struct dirent *de)
 {
   char name[1024];
   int number = -1;
@@ -401,8 +401,8 @@ main(int argc, char *argv[])
 {
   int c,long_option_index;
   int i, n;
-  const char *input_mask;
-  const char *input_directory;
+  char *input_mask;
+  char *input_directory;
   struct dirent **png_files;
   
   while(1) {
@@ -464,16 +464,21 @@ main(int argc, char *argv[])
   input_directory = dirname(input_mask);
   input_filter = basename(input_mask);
   
+#ifdef DEBUG
+  fprintf(stderr, "scanning %s with filter '%s'\n",
+	input_directory, input_filter);
+#endif
   n = scandir (input_directory, &png_files, include_files, alphasort);
   for(i=0;i< n;i++) {
     unsigned int w;
     unsigned int h;
     unsigned char *yuv;
-    const char input_png[1024];
+    char input_png[1024];
 
     sprintf(input_png, "%s/%s", input_directory, png_files[i]->d_name);
     
     if(png_read(input_png, &w, &h, &yuv)) {
+      fprintf(stderr, "could not read %s\n", input_png);
       theora_close();
       exit(1);
     }
