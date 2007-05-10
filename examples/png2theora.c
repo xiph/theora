@@ -403,6 +403,7 @@ main(int argc, char *argv[])
   int i, n;
   char *input_mask;
   char *input_directory;
+  char *scratch;
   struct dirent **png_files;
   
   while(1) {
@@ -437,20 +438,15 @@ main(int argc, char *argv[])
      case 's':
        video_aspect_numerator=rint(atof(optarg));
        break;
-
      case 'S':
        video_aspect_denominator=rint(atof(optarg));
        break;
-
      case 'f':
        video_fps_numerator=rint(atof(optarg));
        break;
-
      case 'F':
-       video_fps_denominator=rint(atof(optarg));
-       break;
-    
-      default:
+       video_fps_denominator=rint(atof(optarg));   
+     default:
         usage();
         break;
       }
@@ -461,9 +457,14 @@ main(int argc, char *argv[])
   }
 
   input_mask = argv[optind];
-  input_directory = dirname(input_mask);
-  input_filter = basename(input_mask);
-  
+  /* dirname and basename must operate on scratch strings */
+  scratch = strdup(input_mask);
+  input_directory = strdup(dirname(scratch));
+  free(scratch);
+  scratch = strdup(input_mask);
+  input_filter = strdup(basename(scratch));
+  free(scratch);
+
 #ifdef DEBUG
   fprintf(stderr, "scanning %s with filter '%s'\n",
 	input_directory, input_filter);
@@ -520,6 +521,8 @@ main(int argc, char *argv[])
 
     if(theora_write_frame(w, h, yuv)) {
       theora_close();
+      free(input_directory);
+      free(input_filter);
       exit(1);
     }
 
