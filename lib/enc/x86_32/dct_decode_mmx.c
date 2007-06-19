@@ -24,7 +24,7 @@
 static const __attribute__((aligned(8),used)) ogg_int64_t V3= 0x0003000300030003LL;
 static const __attribute__((aligned(8),used)) ogg_int64_t V804= 0x0804080408040804LL;
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__CYGWIN__)
 #define MANGLE(x) "_"#x
 #else
 #define MANGLE(x) #x
