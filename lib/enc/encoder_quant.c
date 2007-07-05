@@ -805,109 +805,22 @@ void quantize( PB_INSTANCE *pbi,
 
   /* Note that we add half divisor to effect rounding on positive number */
   for( i = 0; i < VFRAGPIXELS; i++) {
-    /* Column 0  */
-    if ( DCT_blockPtr[0] >= FquantZBinSizePtr[0] ) {
-      temp = FquantCoeffsPtr[0] * ( DCT_blockPtr[0] + FquantRoundPtr[0] ) ;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[0]] = ( val > 511 ) ? 511 : val;
-    } else if ( DCT_blockPtr[0] <= -FquantZBinSizePtr[0] ) {
-      temp = FquantCoeffsPtr[0] *
-        ( DCT_blockPtr[0] - FquantRoundPtr[0] ) + MIN16;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[0]] = ( val < -511 ) ? -511 : val;
+  
+    int col;
+    /* Iterate through columns */
+    for( col = 0; col < 8; col++) {
+      if ( DCT_blockPtr[col] >= FquantZBinSizePtr[col] ) {
+        temp = FquantCoeffsPtr[col] * ( DCT_blockPtr[col] + FquantRoundPtr[col] ) ;
+        val = (Q_LIST_ENTRY) (temp>>16);
+        quantized_list[ZigZagPtr[col]] = ( val > 511 ) ? 511 : val;
+      } else if ( DCT_blockPtr[col] <= -FquantZBinSizePtr[col] ) {
+        temp = FquantCoeffsPtr[col] *
+          ( DCT_blockPtr[col] - FquantRoundPtr[col] ) + MIN16;
+        val = (Q_LIST_ENTRY) (temp>>16);
+        quantized_list[ZigZagPtr[col]] = ( val < -511 ) ? -511 : val;
+      }
     }
-
-    /* Column 1 */
-    if ( DCT_blockPtr[1] >= FquantZBinSizePtr[1] ) {
-      temp = FquantCoeffsPtr[1] *
-        ( DCT_blockPtr[1] + FquantRoundPtr[1] ) ;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[1]] = ( val > 511 ) ? 511 : val;
-    } else if ( DCT_blockPtr[1] <= -FquantZBinSizePtr[1] ) {
-      temp = FquantCoeffsPtr[1] *
-        ( DCT_blockPtr[1] - FquantRoundPtr[1] ) + MIN16;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[1]] = ( val < -511 ) ? -511 : val;
-    }
-
-    /* Column 2 */
-    if ( DCT_blockPtr[2] >= FquantZBinSizePtr[2] ) {
-      temp = FquantCoeffsPtr[2] *
-        ( DCT_blockPtr[2] + FquantRoundPtr[2] ) ;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[2]] = ( val > 511 ) ? 511 : val;
-    } else if ( DCT_blockPtr[2] <= -FquantZBinSizePtr[2] ) {
-      temp = FquantCoeffsPtr[2] *
-        ( DCT_blockPtr[2] - FquantRoundPtr[2] ) + MIN16;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[2]] = ( val < -511 ) ? -511 : val;
-    }
-
-    /* Column 3 */
-    if ( DCT_blockPtr[3] >= FquantZBinSizePtr[3] ) {
-      temp = FquantCoeffsPtr[3] *
-        ( DCT_blockPtr[3] + FquantRoundPtr[3] ) ;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[3]] = ( val > 511 ) ? 511 : val;
-    } else if ( DCT_blockPtr[3] <= -FquantZBinSizePtr[3] ) {
-      temp = FquantCoeffsPtr[3] *
-        ( DCT_blockPtr[3] - FquantRoundPtr[3] ) + MIN16;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[3]] = ( val < -511 ) ? -511 : val;
-    }
-
-    /* Column 4 */
-    if ( DCT_blockPtr[4] >= FquantZBinSizePtr[4] ) {
-      temp = FquantCoeffsPtr[4] *
-        ( DCT_blockPtr[4] + FquantRoundPtr[4] ) ;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[4]] = ( val > 511 ) ? 511 : val;
-    } else if ( DCT_blockPtr[4] <= -FquantZBinSizePtr[4] ) {
-      temp = FquantCoeffsPtr[4] *
-        ( DCT_blockPtr[4] - FquantRoundPtr[4] ) + MIN16;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[4]] = ( val < -511 ) ? -511 : val;
-    }
-
-    /* Column 5 */
-    if ( DCT_blockPtr[5] >= FquantZBinSizePtr[5] ) {
-      temp = FquantCoeffsPtr[5] *
-        ( DCT_blockPtr[5] + FquantRoundPtr[5] ) ;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[5]] = ( val > 511 ) ? 511 : val;
-    } else if ( DCT_blockPtr[5] <= -FquantZBinSizePtr[5] ) {
-      temp = FquantCoeffsPtr[5] *
-        ( DCT_blockPtr[5] - FquantRoundPtr[5] ) + MIN16;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[5]] = ( val < -511 ) ? -511 : val;
-    }
-
-    /* Column 6 */
-    if ( DCT_blockPtr[6] >= FquantZBinSizePtr[6] ) {
-      temp = FquantCoeffsPtr[6] *
-        ( DCT_blockPtr[6] + FquantRoundPtr[6] ) ;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[6]] = ( val > 511 ) ? 511 : val;
-    } else if ( DCT_blockPtr[6] <= -FquantZBinSizePtr[6] ) {
-      temp = FquantCoeffsPtr[6] *
-        ( DCT_blockPtr[6] - FquantRoundPtr[6] ) + MIN16;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[6]] = ( val < -511 ) ? -511 : val;
-    }
-
-    /* Column 7 */
-    if ( DCT_blockPtr[7] >= FquantZBinSizePtr[7] ) {
-      temp = FquantCoeffsPtr[7] *
-        ( DCT_blockPtr[7] + FquantRoundPtr[7] ) ;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[7]] = ( val > 511 ) ? 511 : val;
-    } else if ( DCT_blockPtr[7] <= -FquantZBinSizePtr[7] ) {
-      temp = FquantCoeffsPtr[7] *
-        ( DCT_blockPtr[7] - FquantRoundPtr[7] ) + MIN16;
-      val = (Q_LIST_ENTRY) (temp>>16);
-      quantized_list[ZigZagPtr[7]] = ( val < -511 ) ? -511 : val;
-    }
-
+ 
     FquantRoundPtr += 8;
     FquantCoeffsPtr += 8;
     FquantZBinSizePtr += 8;
