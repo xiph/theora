@@ -916,7 +916,7 @@ int theora_encode_init(theora_state *th, theora_info *c){
   InitHuffmanSet(&cpi->pb);
 
   /* This makes sure encoder version specific tables are initialised */
-  cpi->pb.encoder_profile = PROFILE_FULL;
+  cpi->pb.encoder_profile = PROFILE_VP3;
   InitQTables(&cpi->pb);
 
   /* Indicate that the next frame to be compressed is the first in the
