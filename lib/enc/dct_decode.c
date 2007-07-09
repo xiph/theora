@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "codec_internal.h"
+#include "quant_lookup.h"
 
 
 #define GOLDEN_FRAME_THRESH_Q   50
@@ -27,18 +28,6 @@
 #define PL 1
 #define HIGHBITDUPPED(X) (((signed short) X)  >> 15)
 
-/* in-loop filter tables. */
-
-static const unsigned char LoopFilterLimitValuesV1[Q_TABLE_SIZE] = {
-  30, 25, 20, 20, 15, 15, 14, 14,
-  13, 13, 12, 12, 11, 11, 10, 10,
-  9,  9,  8,  8,  7,  7,  7,  7,
-  6,  6,  6,  6,  5,  5,  5,  5,
-  4,  4,  4,  4,  3,  3,  3,  3,
-  2,  2,  2,  2,  2,  2,  2,  2,
-  0,  0,  0,  0,  0,  0,  0,  0,
-  0,  0,  0,  0,  0,  0,  0,  0
-};
 
 static const int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };
 
@@ -60,14 +49,6 @@ static void SetupBoundingValueArray_Generic(PB_INSTANCE *pbi,
 
 /* handle the in-loop filter limit value table */
 
-void WriteFilterTables(PB_INSTANCE *pbi, oggpack_buffer *opb){
-  int i;
-  int bits=5;
-  oggpackB_write(opb, bits, 3);
-  for(i=0;i<Q_TABLE_SIZE;i++)
-    oggpackB_write(opb, pbi->LoopFilterLimits[i],bits);
-}
-
 int ReadFilterTables(codec_setup_info *ci, oggpack_buffer *opb){
   int i;
   int bits, value;
@@ -82,20 +63,10 @@ int ReadFilterTables(codec_setup_info *ci, oggpack_buffer *opb){
   return 0;
 }
 
-/* copy in-loop filter limits from the bitstream header into our instance */
-void CopyFilterTables(PB_INSTANCE *pbi, codec_setup_info *ci){
-  memcpy(pbi->LoopFilterLimits, ci->LoopFilterLimitValues, Q_TABLE_SIZE);
-}
-
-/* initialize the filter limits from our static table */
-void InitFilterTables(PB_INSTANCE *pbi){
-  memcpy(pbi->LoopFilterLimits, LoopFilterLimitValuesV1, Q_TABLE_SIZE);
-}
-
 void SetupLoopFilter(PB_INSTANCE *pbi){
   ogg_int32_t FLimit;
 
-  FLimit = pbi->LoopFilterLimits[pbi->FrameQIndex];
+  FLimit = pbi->quant_info->loop_filter_limits[pbi->FrameQIndex];
   SetupBoundingValueArray_Generic(pbi, FLimit);
 }
 
@@ -730,12 +701,12 @@ void LoopFilter(PB_INSTANCE *pbi){
   QIndex = Q_TABLE_SIZE - 1;
   while ( QIndex >= 0 ) {
     if ( (QIndex == 0) ||
-         ( pbi->QThreshTable[QIndex] >= pbi->ThisFrameQualityValue) )
+         ( pbi->quant_info->ac_scale[QIndex] >= pbi->ThisFrameQualityValue) )
       break;
     QIndex --;
   }
 
-  FLimit = pbi->LoopFilterLimits[QIndex];
+  FLimit = pbi->quant_info->loop_filter_limits[QIndex];
   if ( FLimit == 0 ) return;
   SetupBoundingValueArray_Generic(pbi, FLimit);
 

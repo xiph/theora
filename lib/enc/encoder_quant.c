@@ -20,470 +20,247 @@
 #include "codec_internal.h"
 #include "quant_lookup.h"
 
-/* the *V1 tables are the originals used by the VP3 codec */
-
-static const ogg_uint32_t QThreshTableV1[Q_TABLE_SIZE] = {
-  500,  450,  400,  370,  340,  310, 285, 265,
-  245,  225,  210,  195,  185,  180, 170, 160,
-  150,  145,  135,  130,  125,  115, 110, 107,
-  100,   96,   93,   89,   85,   82,  75,  74,
-  70,   68,   64,   60,   57,   56,  52,  50,
-  49,   45,   44,   43,   40,   38,  37,  35,
-  33,   32,   30,   29,   28,   25,  24,  22,
-  21,   19,   18,   17,   15,   13,  12,  10
-};
-
-static const Q_LIST_ENTRY DcScaleFactorTableV1[ Q_TABLE_SIZE ] = {
-  220, 200, 190, 180, 170, 170, 160, 160,
-  150, 150, 140, 140, 130, 130, 120, 120,
-  110, 110, 100, 100, 90,  90,  90,  80,
-  80,  80,  70,  70,  70,  60,  60,  60,
-  60,  50,  50,  50,  50,  40,  40,  40,
-  40,  40,  30,  30,  30,  30,  30,  30,
-  30,  20,  20,  20,  20,  20,  20,  20,
-  20,  10,  10,  10,  10,  10,  10,  10
-};
-
-/* dbm -- defined some alternative tables to test header packing */
-#define NEW_QTABLES 0
-#if NEW_QTABLES
-
-static const Q_LIST_ENTRY Y_coeffsV1[64] =
-{
-        8,  16,  16,  16,  20,  20,  20,  20,
-        16,  16,  16,  16,  20,  20,  20,  20,
-        16,  16,  16,  16,  22,  22,  22,  22,
-        16,  16,  16,  16,  22,  22,  22,  22,
-        20,  20,  22,  22,  24,  24,  24,  24,
-        20,  20,  22,  22,  24,  24,  24,  24,
-        20,  20,  22,  22,  24,  24,  24,  24,
-        20,  20,  22,  22,  24,  24,  24,  24
-};
-
-static const Q_LIST_ENTRY UV_coeffsV1[64] =
-{       17,     18,     24,     47,     99,     99,     99,     99,
-        18,     21,     26,     66,     99,     99,     99,     99,
-        24,     26,     56,     99,     99,     99,     99,     99,
-        47,     66,     99,     99,     99,     99,     99,     99,
-        99,     99,     99,     99,     99,     99,     99,     99,
-        99,     99,     99,     99,     99,     99,     99,     99,
-        99,     99,     99,     99,     99,     99,     99,     99,
-        99,     99,     99,     99,     99,     99,     99,     99
-};
-
-static const Q_LIST_ENTRY Inter_coeffsV1[64] =
-{
-        12, 16,  16,  16,  20,  20,  20,  20,
-        16,  16,  16,  16,  20,  20,  20,  20,
-        16,  16,  16,  16,  22,  22,  22,  22,
-        16,  16,  16,  16,  22,  22,  22,  22,
-        20,  20,  22,  22,  24,  24,  24,  24,
-        20,  20,  22,  22,  24,  24,  24,  24,
-        20,  20,  22,  22,  24,  24,  24,  24,
-        20,  20,  22,  22,  24,  24,  24,  24
-};
-
-#else /* these are the old VP3 values: */
-
-static const Q_LIST_ENTRY Y_coeffsV1[64] ={
-  16,  11,  10,  16,  24,  40,  51,  61,
-  12,  12,  14,  19,  26,  58,  60,  55,
-  14,  13,  16,  24,  40,  57,  69,  56,
-  14,  17,  22,  29,  51,  87,  80,  62,
-  18,  22,  37,  58,  68, 109, 103,  77,
-  24,  35,  55,  64,  81, 104, 113,  92,
-  49,  64,  78,  87, 103, 121, 120, 101,
-  72,  92,  95,  98, 112, 100, 103,  99
-};
-
-static const Q_LIST_ENTRY UV_coeffsV1[64] ={
-  17,   18,     24,     47,     99,     99,     99,     99,
-  18,   21,     26,     66,     99,     99,     99,     99,
-  24,   26,     56,     99,     99,     99,     99,     99,
-  47,   66,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99
-};
-
-static const Q_LIST_ENTRY Inter_coeffsV1[64] ={
-  16,  16,  16,  20,  24,  28,  32,  40,
-  16,  16,  20,  24,  28,  32,  40,  48,
-  16,  20,  24,  28,  32,  40,  48,  64,
-  20,  24,  28,  32,  40,  48,  64,  64,
-  24,  28,  32,  40,  48,  64,  64,  64,
-  28,  32,  40,  48,  64,  64,  64,  96,
-  32,  40,  48,  64,  64,  64,  96,  128,
-  40,  48,  64,  64,  64,  96,  128, 128
-};
-
-#endif
-
-/* New (6) quant matrices */
-
-static const Q_LIST_ENTRY Y_coeffs[64] ={
-  16,  11,  10,  16,  24,  40,  51,  61,
-  12,  12,  14,  19,  26,  58,  60,  55,
-  14,  13,  16,  24,  40,  57,  69,  56,
-  14,  17,  22,  29,  51,  87,  80,  62,
-  18,  22,  37,  58,  68, 109, 103,  77,
-  24,  35,  55,  64,  81, 104, 113,  92,
-  49,  64,  78,  87, 103, 121, 120, 101,
-  72,  92,  95,  98, 112, 100, 103,  99
-};
-
-
-static const Q_LIST_ENTRY U_coeffs[64] ={
-  17,   18,     24,     47,     99,     99,     99,     99,
-  18,   21,     26,     66,     99,     99,     99,     99,
-  24,   26,     56,     99,     99,     99,     99,     99,
-  47,   66,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99
-};
-
-static const Q_LIST_ENTRY V_coeffs[64] ={
-  17,   18,     24,     47,     99,     99,     99,     99,
-  18,   21,     26,     66,     99,     99,     99,     99,
-  24,   26,     56,     99,     99,     99,     99,     99,
-  47,   66,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99
-};
-
-
-static const Q_LIST_ENTRY Inter_Y_coeffs[64] ={
-  16,  16,  16,  20,  24,  28,  32,  40,
-  16,  16,  20,  24,  28,  32,  40,  48,
-  16,  20,  24,  28,  32,  40,  48,  64,
-  20,  24,  28,  32,  40,  48,  64,  64,
-  24,  28,  32,  40,  48,  64,  64,  64,
-  28,  32,  40,  48,  64,  64,  64,  96,
-  32,  40,  48,  64,  64,  64,  96,  128,
-  40,  48,  64,  64,  64,  96,  128, 128
-};
-
-static const Q_LIST_ENTRY Inter_U_coeffs[64] ={
-  17,   18,     24,     47,     99,     99,     99,     99,
-  18,   21,     26,     66,     99,     99,     99,     99,
-  24,   26,     56,     99,     99,     99,     99,     99,
-  47,   66,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99
-};
-
-static const Q_LIST_ENTRY Inter_V_coeffs[64] ={
-  17,   18,     24,     47,     99,     99,     99,     99,
-  18,   21,     26,     66,     99,     99,     99,     99,
-  24,   26,     56,     99,     99,     99,     99,     99,
-  47,   66,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99,
-  99,   99,     99,     99,     99,     99,     99,     99
-};
-
-
-static int _ilog(unsigned int v){
-  int ret=0;
-  while(v){
-    ret++;
-    v>>=1;
-  }
-  return(ret);
-}
-
-
-void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer* opb) {
-  int x, bits;
-  bits=10;
-  oggpackB_write(opb, bits-1, 4);
-  for(x=0; x<64; x++) {
-    oggpackB_write(opb, pbi->QThreshTable[x],bits);
-  }
-  oggpackB_write(opb, bits-1, 4);
-  for(x=0; x<64; x++) {
-    oggpackB_write(opb, pbi->DcScaleFactorTable[x],bits);
-  }
-  
-  switch(pbi->encoder_profile) {
-  	case PROFILE_FULL:
-      oggpackB_write(opb, 6 - 1, 9); /* number of base matricies */
-
-      for(x=0; x<64; x++) {
-        oggpackB_write(opb, pbi->Y_coeffs[x],8);
-      }
-      for(x=0; x<64; x++) {
-        oggpackB_write(opb, pbi->U_coeffs[x],8);
-      }
-      for(x=0; x<64; x++) {
-        oggpackB_write(opb, pbi->V_coeffs[x],8);
-      }
-  
-      for(x=0; x<64; x++) {
-        oggpackB_write(opb, pbi->InterY_coeffs[x],8);
-      }
-      for(x=0; x<64; x++) {
-        oggpackB_write(opb, pbi->InterU_coeffs[x],8);
-      }
-      for(x=0; x<64; x++) {
-        oggpackB_write(opb, pbi->InterV_coeffs[x],8);
-      }
-      /* table mapping */
-      oggpackB_write(opb, 0, 3);  /* matrix 0 for intra Y */
-      oggpackB_write(opb, 62, 6); /* used for every q */
-      oggpackB_write(opb, 0, 3);
-  
-      oggpackB_write(opb, 1, 1);
-      oggpackB_write(opb, 1, 3);  /* matrix 1 for intra U */
-      oggpackB_write(opb, 62, 6); /* used for every q */
-      oggpackB_write(opb, 0, 3);
-  
-      oggpackB_write(opb, 1, 1);
-      oggpackB_write(opb, 2, 3);  /* matrix 2 for intra V */
-      oggpackB_write(opb, 62, 6); /* used for every q */
-      oggpackB_write(opb, 0, 3);
-  
-      oggpackB_write(opb, 1, 1);
-      oggpackB_write(opb, 3, 3);  /* matrix 3 for inter Y */
-      oggpackB_write(opb, 62, 6); /* used for every q */
-      oggpackB_write(opb, 0, 3);
-  
-      oggpackB_write(opb, 1, 1);
-      oggpackB_write(opb, 4, 3);  /* matrix 4 for inter U */
-      oggpackB_write(opb, 62, 6); /* used for every q */
-      oggpackB_write(opb, 0, 3);
-  
-      oggpackB_write(opb, 1, 1);
-      oggpackB_write(opb, 5, 3);  /* matrix 5 for inter V */
-      oggpackB_write(opb, 62, 6); /* used for every q */
-      oggpackB_write(opb, 0, 3);
-      break;
-
-    default: /* VP3 */
-      oggpackB_write(opb, 3 - 1, 9); /* number of base matricies */
-      for(x=0; x<64; x++) {
-        oggpackB_write(opb, pbi->Y_coeffs[x],8);
-      }
-      for(x=0; x<64; x++) {
-        oggpackB_write(opb, pbi->U_coeffs[x],8);
-      }
-      for(x=0; x<64; x++) {
-        oggpackB_write(opb, pbi->InterY_coeffs[x],8);
-      }
-      /* table mapping */
-      oggpackB_write(opb, 0, 2);  /* matrix 0 for intra Y */
-      oggpackB_write(opb, 62, 6); /* used for every q */
-      oggpackB_write(opb, 0, 2);
-      oggpackB_write(opb, 1, 1);  /* next range is explicit */
-      oggpackB_write(opb, 1, 2);  /* matrix 1 for intra U */
-      oggpackB_write(opb, 62, 6);
-      oggpackB_write(opb, 1, 2);
-      oggpackB_write(opb, 0, 1);  /* intra V is the same */
-      oggpackB_write(opb, 1, 1);  /* next range is explicit */
-      oggpackB_write(opb, 2, 2);  /* matrix 2 for inter Y */
-      oggpackB_write(opb, 62, 6);
-      oggpackB_write(opb, 2, 2);
-      oggpackB_write(opb, 0, 2);  /* inter U the same */
-      oggpackB_write(opb, 0, 2);  /* inter V the same */
-      break;
-  }
-}
-
-
-static int _read_qtable_range(codec_setup_info *ci, oggpack_buffer* opb,
-         int N, int type) 
-{
-  int index, range;
-  int qi = 0;
-  int count = 0;
-  qmat_range_table table[65];
-
-  theora_read(opb,_ilog(N-1),&index); /* qi=0 index */
-  table[count].startqi = 0;
-  table[count++].qmat = ci->qmats + index * Q_TABLE_SIZE;
-  while(qi<63) {
-    theora_read(opb,_ilog(62-qi),&range); /* range to next code q matrix */
-    range++;
-    if(range<=0) return OC_BADHEADER;
-    qi+=range;
-    theora_read(opb,_ilog(N-1),&index); /* next index */
-    table[count].startqi = qi;
-    table[count++].qmat = ci->qmats + index * Q_TABLE_SIZE;
-  }
-
-  ci->range_table[type] = _ogg_malloc(count * sizeof(qmat_range_table));
-  if (ci->range_table[type] != NULL) {
-    memcpy(ci->range_table[type], table, count * sizeof(qmat_range_table)); 
-    return 0;
-  }
-  
-  return OC_FAULT; /* allocation failed */
-}
-
-int ReadQTables(codec_setup_info *ci, oggpack_buffer* opb) {
-  long bits,value;
-  int x,y, N;
-
-  /* AC scale table */
-  theora_read(opb,4,&bits); bits++;
-  for(x=0; x<Q_TABLE_SIZE; x++) {
-    theora_read(opb,bits,&value);
-    if(bits<0)return OC_BADHEADER;
-    ci->QThreshTable[x]=value;
-  }
-  /* DC scale table */
-  theora_read(opb,4,&bits); bits++;
-  for(x=0; x<Q_TABLE_SIZE; x++) {
-    theora_read(opb,bits,&value);
-    if(bits<0)return OC_BADHEADER;
-    ci->DcScaleFactorTable[x]=(Q_LIST_ENTRY)value;
-  }
-  /* base matricies */
-  theora_read(opb,9,&N); N++;
-  ci->qmats=_ogg_malloc(N*64*sizeof(Q_LIST_ENTRY));
-  ci->MaxQMatrixIndex = N;
-  for(y=0; y<N; y++) {
-    for(x=0; x<64; x++) {
-      theora_read(opb,8,&value);
-      if(bits<0)return OC_BADHEADER;
-      ci->qmats[(y<<6)+x]=(Q_LIST_ENTRY)value;
-    }
-  }
-  /* table mapping */
-  for(x=0; x<6; x++) {
-    ci->range_table[x] = NULL;
-  }
+/*
+ * th_quant_info for VP3 
+ */
+ 
+/*The default quantization parameters used by VP3.1.*/
+static const int OC_VP31_RANGE_SIZES[1]={63};
+static const th_quant_base OC_VP31_BASES_INTRA_Y[2]={
   {
-    int flag, ret;
-    /* intra Y */
-    if((ret=_read_qtable_range(ci,opb,N,0))<0) return ret;
-    /* intra U */
-    theora_read(opb,1,&flag);
-    if(flag<0) return OC_BADHEADER;
-    if(flag) {
-      /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N,1))<0) return ret;
-    } else {
-      /* same as previous */
+     16, 11, 10, 16, 24,  40, 51, 61,
+     12, 12, 14, 19, 26,  58, 60, 55,
+     14, 13, 16, 24, 40,  57, 69, 56,
+     14, 17, 22, 29, 51,  87, 80, 62,
+     18, 22, 37, 58, 68, 109,103, 77,
+     24, 35, 55, 64, 81, 104,113, 92,
+     49, 64, 78, 87,103, 121,120,101,
+     72, 92, 95, 98,112, 100,103, 99
+  },
+  {
+     16, 11, 10, 16, 24,  40, 51, 61,
+     12, 12, 14, 19, 26,  58, 60, 55,
+     14, 13, 16, 24, 40,  57, 69, 56,
+     14, 17, 22, 29, 51,  87, 80, 62,
+     18, 22, 37, 58, 68, 109,103, 77,
+     24, 35, 55, 64, 81, 104,113, 92,
+     49, 64, 78, 87,103, 121,120,101,
+     72, 92, 95, 98,112, 100,103, 99
+  }
+};
+static const th_quant_base OC_VP31_BASES_INTRA_C[2]={
+  {
+     17, 18, 24, 47, 99, 99, 99, 99,
+     18, 21, 26, 66, 99, 99, 99, 99,
+     24, 26, 56, 99, 99, 99, 99, 99,
+     47, 66, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99
+  },
+  {
+     17, 18, 24, 47, 99, 99, 99, 99,
+     18, 21, 26, 66, 99, 99, 99, 99,
+     24, 26, 56, 99, 99, 99, 99, 99,
+     47, 66, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99
+  }
+};
+static const th_quant_base OC_VP31_BASES_INTER[2]={
+  {
+     16, 16, 16, 20, 24, 28, 32, 40,
+     16, 16, 20, 24, 28, 32, 40, 48,
+     16, 20, 24, 28, 32, 40, 48, 64,
+     20, 24, 28, 32, 40, 48, 64, 64,
+     24, 28, 32, 40, 48, 64, 64, 64,
+     28, 32, 40, 48, 64, 64, 64, 96,
+     32, 40, 48, 64, 64, 64, 96,128,
+     40, 48, 64, 64, 64, 96,128,128
+  },
+  {
+     16, 16, 16, 20, 24, 28, 32, 40,
+     16, 16, 20, 24, 28, 32, 40, 48,
+     16, 20, 24, 28, 32, 40, 48, 64,
+     20, 24, 28, 32, 40, 48, 64, 64,
+     24, 28, 32, 40, 48, 64, 64, 64,
+     28, 32, 40, 48, 64, 64, 64, 96,
+     32, 40, 48, 64, 64, 64, 96,128,
+     40, 48, 64, 64, 64, 96,128,128
+  }
+};
+
+const th_quant_info TH_VP31_QUANT_INFO={
+  {
+    220,200,190,180,170,170,160,160,
+    150,150,140,140,130,130,120,120,
+    110,110,100,100, 90, 90, 90, 80,
+     80, 80, 70, 70, 70, 60, 60, 60,
+     60, 50, 50, 50, 50, 40, 40, 40,
+     40, 40, 30, 30, 30, 30, 30, 30,
+     30, 20, 20, 20, 20, 20, 20, 20,
+     20, 10, 10, 10, 10, 10, 10, 10
+  },
+  {
+    500,450,400,370,340,310,285,265,
+    245,225,210,195,185,180,170,160,
+    150,145,135,130,125,115,110,107,
+    100, 96, 93, 89, 85, 82, 75, 74,
+     70, 68, 64, 60, 57, 56, 52, 50,
+     49, 45, 44, 43, 40, 38, 37, 35,
+     33, 32, 30, 29, 28, 25, 24, 22,
+     21, 19, 18, 17, 15, 13, 12, 10
+  },
+  {
+    30,25,20,20,15,15,14,14,
+    13,13,12,12,11,11,10,10,
+     9, 9, 8, 8, 7, 7, 7, 7,
+     6, 6, 6, 6, 5, 5, 5, 5,
+     4, 4, 4, 4, 3, 3, 3, 3,
+     2, 2, 2, 2, 2, 2, 2, 2,
+     0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0, 0
+  },
+  {
+    {
+      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTRA_Y},
+      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTRA_C},
+      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTRA_C}
+    },
+    {
+      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTER},
+      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTER},
+      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTER}
     }
-    /* intra V */
-    theora_read(opb,1,&flag);
-    if(flag<0) return OC_BADHEADER;
-    if(flag) {
-      /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N,2))<0) return ret;
-    } else {
-       /* same as previous */
-    }
-    /* inter Y */
-    theora_read(opb,1,&flag);
-    if(flag<0) return OC_BADHEADER;
-    if(flag) {
-      /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N,3))<0) return ret;
-    } else {
-      theora_read(opb,1,&flag);
-      if(flag<0) return OC_BADHEADER;
-      if(flag) {
-        /* same as corresponding intra */
-      } else {
-        /* same as previous */
-      }
-    }
-    /* inter U */
-    theora_read(opb,1,&flag);
-    if(flag<0) return OC_BADHEADER;
-    if(flag) {
-      /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N,4))<0) return ret;
-    } else {
-      theora_read(opb,1,&flag);
-      if(flag<0) return OC_BADHEADER;
-      if(flag) {
-        /* same as corresponding intra */
-      } else {
-        /* same as previous */
-      }
-    }
-    /* inter V */
-    theora_read(opb,1,&flag);
-    if(flag<0) return OC_BADHEADER;
-    if(flag) {
-      /* explicitly coded */
-      if((ret=_read_qtable_range(ci,opb,N,5))<0) return ret;
-    } else {
-      theora_read(opb,1,&flag);
-      if(flag<0) return OC_BADHEADER;
-      if(flag) {
-        /* same as corresponding intra */
-      } else {
-        /* same as previous */
+  }
+};
+
+void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer* _opb) {
+  
+  th_quant_info *_qinfo = pbi->quant_info; 
+  
+  const th_quant_ranges *qranges;
+  const th_quant_base   *base_mats[2*3*64];
+  int                    indices[2][3][64];
+  int                    nbase_mats;
+  int                    nbits;
+  int                    ci;
+  int                    qi;
+  int                    qri;
+  int                    qti;
+  int                    pli;
+  int                    qtj;
+  int                    plj;
+  int                    bmi;
+  int                    i;
+  
+  /*Unlike the scale tables, we can't assume the maximum value will be in
+     index 0, so search for it here.*/
+  i=_qinfo->loop_filter_limits[0];
+  for(qi=1;qi<64;qi++)i=OC_MAXI(i,_qinfo->loop_filter_limits[qi]);
+  nbits=oc_ilog(i);
+  oggpackB_write(_opb,nbits,3);
+  for(qi=0;qi<64;qi++){
+    oggpackB_write(_opb,_qinfo->loop_filter_limits[qi],nbits);
+  }
+  /* 580 bits for VP3.*/
+  nbits=OC_MAXI(oc_ilog(_qinfo->ac_scale[0]),1);
+  oggpackB_write(_opb,nbits-1,4);
+  for(qi=0;qi<64;qi++)oggpackB_write(_opb,_qinfo->ac_scale[qi],nbits);
+  /* 516 bits for VP3.*/
+  nbits=OC_MAXI(oc_ilog(_qinfo->dc_scale[0]),1);
+  oggpackB_write(_opb,nbits-1,4);
+  for(qi=0;qi<64;qi++)oggpackB_write(_opb,_qinfo->dc_scale[qi],nbits);
+  /*Consolidate any duplicate base matrices.*/
+  nbase_mats=0;
+  for(qti=0;qti<2;qti++)for(pli=0;pli<3;pli++){
+    qranges=_qinfo->qi_ranges[qti]+pli;
+    for(qri=0;qri<=qranges->nranges;qri++){
+      for(bmi=0;;bmi++){
+        if(bmi>=nbase_mats){
+          base_mats[bmi]=qranges->base_matrices+qri;
+          indices[qti][pli][qri]=nbase_mats++;
+          break;
+        }
+        else if(memcmp(base_mats[bmi][0],qranges->base_matrices[qri],
+         sizeof(base_mats[bmi][0]))==0){
+          indices[qti][pli][qri]=bmi;
+          break;
+        }
       }
     }
   }
-  
-  return 0;
+  /*Write out the list of unique base matrices.
+    1545 bits for VP3 matrices.*/
+  oggpackB_write(_opb,nbase_mats-1,9);
+  for(bmi=0;bmi<nbase_mats;bmi++){
+    for(ci=0;ci<64;ci++)oggpackB_write(_opb,base_mats[bmi][0][ci],8);
+  }
+  /*Now store quant ranges and their associated indices into the base matrix
+     list.
+     46 bits for VP3 matrices.*/
+  nbits=oc_ilog(nbase_mats-1);
+  for(i=0;i<6;i++){
+    qti=i/3;
+    pli=i%3;
+    qranges=_qinfo->qi_ranges[qti]+pli;
+    if(i>0){
+      if(qti>0){
+        if(qranges->nranges==_qinfo->qi_ranges[qti-1][pli].nranges&&
+         memcmp(qranges->sizes,_qinfo->qi_ranges[qti-1][pli].sizes,
+         qranges->nranges*sizeof(qranges->sizes[0]))==0&&
+         memcmp(indices[qti][pli],indices[qti-1][pli],
+         (qranges->nranges+1)*sizeof(indices[qti][pli][0]))==0){
+          oggpackB_write(_opb,1,2);
+          continue;
+        }
+      }
+      qtj=(i-1)/3;
+      plj=(i-1)%3;
+      if(qranges->nranges==_qinfo->qi_ranges[qtj][plj].nranges&&
+       memcmp(qranges->sizes,_qinfo->qi_ranges[qtj][plj].sizes,
+       qranges->nranges*sizeof(qranges->sizes[0]))==0&&
+       memcmp(indices[qti][pli],indices[qtj][plj],
+       (qranges->nranges+1)*sizeof(indices[qti][pli][0]))==0){
+        oggpackB_write(_opb,0,1+(qti>0));
+        continue;
+      }
+      oggpackB_write(_opb,1,1);
+    }
+    oggpackB_write(_opb,indices[qti][pli][0],nbits);
+    for(qi=qri=0;qi<63;qri++){
+      oggpackB_write(_opb,qranges->sizes[qri]-1,oc_ilog(62-qi));
+      qi+=qranges->sizes[qri];
+      oggpackB_write(_opb,indices[qti][pli][qri+1],nbits);
+    }
+  }
 }
 
-void CopyQTables(PB_INSTANCE *pbi, codec_setup_info *ci) {
-  Q_LIST_ENTRY *qmat;
-
-  memcpy(pbi->QThreshTable, ci->QThreshTable, sizeof(pbi->QThreshTable));
-  memcpy(pbi->DcScaleFactorTable, ci->DcScaleFactorTable,
-         sizeof(pbi->DcScaleFactorTable));
-
-  /* the decoder only supports 6 different base matricies; do the
-     best we can with the range table. We assume the first range
-     entry is good for all qi values. A NULL range table entry 
-     indicates we fall back to the previous value. */
-  qmat = ci->range_table[0]->qmat;
-  memcpy(pbi->Y_coeffs, qmat, sizeof(pbi->Y_coeffs));
-  if (ci->range_table[1]) qmat = ci->range_table[1]->qmat;
-  memcpy(pbi->U_coeffs, qmat, sizeof(pbi->U_coeffs));
-  if (ci->range_table[2]) qmat = ci->range_table[2]->qmat;
-  memcpy(pbi->V_coeffs, qmat, sizeof(pbi->V_coeffs));
-  if (ci->range_table[3]) qmat = ci->range_table[3]->qmat;
-  memcpy(pbi->InterY_coeffs, qmat, sizeof(pbi->InterY_coeffs));
-  if (ci->range_table[4]) qmat = ci->range_table[4]->qmat;
-  memcpy(pbi->InterU_coeffs, qmat, sizeof(pbi->InterU_coeffs));
-  if (ci->range_table[5]) qmat = ci->range_table[5]->qmat;
-  memcpy(pbi->InterV_coeffs, qmat, sizeof(pbi->InterV_coeffs));
-}
 
 /* Initialize custom qtables using the VP31 values.
    Someday we can change the quant tables to be adaptive, or just plain
     better. */
 void InitQTables( PB_INSTANCE *pbi ){
+    
   switch(pbi->encoder_profile) {
   	case PROFILE_FULL:
-      memcpy(pbi->QThreshTable, QThreshTableV1, sizeof(pbi->QThreshTable));
-      memcpy(pbi->DcScaleFactorTable, DcScaleFactorTableV1, sizeof(pbi->DcScaleFactorTable));
-      memcpy(pbi->Y_coeffs, Y_coeffs, sizeof(pbi->Y_coeffs));
-      memcpy(pbi->U_coeffs, U_coeffs, sizeof(pbi->U_coeffs));
-      memcpy(pbi->V_coeffs, V_coeffs, sizeof(pbi->V_coeffs));
-      memcpy(pbi->InterY_coeffs, Inter_Y_coeffs, sizeof(pbi->InterY_coeffs));
-      memcpy(pbi->InterU_coeffs, Inter_U_coeffs, sizeof(pbi->InterU_coeffs));
-      memcpy(pbi->InterV_coeffs, Inter_V_coeffs, sizeof(pbi->InterV_coeffs));
+  	
+  	  pbi->quant_info = (th_quant_info *) &TH_VP31_QUANT_INFO;
+      
       break;
     default: /* VP3 */
-      memcpy(pbi->QThreshTable, QThreshTableV1, sizeof(pbi->QThreshTable));
-      memcpy(pbi->DcScaleFactorTable, DcScaleFactorTableV1, sizeof(pbi->DcScaleFactorTable));
-      memcpy(pbi->Y_coeffs, Y_coeffsV1, sizeof(pbi->Y_coeffs));
-      memcpy(pbi->U_coeffs, UV_coeffsV1, sizeof(pbi->U_coeffs));
-      memcpy(pbi->V_coeffs, UV_coeffsV1, sizeof(pbi->V_coeffs));
-      memcpy(pbi->InterY_coeffs, Inter_coeffsV1, sizeof(pbi->InterY_coeffs));
-      memcpy(pbi->InterU_coeffs, Inter_coeffsV1, sizeof(pbi->InterU_coeffs));
-      memcpy(pbi->InterV_coeffs, Inter_coeffsV1, sizeof(pbi->InterV_coeffs));
+      
+      pbi->quant_info = (th_quant_info *) &TH_VP31_QUANT_INFO;
+      
       break;
   }
+    
+  pbi->QThreshTable = pbi->quant_info->ac_scale;
+  
+  quant_tables_init(pbi, pbi->quant_info);
 }
 
 static void BuildZigZagIndex(PB_INSTANCE *pbi){
@@ -493,6 +270,55 @@ static void BuildZigZagIndex(PB_INSTANCE *pbi){
   for ( i = 0; i < BLOCK_SIZE; i++ ){
     j = dezigzag_index[i];
     pbi->zigzag_index[j] = i;
+  }
+}
+
+/* this is a butchered version of derf's theora-exp code */
+void quant_tables_init(PB_INSTANCE *pbi, const th_quant_info *_qinfo){
+  int          qti;
+  int          pli;
+  for(qti=0;qti<2;qti++)for(pli=0;pli<3;pli++){
+    int qi;
+    int qri;
+    /*These simple checks help us improve cache coherency later.*/
+    /*if(pli>0&&memcmp(_qinfo->qi_ranges[qti]+pli-1,
+     _qinfo->qi_ranges[qti]+pli,sizeof(_qinfo->qi_ranges[qti][pli]))==0){
+      pbi->quant_tables[qti][pli]=pbi->quant_tables[qti][pli-1];
+      continue;
+    }
+    if(qti>0&&memcmp(_qinfo->qi_ranges[qti-1]+pli,
+     _qinfo->qi_ranges[qti]+pli,sizeof(_qinfo->qi_ranges[qti][pli]))==0){
+      pbi->quant_tables[qti][pli]=pbi->quant_tables[qti-1][pli];
+      continue;
+    }*/
+    for(qi=qri=0;qri<=_qinfo->qi_ranges[qti][pli].nranges;qri++){
+      int i;
+      ogg_uint16_t  base[64];
+      int           qi_start;
+      int           qi_end;
+      int           ci;
+
+      for(i = 0; i < 64; i++)
+        base[i] = _qinfo->qi_ranges[qti][pli].base_matrices[qri][i];
+
+      qi_start=qi;
+      if(qri==_qinfo->qi_ranges[qti][pli].nranges)qi_end=qi+1;
+      else qi_end=qi+_qinfo->qi_ranges[qti][pli].sizes[qri];
+      for(;;){
+               
+        memcpy(pbi->quant_tables[qti][pli][qi], base, sizeof(base));
+                
+        if(++qi>=qi_end)break;
+        /*Interpolate the next base matrix.*/
+        for(ci=0;ci<64;ci++){
+          base[ci]=(unsigned char)(
+           (2*((qi_end-qi)*_qinfo->qi_ranges[qti][pli].base_matrices[qri][ci]+
+           (qi-qi_start)*_qinfo->qi_ranges[qti][pli].base_matrices[qri+1][ci])
+           +_qinfo->qi_ranges[qti][pli].sizes[qri])/
+           (2*_qinfo->qi_ranges[qti][pli].sizes[qri]));
+        }
+      }
+    }
   }
 }
 
@@ -508,28 +334,29 @@ static void init_quantizer ( CP_INSTANCE *cpi,
     double temp_fp_ZeroBinSize;
     PB_INSTANCE *pbi = &cpi->pb;
 
-    const Q_LIST_ENTRY * temp_Y_coeffs;
-    const Q_LIST_ENTRY * temp_U_coeffs;
-    const Q_LIST_ENTRY * temp_V_coeffs;
-    const Q_LIST_ENTRY * temp_Inter_Y_coeffs;
-    const Q_LIST_ENTRY * temp_Inter_U_coeffs;
-    const Q_LIST_ENTRY * temp_Inter_V_coeffs;
-    const Q_LIST_ENTRY * temp_DcScaleFactorTable;
+
+    const ogg_uint16_t * temp_Y_coeffs;
+    const ogg_uint16_t * temp_U_coeffs;
+    const ogg_uint16_t * temp_V_coeffs;
+    const ogg_uint16_t * temp_Inter_Y_coeffs;
+    const ogg_uint16_t * temp_Inter_U_coeffs;
+    const ogg_uint16_t * temp_Inter_V_coeffs;
+    const ogg_uint16_t * temp_DcScaleFactorTable;
 
     /* Notes on setup of quantisers.  The initial multiplication by
      the scale factor is done in the ogg_int32_t domain to insure that the
      precision in the quantiser is the same as in the inverse
      quantiser where all calculations are integer.  The "<< 2" is a
      normalisation factor for the forward DCT transform. */
-
-    /* New version rounding and ZB characteristics. */
-    temp_Y_coeffs = cpi->pb.Y_coeffs;
-    temp_U_coeffs = cpi->pb.U_coeffs;
-    temp_V_coeffs = cpi->pb.V_coeffs;
-    temp_Inter_Y_coeffs = cpi->pb.InterY_coeffs;
-    temp_Inter_U_coeffs = cpi->pb.InterU_coeffs;
-    temp_Inter_V_coeffs = cpi->pb.InterV_coeffs;
-    temp_DcScaleFactorTable = cpi->pb.DcScaleFactorTable;
+    
+    temp_Y_coeffs = pbi->quant_tables[0][0][QIndex];
+    temp_U_coeffs = pbi->quant_tables[0][1][QIndex];
+    temp_V_coeffs = pbi->quant_tables[0][2][QIndex];
+    temp_Inter_Y_coeffs = pbi->quant_tables[1][0][QIndex];
+    temp_Inter_U_coeffs = pbi->quant_tables[1][1][QIndex];
+    temp_Inter_V_coeffs = pbi->quant_tables[1][2][QIndex];
+    temp_DcScaleFactorTable = pbi->quant_info->dc_scale;
+    
     ZBinFactor = 0.9;
 
     switch(cpi->pb.info.sharpness){
@@ -834,21 +661,22 @@ static void init_dequantizer ( PB_INSTANCE *pbi,
                         unsigned char  QIndex ){
   int i, j;
 
-  Q_LIST_ENTRY * InterY_coeffs;
-  Q_LIST_ENTRY * InterU_coeffs;
-  Q_LIST_ENTRY * InterV_coeffs;
-  Q_LIST_ENTRY * Y_coeffs;
-  Q_LIST_ENTRY * U_coeffs;
-  Q_LIST_ENTRY * V_coeffs;
-  Q_LIST_ENTRY * DcScaleFactorTable;
+  ogg_uint16_t * InterY_coeffs;
+  ogg_uint16_t * InterU_coeffs;
+  ogg_uint16_t * InterV_coeffs;
+  ogg_uint16_t * Y_coeffs;
+  ogg_uint16_t * U_coeffs;
+  ogg_uint16_t * V_coeffs;
+  ogg_uint16_t * DcScaleFactorTable;
 
-  InterY_coeffs = pbi->InterY_coeffs;
-  InterU_coeffs = pbi->InterU_coeffs;
-  InterV_coeffs = pbi->InterV_coeffs;
-  Y_coeffs = pbi->Y_coeffs;
-  U_coeffs = pbi->U_coeffs;
-  V_coeffs = pbi->V_coeffs;
-  DcScaleFactorTable = pbi->DcScaleFactorTable;
+
+  Y_coeffs = pbi->quant_tables[0][0][QIndex];
+  U_coeffs = pbi->quant_tables[0][1][QIndex];
+  V_coeffs = pbi->quant_tables[0][2][QIndex];
+  InterY_coeffs = pbi->quant_tables[1][0][QIndex];
+  InterU_coeffs = pbi->quant_tables[1][1][QIndex];
+  InterV_coeffs = pbi->quant_tables[1][2][QIndex];
+  DcScaleFactorTable = pbi->quant_info->dc_scale;
 
   /* invert the dequant index into the quant index
      the dxer has a different order than the cxer. */
@@ -980,7 +808,8 @@ void UpdateQ( PB_INSTANCE *pbi, int NewQIndex ){
   else if (NewQIndex < 0) NewQIndex = 0;
 
   pbi->FrameQIndex = NewQIndex;
-  qscale = pbi->QThreshTable[NewQIndex];
+  
+  qscale = pbi->quant_info->ac_scale[NewQIndex];
   pbi->ThisFrameQualityValue = qscale;
 
   /* Re-initialise the Q tables for forward and reverse transforms. */
@@ -993,16 +822,16 @@ void UpdateQC( CP_INSTANCE *cpi, ogg_uint32_t NewQ ){
 
   /* Do bounds checking and convert to a float.  */
   qscale = NewQ;
-  if ( qscale < pbi->QThreshTable[Q_TABLE_SIZE-1] )
-    qscale = pbi->QThreshTable[Q_TABLE_SIZE-1];
-  else if ( qscale > pbi->QThreshTable[0] )
-    qscale = pbi->QThreshTable[0];
+  if ( qscale < pbi->quant_info->ac_scale[Q_TABLE_SIZE-1] )
+    qscale = pbi->quant_info->ac_scale[Q_TABLE_SIZE-1];
+  else if ( qscale > pbi->quant_info->ac_scale[0] )
+    qscale = pbi->quant_info->ac_scale[0];
 
   /* Set the inter/intra descision control variables. */
   pbi->FrameQIndex = Q_TABLE_SIZE - 1;
   while ((ogg_int32_t) pbi->FrameQIndex >= 0 ) {
     if ( (pbi->FrameQIndex == 0) ||
-         ( pbi->QThreshTable[pbi->FrameQIndex] >= NewQ) )
+         ( pbi->quant_info->ac_scale[pbi->FrameQIndex] >= NewQ) )
       break;
     pbi->FrameQIndex --;
   }

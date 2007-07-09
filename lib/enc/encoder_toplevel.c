@@ -880,7 +880,6 @@ int theora_encode_init(theora_state *th, theora_info *c){
   cpi->ScanConfig.VideoFrameWidth = cpi->pb.info.width;
 
   InitFrameDetails(&cpi->pb);
-  InitFilterTables(&cpi->pb);
   EInitFragmentInfo(cpi);
   EInitFrameInfo(cpi);
 
@@ -1183,7 +1182,6 @@ int theora_encode_tables(theora_state *t, ogg_packet *op){
   oggpackB_write(cpi->oggbuffer,0x82,8);
   _tp_writebuffer(cpi->oggbuffer,"theora",6);
 
-  WriteFilterTables(&cpi->pb,cpi->oggbuffer);
   WriteQTables(&cpi->pb,cpi->oggbuffer);
   WriteHuffmanTrees(cpi->pb.HuffRoot_VP3x,cpi->oggbuffer);
 

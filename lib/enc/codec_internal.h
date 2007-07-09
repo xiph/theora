@@ -468,7 +468,6 @@ typedef struct PB_INSTANCE {
   ogg_int16_t   *TmpDataBuffer;
 
   /* Loop filter bounding values */
-  unsigned char  LoopFilterLimits[Q_TABLE_SIZE];
   ogg_int16_t    FiltBoundingValue[256];
 
   /* encoder profiles differ by their quantization table usage */
@@ -479,14 +478,8 @@ typedef struct PB_INSTANCE {
    * rest is Intra. */
 
   /* Dequantiser and rounding tables */
-  ogg_uint32_t   QThreshTable[Q_TABLE_SIZE];
-  Q_LIST_ENTRY   DcScaleFactorTable[Q_TABLE_SIZE];
-  Q_LIST_ENTRY   Y_coeffs[64];
-  Q_LIST_ENTRY   U_coeffs[64];
-  Q_LIST_ENTRY   V_coeffs[64];
-  Q_LIST_ENTRY   InterY_coeffs[64];
-  Q_LIST_ENTRY   InterU_coeffs[64];
-  Q_LIST_ENTRY   InterV_coeffs[64];
+  ogg_uint16_t   *QThreshTable;
+  
   Q_LIST_ENTRY  *dequant_Y_coeffs;
   Q_LIST_ENTRY  *dequant_U_coeffs;
   Q_LIST_ENTRY  *dequant_V_coeffs;
@@ -503,6 +496,9 @@ typedef struct PB_INSTANCE {
   ogg_uint32_t  *HuffCodeArray_VP3x[NUM_HUFF_TABLES];
   unsigned char *HuffCodeLengthArray_VP3x[NUM_HUFF_TABLES];
   const unsigned char *ExtraBitLengths_VP3x;
+
+  th_quant_info  *quant_info;
+  ogg_uint16_t   quant_tables[2][3][64][64];
 
   /* Quantiser and rounding tables */
   ogg_int32_t    fp_quant_Y_coeffs[64]; /* used in reiniting quantizers */
@@ -789,9 +785,8 @@ extern void InitFrameInfo(PB_INSTANCE * pbi, unsigned int FrameSize);
 extern void InitializeFragCoordinates(PB_INSTANCE *pbi);
 extern void InitFrameDetails(PB_INSTANCE *pbi);
 extern void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer *opb);
-extern int  ReadQTables(codec_setup_info *ci,oggpack_buffer* opb);
-extern void CopyQTables(PB_INSTANCE *pbi, codec_setup_info *ci);
 extern void InitQTables( PB_INSTANCE *pbi );
+extern void quant_tables_init( PB_INSTANCE *pbi, const th_quant_info *_qinfo);
 extern void InitHuffmanSet( PB_INSTANCE *pbi );
 extern void ClearHuffmanSet( PB_INSTANCE *pbi );
 extern int  ReadHuffmanTrees(codec_setup_info *ci, oggpack_buffer *opb);
@@ -799,10 +794,7 @@ extern void WriteHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES],
                               oggpack_buffer *opb);
 extern void InitHuffmanTrees(PB_INSTANCE *pbi, const codec_setup_info *ci);
 extern void ClearHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES]);
-extern void WriteFilterTables(PB_INSTANCE *pbi, oggpack_buffer *opb);
 extern int  ReadFilterTables(codec_setup_info *ci, oggpack_buffer *opb);
-extern void CopyFilterTables(PB_INSTANCE *pbi, codec_setup_info *ci);
-extern void InitFilterTables(PB_INSTANCE *pbi);
 extern void QuadDecodeDisplayFragments ( PB_INSTANCE *pbi );
 extern void PackAndWriteDFArray( CP_INSTANCE *cpi );
 extern void UpdateFragQIndex(PB_INSTANCE *pbi);
@@ -866,5 +858,6 @@ extern void InitTmpBuffers(PB_INSTANCE * pbi);
 extern void ScanYUVInit( PP_INSTANCE *  ppi,
                          SCAN_CONFIG_DATA * ScanConfigPtr);
 extern int LoadAndDecode(PB_INSTANCE *pbi);
+
 
 #endif /* ENCODER_INTERNAL_H */
