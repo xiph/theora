@@ -273,6 +273,14 @@ else
 fi
 AM_CONDITIONAL(THEORA_DISABLE_ENCODE, [test "x${ac_enable_encode}" != xyes])
 
+dnl Configuration option for examples
+
+ac_enable_examples=yes
+AC_ARG_ENABLE(examples,
+     [  --disable-examples      disable examples ],
+     [ ac_enable_examples=$enableval ], [ ac_enable_examples=yes] )
+AM_CONDITIONAL(THEORA_ENABLE_EXAMPLES, [test "x${ac_enable_examples}" != xno])
+
 dnl --------------------------------------------------
 dnl Check for headers
 dnl --------------------------------------------------
@@ -346,6 +354,7 @@ AC_MSG_RESULT([
     Floating point support: ..... ${ac_enable_float}
     Assembly optimization: ...... ${cpu_optimization}
     API Documentation: .......... ${doc_build}
+    Build example code: ......... ${ac_enable_examples}
 
   Installation paths:
 

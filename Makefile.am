@@ -2,7 +2,13 @@
 
 AUTOMAKE_OPTIONS = foreign 1.6 dist-zip dist-bzip2
 
-SUBDIRS = lib include doc examples tests m4
+THEORA_ENABLE_EXAMPLES=@THEORA_ENABLE_EXAMPLES@
+
+SUBDIRS = lib include doc tests m4
+
+if THEORA_ENABLE_EXAMPLES
+SUBDIRS += examples
+endif
 
 # we include the whole debian/ dir in EXTRA_DIST because there's a problem
 # with autotools and HFS+ MacOSX file systems that caused debian/Makefile.am
