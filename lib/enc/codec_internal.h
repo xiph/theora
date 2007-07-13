@@ -57,12 +57,6 @@ enum BlockMode {
   BLOCK_INTER_V
 };
 
-/* Encoding profiles */
-enum EncodingProfiles {
-  PROFILE_VP3,
-  PROFILE_FULL
-};
-
 /* Baseline dct block size */
 #define BLOCK_SIZE              (BLOCK_HEIGHT_WIDTH * BLOCK_HEIGHT_WIDTH)
 
@@ -303,6 +297,10 @@ typedef struct codec_setup_info {
 typedef struct PB_INSTANCE {
   oggpack_buffer *opb;
   theora_info     info;
+  
+  /* flag to indicate if the headers already have been written */
+  int            HeadersWritten;
+  
   /* how far do we shift the granulepos to seperate out P frame counts? */
   int             keyframe_granule_shift;
 
@@ -470,9 +468,6 @@ typedef struct PB_INSTANCE {
   /* Loop filter bounding values */
   ogg_int16_t    FiltBoundingValue[256];
 
-  /* encoder profiles differ by their quantization table usage */
-  int            encoder_profile;
-
   /* Naming convention for all quant matrices and related data structures:
    * Fields containing "Inter" in their name are for Inter frames, the
    * rest is Intra. */
@@ -497,7 +492,7 @@ typedef struct PB_INSTANCE {
   unsigned char *HuffCodeLengthArray_VP3x[NUM_HUFF_TABLES];
   const unsigned char *ExtraBitLengths_VP3x;
 
-  th_quant_info  *quant_info;
+  th_quant_info  quant_info;
   ogg_uint16_t   quant_tables[2][3][64][64];
 
   /* Quantiser and rounding tables */
@@ -786,7 +781,7 @@ extern void InitializeFragCoordinates(PB_INSTANCE *pbi);
 extern void InitFrameDetails(PB_INSTANCE *pbi);
 extern void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer *opb);
 extern void InitQTables( PB_INSTANCE *pbi );
-extern void quant_tables_init( PB_INSTANCE *pbi, const th_quant_info *_qinfo);
+extern void quant_tables_init( PB_INSTANCE *pbi, const th_quant_info *qinfo);
 extern void InitHuffmanSet( PB_INSTANCE *pbi );
 extern void ClearHuffmanSet( PB_INSTANCE *pbi );
 extern int  ReadHuffmanTrees(codec_setup_info *ci, oggpack_buffer *opb);

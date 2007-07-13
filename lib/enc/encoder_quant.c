@@ -20,127 +20,10 @@
 #include "codec_internal.h"
 #include "quant_lookup.h"
 
-/*
- * th_quant_info for VP3 
- */
- 
-/*The default quantization parameters used by VP3.1.*/
-static const int OC_VP31_RANGE_SIZES[1]={63};
-static const th_quant_base OC_VP31_BASES_INTRA_Y[2]={
-  {
-     16, 11, 10, 16, 24,  40, 51, 61,
-     12, 12, 14, 19, 26,  58, 60, 55,
-     14, 13, 16, 24, 40,  57, 69, 56,
-     14, 17, 22, 29, 51,  87, 80, 62,
-     18, 22, 37, 58, 68, 109,103, 77,
-     24, 35, 55, 64, 81, 104,113, 92,
-     49, 64, 78, 87,103, 121,120,101,
-     72, 92, 95, 98,112, 100,103, 99
-  },
-  {
-     16, 11, 10, 16, 24,  40, 51, 61,
-     12, 12, 14, 19, 26,  58, 60, 55,
-     14, 13, 16, 24, 40,  57, 69, 56,
-     14, 17, 22, 29, 51,  87, 80, 62,
-     18, 22, 37, 58, 68, 109,103, 77,
-     24, 35, 55, 64, 81, 104,113, 92,
-     49, 64, 78, 87,103, 121,120,101,
-     72, 92, 95, 98,112, 100,103, 99
-  }
-};
-static const th_quant_base OC_VP31_BASES_INTRA_C[2]={
-  {
-     17, 18, 24, 47, 99, 99, 99, 99,
-     18, 21, 26, 66, 99, 99, 99, 99,
-     24, 26, 56, 99, 99, 99, 99, 99,
-     47, 66, 99, 99, 99, 99, 99, 99,
-     99, 99, 99, 99, 99, 99, 99, 99,
-     99, 99, 99, 99, 99, 99, 99, 99,
-     99, 99, 99, 99, 99, 99, 99, 99,
-     99, 99, 99, 99, 99, 99, 99, 99
-  },
-  {
-     17, 18, 24, 47, 99, 99, 99, 99,
-     18, 21, 26, 66, 99, 99, 99, 99,
-     24, 26, 56, 99, 99, 99, 99, 99,
-     47, 66, 99, 99, 99, 99, 99, 99,
-     99, 99, 99, 99, 99, 99, 99, 99,
-     99, 99, 99, 99, 99, 99, 99, 99,
-     99, 99, 99, 99, 99, 99, 99, 99,
-     99, 99, 99, 99, 99, 99, 99, 99
-  }
-};
-static const th_quant_base OC_VP31_BASES_INTER[2]={
-  {
-     16, 16, 16, 20, 24, 28, 32, 40,
-     16, 16, 20, 24, 28, 32, 40, 48,
-     16, 20, 24, 28, 32, 40, 48, 64,
-     20, 24, 28, 32, 40, 48, 64, 64,
-     24, 28, 32, 40, 48, 64, 64, 64,
-     28, 32, 40, 48, 64, 64, 64, 96,
-     32, 40, 48, 64, 64, 64, 96,128,
-     40, 48, 64, 64, 64, 96,128,128
-  },
-  {
-     16, 16, 16, 20, 24, 28, 32, 40,
-     16, 16, 20, 24, 28, 32, 40, 48,
-     16, 20, 24, 28, 32, 40, 48, 64,
-     20, 24, 28, 32, 40, 48, 64, 64,
-     24, 28, 32, 40, 48, 64, 64, 64,
-     28, 32, 40, 48, 64, 64, 64, 96,
-     32, 40, 48, 64, 64, 64, 96,128,
-     40, 48, 64, 64, 64, 96,128,128
-  }
-};
-
-const th_quant_info TH_VP31_QUANT_INFO={
-  {
-    220,200,190,180,170,170,160,160,
-    150,150,140,140,130,130,120,120,
-    110,110,100,100, 90, 90, 90, 80,
-     80, 80, 70, 70, 70, 60, 60, 60,
-     60, 50, 50, 50, 50, 40, 40, 40,
-     40, 40, 30, 30, 30, 30, 30, 30,
-     30, 20, 20, 20, 20, 20, 20, 20,
-     20, 10, 10, 10, 10, 10, 10, 10
-  },
-  {
-    500,450,400,370,340,310,285,265,
-    245,225,210,195,185,180,170,160,
-    150,145,135,130,125,115,110,107,
-    100, 96, 93, 89, 85, 82, 75, 74,
-     70, 68, 64, 60, 57, 56, 52, 50,
-     49, 45, 44, 43, 40, 38, 37, 35,
-     33, 32, 30, 29, 28, 25, 24, 22,
-     21, 19, 18, 17, 15, 13, 12, 10
-  },
-  {
-    30,25,20,20,15,15,14,14,
-    13,13,12,12,11,11,10,10,
-     9, 9, 8, 8, 7, 7, 7, 7,
-     6, 6, 6, 6, 5, 5, 5, 5,
-     4, 4, 4, 4, 3, 3, 3, 3,
-     2, 2, 2, 2, 2, 2, 2, 2,
-     0, 0, 0, 0, 0, 0, 0, 0,
-     0, 0, 0, 0, 0, 0, 0, 0
-  },
-  {
-    {
-      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTRA_Y},
-      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTRA_C},
-      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTRA_C}
-    },
-    {
-      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTER},
-      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTER},
-      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTER}
-    }
-  }
-};
 
 void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer* _opb) {
   
-  th_quant_info *_qinfo = pbi->quant_info; 
+  th_quant_info *_qinfo = &pbi->quant_info; 
   
   const th_quant_ranges *qranges;
   const th_quant_base   *base_mats[2*3*64];
@@ -245,22 +128,9 @@ void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer* _opb) {
     better. */
 void InitQTables( PB_INSTANCE *pbi ){
     
-  switch(pbi->encoder_profile) {
-  	case PROFILE_FULL:
-  	
-  	  pbi->quant_info = (th_quant_info *) &TH_VP31_QUANT_INFO;
-      
-      break;
-    default: /* VP3 */
-      
-      pbi->quant_info = (th_quant_info *) &TH_VP31_QUANT_INFO;
-      
-      break;
-  }
-    
-  pbi->QThreshTable = pbi->quant_info->ac_scale;
+  pbi->QThreshTable = pbi->quant_info.ac_scale;
   
-  quant_tables_init(pbi, pbi->quant_info);
+  quant_tables_init(pbi, &pbi->quant_info);
 }
 
 static void BuildZigZagIndex(PB_INSTANCE *pbi){
@@ -274,7 +144,7 @@ static void BuildZigZagIndex(PB_INSTANCE *pbi){
 }
 
 /* this is a butchered version of derf's theora-exp code */
-void quant_tables_init(PB_INSTANCE *pbi, const th_quant_info *_qinfo){
+void quant_tables_init(PB_INSTANCE *pbi, const th_quant_info *qinfo){
   int          qti;
   int          pli;
   for(qti=0;qti<2;qti++)for(pli=0;pli<3;pli++){
@@ -291,7 +161,7 @@ void quant_tables_init(PB_INSTANCE *pbi, const th_quant_info *_qinfo){
       pbi->quant_tables[qti][pli]=pbi->quant_tables[qti-1][pli];
       continue;
     }*/
-    for(qi=qri=0;qri<=_qinfo->qi_ranges[qti][pli].nranges;qri++){
+    for(qi=qri=0;qri<=qinfo->qi_ranges[qti][pli].nranges;qri++){
       int i;
       ogg_uint16_t  base[64];
       int           qi_start;
@@ -299,11 +169,11 @@ void quant_tables_init(PB_INSTANCE *pbi, const th_quant_info *_qinfo){
       int           ci;
 
       for(i = 0; i < 64; i++)
-        base[i] = _qinfo->qi_ranges[qti][pli].base_matrices[qri][i];
+        base[i] = qinfo->qi_ranges[qti][pli].base_matrices[qri][i];
 
       qi_start=qi;
-      if(qri==_qinfo->qi_ranges[qti][pli].nranges)qi_end=qi+1;
-      else qi_end=qi+_qinfo->qi_ranges[qti][pli].sizes[qri];
+      if(qri==qinfo->qi_ranges[qti][pli].nranges)qi_end=qi+1;
+      else qi_end=qi+qinfo->qi_ranges[qti][pli].sizes[qri];
       for(;;){
                
         memcpy(pbi->quant_tables[qti][pli][qi], base, sizeof(base));
@@ -312,10 +182,10 @@ void quant_tables_init(PB_INSTANCE *pbi, const th_quant_info *_qinfo){
         /*Interpolate the next base matrix.*/
         for(ci=0;ci<64;ci++){
           base[ci]=(unsigned char)(
-           (2*((qi_end-qi)*_qinfo->qi_ranges[qti][pli].base_matrices[qri][ci]+
-           (qi-qi_start)*_qinfo->qi_ranges[qti][pli].base_matrices[qri+1][ci])
-           +_qinfo->qi_ranges[qti][pli].sizes[qri])/
-           (2*_qinfo->qi_ranges[qti][pli].sizes[qri]));
+           (2*((qi_end-qi)*qinfo->qi_ranges[qti][pli].base_matrices[qri][ci]+
+           (qi-qi_start)*qinfo->qi_ranges[qti][pli].base_matrices[qri+1][ci])
+           +qinfo->qi_ranges[qti][pli].sizes[qri])/
+           (2*qinfo->qi_ranges[qti][pli].sizes[qri]));
         }
       }
     }
@@ -355,7 +225,7 @@ static void init_quantizer ( CP_INSTANCE *cpi,
     temp_Inter_Y_coeffs = pbi->quant_tables[1][0][QIndex];
     temp_Inter_U_coeffs = pbi->quant_tables[1][1][QIndex];
     temp_Inter_V_coeffs = pbi->quant_tables[1][2][QIndex];
-    temp_DcScaleFactorTable = pbi->quant_info->dc_scale;
+    temp_DcScaleFactorTable = pbi->quant_info.dc_scale;
     
     ZBinFactor = 0.9;
 
@@ -676,7 +546,7 @@ static void init_dequantizer ( PB_INSTANCE *pbi,
   InterY_coeffs = pbi->quant_tables[1][0][QIndex];
   InterU_coeffs = pbi->quant_tables[1][1][QIndex];
   InterV_coeffs = pbi->quant_tables[1][2][QIndex];
-  DcScaleFactorTable = pbi->quant_info->dc_scale;
+  DcScaleFactorTable = pbi->quant_info.dc_scale;
 
   /* invert the dequant index into the quant index
      the dxer has a different order than the cxer. */
@@ -809,7 +679,7 @@ void UpdateQ( PB_INSTANCE *pbi, int NewQIndex ){
 
   pbi->FrameQIndex = NewQIndex;
   
-  qscale = pbi->quant_info->ac_scale[NewQIndex];
+  qscale = pbi->quant_info.ac_scale[NewQIndex];
   pbi->ThisFrameQualityValue = qscale;
 
   /* Re-initialise the Q tables for forward and reverse transforms. */
@@ -822,16 +692,16 @@ void UpdateQC( CP_INSTANCE *cpi, ogg_uint32_t NewQ ){
 
   /* Do bounds checking and convert to a float.  */
   qscale = NewQ;
-  if ( qscale < pbi->quant_info->ac_scale[Q_TABLE_SIZE-1] )
-    qscale = pbi->quant_info->ac_scale[Q_TABLE_SIZE-1];
-  else if ( qscale > pbi->quant_info->ac_scale[0] )
-    qscale = pbi->quant_info->ac_scale[0];
+  if ( qscale < pbi->quant_info.ac_scale[Q_TABLE_SIZE-1] )
+    qscale = pbi->quant_info.ac_scale[Q_TABLE_SIZE-1];
+  else if ( qscale > pbi->quant_info.ac_scale[0] )
+    qscale = pbi->quant_info.ac_scale[0];
 
   /* Set the inter/intra descision control variables. */
   pbi->FrameQIndex = Q_TABLE_SIZE - 1;
   while ((ogg_int32_t) pbi->FrameQIndex >= 0 ) {
     if ( (pbi->FrameQIndex == 0) ||
-         ( pbi->quant_info->ac_scale[pbi->FrameQIndex] >= NewQ) )
+         ( pbi->quant_info.ac_scale[pbi->FrameQIndex] >= NewQ) )
       break;
     pbi->FrameQIndex --;
   }

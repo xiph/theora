@@ -286,6 +286,153 @@ typedef struct theora_comment{
 
 } theora_comment;
 
+
+/**\name theora_control() codes
+ * \anchor encctlcodes
+ * These are the available request codes for theora_control().
+ * By convention, these are even, to distinguish them from the
+ *  \ref decctlcodes "decoder control codes".
+ * Keep any experimental or vendor-specific values above \c 0x8000.*/
+/*@{*/
+/**Sets the Huffman tables to use.
+ * The tables are copied, not stored by reference, so they can be freed after
+ *  this call.
+ * <tt>NULL</tt> may be specified to revert to the default tables.
+ *
+ * \param[in] buf <tt>#th_huff_code[#TH_NHUFFMAN_TABLES][#TH_NDCT_TOKENS]</tt>
+ * \retval TH_FAULT  \a theora_state is <tt>NULL</tt>.
+ * \retval TH_EINVAL Encoding has already begun or one or more of the given
+ *                     tables is not full or prefix-free, \a buf is
+ *                     <tt>NULL</tt> and \a buf_sz is not zero, or \a buf is
+ *                     non-<tt>NULL</tt> and \a buf_sz is not
+ *                     <tt>sizeof(#th_huff_code)*#TH_NHUFFMAN_TABLES*#TH_NDCT_TOKENS</tt>.
+ * \retval TH_IMPL   Not supported by this implementation.*/
+#define TH_ENCCTL_SET_HUFFMAN_CODES (0)
+/**Sets the quantization parameters to use.
+ * The parameters are copied, not stored by reference, so they can be freed
+ *  after this call.
+ * <tt>NULL</tt> may be specified to revert to the default parameters.
+ * For the current encoder, <tt>scale[ci!=0][qi]</tt> must be no greater than
+ *  <tt>scale[ci!=0][qi-1]</tt> and <tt>base[qti][pli][qi][ci]</tt> must be no
+ *  greater than <tt>base[qti][pli][qi-1][ci]</tt>.
+ * These two conditions ensure that the actual quantizer for a given \a qti,
+ *  \a pli, and \a ci does not increase as \a qi increases.
+ *
+ * \param[in] buf #th_quant_info
+ * \retval TH_FAULT  \a theora_state is <tt>NULL</tt>.
+ * \retval TH_EINVAL Encoding has already begun, the quantization parameters
+ *                    do not meet one of the above stated conditions, \a buf
+ *                    is <tt>NULL</tt> and \a buf_sz is not zero, or \a buf
+ *                    is non-<tt>NULL</tt> and \a buf_sz is not
+ *                    <tt>sizeof(#th_quant_info)</tt>.
+ * \retval TH_IMPL   Not supported by this implementation.*/
+#define TH_ENCCTL_SET_QUANT_PARAMS (2)
+/**Sets the maximum distance between key frames.
+ * This can be changed during an encode, but will be bounded by
+ *  <tt>1<<th_info#keyframe_granule_shift</tt>.
+ * If it is set before encoding begins, th_info#keyframe_granule_shift will
+ *  be enlarged appropriately.
+ *
+ * \param[in]  buf <tt>ogg_uint32_t</tt>: The maximum distance between key
+ *                   frames.
+ * \param[out] buf <tt>ogg_uint32_t</tt>: The actual maximum distance set.
+ * \retval TH_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
+ * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(ogg_uint32_t)</tt>.
+ * \retval TH_IMPL   Not supported by this implementation.*/
+#define TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE (4)
+/**Disables any encoder features that would prevent lossless transcoding back
+ *  to VP3.
+ * This primarily means disabling block-level QI values and not using 4MV mode
+ *  when any of the luma blocks in a macro block are not coded.
+ * It also includes using the VP3 quantization tables and Huffman codes; if you
+ *  set them explicitly after calling this function, the resulting stream will
+ *  not be VP3-compatible.
+ * If you enable VP3-compatibility when encoding 4:2:2 or 4:4:4 source
+ *  material, or when using a picture region smaller than the full frame (e.g.
+ *  a non-multiple-of-16 width or height), then non-VP3 bitstream features will
+ *  still be disabled, but the stream will still not be VP3-compatible, as VP3
+ *  was not capable of encoding such formats.
+ * If you call this after encoding has already begun, then the quantization
+ *  tables and codebooks cannot be changed, but the frame-level features will
+ *  be enabled or disabled as requested.
+ *
+ * \param[in]  buf <tt>int</tt>: a non-zero value to enable VP3 compatibility,
+ *                   or 0 to disable it (the default).
+ * \param[out] buf <tt>int</tt>: 1 if all bitstream features required for
+ *                   VP3-compatibility could be set, and 0 otherwise.
+ *                  The latter will be returned if the pixel format is not
+ *                   4:2:0, the picture region is smaller than the full frame,
+ *                   or if encoding has begun, preventing the quantization
+ *                   tables and codebooks from being set.
+ * \retval TH_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
+ * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(int)</tt>.
+ * \retval TH_IMPL   Not supported by this implementation.*/
+#define TH_ENCCTL_SET_VP3_COMPATIBLE (10)
+/**Gets the maximum speed level.
+ * Higher speed levels favor quicker encoding over better quality per bit.
+ * Depending on the encoding mode, and the internal algorithms used, quality
+ *  may actually improve, but in this case bitrate will also likely increase.
+ * In any case, overall rate/distortion performance will probably decrease.
+ * The maximum value, and the meaning of each value, may change depending on
+ *  the current encoding mode (VBR vs. CQI, etc.).
+ *
+ * \param[out] buf int: The maximum encoding speed level.
+ * \retval TH_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
+ * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(int)</tt>.
+ * \retval TH_IMPL   Not supported by this implementation in the current
+ *                    encoding mode.*/
+#define TH_ENCCTL_GET_SPLEVEL_MAX (12)
+/**Sets the speed level.
+ * By default, the slowest speed (0) is used.
+ *
+ * \param[in] buf int: The new encoding speed level.
+ *                      0 is slowest, larger values use less CPU.
+ * \retval TH_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
+ * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(int)</tt>, or the
+ *                    encoding speed level is out of bounds.
+ *                   The maximum encoding speed level may be
+ *                    implementation- and encoding mode-specific, and can be
+ *                    obtained via #TH_ENCCTL_GET_SPLEVEL_MAX.
+ * \retval TH_IMPL   Not supported by this implementation in the current
+ *                    encoding mode.*/
+#define TH_ENCCTL_SET_SPLEVEL (14)
+/**Puts the encoder in VBR mode.
+ * This can be done at any time during the encoding process, with different
+ *  configuration parameters, to encode different regions of the video segment
+ *  with different qualities.
+ * See the #th_info struct documentation for details on how the default
+ *  encoding mode is chosen.
+ *
+ * \param[in] buf <tt>#th_vbr_cfg</tt>: the configuration parameters.
+ *                 This may be <tt>NULL</tt>, in which case the current VBR
+ *                  configuration is unchanged.
+ *                 The default is to use the QI setting passed in via the
+ *                  #th_info struct when the encoder was initialized, with a
+ *                  full range of admissible quantizers.
+ * \retval OC_EFAULT \a theora_state is <tt>NULL</tt>.
+ * \retval TH_EINVAL The configuration parameters do not meet one of their
+ *                    stated requirements, \a buf is <tt>NULL</tt> and
+ *                    \a buf_sz is not zero, or \a buf is non-<tt>NULL</tt>
+ *                    and \a buf_sz is not <tt>sizeof(#th_vbr_cfg)</tt>.
+ * \retval TH_IMPL   Not supported by this implementation.*/
+#define TH_ENCCTL_SETUP_VBR (16)
+/**Puts the encoder in CQI mode.
+ * This can be done at any time during the encoding process, with different QI
+ *  values.
+ * See the #th_info struct documentation for details on how the default
+ *  encoding mode is chosen.
+ *
+ * \param[in] buf <tt>#th_cqi_cfg</tt>: the configuration parameters.
+ *                 This may be <tt>NULL</tt>, in which case the current CQI
+ *                  configuration is unchanged.
+ *                 The default is to use the QI setting passed in via the
+ *                  #th_info struct when the encoder was initialized.
+ * \retval OC_EFAULT \a theora_state is <tt>NULL</tt>.
+ * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(#th_cqi_cfg)</tt>.
+ * \retval TH_IMPL   Not supported by this implementation.*/
+#define TH_ENCCTL_SETUP_CQI (18)
+/*@}*/
+
 #define OC_FAULT       -1       /**< General failure */
 #define OC_EINVAL      -10      /**< Library encountered invalid internal data */
 #define OC_DISABLED    -11      /**< Requested action is disabled */
@@ -627,6 +774,16 @@ extern int   theora_comment_query_count(theora_comment *tc, char *tag);
  * \param tc An allocated theora_comment structure.
  **/
 extern void  theora_comment_clear(theora_comment *tc);
+
+/**Encoder control function.
+ * This is used to provide advanced control the encoding process.
+ * \param th     A #theora_state handle.
+ * \param req    The control code to process.
+ *                See \ref encctlcodes "the list of available control codes"
+ *                 for details.
+ * \param buf    The parameters for this control code.
+ * \param buf_sz The size of the parameter buffer.*/
+extern int theora_control(theora_state *th,int req,void *buf,size_t buf_sz);
 
 #ifdef __cplusplus
 }

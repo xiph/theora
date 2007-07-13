@@ -29,6 +29,124 @@
 #define A_TABLE_SIZE        29
 #define DF_CANDIDATE_WINDOW 5
 
+/*
+ * th_quant_info for VP3 
+ */
+ 
+/*The default quantization parameters used by VP3.1.*/
+static const int OC_VP31_RANGE_SIZES[1]={63};
+static const th_quant_base OC_VP31_BASES_INTRA_Y[2]={
+  {
+     16, 11, 10, 16, 24,  40, 51, 61,
+     12, 12, 14, 19, 26,  58, 60, 55,
+     14, 13, 16, 24, 40,  57, 69, 56,
+     14, 17, 22, 29, 51,  87, 80, 62,
+     18, 22, 37, 58, 68, 109,103, 77,
+     24, 35, 55, 64, 81, 104,113, 92,
+     49, 64, 78, 87,103, 121,120,101,
+     72, 92, 95, 98,112, 100,103, 99
+  },
+  {
+     16, 11, 10, 16, 24,  40, 51, 61,
+     12, 12, 14, 19, 26,  58, 60, 55,
+     14, 13, 16, 24, 40,  57, 69, 56,
+     14, 17, 22, 29, 51,  87, 80, 62,
+     18, 22, 37, 58, 68, 109,103, 77,
+     24, 35, 55, 64, 81, 104,113, 92,
+     49, 64, 78, 87,103, 121,120,101,
+     72, 92, 95, 98,112, 100,103, 99
+  }
+};
+static const th_quant_base OC_VP31_BASES_INTRA_C[2]={
+  {
+     17, 18, 24, 47, 99, 99, 99, 99,
+     18, 21, 26, 66, 99, 99, 99, 99,
+     24, 26, 56, 99, 99, 99, 99, 99,
+     47, 66, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99
+  },
+  {
+     17, 18, 24, 47, 99, 99, 99, 99,
+     18, 21, 26, 66, 99, 99, 99, 99,
+     24, 26, 56, 99, 99, 99, 99, 99,
+     47, 66, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99,
+     99, 99, 99, 99, 99, 99, 99, 99
+  }
+};
+static const th_quant_base OC_VP31_BASES_INTER[2]={
+  {
+     16, 16, 16, 20, 24, 28, 32, 40,
+     16, 16, 20, 24, 28, 32, 40, 48,
+     16, 20, 24, 28, 32, 40, 48, 64,
+     20, 24, 28, 32, 40, 48, 64, 64,
+     24, 28, 32, 40, 48, 64, 64, 64,
+     28, 32, 40, 48, 64, 64, 64, 96,
+     32, 40, 48, 64, 64, 64, 96,128,
+     40, 48, 64, 64, 64, 96,128,128
+  },
+  {
+     16, 16, 16, 20, 24, 28, 32, 40,
+     16, 16, 20, 24, 28, 32, 40, 48,
+     16, 20, 24, 28, 32, 40, 48, 64,
+     20, 24, 28, 32, 40, 48, 64, 64,
+     24, 28, 32, 40, 48, 64, 64, 64,
+     28, 32, 40, 48, 64, 64, 64, 96,
+     32, 40, 48, 64, 64, 64, 96,128,
+     40, 48, 64, 64, 64, 96,128,128
+  }
+};
+
+const th_quant_info TH_VP31_QUANT_INFO={
+  {
+    220,200,190,180,170,170,160,160,
+    150,150,140,140,130,130,120,120,
+    110,110,100,100, 90, 90, 90, 80,
+     80, 80, 70, 70, 70, 60, 60, 60,
+     60, 50, 50, 50, 50, 40, 40, 40,
+     40, 40, 30, 30, 30, 30, 30, 30,
+     30, 20, 20, 20, 20, 20, 20, 20,
+     20, 10, 10, 10, 10, 10, 10, 10
+  },
+  {
+    500,450,400,370,340,310,285,265,
+    245,225,210,195,185,180,170,160,
+    150,145,135,130,125,115,110,107,
+    100, 96, 93, 89, 85, 82, 75, 74,
+     70, 68, 64, 60, 57, 56, 52, 50,
+     49, 45, 44, 43, 40, 38, 37, 35,
+     33, 32, 30, 29, 28, 25, 24, 22,
+     21, 19, 18, 17, 15, 13, 12, 10
+  },
+  {
+    30,25,20,20,15,15,14,14,
+    13,13,12,12,11,11,10,10,
+     9, 9, 8, 8, 7, 7, 7, 7,
+     6, 6, 6, 6, 5, 5, 5, 5,
+     4, 4, 4, 4, 3, 3, 3, 3,
+     2, 2, 2, 2, 2, 2, 2, 2,
+     0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0, 0
+  },
+  {
+    {
+      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTRA_Y},
+      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTRA_C},
+      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTRA_C}
+    },
+    {
+      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTER},
+      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTER},
+      {1,OC_VP31_RANGE_SIZES,OC_VP31_BASES_INTER}
+    }
+  }
+};
+
 
 static void EClearFragmentInfo(CP_INSTANCE * cpi){
   if(cpi->extra_fragments)
@@ -915,13 +1033,15 @@ int theora_encode_init(theora_state *th, theora_info *c){
   InitHuffmanSet(&cpi->pb);
 
   /* This makes sure encoder version specific tables are initialised */
-  cpi->pb.encoder_profile = PROFILE_VP3;
+  memcpy(&cpi->pb.quant_info, &TH_VP31_QUANT_INFO, sizeof(th_quant_info));
   InitQTables(&cpi->pb);
 
   /* Indicate that the next frame to be compressed is the first in the
      current clip. */
   cpi->ThisIsFirstFrame = 1;
   cpi->readyflag = 1;
+  
+  cpi->pb.HeadersWritten = 0;
 
   return 0;
 }
@@ -1200,6 +1320,8 @@ int theora_encode_tables(theora_state *t, ogg_packet *op){
   op->granulepos=0;
   cpi->packetflag=0;
 
+  cpi->pb.HeadersWritten = 1;
+
   return(0);
 }
 
@@ -1257,4 +1379,38 @@ ogg_int64_t theora_granule_frame_enc(theora_state *th,ogg_int64_t granulepos){
   }
 
   return(-1);
+}
+
+
+int theora_control(theora_state *th,int req,void *buf,size_t buf_sz) {
+
+  if(th == NULL)
+    return TH_EFAULT;
+
+  CP_INSTANCE *cpi = th->internal_encode;
+  PB_INSTANCE *pbi = &cpi->pb;
+  
+  switch(req) {
+    case TH_ENCCTL_SET_QUANT_PARAMS:
+      if( ( buf==NULL&&buf_sz!=0 )
+  	   || ( buf!=NULL&&buf_sz!=sizeof(th_quant_info) )
+  	   || cpi->pb.HeadersWritten ){
+        return TH_EINVAL;
+      }
+      
+      memcpy(&pbi->quant_info, buf, sizeof(th_quant_info));
+      InitQTables(pbi);
+      
+      return 0;
+    case TH_ENCCTL_SET_VP3_COMPATIBLE:
+      if(cpi->pb.HeadersWritten)
+        return TH_EINVAL;
+      
+      memcpy(&pbi->quant_info, &TH_VP31_QUANT_INFO, sizeof(th_quant_info));
+      InitQTables(pbi);
+      
+      return 0;  
+    default:
+      return TH_EIMPL;
+  }
 }

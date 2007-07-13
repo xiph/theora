@@ -66,7 +66,7 @@ int ReadFilterTables(codec_setup_info *ci, oggpack_buffer *opb){
 void SetupLoopFilter(PB_INSTANCE *pbi){
   ogg_int32_t FLimit;
 
-  FLimit = pbi->quant_info->loop_filter_limits[pbi->FrameQIndex];
+  FLimit = pbi->quant_info.loop_filter_limits[pbi->FrameQIndex];
   SetupBoundingValueArray_Generic(pbi, FLimit);
 }
 
@@ -701,12 +701,12 @@ void LoopFilter(PB_INSTANCE *pbi){
   QIndex = Q_TABLE_SIZE - 1;
   while ( QIndex >= 0 ) {
     if ( (QIndex == 0) ||
-         ( pbi->quant_info->ac_scale[QIndex] >= pbi->ThisFrameQualityValue) )
+         ( pbi->quant_info.ac_scale[QIndex] >= pbi->ThisFrameQualityValue) )
       break;
     QIndex --;
   }
 
-  FLimit = pbi->quant_info->loop_filter_limits[QIndex];
+  FLimit = pbi->quant_info.loop_filter_limits[QIndex];
   if ( FLimit == 0 ) return;
   SetupBoundingValueArray_Generic(pbi, FLimit);
 
