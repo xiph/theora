@@ -23,6 +23,8 @@ extern "C"
 {
 #endif /* __cplusplus */
 
+#include <stddef.h>	/* for size_t */
+
 #ifndef LIBOGG2
 #include <ogg/ogg.h>
 #else
