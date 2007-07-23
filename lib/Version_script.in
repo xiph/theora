@@ -23,6 +23,8 @@
 		theora_decode_packetin;
 		theora_decode_YUVout;
 
+		theora_control;
+
 		theora_packet_isheader;
 		theora_packet_iskeyframe;
 
