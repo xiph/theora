@@ -1101,7 +1101,8 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
   QIndex = (unsigned char)cpi->pb.FrameQIndex;
 
-
+  if(!cpi->MotionCompensation)
+    return 0;
 
   /* change the quatization matrix to the one at best Q to compute the
      new error score */

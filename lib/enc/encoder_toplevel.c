@@ -1383,7 +1383,9 @@ ogg_int64_t theora_granule_frame_enc(theora_state *th,ogg_int64_t granulepos){
 
 
 int theora_control(theora_state *th,int req,void *buf,size_t buf_sz) {
-
+  
+  int value;
+  
   if(th == NULL)
     return TH_EFAULT;
 
@@ -1409,7 +1411,38 @@ int theora_control(theora_state *th,int req,void *buf,size_t buf_sz) {
       memcpy(&pbi->quant_info, &TH_VP31_QUANT_INFO, sizeof(th_quant_info));
       InitQTables(pbi);
       
-      return 0;  
+      return 0;
+    case TH_ENCCTL_SET_SPLEVEL:
+      if(buf == NULL || buf_sz != sizeof(int))
+        return TH_EINVAL;
+      
+      memcpy(&value, buf, sizeof(int));
+            
+      switch(value) {
+        case 0:
+          cpi->MotionCompensation = 1;
+          pbi->info.quick_p = 0;
+        break;
+        
+        case 1:
+          cpi->MotionCompensation = 1;
+          pbi->info.quick_p = 1;
+        break;
+        
+        case 2:
+          cpi->MotionCompensation = 0;
+          pbi->info.quick_p = 1;
+        break;
+        
+        default:
+          return TH_EINVAL;    
+      }
+      
+      return 0;
+    case TH_ENCCTL_GET_SPLEVEL_MAX:
+      value = 2;
+      memcpy(buf, &value, sizeof(int));
+      return 0;
     default:
       return TH_EIMPL;
   }
