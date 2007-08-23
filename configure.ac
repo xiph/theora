@@ -15,6 +15,11 @@ AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
 
 dnl Library versioning
+dnl CURRENT, REVISION, AGE
+dnl - library source changed -> increment REVISION
+dnl - interfaces added/removed/changed -> increment CURRENT, REVISION = 0
+dnl - interfaces added -> increment AGE
+dnl - interfaces removed -> AGE = 0
 
 V_LIB_CURRENT=2
 V_LIB_REVISION=0
