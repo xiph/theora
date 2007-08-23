@@ -26,18 +26,18 @@
 int oc_quant_params_unpack(oggpack_buffer *_opb,
  th_quant_info *_qinfo){
   th_quant_base *base_mats;
-  long               val;
-  int                nbase_mats;
-  int                sizes[64];
-  int                indices[64];
-  int                nbits;
-  int                bmi;
-  int                ci;
-  int                qti;
-  int                pli;
-  int                qri;
-  int                qi;
-  int                i;
+  long           val;
+  int            nbase_mats;
+  int            sizes[64];
+  int            indices[64];
+  int            nbits;
+  int            bmi;
+  int            ci;
+  int            qti;
+  int            pli;
+  int            qri;
+  int            qi;
+  int            i;
   theora_read(_opb,3,&val);
   nbits=(int)val;
   for(qi=0;qi<64;qi++){
@@ -69,7 +69,7 @@ int oc_quant_params_unpack(oggpack_buffer *_opb,
   for(i=0;i<6;i++){
     th_quant_ranges *qranges;
     th_quant_base   *qrbms;
-    int                 *qrsizes;
+    int             *qrsizes;
     qti=i/3;
     pli=i%3;
     qranges=_qinfo->qi_ranges[qti]+pli;
@@ -115,8 +115,8 @@ int oc_quant_params_unpack(oggpack_buffer *_opb,
     qranges->nranges=qri;
     qranges->sizes=qrsizes=(int *)_ogg_malloc(qri*sizeof(qrsizes[0]));
     memcpy(qrsizes,sizes,qri*sizeof(qrsizes[0]));
-    qranges->base_matrices=qrbms=(th_quant_base *)_ogg_malloc(
-     (qri+1)*sizeof(qrbms[0]));
+    qrbms=(th_quant_base *)_ogg_malloc((qri+1)*sizeof(qrbms[0]));
+    qranges->base_matrices=(const th_quant_base *)qrbms;
     do{
       bmi=indices[qri];
       /*Note: The caller is responsible for cleaning up any partially

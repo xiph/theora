@@ -15,7 +15,7 @@
 
  ********************************************************************/
 
-#include "huffman.h"
+#include "../dec/huffman.h"
 #include "codec_internal.h"
 
 const unsigned char ExtraBitLengths_VP31[MAX_ENTROPY_TOKENS] = {

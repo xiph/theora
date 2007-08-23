@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <string.h>
-#include "internal.h"
+#include "../internal.h"
 #include "idct.h"
 
 
@@ -287,10 +287,10 @@ static void oc_set_chroma_mvs11(char _cbmvs[4][2],const char _lbmvs[4][2]){
    macro block when 4 different motion vectors are specified in the luma
    plane.*/
 const oc_set_chroma_mvs_func OC_SET_CHROMA_MVS_TABLE[TH_PF_NFORMATS]={
-  oc_set_chroma_mvs00,
-  oc_set_chroma_mvs01,
-  oc_set_chroma_mvs10,
-  oc_set_chroma_mvs11
+  (oc_set_chroma_mvs_func)oc_set_chroma_mvs00,
+  (oc_set_chroma_mvs_func)oc_set_chroma_mvs01,
+  (oc_set_chroma_mvs_func)oc_set_chroma_mvs10,
+  (oc_set_chroma_mvs_func)oc_set_chroma_mvs11
 };
 
 
@@ -339,7 +339,7 @@ void **oc_calloc_2d(size_t _height,size_t _width,size_t _sz){
   return (void **)ret;
 }
 
-void oc_free_2d(void **_ptr){
+void oc_free_2d(void *_ptr){
   _ogg_free(_ptr);
 }
 

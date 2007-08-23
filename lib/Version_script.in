@@ -44,14 +44,16 @@
 		theora_comment_query_count;
 		theora_comment_clear;
 
-		th_version_number;
 		th_version_string;
-		
-		th_decode_alloc;
-		th_decode_ctl;
+		th_version_number;
+
 		th_decode_headerin;
+		th_decode_alloc;
+		th_setup_free;
+		th_decode_ctl;
 		th_decode_packetin;
 		th_decode_ycbcr_out;
+		th_decode_free;
 
 		th_packet_isheader;
 		th_packet_iskeyframe;
@@ -59,12 +61,9 @@
 		th_granule_frame;
 		th_granule_time;
 
-		th_setup_free;
-		th_decode_free;
-
 		th_info_init;
 		th_info_clear;
-		
+
 		th_comment_init;
 		th_comment_add;
 		th_comment_add_tag;

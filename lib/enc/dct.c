@@ -17,7 +17,7 @@
 
 #include "codec_internal.h"
 #include "dsp.h"
-#include "cpu.h"
+#include "../cpu.h"
 
 static ogg_int32_t xC1S7 = 64277;
 static ogg_int32_t xC2S6 = 60547;

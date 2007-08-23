@@ -17,7 +17,6 @@
 #if !defined(_x86_cpu_H)
 # define _x86_cpu_H (1)
 #include "internal.h"
-#include "codec_internal.h"
 
 #define OC_CPU_X86_MMX    (1<<0)
 #define OC_CPU_X86_3DNOW  (1<<1)

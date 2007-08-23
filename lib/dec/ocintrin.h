@@ -32,9 +32,6 @@ static int oc_mini(int _a,int _b){
   return (_a&~ambsign)+(_b&ambsign);
 }*/
 
-static unsigned char oc_clamp255(int _x){
-  return (unsigned char)(((_x<0)-1)&(_x|-(_x>255)));
-}
 
 #define OC_MAXI(_a,_b)      ((_a)<(_b)?(_b):(_a))
 #define OC_MINI(_a,_b)      ((_a)>(_b)?(_b):(_a))
@@ -45,7 +42,7 @@ static unsigned char oc_clamp255(int _x){
   _b: The value to clamp.
   _c: The upper boud.*/
 #define OC_CLAMPI(_a,_b,_c) (OC_MAXI(_a,OC_MINI(_b,_c)))
-#define OC_CLAMP255(_x)     (oc_clamp255(_x))
+#define OC_CLAMP255(_x)     ((unsigned char)((((_x)<0)-1)&((_x)|-((_x)>255))))
 /*Divides an integer by a power of two, truncating towards 0.
   _dividend: The integer to divide.
   _shift:    The non-negative power of two to divide by.

@@ -291,8 +291,7 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
    version. */
 static void fdct_short__mmx ( ogg_int16_t *InputData, ogg_int16_t *OutputData)
 {
-  ogg_int64_t __attribute__((aligned(8))) align_tmp[16];
-  ogg_int16_t *const temp= (ogg_int16_t*)align_tmp;
+  ogg_int16_t __attribute__((aligned(8))) temp[8*8];
 
   __asm__ __volatile__ (
     "  .balign 16                   \n\t"

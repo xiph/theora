@@ -621,6 +621,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
     int          mapi;
     int          mapii;
     int          fragi;
+    int          mb_mode;
     /*Search for at least one coded fragment.*/
     ncoded=mapii=0;
     do{
@@ -630,7 +631,8 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
     }
     while(++mapii<map_nidxs);
     if(ncoded<=0)continue;
-    switch(mb->mode){
+    mb_mode=mb->mode;
+    switch(mb_mode){
       case OC_MODE_INTER_MV_FOUR:{
         char lbmvs[4][2];
         int  bi;
@@ -640,7 +642,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
           if(coded[codedi]==bi){
             codedi++;
             frag=_dec->state.frags+mb->map[0][bi];
-            frag->mbmode=mb->mode;
+            frag->mbmode=mb_mode;
             frag->mv[0]=lbmvs[bi][0]=(char)(*mv_comp_unpack)(&_dec->opb);
             frag->mv[1]=lbmvs[bi][1]=(char)(*mv_comp_unpack)(&_dec->opb);
           }
@@ -658,7 +660,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
             mapi=coded[codedi];
             bi=mapi&3;
             frag=_dec->state.frags+mb->map[mapi>>2][bi];
-            frag->mbmode=mb->mode;
+            frag->mbmode=mb_mode;
             frag->mv[0]=cbmvs[bi][0];
             frag->mv[1]=cbmvs[bi][1];
           }
@@ -690,12 +692,12 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
     }
     /*4MV mode fills in the fragments itself.
       For all other modes we can use this common code.*/
-    if(mb->mode!=OC_MODE_INTER_MV_FOUR){
+    if(mb_mode!=OC_MODE_INTER_MV_FOUR){
       for(codedi=0;codedi<ncoded;codedi++){
         mapi=coded[codedi];
         fragi=mb->map[mapi>>2][mapi&3];
         frag=_dec->state.frags+fragi;
-        frag->mbmode=mb->mode;
+        frag->mbmode=mb_mode;
         frag->mv[0]=mbmv[0];
         frag->mv[1]=mbmv[1];
       }

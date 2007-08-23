@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "toplevel_lookup.h"
-#include "internal.h"
+#include "../internal.h"
 #include "dsp.h"
 #include "codec_internal.h"
 
@@ -888,6 +888,8 @@ static int _ilog(unsigned int v){
   return(ret);
 }
 
+static void theora_encode_dispatch_init(CP_INSTANCE *cpi);
+
 int theora_encode_init(theora_state *th, theora_info *c){
   int i;
 
@@ -897,6 +899,7 @@ int theora_encode_init(theora_state *th, theora_info *c){
   /*Currently only the 4:2:0 format is supported.*/
   if(c->pixelformat!=OC_PF_420)return OC_IMPL;
   th->internal_encode=cpi=_ogg_calloc(1,sizeof(*cpi));
+  theora_encode_dispatch_init(cpi);
 
   dsp_static_init (&cpi->dsp);
   memcpy (&cpi->pb.dsp, &cpi->dsp, sizeof(DspFunctions));
@@ -1325,7 +1328,9 @@ int theora_encode_tables(theora_state *t, ogg_packet *op){
   return(0);
 }
 
-void theora_encoder_clear (CP_INSTANCE * cpi){
+static void theora_encode_clear (theora_state  *th){
+  CP_INSTANCE *cpi;
+  cpi=(CP_INSTANCE *)th->internal_encode;
   if(cpi){
     
     ClearHuffmanSet(&cpi->pb);
@@ -1340,11 +1345,13 @@ void theora_encoder_clear (CP_INSTANCE * cpi){
     _ogg_free(cpi->oggbuffer);
     _ogg_free(cpi);
   }
+  th->internal_encode=NULL;
 }
 
 /* returns, in seconds, absolute time of current packet in given
    logical stream */
-double theora_granule_time_enc(theora_state *th,ogg_int64_t granulepos){
+static double theora_encode_granule_time(theora_state *th,
+ ogg_int64_t granulepos){
 #ifndef THEORA_DISABLE_FLOAT
   CP_INSTANCE *cpi=(CP_INSTANCE *)(th->internal_encode);
   PB_INSTANCE *pbi=(PB_INSTANCE *)(th->internal_decode);
@@ -1365,7 +1372,8 @@ double theora_granule_time_enc(theora_state *th,ogg_int64_t granulepos){
 }
 
 /* returns frame number of current packet in given logical stream */
-ogg_int64_t theora_granule_frame_enc(theora_state *th,ogg_int64_t granulepos){
+static ogg_int64_t theora_encode_granule_frame(theora_state *th,
+ ogg_int64_t granulepos){
   CP_INSTANCE *cpi=(CP_INSTANCE *)(th->internal_encode);
   PB_INSTANCE *pbi=(PB_INSTANCE *)(th->internal_decode);
 
@@ -1382,7 +1390,8 @@ ogg_int64_t theora_granule_frame_enc(theora_state *th,ogg_int64_t granulepos){
 }
 
 
-int theora_control(theora_state *th,int req,void *buf,size_t buf_sz) {
+static int theora_encode_control(theora_state *th,int req,
+ void *buf,size_t buf_sz) {
   
   int value;
   
@@ -1446,4 +1455,11 @@ int theora_control(theora_state *th,int req,void *buf,size_t buf_sz) {
     default:
       return TH_EIMPL;
   }
+}
+
+static void theora_encode_dispatch_init(CP_INSTANCE *cpi){
+  cpi->dispatch_vtbl.clear=theora_encode_clear;
+  cpi->dispatch_vtbl.control=theora_encode_control;
+  cpi->dispatch_vtbl.granule_frame=theora_encode_granule_frame;
+  cpi->dispatch_vtbl.granule_time=theora_encode_granule_time;
 }

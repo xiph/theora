@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include "internal.h"
+#include "../internal.h"
 
 
 

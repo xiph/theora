@@ -17,9 +17,9 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "internal.h"
+#include "../internal.h"
 #include "idct.h"
-#if defined(OC_X86ASM)
+#if defined(USE_ASM)
 # include "x86/x86int.h"
 #endif
 #if defined(OC_DUMP_IMAGES)
@@ -535,7 +535,7 @@ void oc_state_vtable_init_c(oc_theora_state *_state){
 
 /*Initialize the accelerated function pointers.*/
 void oc_state_vtable_init(oc_theora_state *_state){
-#if defined(OC_X86ASM)
+#if defined(USE_ASM)
   oc_state_vtable_init_x86(_state);
 #else
   oc_state_vtable_init_c(_state);

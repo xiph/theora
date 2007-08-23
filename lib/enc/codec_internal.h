@@ -535,6 +535,10 @@ typedef struct PB_INSTANCE {
 
 /* Encoder (Compressor) instance -- installed in a theora_state */
 typedef struct CP_INSTANCE {
+  /*This structure must be first.
+    It contains entry points accessed by the decoder library's API wrapper, and
+     is the only assumption that library makes about our internal format.*/
+  oc_enc_dispatch_vtbl dispatch_vtbl;
 
   /* Compressor Configuration */
   SCAN_CONFIG_DATA ScanConfig;

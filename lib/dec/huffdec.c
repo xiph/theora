@@ -251,7 +251,7 @@ int oc_huff_trees_unpack(oggpack_buffer *_opb,
   _dst: The array to store the copy in.
   _src: The array of trees to copy.*/
 void oc_huff_trees_copy(oc_huff_node *_dst[TH_NHUFFMAN_TABLES],
- const oc_huff_node *const _src[TH_NHUFFMAN_TABLES]){
+ /*const*/ oc_huff_node *const _src[TH_NHUFFMAN_TABLES]){
   int i;
   for(i=0;i<TH_NHUFFMAN_TABLES;i++)_dst[i]=oc_huff_tree_copy(_src[i]);
 }

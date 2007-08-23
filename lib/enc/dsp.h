@@ -19,7 +19,7 @@
 #define DSP_H
 
 #include "theora/theora.h"
-#include "cpu.h"
+#include "../cpu.h"
 
 typedef struct
 {

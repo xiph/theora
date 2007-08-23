@@ -24,7 +24,7 @@
 /*theora-exp header.*/
 #include "theora/theoradec.h"
 /*For oc_ilog et al.*/
-#include "internal.h"
+#include "../internal.h"
 
 typedef struct th_api_wrapper th_api_wrapper;
 
@@ -65,15 +65,14 @@ void theora_info_clear(theora_info *_ci){
 }
 
 void theora_clear(theora_state *_td){
-  if(_td->i!=NULL)
-    if(_td->internal_encode==NULL) {
-      theora_info_clear(_td->i);
-      _ogg_free(_td->i);
-      _td->i=NULL;
-    }
-    else {
-      //FIXME: what needs to be freed if theora_state was created by encoder
-    }
+  if(_td->internal_encode!=NULL){
+    (*((oc_enc_dispatch_vtbl *)_td->internal_encode)->clear)(_td);
+  }
+  else if(_td->i!=NULL){
+    theora_info_clear(_td->i);
+    _ogg_free(_td->i);
+    _td->i=NULL;
+  }
 }
 
 static void theora_info2th_info(th_info *_info,const theora_info *_ci){
@@ -132,8 +131,7 @@ int theora_decode_init(theora_state *_td,theora_info *_ci){
   /*Don't bother to copy the setup info; th_decode_alloc() makes its own copy
      of the stuff it needs.*/
   dapi->decode=th_decode_alloc(&info,api->setup);
-  
-  return(0);
+  return 0;
 }
 
 static void th_info2theora_info(theora_info *_ci,const th_info *_info){
@@ -222,6 +220,15 @@ int theora_decode_YUVout(theora_state *_td,yuv_buffer *_yuv){
   return ret;
 }
 
+int theora_control(theora_state *_td,int _req,void *_buf,size_t _buf_sz){
+  if(_td->internal_encode!=NULL){
+    return (*((oc_enc_dispatch_vtbl *)_td->internal_encode)->control)(_td,
+     _req,_buf,_buf_sz);
+  }
+  return th_decode_ctl(((th_api_wrapper *)_td->i->codec_setup)->decode,
+   _req,_buf,_buf_sz);
+}
+
 int theora_packet_isheader(ogg_packet *_op){
   return th_packet_isheader(_op);
 }
@@ -238,16 +245,21 @@ int theora_granule_shift(theora_info *_ci){
 }
 
 ogg_int64_t theora_granule_frame(theora_state *_td,ogg_int64_t _gp){
-  if(_td->internal_encode!=NULL)
-    return theora_granule_time_enc(_td, _gp);
+  if(_td->internal_encode!=NULL){
+    return
+     (*((oc_enc_dispatch_vtbl *)_td->internal_encode)->granule_frame)(_td,_gp);
+  }
   return th_granule_frame(((th_api_wrapper *)_td->i->codec_setup)->decode,_gp);
 }
 
 double theora_granule_time(theora_state *_td, ogg_int64_t _gp){
-  if(_td->internal_encode!=NULL)
-    return theora_granule_time_enc(_td, _gp);
+  if(_td->internal_encode!=NULL){
+    return
+     (*((oc_enc_dispatch_vtbl *)_td->internal_encode)->granule_time)(_td,_gp);
+  }
   return th_granule_time(((th_api_wrapper *)_td->i->codec_setup)->decode,_gp);
 }
+
 void theora_comment_init(theora_comment *_tc){
   th_comment_init((th_comment *)_tc);
 }

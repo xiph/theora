@@ -23,12 +23,14 @@
 # endif
 # include "theora/codec.h"
 # include "theora/theora.h"
-# include "ocintrin.h"
-# include "huffman.h"
-# include "quant.h"
+# include "dec/ocintrin.h"
+# include "dec/huffman.h"
+# include "dec/quant.h"
 
 /*Thank you Microsoft, I know the order of operations.*/
-#pragma warning(disable:4554)
+# if defined(_MSC_VER)
+#  pragma warning(disable:4554)
+# endif
 
 /*This library's version.*/
 # define OC_VENDOR_STRING "Xiph.Org libTheora I 20060526 3 2 0"
@@ -352,7 +354,7 @@ struct oc_theora_state{
            prediction.
   _lbmvs: The luma block-level motion vectors.*/
 typedef void (*oc_set_chroma_mvs_func)(char _cbmvs[4][2],
- const char _lbmvs[4][2]);
+ /*const*/ char _lbmvs[4][2]);
 
 
 
@@ -386,7 +388,7 @@ extern const oc_set_chroma_mvs_func OC_SET_CHROMA_MVS_TABLE[TH_PF_NFORMATS];
 int oc_ilog(unsigned _v);
 void **oc_malloc_2d(size_t _height,size_t _width,size_t _sz);
 void **oc_calloc_2d(size_t _height,size_t _width,size_t _sz);
-void oc_free_2d(void **_ptr);
+void oc_free_2d(void *_ptr);
 
 void oc_ycbcr_buffer_flip(th_ycbcr_buffer _dst,
  const th_ycbcr_buffer _src);
@@ -450,7 +452,26 @@ void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
  int _refi,int _pli,int _fragy0,int _fragy_end);
 void oc_restore_fpu_c(void);
 
-extern double theora_granule_time_enc(theora_state *th,ogg_int64_t granulepos);
-extern ogg_int64_t theora_granule_frame_enc(theora_state *th,ogg_int64_t granulepos);
+/*We need a way to call a few enocder functions without introducing a link-time
+   dependency into the decoder, while still allowing the old alpha API which
+   does not distinguish between encoder and decoder objects to be used.
+  We do this by placing a function table at the start of the encoder object
+   which can dispatch into the encoder library.*/
+typedef void (*oc_enc_clear_func)(theora_state *_th);
+typedef int (*oc_enc_control_func)(theora_state *th,int req,
+ void *buf,size_t buf_sz);
+typedef ogg_int64_t (*oc_enc_granule_frame_func)(theora_state *_th,
+ ogg_int64_t _granulepos);
+typedef double (*oc_enc_granule_time_func)(theora_state *_th,
+ ogg_int64_t _granulepos);
+
+typedef struct oc_enc_dispatch_vtbl oc_enc_dispatch_vtbl;
+
+struct oc_enc_dispatch_vtbl{
+  oc_enc_clear_func         clear;
+  oc_enc_control_func       control;
+  oc_enc_granule_frame_func granule_frame;
+  oc_enc_granule_time_func  granule_time;
+};
 
 #endif
