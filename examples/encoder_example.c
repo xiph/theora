@@ -16,10 +16,18 @@
 
  ********************************************************************/
 
+#if !defined(_GNU_SOURCE)
 #define _GNU_SOURCE
+#endif
+#if !defined(_LARGEFILE_SOURCE)
 #define _LARGEFILE_SOURCE
+#endif
+#if !defined(_LARGEFILE64_SOURCE)
 #define _LARGEFILE64_SOURCE
+#endif
+#if !defined(_FILE_OFFSET_BITS)
 #define _FILE_OFFSET_BITS 64
+#endif
 
 /* Define to give performance data win32 only*/
 //#define THEORA_PERF_DATA 
@@ -37,16 +45,16 @@
 #endif
 
 #include <stdio.h>
-#ifndef WIN32
-#include <unistd.h>
-#endif
-#include <stdlib.h>
-#include <string.h>
-#ifndef WIN32
+#ifndef _WIN32
 #include <getopt.h>
+#include <unistd.h>
 #else
 #include "getopt.h"
 #endif
+#ifndef _WIN32
+#endif
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <math.h>
 #include "theora/theora.h"
@@ -567,7 +575,7 @@ int fetch_and_process_video(FILE *video,ogg_page *videopage,
   return videoflag;
 }
 
-int main(int argc,char *argv[]){
+int main(int argc,char *const *argv){
   int c,long_option_index,ret;
 
   ogg_stream_state to; /* take physical pages, weld into a logical

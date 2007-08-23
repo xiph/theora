@@ -25,10 +25,18 @@
    A simple 'demux and write back streams' would have been easier,
    it's true. */
 
+#if !defined(_GNU_SOURCE)
 #define _GNU_SOURCE
+#endif
+#if !defined(_LARGEFILE_SOURCE)
 #define _LARGEFILE_SOURCE
+#endif
+#if !defined(_LARGEFILE64_SOURCE)
 #define _LARGEFILE64_SOURCE
+#endif
+#if !defined(_FILE_OFFSET_BITS)
 #define _FILE_OFFSET_BITS 64
+#endif
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -434,7 +442,7 @@ static void usage(void){
   );
 }
 
-int main(int argc,char *argv[]){
+int main(int argc,char *const *argv){
 
   int pp_level_max;
   int pp_level;

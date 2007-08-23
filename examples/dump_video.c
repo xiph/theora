@@ -18,13 +18,26 @@
 /* By Mauricio Piacentini (mauricio at xiph.org) */
 /*  simply dump decoded YUV data, for verification of theora bitstream */
 
+#if !defined(_GNU_SOURCE)
 #define _GNU_SOURCE
+#endif
+#if !defined(_LARGEFILE_SOURCE)
 #define _LARGEFILE_SOURCE
+#endif
+#if !defined(_LARGEFILE64_SOURCE)
 #define _LARGEFILE64_SOURCE
+#endif
+#if !defined(_FILE_OFFSET_BITS)
 #define _FILE_OFFSET_BITS 64
+#endif
 
 #include <stdio.h>
+#if !defined(_WIN32)
+#include <getopt.h>
 #include <unistd.h>
+#else
+#include "getopt.h"
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <sys/timeb.h>
@@ -37,7 +50,6 @@
 #include <fcntl.h>
 #include <math.h>
 #include <signal.h>
-#include "getopt.h"
 #include "theora/theoradec.h"
 
 const char *optstring = "o:rf";
@@ -165,7 +177,7 @@ static void usage(void){
   );
 }
 
-int main(int argc,char *argv[]){
+int main(int argc,char *const *argv){
 
   ogg_packet op;
 
