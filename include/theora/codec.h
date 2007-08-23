@@ -182,26 +182,26 @@ typedef struct{
   /**\name Theora version
    * Bitstream version information.*/
   /*@{*/
-  unsigned char      version_major;
-  unsigned char      version_minor;
-  unsigned char      version_subminor;
+  unsigned char version_major;
+  unsigned char version_minor;
+  unsigned char version_subminor;
   /*@}*/
   /**The encoded frame width.
    * This must be a multiple of 16, and less than 1048576.*/
-  ogg_uint32_t       frame_width;
+  ogg_uint32_t  frame_width;
   /**The encoded frame height.
    * This must be a multiple of 16, and less than 1048576.*/
-  ogg_uint32_t       frame_height;
+  ogg_uint32_t  frame_height;
   /**The displayed picture width.
    * This must be no larger than width.*/
-  ogg_uint32_t       pic_width;
+  ogg_uint32_t  pic_width;
   /**The displayed picture height.
    * This must be no larger than height.*/
-  ogg_uint32_t       pic_height;
+  ogg_uint32_t  pic_height;
   /**The X offset of the displayed picture.
    * This must be no larger than #frame_width-#pic_width or 255, whichever is
    *  smaller.*/
-  ogg_uint32_t       pic_x;
+  ogg_uint32_t  pic_x;
   /**The Y offset of the displayed picture.
    * This must be no larger than #frame_height-#pic_height, and
    *  #frame_height-#pic_height-#pic_y must be no larger than 255.
@@ -209,13 +209,13 @@ typedef struct{
    *  specified from the top of the image for consistency with the standard
    *  graphics left-handed coordinate system used throughout this API, while it
    *  is stored in the encoded stream as an offset from the bottom.*/
-  ogg_uint32_t       pic_y;
+  ogg_uint32_t  pic_y;
   /**\name Frame rate
    * The frame rate, as a fraction.
    * If either is 0, the frame rate is undefined.*/
   /*@{*/
-  ogg_uint32_t       fps_numerator;
-  ogg_uint32_t       fps_denominator;
+  ogg_uint32_t  fps_numerator;
+  ogg_uint32_t  fps_denominator;
   /*@}*/
   /**\name Aspect ratio
    * The aspect ratio of the pixels.
@@ -226,20 +226,20 @@ typedef struct{
    *  aspect_numerator*pic_width/(aspect_denominator*pic_height).
    * \endcode */
   /*@{*/
-  ogg_uint32_t       aspect_numerator;
-  ogg_uint32_t       aspect_denominator;
+  ogg_uint32_t  aspect_numerator;
+  ogg_uint32_t  aspect_denominator;
   /*@}*/
   /**The color space.*/
-  th_colorspace  colorspace;
+  th_colorspace colorspace;
   /**The pixel format.*/
-  th_pixel_fmt   pixel_fmt;
+  th_pixel_fmt  pixel_fmt;
   /**The target bit-rate in bits per second.
      If initializing an encoder with this struct, set this field to a non-zero
       value to activate CBR encoding by default.*/
   /*TODO: Current encoder does not support CBR mode, or anything like it.
     We also don't really know what nominal rate each quality level
      corresponds to yet.*/
-  int                target_bitrate;
+  int           target_bitrate;
   /**The target quality level.
      Valid values range from 0 to 63, inclusive, with higher values giving
       higher quality.
@@ -259,7 +259,7 @@ typedef struct{
      too large for the current bitstream to be able to store.
     We'd have to redesign the token syntax to store these large coefficients,
      which would make transcoding complex.*/
-  int                quality;
+  int           quality;
   /**The amount to shift to extract the last keyframe number from the granule
    *  position.
    * This can be at most 31.
@@ -273,7 +273,7 @@ typedef struct{
    *  during encoding (for example, to force the next frame to be a keyframe),
    *  but it cannot be set larger than the amount permitted by this field after
    *  the headers have been output.*/
-  int                keyframe_granule_shift;
+  int           keyframe_granule_shift;
 }th_info;
 
 /**The comment information.
@@ -320,10 +320,10 @@ typedef unsigned char th_quant_base[64];
 /**A set of \a qi ranges.*/
 typedef struct{
   /**The number of ranges in the set.*/
-  int                      nranges;
+  int                  nranges;
   /**The size of each of the #nranges ranges.
      These must sum to 63.*/
-  const int               *sizes;
+  const int           *sizes;
   /**#nranges <tt>+1</tt> base matrices.
      Matrices \a i and <tt>i+1</tt> form the endpoints of range \a i.*/
   const th_quant_base *base_matrices;
@@ -388,11 +388,11 @@ typedef struct{
    This is not required by the decoder.*/
 typedef struct{
   /**The DC scaling factors.*/
-  ogg_uint16_t        dc_scale[64];
+  ogg_uint16_t    dc_scale[64];
   /**The AC scaling factors.*/
-  ogg_uint16_t        ac_scale[64];
+  ogg_uint16_t    ac_scale[64];
   /**The loop filter limit values.*/
-  unsigned char       loop_filter_limits[64];
+  unsigned char   loop_filter_limits[64];
   /**The \a qi ranges for each \a ci and \a pli.*/
   th_quant_ranges qi_ranges[2][3];
 }th_quant_info;
