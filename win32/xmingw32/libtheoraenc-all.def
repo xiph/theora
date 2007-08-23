@@ -1,0 +1,7 @@
+EXPORTS
+	theora_encode_init
+	theora_encode_YUVin
+	theora_encode_packetout
+	theora_encode_header
+	theora_encode_comment
+	theora_encode_tables
