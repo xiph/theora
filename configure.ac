@@ -21,9 +21,9 @@ dnl - interfaces added/removed/changed -> increment CURRENT, REVISION = 0
 dnl - interfaces added -> increment AGE
 dnl - interfaces removed -> AGE = 0
 
-V_LIB_CURRENT=2
+V_LIB_CURRENT=3
 V_LIB_REVISION=0
-V_LIB_AGE=2
+V_LIB_AGE=3
 AC_SUBST(V_LIB_CURRENT)
 AC_SUBST(V_LIB_REVISION)
 AC_SUBST(V_LIB_AGE)
@@ -100,9 +100,9 @@ else
 
         case $host in 
         *)
-                DEBUG="-g -Wall -DDEBUG -D__NO_MATH_INLINES"
-                CFLAGS="-Wall -O3 -fforce-addr -fomit-frame-pointer -finline-functions -funroll-loops"
-                PROFILE="-Wall -pg -g -O3 -fno-inline-functions -DDEBUG";;
+                DEBUG="-g -Wall -Wno-parentheses -DDEBUG -D__NO_MATH_INLINES"
+                CFLAGS="-Wall -Wno-parentheses -O3 -fforce-addr -fomit-frame-pointer -finline-functions -funroll-loops"
+                PROFILE="-Wall -Wno-parentheses -pg -g -O3 -fno-inline-functions -DDEBUG";;
         esac
 fi
 CFLAGS="$CFLAGS $cflags_save"
