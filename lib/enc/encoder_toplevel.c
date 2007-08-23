@@ -1332,7 +1332,7 @@ static void theora_encode_clear (theora_state  *th){
   CP_INSTANCE *cpi;
   cpi=(CP_INSTANCE *)th->internal_encode;
   if(cpi){
-    
+
     ClearHuffmanSet(&cpi->pb);
     ClearFragmentInfo(&cpi->pb);
     ClearFrameInfo(&cpi->pb);
@@ -1340,12 +1340,12 @@ static void theora_encode_clear (theora_state  *th){
     EClearFrameInfo(cpi);
     ClearTmpBuffers(&cpi->pb);
     ClearPPInstance(&cpi->pp);
-    
+
     oggpackB_writeclear(cpi->oggbuffer);
     _ogg_free(cpi->oggbuffer);
     _ogg_free(cpi);
   }
-  th->internal_encode=NULL;
+  memset(th,0,sizeof(*th));
 }
 
 /* returns, in seconds, absolute time of current packet in given
