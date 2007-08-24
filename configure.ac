@@ -152,9 +152,10 @@ if test "x$lt_cv_prog_gnu_ld" = "xyes"; then
     SHLIB_VERSION_ARG="-Wl,--version-script=Version_script"
     ;;
   *)
+    SHLIB_VERSION_ARG=""
     ;;
    esac
-   THEORA_LDFLAGS="$THEORA_LDFLAGS SHLIB_VERSION_ARG"
+   THEORA_LDFLAGS="$THEORA_LDFLAGS $SHLIB_VERSION_ARG"
 fi
 
 AC_SUBST(THEORA_LDFLAGS)
