@@ -21,12 +21,12 @@ dnl - interfaces added/removed/changed -> increment CURRENT, REVISION = 0
 dnl - interfaces added -> increment AGE
 dnl - interfaces removed -> AGE = 0
 
-V_LIB_CURRENT=3
-V_LIB_REVISION=0
-V_LIB_AGE=3
-AC_SUBST(V_LIB_CURRENT)
-AC_SUBST(V_LIB_REVISION)
-AC_SUBST(V_LIB_AGE)
+TH_LIB_CURRENT=3
+TH_LIB_REVISION=0
+TH_LIB_AGE=3
+AC_SUBST(TH_LIB_CURRENT)
+AC_SUBST(TH_LIB_REVISION)
+AC_SUBST(TH_LIB_AGE)
 
 dnl Extra linker options (for version script)
 THEORA_LDFLAGS=""

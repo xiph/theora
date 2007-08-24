@@ -131,7 +131,7 @@ noinst_HEADERS = \
 	
 
 libtheora_la_CFLAGS = $(OGG_CFLAGS)
-libtheora_la_LDFLAGS = -version-info @V_LIB_CURRENT@:@V_LIB_REVISION@:@V_LIB_AGE@ @THEORA_LDFLAGS@
+libtheora_la_LDFLAGS = -version-info @TH_LIB_CURRENT@:@TH_LIB_REVISION@:@TH_LIB_AGE@ @THEORA_LDFLAGS@
 libtheora_la_LIBADD = $(OGG_LIBS)
 
 debug:
