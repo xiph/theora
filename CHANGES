@@ -2,7 +2,8 @@ libtheora 1.0alpha8 (unreleased)
 
  - Switch to new spec compliant decoder from theora-exp branch.
    Written by Dr. Timothy Terriberry.
- - Add support to the encoder for using 6 different (static) matricies
+ - Add support to the encoder for using quantization settings
+   provided by the application.
  - more assembly optimizations
 
 libtheora 1.0alpha7 (2006 June 20)
