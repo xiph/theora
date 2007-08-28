@@ -1,3 +1,20 @@
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggTheora SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
+ * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ *                                                                  *
+ ********************************************************************
+
+  function: routines for validating comment header code
+  last mod: $Id$
+
+ ********************************************************************/
+
 #include <theora/theora.h>
 
 #include <string.h>

@@ -11,7 +11,7 @@
  ********************************************************************
 
   function: routines for validating encoder granulepos generation
-  last mod: $Id: $
+  last mod: $Id$
 
  ********************************************************************/
 
