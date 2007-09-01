@@ -196,7 +196,7 @@
 		0977298C0BCAC5A800303091 /* encoder_quant.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = encoder_quant.c; path = ../lib/enc/encoder_quant.c; sourceTree = SOURCE_ROOT; };
 		097729930BCAC60000303091 /* codec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = codec.h; path = ../include/theora/codec.h; sourceTree = SOURCE_ROOT; };
 		097729940BCAC60000303091 /* theoradec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = theoradec.h; path = ../include/theora/theoradec.h; sourceTree = SOURCE_ROOT; };
-		09C8F6430C82FBE500F72188 /* libtheoradec.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; name = libtheoradec.a; path = build/Release/libtheoradec.a; sourceTree = "<group>"; };
+		09C8F6430C82FBE500F72188 /* libtheoradec.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libtheoradec.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		32BAE0B70371A74B00C91783 /* Theora_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Theora_Prefix.pch; sourceTree = "<group>"; };
 		734A751809D76ADD002D8FAE /* Ogg.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Ogg.framework; path = /Library/Frameworks/Ogg.framework; sourceTree = "<absolute>"; };
 		734A75BE09D76BB9002D8FAE /* theora.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = theora.h; path = ../include/theora/theora.h; sourceTree = SOURCE_ROOT; };
@@ -726,7 +726,7 @@
 					Carbon,
 				);
 				PREBINDING = NO;
-				PRODUCT_NAME = libtheoradec;
+				PRODUCT_NAME = theoradec;
 				ZERO_LINK = YES;
 			};
 			name = Debug;
@@ -746,7 +746,7 @@
 					Carbon,
 				);
 				PREBINDING = NO;
-				PRODUCT_NAME = libtheoradec;
+				PRODUCT_NAME = theoradec;
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -767,6 +767,7 @@
 				INSTALL_PATH = /Library/Frameworks;
 				LIBRARY_STYLE = DYNAMIC;
 				MACH_O_TYPE = mh_dylib;
+				OTHER_LDFLAGS_i386 = "-Wl,-read_only_relocs,suppress";
 				PRODUCT_NAME = Theora;
 				WRAPPER_EXTENSION = framework;
 				ZERO_LINK = YES;
@@ -790,6 +791,7 @@
 				INSTALL_PATH = /Library/Frameworks;
 				LIBRARY_STYLE = DYNAMIC;
 				MACH_O_TYPE = mh_dylib;
+				OTHER_LDFLAGS_i386 = "-Wl,-read_only_relocs,suppress";
 				PRODUCT_NAME = Theora;
 				WRAPPER_EXTENSION = framework;
 			};
