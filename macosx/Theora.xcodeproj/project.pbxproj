@@ -73,8 +73,8 @@
 		097729880BCAC57D00303091 /* common.c in Sources */ = {isa = PBXBuildFile; fileRef = 097729860BCAC57D00303091 /* common.c */; };
 		0977298D0BCAC5A800303091 /* encoder_quant.c in Sources */ = {isa = PBXBuildFile; fileRef = 0977298C0BCAC5A800303091 /* encoder_quant.c */; };
 		0977298E0BCAC5A800303091 /* encoder_quant.c in Sources */ = {isa = PBXBuildFile; fileRef = 0977298C0BCAC5A800303091 /* encoder_quant.c */; };
-		097729950BCAC60000303091 /* codec.h in Headers */ = {isa = PBXBuildFile; fileRef = 097729930BCAC60000303091 /* codec.h */; };
-		097729960BCAC60000303091 /* theoradec.h in Headers */ = {isa = PBXBuildFile; fileRef = 097729940BCAC60000303091 /* theoradec.h */; };
+		097729950BCAC60000303091 /* codec.h in Headers */ = {isa = PBXBuildFile; fileRef = 097729930BCAC60000303091 /* codec.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		097729960BCAC60000303091 /* theoradec.h in Headers */ = {isa = PBXBuildFile; fileRef = 097729940BCAC60000303091 /* theoradec.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		097729970BCAC60000303091 /* codec.h in Headers */ = {isa = PBXBuildFile; fileRef = 097729930BCAC60000303091 /* codec.h */; };
 		097729980BCAC60000303091 /* theoradec.h in Headers */ = {isa = PBXBuildFile; fileRef = 097729940BCAC60000303091 /* theoradec.h */; };
 		09C8F6470C82FC0E00F72188 /* x86state.c in Sources */ = {isa = PBXBuildFile; fileRef = 097728F60BCABCAA00303091 /* x86state.c */; };
@@ -398,8 +398,8 @@
 		734A75BD09D76B96002D8FAE /* Headers */ = {
 			isa = PBXGroup;
 			children = (
-				097729930BCAC60000303091 /* codec.h */,
 				097729940BCAC60000303091 /* theoradec.h */,
+				097729930BCAC60000303091 /* codec.h */,
 				734A75BE09D76BB9002D8FAE /* theora.h */,
 			);
 			name = Headers;
