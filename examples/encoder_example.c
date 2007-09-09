@@ -75,7 +75,7 @@ static double rint(double x)
 }
 #endif
 
-const char *optstring = "o:a:A:v:V:s:S:f:F:";
+const char *optstring = "o:a:A:v:V:s:S:f:F:n:m:k:";
 struct option options [] = {
   {"output",required_argument,NULL,'o'},
   {"audio-rate-target",required_argument,NULL,'A'},
@@ -86,6 +86,9 @@ struct option options [] = {
   {"aspect-denominator",optional_argument,NULL,'S'},
   {"framerate-numerator",optional_argument,NULL,'f'},
   {"framerate-denominator",optional_argument,NULL,'F'},
+  {"noise-suppress",required_argument,NULL,'n'},
+  {"sharpness",required_argument,NULL,'m'},
+  {"keyframe-freq",required_argument,NULL,'k'},
   {NULL,0,NULL,0}
 };
 
@@ -113,6 +116,9 @@ int video_ad=-1;
 
 int video_r=-1;
 int video_q=16;
+int noise_sensitivity=1;
+int sharpness=0;
+int keyframe_frequency=64;
 
 static void usage(void){
   fprintf(stderr,
@@ -145,6 +151,15 @@ static void usage(void){
           "                                 from YUV input file. ex: 1000000\n"
           "                                 The frame rate nominator divided by this\n"
           "                                 determinates the frame rate in units per tick\n"
+          "   -n --noise-sensitivity <n>    Theora noise sensitivity selector from 0\n"
+          "                                 to 6 (0 yields best quality but larger\n"
+          "                                 files, defaults to 1)\n"
+          "   -m --sharpness <n>           Theora sharpness selector from 0 to 2\n"
+          "                                 (0 yields crispest video at the cost of\n"
+          "                                 larger files, selecting 2 can greatly\n"
+          "                                 reduce file size but resulting video\n"
+          "                                 is blurrier, defaults to 0)\n"
+          "   -k --keyframe-freq <n>        Keyframe frequency from 8 to 1000\n"
           "encoder_example accepts only uncompressed RIFF WAV format audio and\n"
           "YUV4MPEG2 uncompressed video.\n\n");
   exit(1);
@@ -693,6 +708,30 @@ int main(int argc,char *const *argv){
       video_hzd=rint(atof(optarg));
       break;
 
+    case 'n':
+      noise_sensitivity=rint(atof(optarg));
+      if(noise_sensitivity<0 || noise_sensitivity>6){
+        fprintf(stderr,"Illegal noise sensitivity (choose 0 through 6)\n");
+        exit(1);
+      }
+      break;
+
+    case 'm':
+      sharpness=rint(atof(optarg));
+      if(sharpness<0 || sharpness>2){
+        fprintf(stderr,"Illegal sharpness (choose 0 through 2)\n");
+        exit(1);
+      }
+      break;
+
+    case 'k':
+      keyframe_frequency=rint(atof(optarg));
+      if(keyframe_frequency<8 || keyframe_frequency>1000){
+        fprintf(stderr,"Illegal keyframe frequency (choose 8 through 1000)\n");
+        exit(1);
+      }
+      break;
+
     default:
       usage();
     }
@@ -759,12 +798,13 @@ int main(int argc,char *const *argv){
   ti.dropframes_p=0;
   ti.quick_p=1;
   ti.keyframe_auto_p=1;
-  ti.keyframe_frequency=64;
-  ti.keyframe_frequency_force=64;
+  ti.keyframe_frequency=keyframe_frequency;
+  ti.keyframe_frequency_force=keyframe_frequency;
   ti.keyframe_data_target_bitrate=video_r*1.5;
   ti.keyframe_auto_threshold=80;
   ti.keyframe_mindistance=8;
-  ti.noise_sensitivity=1;
+  ti.noise_sensitivity=noise_sensitivity;
+  ti.sharpness=sharpness;
 
   theora_encode_init(&td,&ti);
   theora_info_clear(&ti);
