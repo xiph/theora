@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -26,6 +26,14 @@
 # include "dec/ocintrin.h"
 # include "dec/huffman.h"
 # include "dec/quant.h"
+
+/* debug macros */
+#ifdef DEBUG
+#include <stdio.h>
+#define TH_DEBUG(x) fprintf(stderr, x)
+#else
+#define TH_DEBUG(x)
+#endif
 
 /*Thank you Microsoft, I know the order of operations.*/
 # if defined(_MSC_VER)
