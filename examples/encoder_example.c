@@ -86,7 +86,7 @@ struct option options [] = {
   {"aspect-denominator",optional_argument,NULL,'S'},
   {"framerate-numerator",optional_argument,NULL,'f'},
   {"framerate-denominator",optional_argument,NULL,'F'},
-  {"noise-suppress",required_argument,NULL,'n'},
+  {"noise-sensitivity",required_argument,NULL,'n'},
   {"sharpness",required_argument,NULL,'m'},
   {"keyframe-freq",required_argument,NULL,'k'},
   {NULL,0,NULL,0}
