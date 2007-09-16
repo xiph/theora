@@ -71,6 +71,8 @@ endif
 endif
 
 decoder_sources = \
+	dec/apiwrapper.c \
+	dec/decapiwrapper.c \
 	dec/decinfo.c \
 	dec/decode.c \
 	dec/dequant.c \
@@ -80,8 +82,7 @@ decoder_sources = \
 	dec/info.c \
 	dec/internal.c \
 	dec/quant.c \
-	dec/state.c  \
-	dec/apiwrapper.c
+	dec/state.c
 
 if CPU_x86_64
 decoder_x86_sources = \

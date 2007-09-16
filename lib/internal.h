@@ -464,22 +464,24 @@ void oc_restore_fpu_c(void);
    dependency into the decoder, while still allowing the old alpha API which
    does not distinguish between encoder and decoder objects to be used.
   We do this by placing a function table at the start of the encoder object
-   which can dispatch into the encoder library.*/
-typedef void (*oc_enc_clear_func)(theora_state *_th);
-typedef int (*oc_enc_control_func)(theora_state *th,int req,
+   which can dispatch into the encoder library.
+  We do a similar thing for the decoder in case we ever decide to split off a
+   common base library.*/
+typedef void (*oc_state_clear_func)(theora_state *_th);
+typedef int (*oc_state_control_func)(theora_state *th,int req,
  void *buf,size_t buf_sz);
-typedef ogg_int64_t (*oc_enc_granule_frame_func)(theora_state *_th,
+typedef ogg_int64_t (*oc_state_granule_frame_func)(theora_state *_th,
  ogg_int64_t _granulepos);
-typedef double (*oc_enc_granule_time_func)(theora_state *_th,
+typedef double (*oc_state_granule_time_func)(theora_state *_th,
  ogg_int64_t _granulepos);
 
-typedef struct oc_enc_dispatch_vtbl oc_enc_dispatch_vtbl;
+typedef struct oc_state_dispatch_vtbl oc_state_dispatch_vtbl;
 
-struct oc_enc_dispatch_vtbl{
-  oc_enc_clear_func         clear;
-  oc_enc_control_func       control;
-  oc_enc_granule_frame_func granule_frame;
-  oc_enc_granule_time_func  granule_time;
+struct oc_state_dispatch_vtbl{
+  oc_state_clear_func         clear;
+  oc_state_control_func       control;
+  oc_state_granule_frame_func granule_frame;
+  oc_state_granule_time_func  granule_time;
 };
 
 #endif
