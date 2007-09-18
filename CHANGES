@@ -1,4 +1,4 @@
-libtheora 1.0alpha8 (unreleased)
+libtheora 1.0alpha8 (2007 September 18)
 
  - Switch to new spec compliant decoder from theora-exp branch.
    Written by Dr. Timothy Terriberry.

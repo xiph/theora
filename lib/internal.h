@@ -41,7 +41,7 @@
 # endif
 
 /*This library's version.*/
-# define OC_VENDOR_STRING "Xiph.Org libTheora I 20060526 3 2 0"
+# define OC_VENDOR_STRING "Xiph.Org libTheora I 20070823 3 2 0"
 
 /*Theora bitstream version.*/
 # define TH_VERSION_MAJOR (3)
