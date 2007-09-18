@@ -385,7 +385,7 @@ typedef struct theora_comment{
  *                    encoding mode.*/
 #define TH_ENCCTL_GET_SPLEVEL_MAX (12)
 /**Sets the speed level.
- * By default, the slowest speed (0) is used.
+ * By default a speed value of 1 is used.
  *
  * \param[in] buf int: The new encoding speed level.
  *                      0 is slowest, larger values use less CPU.
