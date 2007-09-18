@@ -6,28 +6,44 @@ import SCons
 # TODO: should use lamda and map to work on python 1.5
 def path(prefix, list): return [join(prefix, x) for x in list]
 
-libtheora_Sources = Split("""
-  dct_encode.c encode.c encoder_toplevel.c
-  blockmap.c
-  comment.c
-  cpu.c
-  dct.c
-  dct_decode.c
-  decode.c
-  dsp.c
-  frarray.c
-  frinit.c
-  huffman.c
-  idct.c
-  mcomp.c
-  misc_common.c
-  pb.c
-  pp.c
-  quant.c
-  reconstruct.c
-  scan.c
-  toplevel.c
-""")
+encoder_sources = """
+        enc/dct_encode.c
+        enc/encode.c
+        enc/encoder_huffman.c
+        enc/encoder_idct.c
+        enc/encoder_toplevel.c
+        enc/encoder_quant.c
+        enc/blockmap.c
+        enc/common.c
+        enc/dct.c
+        enc/dct_decode.c
+        enc/frarray.c
+        enc/frinit.c
+        enc/mcomp.c
+        enc/misc_common.c
+        enc/pb.c
+        enc/pp.c
+        enc/reconstruct.c
+        enc/scan.c
+        enc/dsp.c
+"""
+
+decoder_sources = """
+        dec/apiwrapper.c \
+        dec/decapiwrapper.c \
+        dec/decinfo.c \
+        dec/decode.c \
+        dec/dequant.c \
+        dec/fragment.c \
+        dec/huffdec.c \
+        dec/idct.c \
+        dec/info.c \
+        dec/internal.c \
+        dec/quant.c \
+        dec/state.c
+"""
+
+libtheora_Sources = Split(decoder_sources + encoder_sources + "cpu.c")
 
 env = Environment()
 if env['CC'] == 'gcc':
@@ -111,21 +127,33 @@ if build_player_example and not conf.CheckSDL():
 
 if conf.CheckHost_x86_32():
   libtheora_Sources += Split("""
-    x86_32/dsp_mmx.c
-    x86_32/dsp_mmxext.c
-    x86_32/recon_mmx.c
-    x86_32/fdct_mmx.c
+        dec/x86/mmxidct.c
+        dec/x86/mmxfrag.c
+        dec/x86/mmxstate.c
+        dec/x86/x86state.c
+	enc/x86_32/dct_decode_mmx.c
+	enc/x86_32/dsp_mmx.c
+	enc/x86_32/dsp_mmxext.c
+	enc/x86_32/recon_mmx.c
+	enc/x86_32/idct_mmx.c
+	enc/x86_32/fdct_mmx.c
   """)
 elif conf.CheckHost_x86_64():
   libtheora_Sources += Split("""
-    x86_64/dsp_mmx.c
-    x86_64/dsp_mmxext.c
-    x86_64/recon_mmx.c
-    x86_64/fdct_mmx.c
+        dec/x86/mmxidct.c
+        dec/x86/mmxfrag.c
+        dec/x86/mmxstate.c
+        dec/x86/x86state.c
+	enc/x86_64/dct_decode_mmx.c
+	enc/x86_64/dsp_mmx.c
+	enc/x86_64/dsp_mmxext.c
+	enc/x86_64/recon_mmx.c
+	enc/x86_64/idct_mmx.c
+	enc/x86_64/fdct_mmx.c
   """)
 env = conf.Finish()
 
-env.Append(CPPPATH=['lib', 'include'])
+env.Append(CPPPATH=['lib', 'include', 'lib/enc'])
 env.ParseConfig('pkg-config --cflags --libs ogg')
 
 libtheora_a = env.Library('lib/theora', path('lib', libtheora_Sources))
