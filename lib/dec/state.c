@@ -1185,9 +1185,7 @@ ogg_int64_t th_granule_frame(void *_encdec,ogg_int64_t _granpos){
 
     /* 3.2.0 streams mark the frame index instead of the frame count
      * this was changed with stream version 3.2.1 */ 
-    if(state->info.version_subminor == 0
-       && state->info.version_minor == 2
-       && state->info.version_major == 3) {
+    if(state->info.version_subminor < 1) {
       return iframe+pframe + 1;
     } else {
       return iframe+pframe;
