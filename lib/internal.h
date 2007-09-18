@@ -41,12 +41,12 @@
 # endif
 
 /*This library's version.*/
-# define OC_VENDOR_STRING "Xiph.Org libTheora I 20070823 3 2 0"
+# define OC_VENDOR_STRING "Xiph.Org libTheora I 20070915 3 2 1"
 
 /*Theora bitstream version.*/
 # define TH_VERSION_MAJOR (3)
 # define TH_VERSION_MINOR (2)
-# define TH_VERSION_SUB   (0)
+# define TH_VERSION_SUB   (1)
 
 /*A keyframe.*/
 #define OC_INTRA_FRAME (0)

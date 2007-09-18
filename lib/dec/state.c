@@ -1182,7 +1182,16 @@ ogg_int64_t th_granule_frame(void *_encdec,ogg_int64_t _granpos){
     ogg_int64_t pframe;
     iframe=_granpos>>state->info.keyframe_granule_shift;
     pframe=_granpos-(iframe<<state->info.keyframe_granule_shift);
-    return iframe+pframe;
+
+    /* 3.2.0 streams mark the frame index instead of the frame count
+     * this was changed with stream version 3.2.1 */ 
+    if(state->info.version_subminor == 0
+       && state->info.version_minor == 2
+       && state->info.version_major == 3) {
+      return iframe+pframe + 1;
+    } else {
+      return iframe+pframe;
+    }
   }
   return -1;
 }
@@ -1191,12 +1200,7 @@ double th_granule_time(void *_encdec,ogg_int64_t _granpos){
   oc_theora_state *state;
   state=(oc_theora_state *)_encdec;
   if(_granpos>=0){
-    ogg_int64_t iframe;
-    ogg_int64_t pframe;
-    iframe=_granpos>>state->info.keyframe_granule_shift;
-    pframe=_granpos-(iframe<<state->info.keyframe_granule_shift);
-    return (iframe+pframe)*(
-     (double)state->info.fps_denominator/state->info.fps_numerator);
+      return th_granule_frame(_encdec, _granpos)*((double)state->info.fps_denominator/state->info.fps_numerator);
   }
   return -1;
 }

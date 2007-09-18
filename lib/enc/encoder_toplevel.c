@@ -1126,8 +1126,8 @@ int theora_encode_YUVin(theora_state *t,
   cpi->packetflag=1;
 
   t->granulepos=
-    ((cpi->CurrentFrame-cpi->LastKeyFrame-1)<<cpi->pb.keyframe_granule_shift)+
-    cpi->LastKeyFrame-1;
+    ((cpi->CurrentFrame - cpi->LastKeyFrame)<<cpi->pb.keyframe_granule_shift)+
+    cpi->LastKeyFrame - 1;
 
   return 0;
 }
@@ -1347,6 +1347,7 @@ static void theora_encode_clear (theora_state  *th){
   }
   memset(th,0,sizeof(*th));
 }
+
 
 /* returns, in seconds, absolute time of current packet in given
    logical stream */
