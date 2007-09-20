@@ -70,11 +70,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libtheora.a
 %{_libdir}/libtheora.so
 %dir %{_includedir}/theora
+%{_includedir}/theora/codec.h
 %{_includedir}/theora/theora.h
+%{_includedir}/theora/theoradec.h
 %{_libdir}/pkgconfig/theora.pc
 
 %changelog
-* Thu Jun 10 2004 Thomas Vander Stichele <thomas at apestaart dot org>
-- transported fedora.us spec file
 * Sat Aug 20 2005 Ralph Giles <giles at xiph.org>
 - updated version for 1.0alpha5 release
+* Thu Jun 10 2004 Thomas Vander Stichele <thomas at apestaart dot org>
+- transported fedora.us spec file
