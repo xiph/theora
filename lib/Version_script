@@ -2,10 +2,14 @@
 # Export file for libtheora
 #
 # Only the symbols listed in the global section will be callable from
-# applications linking to libtheora.
+# applications linking to the libraries.
 #
 
-@PACKAGE@.so.1.0
+# We use something that looks like an versioned so filename here 
+# to define the 1.0 API because of a historical confusion. This
+# label must be kept to maintain ABI compatibility.
+
+libtheora.so.1.0
 {
 	global:
 		theora_version_string;
@@ -48,7 +52,10 @@
 		*;
 };
 
-@PACKAGE@.so.2.0
+
+# This version set defines the (better) revised API.
+
+libtheora-2.0
 {
 	global:
 		th_version_string;
@@ -80,4 +87,4 @@
 
 	local:
 		*;
-} @PACKAGE@.so.1.0;
+} libtheora.so.1.0;

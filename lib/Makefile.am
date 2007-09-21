@@ -1,6 +1,6 @@
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/lib -I$(top_srcdir)/lib/dec -I$(top_srcdir)/lib/enc
 
-EXTRA_DIST = Version_script.in \
+EXTRA_DIST = Version_script \
         enc/x86_32/dct_decode_mmx.c \
         enc/x86_32/dsp_mmx.c \
         enc/x86_32/dsp_mmxext.c \

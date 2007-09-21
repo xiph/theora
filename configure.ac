@@ -331,7 +331,6 @@ AC_OUTPUT([
   examples/Makefile
   doc/Makefile doc/Doxyfile
   tests/Makefile
-  lib/Version_script
   m4/Makefile
   libtheora.spec
   theora.pc
