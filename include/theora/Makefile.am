@@ -2,4 +2,6 @@
 
 theoraincludedir = $(includedir)/theora
 
-theorainclude_HEADERS = theora.h codec.h theoradec.h
+theorainclude_HEADERS = theora.h
+
+noinst_HEADERS = codec.h theoradec.h
