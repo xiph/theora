@@ -144,18 +144,15 @@ AM_CONDITIONAL(OC_X86ASM,[test x$ac_enable_asm = xyes])
 AC_PROG_LD
 AC_PROG_LD_GNU
 if test "x$lt_cv_prog_gnu_ld" = "xyes"; then
-   SHLIB_VERSION_ARG="Wl,--version-script=Version_script"
-
-   dnl Set extra linker options
-   case "$target_os" in
+ case "$target_os" in
   linux* | solaris* )
-    SHLIB_VERSION_ARG="-Wl,--version-script=Version_script"
+    SHLIB_VERSION_ARG='-Wl,--version-script=$(srcdir)/Version_script'
     ;;
   *)
     SHLIB_VERSION_ARG=""
     ;;
-   esac
-   THEORA_LDFLAGS="$THEORA_LDFLAGS $SHLIB_VERSION_ARG"
+ esac
+ THEORA_LDFLAGS="$THEORA_LDFLAGS $SHLIB_VERSION_ARG"
 fi
 
 AC_SUBST(THEORA_LDFLAGS)
