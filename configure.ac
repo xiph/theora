@@ -42,6 +42,7 @@ AC_PROG_CC
 AC_PROG_CPP
 CFLAGS="$cflags_save"
 
+AM_PROG_CC_C_O
 AM_PROG_LIBTOOL
 
 dnl Add parameters for aclocal
