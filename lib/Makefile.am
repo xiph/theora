@@ -119,6 +119,7 @@ noinst_HEADERS = \
 	enc/quant_lookup.h \
 	enc/toplevel_lookup.h \
 	enc/dsp.h \
+	dec/apiwrapper.h \
 	dec/dct.h \
 	dec/decint.h \
 	dec/dequant.h \
