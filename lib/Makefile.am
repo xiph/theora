@@ -1,6 +1,6 @@
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/lib -I$(top_srcdir)/lib/dec -I$(top_srcdir)/lib/enc
 
-EXTRA_DIST = Version_script \
+EXTRA_DIST = \
         enc/x86_32/dct_decode_mmx.c \
         enc/x86_32/dsp_mmx.c \
         enc/x86_32/dsp_mmxext.c \
@@ -105,7 +105,8 @@ libtheora_la_SOURCES = \
 	$(decoder_x86_sources) \
 	$(decoder_sources) \
 	$(encoder_arch_sources) \
-	$(encoder_sources)
+	$(encoder_sources) \
+  Version_script
 
 noinst_HEADERS = \
 	cpu.h \
