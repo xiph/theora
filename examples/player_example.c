@@ -56,6 +56,7 @@
 #include <fcntl.h>
 #include <math.h>
 #include <signal.h>
+#include "theora/theora.h"
 #include "theora/theoradec.h"
 #include "vorbis/codec.h"
 #include <SDL.h>
@@ -91,17 +92,15 @@ ogg_sync_state   oy;
 ogg_page         og;
 ogg_stream_state vo;
 ogg_stream_state to;
-th_info      ti;
-th_comment   tc;
-th_setup_info *ts;
-th_dec_ctx    *td;
+theora_info      ti;
+theora_comment   tc;
+theora_state     td;
 vorbis_info      vi;
 vorbis_dsp_state vd;
 vorbis_block     vb;
 vorbis_comment   vc;
 
 int              theora_p=0;
-int              theora_processing_headers;
 int              vorbis_p=0;
 int              stateflag=0;
 
@@ -280,9 +279,9 @@ void audio_write_nonblocking(void){
       while(1){
         bytes=write(audiofd,audiobuf+(audiofd_fragsize-audiobuf_fill),
                     audiofd_fragsize);
-        
+
         if(bytes>0){
-        
+
           if(bytes!=audiobuf_fill){
             /* shouldn't actually be possible... but eh */
             audiobuf_fill-=bytes;
@@ -311,14 +310,14 @@ static void open_video(void){
     exit(1);
   }
 
-  screen = SDL_SetVideoMode(ti.pic_width, ti.pic_height, 0, SDL_SWSURFACE);
+  screen = SDL_SetVideoMode(ti.frame_width, ti.frame_height, 0, SDL_SWSURFACE);
   if ( screen == NULL ) {
     fprintf(stderr, "Unable to set %dx%d video: %s\n",
-            ti.pic_width,ti.pic_height,SDL_GetError());
+            ti.frame_width,ti.frame_height,SDL_GetError());
     exit(1);
   }
 
-  yuv_overlay = SDL_CreateYUVOverlay(ti.pic_width, ti.pic_height,
+  yuv_overlay = SDL_CreateYUVOverlay(ti.frame_width, ti.frame_height,
                                      SDL_YV12_OVERLAY,
                                      screen);
   if ( yuv_overlay == NULL ) {
@@ -328,21 +327,17 @@ static void open_video(void){
   }
   rect.x = 0;
   rect.y = 0;
-  rect.w = ti.pic_width;
-  rect.h = ti.pic_height;
+  rect.w = ti.frame_width;
+  rect.h = ti.frame_height;
 
   SDL_DisplayYUVOverlay(yuv_overlay, &rect);
 }
 
 static void video_write(void){
-  static const int planemap[3] = {0,2,1};
-  int pli;
-  int wscale, hscale;
   int i;
-  th_ycbcr_buffer ycbcr;
+  yuv_buffer yuv;
   int crop_offset;
-
-  th_decode_ycbcr_out(td,ycbcr);
+  theora_decode_YUVout(&td,&yuv);
 
   /* Lock SDL_yuv_overlay */
   if ( SDL_MUSTLOCK(screen) ) {
@@ -355,17 +350,19 @@ static void video_write(void){
   /* reverse u and v for SDL */
   /* and crop input properly, respecting the encoded frame rect */
   /* problems may exist for odd frame rect for some encodings */
-  for (pli = 0; pli < 3; pli++) {
-    wscale = ycbcr[0].width / ycbcr[pli].width;
-    hscale = ycbcr[0].height / ycbcr[pli].height;
-    crop_offset = (ti.pic_x / wscale)
-                + (ycbcr[pli].ystride)
-                * (ti.pic_y / hscale);
-    for(i=0;i<yuv_overlay->h / hscale;i++)
-      memcpy(yuv_overlay->pixels[planemap[pli]]
-                      + yuv_overlay->pitches[planemap[pli]]*i,
-             ycbcr[pli].data+crop_offset+ycbcr[pli].ystride*i,
-             yuv_overlay->w / wscale);
+  crop_offset=ti.offset_x+yuv.y_stride*ti.offset_y;
+  for(i=0;i<yuv_overlay->h;i++)
+    memcpy(yuv_overlay->pixels[0]+yuv_overlay->pitches[0]*i,
+           yuv.y+crop_offset+yuv.y_stride*i,
+           yuv_overlay->w);
+  crop_offset=(ti.offset_x/2)+(yuv.uv_stride)*(ti.offset_y/2);
+  for(i=0;i<yuv_overlay->h/2;i++){
+    memcpy(yuv_overlay->pixels[1]+yuv_overlay->pitches[1]*i,
+           yuv.v+crop_offset+yuv.uv_stride*i,
+           yuv_overlay->w/2);
+    memcpy(yuv_overlay->pixels[2]+yuv_overlay->pitches[2]*i,
+           yuv.u+crop_offset+yuv.uv_stride*i,
+           yuv_overlay->w/2);
   }
 
   /* Unlock SDL_yuv_overlay */
@@ -380,7 +377,7 @@ static void video_write(void){
 
 }
 /* dump the theora (or vorbis) comment header */
-static int dump_comments(th_comment *tc){
+static int dump_comments(theora_comment *tc){
   int i, len;
   char *value;
   FILE *out=stdout;
@@ -406,16 +403,16 @@ static int dump_comments(th_comment *tc){
    We don't actually make use of the information in this example;
    a real player should attempt to perform color correction for
    whatever display device it supports. */
-static void report_colorspace(th_info *ti)
+static void report_colorspace(theora_info *ti)
 {
     switch(ti->colorspace){
-      case TH_CS_UNSPECIFIED:
+      case OC_CS_UNSPECIFIED:
         /* nothing to report */
         break;;
-      case TH_CS_ITU_REC_470M:
+      case OC_CS_ITU_REC_470M:
         fprintf(stderr,"  encoder specified ITU Rec 470M (NTSC) color.\n");
         break;;
-      case TH_CS_ITU_REC_470BG:
+      case OC_CS_ITU_REC_470BG:
         fprintf(stderr,"  encoder specified ITU Rec 470BG (PAL) color.\n");
         break;;
       default:
@@ -430,7 +427,7 @@ static void report_colorspace(th_info *ti)
                 that doesn't belong to it */
 static int queue_page(ogg_page *page){
   if(theora_p)ogg_stream_pagein(&to,page);
-  if(vorbis_p)ogg_stream_pagein(&vo,&og);
+  if(vorbis_p)ogg_stream_pagein(&vo,page);
   return 0;
 }
 
@@ -482,8 +479,8 @@ int main(int argc,char *const *argv){
   vorbis_comment_init(&vc);
 
   /* init supporting Theora structures needed in header parsing */
-  th_comment_init(&tc);
-  th_info_init(&ti);
+  theora_comment_init(&tc);
+  theora_info_init(&ti);
 
   /* Ogg file open; parse the headers */
   /* Only interested in Vorbis/Theora streams */
@@ -503,22 +500,17 @@ int main(int argc,char *const *argv){
 
       ogg_stream_init(&test,ogg_page_serialno(&og));
       ogg_stream_pagein(&test,&og);
-      ogg_stream_packetpeek(&test,&op);
+      ogg_stream_packetout(&test,&op);
 
       /* identify the codec: try theora */
-      if(!theora_p && (theora_processing_headers=
-       th_decode_headerin(&ti,&tc,&ts,&op))>=0){
+      if(!theora_p && theora_decode_header(&ti,&tc,&op)>=0){
         /* it is theora */
         memcpy(&to,&test,sizeof(test));
         theora_p=1;
-        /*Advance past the successfully processed header.*/
-        if(theora_processing_headers)ogg_stream_packetout(&to,NULL);
       }else if(!vorbis_p && vorbis_synthesis_headerin(&vi,&vc,&op)>=0){
         /* it is vorbis */
         memcpy(&vo,&test,sizeof(test));
         vorbis_p=1;
-        /*Advance past the successfully processed header.*/
-        ogg_stream_packetout(&vo,NULL);
       }else{
         /* whatever it is, we don't care about it */
         ogg_stream_clear(&test);
@@ -528,20 +520,20 @@ int main(int argc,char *const *argv){
   }
 
   /* we're expecting more header packets. */
-  while((theora_p && theora_processing_headers) || (vorbis_p && vorbis_p<3)){
+  while((theora_p && theora_p<3) || (vorbis_p && vorbis_p<3)){
     int ret;
 
     /* look for further theora headers */
-    while(theora_processing_headers&&(ret=ogg_stream_packetpeek(&to,&op))){
-      if(ret<0)continue;
-      theora_processing_headers=th_decode_headerin(&ti,&tc,&ts,&op);
-      if(theora_processing_headers<0){
-        printf("Error parsing Theora stream headers; corrupt stream?\n");
+    while(theora_p && (theora_p<3) && (ret=ogg_stream_packetout(&to,&op))){
+      if(ret<0){
+        fprintf(stderr,"Error parsing Theora stream headers; "
+         "corrupt stream?\n");
         exit(1);
       }
-      else if(theora_processing_headers>0){
-        /*Advance past the successfully processed header.*/
-        ogg_stream_packetout(&to,NULL);
+      if(theora_decode_header(&ti,&tc,&op)){
+        fprintf(stderr,"Error parsing Theora stream headers; "
+         "corrupt stream?\n");
+        exit(1);
       }
       theora_p++;
     }
@@ -560,10 +552,6 @@ int main(int argc,char *const *argv){
       if(vorbis_p==3)break;
     }
 
-    /*Stop now so we don't fail if there aren't enough pages in a short
-       stream.*/
-    if(!(theora_p&&theora_processing_headers)&&!(vorbis_p&&vorbis_p<3))break;
-
     /* The header pages/packets will arrive before anything else we
        care about, or the stream is not obeying spec */
 
@@ -580,27 +568,34 @@ int main(int argc,char *const *argv){
 
   /* and now we have it all.  initialize decoders */
   if(theora_p){
-    td=th_decode_alloc(&ti,ts);
-    printf("Ogg logical stream %lx is Theora %dx%d %.02f fps video\n",
-           to.serialno,ti.frame_width,ti.frame_height, 
+    theora_decode_init(&td,&ti);
+    printf("Ogg logical stream %lx is Theora %dx%d %.02f fps",
+           to.serialno,ti.width,ti.height,
            (double)ti.fps_numerator/ti.fps_denominator);
-    if(ti.frame_width!=ti.pic_width || ti.frame_height!=ti.pic_height)
+    switch(ti.pixelformat){
+      case OC_PF_420: printf(" 4:2:0 video\n"); break;
+      case OC_PF_422: printf(" 4:2:2 video\n"); break;
+      case OC_PF_444: printf(" 4:4:4 video\n"); break;
+      case OC_PF_RSVD:
+      default:
+       printf(" video\n  (UNKNOWN Chroma sampling!)\n");
+       break;
+    }
+    if(ti.width!=ti.frame_width || ti.height!=ti.frame_height)
       printf("  Frame content is %dx%d with offset (%d,%d).\n",
-           ti.pic_width, ti.pic_height, ti.pic_x, ti.pic_y);
+           ti.frame_width, ti.frame_height, ti.offset_x, ti.offset_y);
     report_colorspace(&ti);
     dump_comments(&tc);
-    th_decode_ctl(td,TH_DECCTL_GET_PPLEVEL_MAX,&pp_level_max,
+    theora_control(&td,TH_DECCTL_GET_PPLEVEL_MAX,&pp_level_max,
      sizeof(pp_level_max));
     pp_level=pp_level_max;
-    th_decode_ctl(td,TH_DECCTL_SET_PPLEVEL,&pp_level,sizeof(pp_level));
+    theora_control(&td,TH_DECCTL_SET_PPLEVEL,&pp_level,sizeof(pp_level));
     pp_inc=0;
   }else{
     /* tear down the partial theora setup */
-    th_info_clear(&ti);
-    th_comment_clear(&tc);
+    theora_info_clear(&ti);
+    theora_comment_clear(&tc);
   }
-  /*Either way, we're done with the codec setup data.*/
-  th_setup_free(ts);
   if(vorbis_p){
     vorbis_synthesis_init(&vd,&vi);
     vorbis_block_init(&vd,&vb);
@@ -655,9 +650,9 @@ int main(int argc,char *const *argv){
           audiobuf_granulepos=vd.granulepos-ret+i;
         else
           audiobuf_granulepos+=i;
-        
+
       }else{
-        
+
         /* no pending audio; is there a pending packet to decode? */
         if(ogg_stream_packetout(&vo,&op)>0){
           if(vorbis_synthesis(&vb,&op)==0) /* test for success! */
@@ -673,7 +668,7 @@ int main(int argc,char *const *argv){
 
         if(pp_inc){
           pp_level+=pp_inc;
-          th_decode_ctl(td,TH_DECCTL_SET_PPLEVEL,&pp_level,
+          theora_control(&td,TH_DECCTL_SET_PPLEVEL,&pp_level,
            sizeof(pp_level));
           pp_inc=0;
         }
@@ -684,11 +679,12 @@ int main(int argc,char *const *argv){
            page and compute the correct granulepos for the first packet after
            a seek or a gap.*/
         if(op.granulepos>=0){
-          th_decode_ctl(td,TH_DECCTL_SET_GRANPOS,&op.granulepos,
+          theora_control(&td,TH_DECCTL_SET_GRANPOS,&op.granulepos,
            sizeof(op.granulepos));
         }
-        if(th_decode_packetin(td,&op,&videobuf_granulepos)==0){
-          videobuf_time=th_granule_time(td,videobuf_granulepos);
+        if(theora_decode_packetin(&td,&op)==0){
+          videobuf_granulepos=td.granulepos;
+          videobuf_time=theora_granule_time(&td,videobuf_granulepos);
           frames++;
 
           /* is it already too old to be useful?  This is only actually
@@ -701,7 +697,7 @@ int main(int argc,char *const *argv){
             videobuf_ready=1;
           else{
             /*If we are too slow, reduce the pp level.*/
-	    pp_inc=pp_level>0?-1:0;
+            pp_inc=pp_level>0?-1:0;
             dropped++;
           }
         }
@@ -736,7 +732,7 @@ int main(int argc,char *const *argv){
       /* we have an audio frame ready (which means the audio buffer is
          full), it's not time to play video, so wait until one of the
          audio buffer is ready or it's near time to play video */
-        
+
       /* set up select wait on the audiobuffer and a timeout for video */
       struct timeval timeout;
       fd_set writefs;
@@ -798,9 +794,9 @@ int main(int argc,char *const *argv){
   }
   if(theora_p){
     ogg_stream_clear(&to);
-    th_decode_free(td);
-    th_comment_clear(&tc);
-    th_info_clear(&ti);
+    theora_clear(&td);
+    theora_comment_clear(&tc);
+    theora_info_clear(&ti);
   }
   ogg_sync_clear(&oy);
 

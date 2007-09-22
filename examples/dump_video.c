@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2006                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -50,7 +50,7 @@
 #include <fcntl.h>
 #include <math.h>
 #include <signal.h>
-#include "theora/theoradec.h"
+#include "theora/theora.h"
 
 const char *optstring = "o:rf";
 struct option options [] = {
@@ -71,17 +71,15 @@ int buffer_data(FILE *in,ogg_sync_state *oy){
 
 /* never forget that globals are a one-way ticket to Hell */
 /* Ogg and codec state for demux/decode */
-ogg_sync_state     oy;
-ogg_page           og;
-ogg_stream_state   vo;
-ogg_stream_state   to;
-th_info        ti;
-th_comment     tc;
-th_setup_info *ts;
-th_dec_ctx    *td;
+ogg_sync_state    oy;
+ogg_page          og;
+ogg_stream_state  vo;
+ogg_stream_state  to;
+theora_info       ti;
+theora_comment    tc;
+theora_state      td;
 
 int              theora_p=0;
-int              theora_processing_headers;
 int              stateflag=0;
 
 /* single frame video buffering */
@@ -97,69 +95,55 @@ static void sigint_handler (int signal) {
   got_sigint = 1;
 }
 
-static th_ycbcr_buffer ycbcr;
-
-static void stripe_decoded(th_ycbcr_buffer _dst,th_ycbcr_buffer _src,
- int _fragy0,int _fragy_end){
-  int pli;
-  for(pli=0;pli<3;pli++){
-    int yshift;
-    int y_end;
-    int y;
-    yshift=pli!=0&&!(ti.pixel_fmt&2);
-    y_end=_fragy_end<<3-yshift;
-    for(y=_fragy0<<3-yshift;y<y_end;y++){
-      memcpy(_dst[pli].data+y*_dst[pli].ystride,
-       _src[pli].data+y*_src[pli].ystride,_src[pli].width);
-    }
-  }
-}
-
+/* this is a nop in the current implementation. we could
+   open a file here or something if so moved. */
 static void open_video(void){
-  th_stripe_callback cb;
-  int                    pli;
-  /*Here we allocate a buffer so we can use the striped decode feature.
-    There's no real reason to do this in this application, because we want to
-     write to the file top-down, but the frame gets decoded bottom up, so we
-     have to buffer it all anyway.
-    But this illustrates how the API works.*/
-  for(pli=0;pli<3;pli++){
-    int xshift;
-    int yshift;
-    xshift=pli!=0&&!(ti.pixel_fmt&1);
-    yshift=pli!=0&&!(ti.pixel_fmt&2);
-    ycbcr[pli].data=(unsigned char *)malloc(
-     (ti.frame_width>>xshift)*(ti.frame_height>>yshift)*sizeof(char));
-    ycbcr[pli].ystride=ti.frame_width>>xshift;
-    ycbcr[pli].width=ti.frame_width>>xshift;
-    ycbcr[pli].height=ti.frame_height>>yshift;
-  }
-  /*Similarly, since ycbcr is a global, there's no real reason to pass it as
-     the context.
-    In a more object-oriented decoder, we could pass the "this" pointer
-     instead (though in C++ platform-dependent calling convention differences
-     prevent us from using a real member function pointer).*/
-  cb.ctx=ycbcr;
-  cb.stripe_decoded=(th_stripe_decoded_func)stripe_decoded;
-  th_decode_ctl(td,TH_DECCTL_SET_STRIPE_CB,&cb,sizeof(cb));
+  return;
 }
 
+/* write out the planar YUV frame, uncropped */
 static void video_write(void){
-  int pli;
   int i;
 
-  /*Uncomment the following to do normal, non-striped decoding.
-  th_ycbcr_buffer ycbcr;
-  th_decode_ycbcr_out(td,ycbcr);*/
-  fprintf(outfile, "FRAME\n");
+  yuv_buffer yuv;
+  theora_decode_YUVout(&td,&yuv);
 
-  for(pli=0;pli<3;pli++){
-    for(i=0;i<ycbcr[pli].height;i++){
-      fwrite(ycbcr[pli].data+ycbcr[pli].ystride*i, 1,
-       ycbcr[pli].width, outfile);
-    }
+  if(outfile){
+    if(!raw)
+      fprintf(outfile, "FRAME\n");
+    for(i=0;i<yuv.y_height;i++)
+      fwrite(yuv.y+yuv.y_stride*i, 1, yuv.y_width, outfile);
+    for(i=0;i<yuv.uv_height;i++)
+      fwrite(yuv.u+yuv.uv_stride*i, 1, yuv.uv_width, outfile);
+    for(i=0;i<yuv.uv_height;i++)
+      fwrite(yuv.v+yuv.uv_stride*i, 1, yuv.uv_width, outfile);
   }
 }
+
+/* dump the theora comment header */
+static int dump_comments(theora_comment *tc){
+  int i, len;
+  char *value;
+  FILE *out=stderr;
+
+  fprintf(out,"Encoded by %s\n",tc->vendor);
+  if(tc->comments){
+    fprintf(out, "theora comment header:\n");
+    for(i=0;i<tc->comments;i++){
+      if(tc->user_comments[i]){
+        len=tc->comment_lengths[i];
+        value=malloc(len+1);
+        memcpy(value,tc->user_comments[i],len);
+        value[len]='\0';
+        fprintf(out, "\t%s\n", value);
+        free(value);
+      }
+    }
+  }
+  return(0);
+}
+
+
 
 /* helper: push a page into the appropriate steam */
 /* this can be done blindly; a stream won't accept a page
@@ -184,15 +168,14 @@ int main(int argc,char *const *argv){
   int long_option_index;
   int c;
 
-  int frames = 0;
-
-  FILE *infile = stdin;
-  outfile = stdout;
-
   struct timeb start;
   struct timeb after;
   struct timeb last;
   int fps_only=0;
+  int frames = 0;
+
+  FILE *infile = stdin;
+  outfile = stdout;
 
 #ifdef _WIN32 /* We need to set stdin/stdout to binary mode on windows. */
   /* Beware the evil ifdef. We avoid these where we can, but this one we
@@ -206,25 +189,25 @@ int main(int argc,char *const *argv){
     switch(c){
     case 'o':
       if(!strcmp(optarg,"-")){
-	outfile=fopen(optarg,"wb");
-	if(outfile==NULL){
-	  fprintf(stderr,"Unable to open output file '%s'\n", optarg);
-	  exit(1);
-	}
+        outfile=fopen(optarg,"wb");
+        if(outfile==NULL){
+          fprintf(stderr,"Unable to open output file '%s'\n", optarg);
+          exit(1);
+        }
       }else{
-	outfile=stdout;
+        outfile=stdout;
       }
       break;
-      
+
     case 'r':
-	raw=1;
-	break;
-	
+      raw=1;
+      break;
+
     case 'f':
       fps_only = 1;
       outfile = NULL;
       break;
-      
+
     default:
       usage();
     }
@@ -241,6 +224,19 @@ int main(int argc,char *const *argv){
     }
   }
 
+  /*
+     Ok, Ogg parsing. The idea here is we have a bitstream
+     that is made up of Ogg pages. The libogg sync layer will
+     find them for us. There may be pages from several logical
+     streams interleaved; we find the first theora stream and
+     ignore any others.
+
+     Then we pass the pages for our stream to the libogg stream
+     layer which assembles our original set of packets out of
+     them. It's the packets that libtheora actually knows how
+     to handle.
+  */
+
   /* start up Ogg stream synchronization layer */
   ogg_sync_init(&oy);
 
@@ -249,11 +245,16 @@ int main(int argc,char *const *argv){
   /*vorbis_comment_init(&vc);*/
 
   /* init supporting Theora structures needed in header parsing */
-  th_comment_init(&tc);
-  th_info_init(&ti);
+  theora_comment_init(&tc);
+  theora_info_init(&ti);
 
   /* Ogg file open; parse the headers */
-  /* Only interested in Vorbis/Theora streams */
+
+  /* Vorbis and Theora both depend on some initial header packets
+     for decoder setup and initialization. We retrieve these first
+     before entering the main decode loop. */
+
+  /* Only interested in Theora streams */
   while(!stateflag){
     int ret=buffer_data(infile,&oy);
     if(ret==0)break;
@@ -270,16 +271,13 @@ int main(int argc,char *const *argv){
 
       ogg_stream_init(&test,ogg_page_serialno(&og));
       ogg_stream_pagein(&test,&og);
-      ogg_stream_packetpeek(&test,&op);
+      ogg_stream_packetout(&test,&op);
 
       /* identify the codec: try theora */
-      if(!theora_p && (theora_processing_headers=
-       th_decode_headerin(&ti,&tc,&ts,&op))>=0){
-        /* it is theora */
+      if(!theora_p && theora_decode_header(&ti,&tc,&op)>=0){
+        /* it is theora -- save this stream state */
         memcpy(&to,&test,sizeof(test));
         theora_p=1;
-        /*Advance past the successfully processed header.*/
-        if(theora_processing_headers)ogg_stream_packetout(&to,NULL);
       }else{
         /* whatever it is, we don't care about it */
         ogg_stream_clear(&test);
@@ -289,27 +287,24 @@ int main(int argc,char *const *argv){
   }
 
   /* we're expecting more header packets. */
-  while(theora_p && theora_processing_headers){
+  while(theora_p && theora_p<3){
     int ret;
 
     /* look for further theora headers */
-    while(theora_processing_headers&&(ret=ogg_stream_packetpeek(&to,&op))){
-      if(ret<0)continue;
-      theora_processing_headers=th_decode_headerin(&ti,&tc,&ts,&op);
-      if(theora_processing_headers<0){
-        printf("Error parsing Theora stream headers; corrupt stream?\n");
+    while(theora_p && (theora_p<3) && (ret=ogg_stream_packetout(&to,&op))){
+      if(ret<0){
+        fprintf(stderr,"Error parsing Theora stream headers; "
+         "corrupt stream?\n");
         exit(1);
       }
-      else if(theora_processing_headers>0){
-        /*Advance past the successfully processed header.*/
-        ogg_stream_packetout(&to,NULL);
+      if(theora_decode_header(&ti,&tc,&op)){
+        fprintf(stderr,"Error parsing Theora stream headers; "
+         "corrupt stream?\n");
+        exit(1);
       }
       theora_p++;
+      if(theora_p==3)break;
     }
-
-    /*Stop now so we don't fail if there aren't enough pages in a short
-       stream.*/
-    if(!(theora_p && theora_processing_headers))break;
 
     /* The header pages/packets will arrive before anything else we
        care about, or the stream is not obeying spec */
@@ -324,35 +319,54 @@ int main(int argc,char *const *argv){
       }
     }
   }
+  dump_comments(&tc);
 
   /* and now we have it all.  initialize decoders */
   if(theora_p){
-    td=th_decode_alloc(&ti,ts);
-    fprintf(stderr,"Ogg logical stream %lx is Theora %dx%d %.02f fps video\nEncoded frame content is %dx%d with %dx%d offset\n",
-            to.serialno,ti.frame_width,ti.frame_height,
-            (double)ti.fps_numerator/ti.fps_denominator,
-            ti.pic_width, ti.pic_height, ti.pic_x, ti.pic_y);
+    theora_decode_init(&td,&ti);
+    fprintf(stderr,"Ogg logical stream %lx is Theora %dx%d %.02f fps video\n"
+     "Encoded frame content is %dx%d with %dx%d offset\n",
+     to.serialno,ti.width,ti.height,
+     (double)ti.fps_numerator/ti.fps_denominator,
+     ti.frame_width,ti.frame_height,ti.offset_x,ti.offset_y);
   }else{
     /* tear down the partial theora setup */
-    th_info_clear(&ti);
-    th_comment_clear(&tc);
+    theora_info_clear(&ti);
+    theora_comment_clear(&tc);
   }
-  /*Either way, we're done with the codec setup data.*/
-  th_setup_free(ts);
 
   /* open video */
   if(theora_p)open_video();
 
   if(!raw && outfile){
-    fprintf(outfile, "YUV4MPEG2 W%d H%d F%d:%d I%c A%d:%d\n",
-     ti.pic_width,ti.pic_height,ti.fps_numerator,ti.fps_denominator,'p',
+    fprintf(outfile,"YUV4MPEG2 W%d H%d F%d:%d I%c A%d:%d\n",
+     ti.width,ti.height,ti.fps_numerator,ti.fps_denominator,'p',
      ti.aspect_numerator,ti.aspect_denominator);
   }
 
   /* install signal handler */
   signal (SIGINT, sigint_handler);
 
-  /* on to the main decode loop.*/
+  /* Finally the main decode loop. 
+
+     It's one Theora packet per frame, so this is pretty 
+     straightforward if we're not trying to maintain sync
+     with other multiplexed streams.
+
+     the videobuf_ready flag is used to maintain the input
+     buffer in the libogg stream state. If there's no output
+     frame available at the end of the decode step, we must
+     need more input data. We could simplify this by just 
+     using the return code on ogg_page_packetout(), but the
+     flag system extends easily to the case were you care
+     about more than one multiplexed stream (like with audio
+     playback). In that case, just maintain a flag for each
+     decoder you care about, and pull data when any one of
+     them stalls.
+
+     videobuf_time holds the presentation time of the currently
+     buffered video frame. We ignore this value.
+  */
 
   stateflag=0; /* playback has not begun */
   /* queue any remaining pages from data we buffered but that did not
@@ -372,41 +386,41 @@ int main(int argc,char *const *argv){
       /* theora is one in, one out... */
       if(ogg_stream_packetout(&to,&op)>0){
 
-        if(th_decode_packetin(td,&op,&videobuf_granulepos)>=0){
-          videobuf_time=th_granule_time(td,videobuf_granulepos);
-          videobuf_ready=1;
-          frames++;
-	  if(fps_only)
-	    ftime(&after);
-        }
-	
+        theora_decode_packetin(&td,&op);
+        videobuf_granulepos=td.granulepos;
+        videobuf_time=theora_granule_time(&td,videobuf_granulepos);
+        videobuf_ready=1;
+        frames++;
+        if(fps_only)
+          ftime(&after);
+
       }else
         break;
     }
 
     if(fps_only && (videobuf_ready || fps_only==2)){
-      long ms = 
-	after.time*1000.+after.millitm-
-	(last.time*1000.+last.millitm);
-      
-      if(ms>500 || fps_only==1 || 
-	 (feof(infile) && !videobuf_ready)){
-	float file_fps = (float)ti.fps_numerator/ti.fps_denominator;
-	fps_only=2;
-	
-	ms = after.time*1000.+after.millitm-
-	  (start.time*1000.+start.millitm);
-	
-	fprintf(stderr,"\rframe:%d rate:%.2fx           ",
-		frames, 
-		frames*1000./(ms*file_fps));
-	memcpy(&last,&after,sizeof(last));
+      long ms =
+        after.time*1000.+after.millitm-
+        (last.time*1000.+last.millitm);
+
+      if(ms>500 || fps_only==1 ||
+         (feof(infile) && !videobuf_ready)){
+        float file_fps = (float)ti.fps_numerator/ti.fps_denominator;
+        fps_only=2;
+
+        ms = after.time*1000.+after.millitm-
+          (start.time*1000.+start.millitm);
+
+        fprintf(stderr,"\rframe:%d rate:%.2fx           ",
+                frames,
+                frames*1000./(ms*file_fps));
+        memcpy(&last,&after,sizeof(last));
       }
     }
-    
-    if(!videobuf_ready  && feof(infile))break;
 
-    if(!videobuf_ready ){
+    if(!videobuf_ready && feof(infile))break;
+
+    if(!videobuf_ready){
       /* no data yet for somebody.  Grab another page */
       buffer_data(infile,&oy);
       while(ogg_sync_pageout(&oy,&og)>0){
@@ -414,19 +428,18 @@ int main(int argc,char *const *argv){
       }
     }
     /* dumpvideo frame, and get new one */
-    else 
-      if(outfile)video_write();
+    else if(outfile)video_write();
 
     videobuf_ready=0;
   }
 
-  /* close everything */
+  /* end of decoder loop -- close everything */
 
   if(theora_p){
     ogg_stream_clear(&to);
-    th_decode_free(td);
-    th_comment_clear(&tc);
-    th_info_clear(&ti);
+    theora_clear(&td);
+    theora_comment_clear(&tc);
+    theora_info_clear(&ti);
   }
   ogg_sync_clear(&oy);
 
