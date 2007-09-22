@@ -22,7 +22,7 @@
 # include "theora/theoradec.h"
 /*# include "theora/theoraenc.h"*/
 typedef struct th_enc_ctx th_enc_ctx;
-# include "internal.h"
+# include "../internal.h"
 
 typedef struct th_api_wrapper th_api_wrapper;
 typedef struct th_api_info    th_api_info;

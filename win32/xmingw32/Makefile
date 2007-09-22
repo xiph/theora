@@ -67,6 +67,7 @@ WORKDIR = objs
 
 LIBTHEORABASE_CHEADERS = \
 internal.h \
+dec/apiwrapper.h \
 dec/dct.h \
 dec/idct.h \
 dec/huffman.h \
@@ -77,6 +78,7 @@ dec/quant.h \
 
 LIBTHEORADEC_CSOURCES = \
 dec/apiwrapper.c \
+dec/decapiwrapper.c \
 dec/decinfo.c \
 dec/decode.c \
 dec/dequant.c \
@@ -168,7 +170,7 @@ RC_OBJS:= ${LIBTHEORADEC_TARGET} ${LIBTHEORAENC_TARGET} \
 RC_OBJS:= ${RC_OBJS:%.dll=${WORKDIR}/%.rco}
 ALL_OBJS:= ${LIBTHEORADEC_OBJS} ${LIBTHEORAENC_OBJS} \
  ${LIBTHEORADECD_OBJS} ${LIBTHEORAENCD_OBJS} ${RC_OBJS} \
- ${DUMP_VIDEO_OBJS} ${ENCODER_EXAMPLE_OBJS} ${PLAYER_EXAMPLE_OBJS}
+ ${DUMP_VIDEO_OBJS} ${ENCODER_EXAMPLE_OBJS} #${PLAYER_EXAMPLE_OBJS}
 # Create the dependency file list
 ALL_DEPS:= ${ALL_OBJS:%.o=%.d}
 ALL_DEPS:= ${ALL_DEPS:%.do=%.dd}
@@ -369,7 +371,7 @@ ${PLAYER_EXAMPLE_TARGET}: ${PLAYER_EXAMPLE_OBJS} ${LIBTHEORADEC_TARGET}
 
 # Remove all targets.
 clean:
-	-rm ${ALL_OBJS} ${ALL_DEPS} ${ALL_TARGETS} ${IMPLIB_TARGETS}
+	-rm $(sort ${ALL_OBJS} ${ALL_DEPS} ${ALL_TARGETS} ${IMPLIB_TARGETS})
 	-rmdir ${WORKDIR}/enc/x86_32
 	-rmdir ${WORKDIR}/enc
 	-rmdir ${WORKDIR}/dec/x86
