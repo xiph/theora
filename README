@@ -1,38 +1,28 @@
 -------------------------------------------------------------------------
-          The Xiph.org Foundation's libtheora 1.0alpha7 release
+          The Xiph.org Foundation's libtheora 1.0beta1 release
 -------------------------------------------------------------------------
 
 *** What is Theora?
 
 Theora is Xiph.Org's first publicly released video codec, intended
 for use within the Foundation's Ogg multimedia streaming system.
-Theora is derived directly from On2's VP3 codec; Currently the two are
-nearly identical, varying only in encapsulating decoder tables in the 
-bitstream headers, but Theora will make use of this extra freedom 
-in the future to improve over what is possible with VP3.
+Theora is derived directly from On2's VP3 codec; Currently the 
+encoders are nearly identical, but Theora will make use of new
+features supported by the decoder to improve over what is 
+is possible with VP3.
 
 *** Where is Theora?
 
 Theora's main site is www.theora.org.  Theora and related libraries
 can be gotten from www.theora.org or the main Xiph.Org site at
 www.xiph.org.  Development source is kept in an open subversion 
-repository, see http://theora.org/svn.html for instructions.
+repository, see http://theora.org/svn/ for instructions.
 
-*** What is the goal of this alpha release?
+*** What is the goal of this release?
 
-The Theora bitstream format was frozen after the alpha3 release. This
-means that files produced by the alpha3 encoder will always be playable
-according to the Theora I specification.
-
-Traditionally alpha mean proof of concept, not a production-ready 
-release. However the code is very robust, ready for and indeed
-in general use. 
-
-The purpose of this release is to provide an updated testing base for 
-those interested in theora and to dissiminate more widely the changes
-we've made since the last alpha release. These include some helper
-utility functions, a draft format specification and api documentation 
-located in the doc directory.
+This is the first beta release of the 1.0 reference implementation.
+It is intended to completely support the decoder specification, and
+gather feedback on the implementation before declaring it stable.
 
 -------------------------------------------------------------------------
 Getting started with the code
@@ -45,7 +35,6 @@ Requirements summary:
   For libtheora:  
          
       libogg 1.1 or newer.
-      (there is optional support for libogg2, unreleased at this time)
 
   For example encoder:
 
@@ -68,13 +57,14 @@ considered a bug; please report problems to theora-dev@xiph.org.
 
 Some windows build support is included in the win32 directory.
 
+There is also an experimental scons build.
+
 *** How do I use the sample encoder?
 
 The sample encoder takes raw video in YUV4MPEG2 format, as used by
-lavtools, mjpeg-tools and other packages.  Snatch and MPlayer version
-0.90 and later can also export in YUV4MPEG format (more on this
-later).  The encoder take audio as WAV files.  encoder_example -h
-lists options accepted by the encoder.
+lavtools, mjpeg-tools and other packages. The encoder expects audio,
+if any, in a separate wave WAV file. Try 'encoder_example -h' for a 
+complete list of options.
 
 An easy way to get raw video and audio files is to use MPlayer as an
 export utility.  The options " -ao pcm -vo yuv4mpeg " will export a
@@ -87,6 +77,9 @@ video file that aren't in sync to begin with.
 The encoder will also take video or audio on stdin if '-' is specified
 as the input file name.
 
+There is also a 'png2theora' example which accepts a set of image
+files in that format.
+
 *** How do I use the sample player?
 
 The sample player takes an Ogg file on standard in; the file may be
@@ -94,10 +87,15 @@ audio alone, video alone or video with audio.
 
 *** What other tools are available?
 
+The programs in the examples directory are intended as tutorial source 
+for developers using the library. As such they sacrifice features and 
+robustness in the interests of comprehension and should not be 
+considered serious applications.
+
 If you're wanting to just use theora, consider the programs linked
 from http://www.theora.org/. There is playback support in a number
-of common free players, and Jan Gerber's ffmpeg2theora is an excellent
-encoding front end.
+of common free players, and plugins for major media frameworks.
+Jan Gerber's ffmpeg2theora is an excellent encoding front end.
 
 -------------------------------------------------------------------------
 Troubleshooting the build process
@@ -108,9 +106,7 @@ Troubleshooting the build process
 encoder_internal.h:664: parse error before `ogg_uint16_t'
 
 This means you have version of libogg prior to 1.1. A *complete* new Ogg 
-install, libs and headers, from a new release or CVS is needed.  Don't 
-forget to re-reun autogen.sh so that autoconf sucks in the new type 
-declarations.
+install, libs and headers is needed.
 
 Also be sure that there aren't multiple copies of Ogg installed in
 /usr and /usr/local; an older one might be first on the search path
