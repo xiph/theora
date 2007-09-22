@@ -289,9 +289,43 @@ typedef struct theora_comment{
 } theora_comment;
 
 
-/**\name theora_control() codes
- * \anchor encctlcodes
- * These are the available request codes for theora_control().
+/**\name theora_control() codes */
+
+/**\anchor decctlcodes
+ * These are the available request codes for theora_control()
+ * when called with a decoder instance.
+ * By convention, these are odd, to distinguish them from the
+ *  \ref encctlcodes "encoder control codes".
+ * Keep any experimental or vendor-specific values above \c 0x8000.*/
+
+/**Get the maximum post-processing level.
+ * The decoder supports a post-processing filter that can improve
+ * the appearance of the decoded images. This returns the highest
+ * level setting for this post-processor, corresponding to maximum
+ * improvement and computational expense.
+ */
+#define TH_DECCTL_GET_PPLEVEL_MAX (1)
+
+/**Set the post-processing level.
+ * Sets the level of post-processing to use when decoding the 
+ * compressed stream. This must be a value between zero (off)
+ * and the maximum returned by TH_DECCTL_GET_PPLEVEL_MAX.
+ */
+#define TH_DECCTL_SET_PPLEVEL (3)
+
+/**Set the granule position.
+ * Call this after a seek, to update the internal granulepos
+ * in the decoder, to insure that subsequent frames are marked
+ * properly. If you track timestamps yourself and do not use
+ * the granule postion returned by the decoder, then you do
+ * not need to use this control.
+ */
+#define TH_DECCTL_SET_GRANPOS (5)
+
+
+/**\anchor encctlcodes
+ * These are the available request codes for theora_control()
+ * when called with an encoder instance.
  * By convention, these are even, to distinguish them from the
  *  \ref decctlcodes "decoder control codes".
  * Keep any experimental or vendor-specific values above \c 0x8000.*/
