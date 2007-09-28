@@ -188,7 +188,7 @@ int main(int argc,char *const *argv){
   while((c=getopt_long(argc,argv,optstring,options,&long_option_index))!=EOF){
     switch(c){
     case 'o':
-      if(!strcmp(optarg,"-")){
+      if(strcmp(optarg,"-")!=0){
         outfile=fopen(optarg,"wb");
         if(outfile==NULL){
           fprintf(stderr,"Unable to open output file '%s'\n", optarg);
