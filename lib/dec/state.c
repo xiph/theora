@@ -723,12 +723,10 @@ int oc_state_mbi_for_pos(oc_theora_state *_state,int _mbx,int _mby){
   Return: The number of offsets returned: 1 or 2.*/
 int oc_state_get_mv_offsets(oc_theora_state *_state,int *_offset0,
  int *_offset1,int _dx,int _dy,int _ystride,int _pli){
-  static const int MV_SHIFT[6]={1,2};
-  static const int MV_MASK[6]={1,3};
   int offset0;
   int offset1;
-  int xtype;
-  int ytype;
+  int xprec;
+  int yprec;
   int xsign;
   int ysign;
   int xfrac;
@@ -749,35 +747,35 @@ int oc_state_get_mv_offsets(oc_theora_state *_state,int *_offset0,
      appropriate amount, always truncating _away_ from zero.*/
   /*These two variables decide whether we are in half- or quarter-pixel
      precision in each component.*/
-  xtype=!(_state->info.pixel_fmt&1)&!!_pli;
-  ytype=!(_state->info.pixel_fmt&2)&!!_pli;
+  xprec=1+(!(_state->info.pixel_fmt&1)&!!_pli);
+  yprec=1+(!(_state->info.pixel_fmt&2)&!!_pli);
   /*These two variables are either 0 for a non-negative vector or all 1's for
      a negative one.*/
-  xsign=_dx>>6;
-  ysign=_dy>>6;
+  xsign=-(_dx<0);
+  ysign=-(_dy<0);
   /*These two variables are either 0 if all the fractional bits are 0 or 1 if
      any of them are non-zero.*/
-  xfrac=!!(_dx&MV_MASK[xtype]);
-  yfrac=!!(_dy&MV_MASK[ytype]);
+  xfrac=!!(_dx&(1<<xprec)-1);
+  yfrac=!!(_dy&(1<<yprec)-1);
   /*This branchless code is equivalent to:
   if(_dx<0){
     if(_dy<0){
-      offset0=-(-_dx>>MV_SHIFT[xtype])-(-_dy>>MV_SHIFT[ytype])*_ystride;
+      offset0=-(-_dx>>xprec)-(-_dy>>yprec)*_ystride;
     }
     else{
-      offset0=-(-_dx>>MV_SHIFT[xtype])+(_dy>>MV_SHIFT[ytype])*_ystride;
+      offset0=-(-_dx>>xprec)+(_dy>>yprec)*_ystride;
     }
   }
   else{
     if(_dy<0){
-      offset0=(_dx>>MV_SHIFT[xtype])-(-_dy>>MV_SHIFT[ytype])*_ystride;
+      offset0=(_dx>>xprec)-(-_dy>>yprec)*_ystride;
     }
     else{
-      offset0=(_dx>>MV_SHIFT[xtype])+(_dy>>MV_SHIFT[ytype])*_ystride;
+      offset0=(_dx>>xprec)+(_dy>>yprec)*_ystride;
     }
   }*/
-  *_offset0=offset0=(_dx>>MV_SHIFT[xtype])+(xfrac&xsign)+
-   ((_dy>>MV_SHIFT[ytype])+(yfrac&ysign))*_ystride;
+  *_offset0=offset0=(_dx>>xprec)+(xfrac&xsign)+
+   ((_dy>>yprec)+(yfrac&ysign))*_ystride;
   if(xfrac||yfrac){
     int o[2];
     /*This branchless code is equivalent to:

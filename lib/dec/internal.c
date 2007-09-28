@@ -227,13 +227,13 @@ int oc_dct_token_skip(int _token,int _extra_bits){
   This version is for use with chroma decimated in the X and Y directions.
   _cbmvs: The chroma block-level motion vectors to fill in.
   _lbmvs: The luma block-level motion vectors.*/
-static void oc_set_chroma_mvs00(char _cbmvs[4][2],const char _lbmvs[4][2]){
+static void oc_set_chroma_mvs00(oc_mv _cbmvs[4],const oc_mv _lbmvs[4]){
   int dx;
   int dy;
   dx=_lbmvs[0][0]+_lbmvs[1][0]+_lbmvs[2][0]+_lbmvs[3][0];
   dy=_lbmvs[0][1]+_lbmvs[1][1]+_lbmvs[2][1]+_lbmvs[3][1];
-  _cbmvs[0][0]=(char)OC_DIV_ROUND_POW2(dx,2,2);
-  _cbmvs[0][1]=(char)OC_DIV_ROUND_POW2(dy,2,2);
+  _cbmvs[0][0]=(signed char)OC_DIV_ROUND_POW2(dx,2,2);
+  _cbmvs[0][1]=(signed char)OC_DIV_ROUND_POW2(dy,2,2);
 }
 
 /*The function used to fill in the chroma plane motion vectors for a macro
@@ -241,17 +241,17 @@ static void oc_set_chroma_mvs00(char _cbmvs[4][2],const char _lbmvs[4][2]){
   This version is for use with chroma decimated in the Y direction.
   _cbmvs: The chroma block-level motion vectors to fill in.
   _lbmvs: The luma block-level motion vectors.*/
-static void oc_set_chroma_mvs01(char _cbmvs[4][2],const char _lbmvs[4][2]){
+static void oc_set_chroma_mvs01(oc_mv _cbmvs[4],const oc_mv _lbmvs[4]){
   int dx;
   int dy;
   dx=_lbmvs[0][0]+_lbmvs[2][0];
   dy=_lbmvs[0][1]+_lbmvs[2][1];
-  _cbmvs[0][0]=(char)OC_DIV_ROUND_POW2(dx,1,1);
-  _cbmvs[0][1]=(char)OC_DIV_ROUND_POW2(dy,1,1);
+  _cbmvs[0][0]=(signed char)OC_DIV_ROUND_POW2(dx,1,1);
+  _cbmvs[0][1]=(signed char)OC_DIV_ROUND_POW2(dy,1,1);
   dx=_lbmvs[1][0]+_lbmvs[3][0];
   dy=_lbmvs[1][1]+_lbmvs[3][1];
-  _cbmvs[1][0]=(char)OC_DIV_ROUND_POW2(dx,1,1);
-  _cbmvs[1][1]=(char)OC_DIV_ROUND_POW2(dy,1,1);
+  _cbmvs[1][0]=(signed char)OC_DIV_ROUND_POW2(dx,1,1);
+  _cbmvs[1][1]=(signed char)OC_DIV_ROUND_POW2(dy,1,1);
 }
 
 /*The function used to fill in the chroma plane motion vectors for a macro
@@ -259,17 +259,17 @@ static void oc_set_chroma_mvs01(char _cbmvs[4][2],const char _lbmvs[4][2]){
   This version is for use with chroma decimated in the X direction.
   _cbmvs: The chroma block-level motion vectors to fill in.
   _lbmvs: The luma block-level motion vectors.*/
-static void oc_set_chroma_mvs10(char _cbmvs[4][2],const char _lbmvs[4][2]){
+static void oc_set_chroma_mvs10(oc_mv _cbmvs[4],const oc_mv _lbmvs[4]){
   int dx;
   int dy;
   dx=_lbmvs[0][0]+_lbmvs[1][0];
   dy=_lbmvs[0][1]+_lbmvs[1][1];
-  _cbmvs[0][0]=(char)OC_DIV_ROUND_POW2(dx,1,1);
-  _cbmvs[0][1]=(char)OC_DIV_ROUND_POW2(dy,1,1);
+  _cbmvs[0][0]=(signed char)OC_DIV_ROUND_POW2(dx,1,1);
+  _cbmvs[0][1]=(signed char)OC_DIV_ROUND_POW2(dy,1,1);
   dx=_lbmvs[2][0]+_lbmvs[3][0];
   dy=_lbmvs[2][1]+_lbmvs[3][1];
-  _cbmvs[2][0]=(char)OC_DIV_ROUND_POW2(dx,1,1);
-  _cbmvs[2][1]=(char)OC_DIV_ROUND_POW2(dy,1,1);
+  _cbmvs[2][0]=(signed char)OC_DIV_ROUND_POW2(dx,1,1);
+  _cbmvs[2][1]=(signed char)OC_DIV_ROUND_POW2(dy,1,1);
 }
 
 /*The function used to fill in the chroma plane motion vectors for a macro
@@ -279,7 +279,7 @@ static void oc_set_chroma_mvs10(char _cbmvs[4][2],const char _lbmvs[4][2]){
   _lmbmv: The luma macro-block level motion vector to fill in for use in
            prediction.
   _lbmvs: The luma block-level motion vectors.*/
-static void oc_set_chroma_mvs11(char _cbmvs[4][2],const char _lbmvs[4][2]){
+static void oc_set_chroma_mvs11(oc_mv _cbmvs[4],const oc_mv _lbmvs[4]){
   memcpy(_cbmvs,_lbmvs,4*sizeof(_lbmvs[0]));
 }
 

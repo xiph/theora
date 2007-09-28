@@ -602,8 +602,8 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
   const int              *map_idxs;
   long                    val;
   int                     map_nidxs;
-  char                    last_mv[2][2];
-  char                    cbmvs[4][2];
+  oc_mv                   last_mv[2];
+  oc_mv                   cbmvs[4];
   set_chroma_mvs=OC_SET_CHROMA_MVS_TABLE[_dec->state.info.pixel_fmt];
   theora_read1(&_dec->opb,&val);
   mv_comp_unpack=val?oc_clc_mv_comp_unpack:oc_vlc_mv_comp_unpack;
@@ -614,7 +614,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
   mb_end=mb+_dec->state.nmbs;
   for(;mb<mb_end;mb++)if(mb->mode!=OC_MODE_INVALID){
     oc_fragment *frag;
-    char         mbmv[2];
+    oc_mv        mbmv;
     int          coded[13];
     int          codedi;
     int          ncoded;
@@ -634,8 +634,8 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
     mb_mode=mb->mode;
     switch(mb_mode){
       case OC_MODE_INTER_MV_FOUR:{
-        char lbmvs[4][2];
-        int  bi;
+        oc_mv       lbmvs[4];
+        int         bi;
         /*Mark the tail of the list, so we don't accidentally go past it.*/
         coded[ncoded]=-1;
         for(bi=codedi=0;bi<4;bi++){
@@ -643,8 +643,8 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
             codedi++;
             frag=_dec->state.frags+mb->map[0][bi];
             frag->mbmode=mb_mode;
-            frag->mv[0]=lbmvs[bi][0]=(char)(*mv_comp_unpack)(&_dec->opb);
-            frag->mv[1]=lbmvs[bi][1]=(char)(*mv_comp_unpack)(&_dec->opb);
+            frag->mv[0]=lbmvs[bi][0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+            frag->mv[1]=lbmvs[bi][1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
           }
           else lbmvs[bi][0]=lbmvs[bi][1]=0;
         }
@@ -655,7 +655,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
           last_mv[0][1]=lbmvs[coded[codedi-1]][1];
         }
         if(codedi<ncoded){
-          (*set_chroma_mvs)(cbmvs,lbmvs);
+          (*set_chroma_mvs)(cbmvs,(const oc_mv *)lbmvs);
           for(;codedi<ncoded;codedi++){
             mapi=coded[codedi];
             bi=mapi&3;
@@ -669,8 +669,8 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
       case OC_MODE_INTER_MV:{
         last_mv[1][0]=last_mv[0][0];
         last_mv[1][1]=last_mv[0][1];
-        mbmv[0]=last_mv[0][0]=(char)(*mv_comp_unpack)(&_dec->opb);
-        mbmv[1]=last_mv[0][1]=(char)(*mv_comp_unpack)(&_dec->opb);
+        mbmv[0]=last_mv[0][0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+        mbmv[1]=last_mv[0][1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
       }break;
       case OC_MODE_INTER_MV_LAST:{
         mbmv[0]=last_mv[0][0];
@@ -685,8 +685,8 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
         last_mv[0][1]=mbmv[1];
       }break;
       case OC_MODE_GOLDEN_MV:{
-        mbmv[0]=(char)(*mv_comp_unpack)(&_dec->opb);
-        mbmv[1]=(char)(*mv_comp_unpack)(&_dec->opb);
+        mbmv[0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+        mbmv[1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
       }break;
       default:mbmv[0]=mbmv[1]=0;break;
     }
@@ -925,12 +925,12 @@ static int oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[3],
       run_counts[63]+=eobs;
       token=oc_huff_token_decode(&_dec->opb,
        _dec->huff_tables[_huff_idxs[pli]]);
-      _dec->dct_tokens[0][ti++]=(char)token;
+      _dec->dct_tokens[0][ti++]=(unsigned char)token;
       neb=OC_DCT_TOKEN_EXTRA_BITS[token];
       if(neb){
         theora_read(&_dec->opb,neb,&val);
         eb=(int)val;
-        _dec->extra_bits[0][ebi++]=(ogg_int16_t)eb;
+        _dec->extra_bits[0][ebi++]=(ogg_uint16_t)eb;
       }
       else eb=0;
       skip=oc_dct_token_skip(token,eb);
@@ -997,12 +997,12 @@ static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[3],
       run_counts[63]+=_eobs;
       token=oc_huff_token_decode(&_dec->opb,
        _dec->huff_tables[_huff_idxs[pli]]);
-      _dec->dct_tokens[_zzi][ti++]=(char)token;
+      _dec->dct_tokens[_zzi][ti++]=(unsigned char)token;
       neb=OC_DCT_TOKEN_EXTRA_BITS[token];
       if(neb){
         theora_read(&_dec->opb,neb,&val);
         eb=(int)val;
-        _dec->extra_bits[_zzi][ebi++]=(ogg_int16_t)eb;
+        _dec->extra_bits[_zzi][ebi++]=(ogg_uint16_t)eb;
       }
       else eb=0;
       skip=oc_dct_token_skip(token,eb);

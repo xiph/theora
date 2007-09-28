@@ -131,9 +131,11 @@ typedef struct oc_theora_state oc_theora_state;
 
 
 /*A map from a super block to fragment numbers.*/
-typedef int oc_sb_map[4][4];
+typedef int         oc_sb_map[4][4];
 /*A map from a macro block to fragment numbers.*/
-typedef int oc_mb_map[3][4];
+typedef int         oc_mb_map[3][4];
+/*A motion vector.*/
+typedef signed char oc_mv[2];
 
 
 
@@ -228,7 +230,7 @@ typedef struct{
     For fragments completely inside or outside this region, this is NULL.*/
   oc_border_info *border;
   /*The motion vector used for this fragment.*/
-  char            mv[2];
+  oc_mv           mv;
 }oc_fragment;
 
 
@@ -361,8 +363,7 @@ struct oc_theora_state{
   _lmbmv: The luma macro-block level motion vector to fill in for use in
            prediction.
   _lbmvs: The luma block-level motion vectors.*/
-typedef void (*oc_set_chroma_mvs_func)(char _cbmvs[4][2],
- /*const*/ char _lbmvs[4][2]);
+typedef void (*oc_set_chroma_mvs_func)(oc_mv _cbmvs[4],const oc_mv _lbmvs[4]);
 
 
 
@@ -427,11 +428,13 @@ int oc_state_dump_frame(const oc_theora_state *_state,int _frame,
 #endif
 
 /*Shared accelerated functions.*/
-void oc_frag_recon_intra(const oc_theora_state *_state,unsigned char *_dst,int _dst_ystride,
- const ogg_int16_t *_residue);
-void oc_frag_recon_inter(const oc_theora_state *_state,unsigned char *_dst,int _dst_ystride,
+void oc_frag_recon_intra(const oc_theora_state *_state,
+ unsigned char *_dst,int _dst_ystride,const ogg_int16_t *_residue);
+void oc_frag_recon_inter(const oc_theora_state *_state,
+ unsigned char *_dst,int _dst_ystride,
  const unsigned char *_src,int _src_ystride,const ogg_int16_t *_residue);
-void oc_frag_recon_inter2(const oc_theora_state *_state,unsigned char *_dst,int _dst_ystride,
+void oc_frag_recon_inter2(const oc_theora_state *_state,
+ unsigned char *_dst,int _dst_ystride,
  const unsigned char *_src1,int _src1_ystride,const unsigned char *_src2,
  int _src2_ystride,const ogg_int16_t *_residue);
 void oc_state_frag_copy(const oc_theora_state *_state,const int *_fragis,
