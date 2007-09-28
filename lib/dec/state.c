@@ -638,7 +638,7 @@ void oc_state_borders_fill_caps(oc_theora_state *_state,int _refi,int _pli){
   iplane=_state->ref_frame_bufs[_refi]+_pli;
   fullw=iplane->width+(hpadding<<1);
   apix=iplane->data-hpadding;
-  bpix=iplane->data+(iplane->height-1)*iplane->ystride;
+  bpix=iplane->data+(iplane->height-1)*iplane->ystride-hpadding;
   epix=apix-iplane->ystride*vpadding;
   while(apix!=epix){
     memcpy(apix-iplane->ystride,apix,fullw);
