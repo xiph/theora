@@ -23,10 +23,10 @@
 
 ogg_uint32_t oc_cpu_flags_get(void){
   ogg_uint32_t flags = 0;
-  ogg_uint32_t eax;
-  ogg_uint32_t ebx;
-  ogg_uint32_t ecx;
-  ogg_uint32_t edx;
+  ogg_uint32_t v_eax;
+  ogg_uint32_t v_ebx;
+  ogg_uint32_t v_ecx;
+  ogg_uint32_t v_edx;
 #if defined(USE_ASM)
 #if (defined(__amd64__) || defined(__x86_64__))
 # define cpuid(_op,_eax,_ebx,_ecx,_edx) \
@@ -66,28 +66,28 @@ ogg_uint32_t oc_cpu_flags_get(void){
   /*No cpuid.*/
   if(eax==ebx)return 0;
 #endif
-  cpuid(0,eax,ebx,ecx,edx);
-  if(ebx==0x756e6547&&edx==0x49656e69&&ecx==0x6c65746e){
+  cpuid(0,v_eax,v_ebx,v_ecx,v_edx);
+  if(v_ebx==0x756e6547&&v_edx==0x49656e69&&v_ecx==0x6c65746e){
     /*Intel:*/
 inteltest:
     cpuid(1,eax,ebx,ecx,edx);
-    if((edx&0x00800000)==0)return 0;
+    if((v_edx&0x00800000)==0)return 0;
     flags=OC_CPU_X86_MMX;
-    if(edx&0x02000000)flags|=OC_CPU_X86_MMXEXT|OC_CPU_X86_SSE;
-    if(edx&0x04000000)flags|=OC_CPU_X86_SSE2;
+    if(v_edx&0x02000000)flags|=OC_CPU_X86_MMXEXT|OC_CPU_X86_SSE;
+    if(v_edx&0x04000000)flags|=OC_CPU_X86_SSE2;
   }
-  else if(ebx==0x68747541&&edx==0x69746e65&&ecx==0x444d4163 ||
-          ebx==0x646f6547&&edx==0x79622065&&ecx==0x43534e20){
+  else if(v_ebx==0x68747541&&v_edx==0x69746e65&&v_ecx==0x444d4163 ||
+          v_ebx==0x646f6547&&v_edx==0x79622065&&v_ecx==0x43534e20){
     /*AMD:*/
     /*Geode:*/
-    cpuid(0x80000000,eax,ebx,ecx,edx);
-    if(eax<0x80000001)goto inteltest;
-    cpuid(0x80000001,eax,ebx,ecx,edx);
-    if((edx&0x00800000)==0)return 0;
+    cpuid(0x80000000,v_eax,v_ebx,v_ecx,v_edx);
+    if(v_eax<0x80000001)goto inteltest;
+    cpuid(0x80000001,v_eax,v_ebx,v_ecx,v_edx);
+    if((v_edx&0x00800000)==0)return 0;
     flags=OC_CPU_X86_MMX;
-    if(edx&0x80000000)flags|=OC_CPU_X86_3DNOW;
-    if(edx&0x40000000)flags|=OC_CPU_X86_3DNOWEXT;
-    if(edx&0x00400000)flags|=OC_CPU_X86_MMXEXT;
+    if(v_edx&0x80000000)flags|=OC_CPU_X86_3DNOW;
+    if(v_edx&0x40000000)flags|=OC_CPU_X86_3DNOWEXT;
+    if(v_edx&0x00400000)flags|=OC_CPU_X86_MMXEXT;
   }
   else{
     /*Implement me.*/
