@@ -23,10 +23,10 @@
 
 ogg_uint32_t oc_cpu_flags_get(void){
   ogg_uint32_t flags = 0;
-  ogg_uint32_t v_eax;
-  ogg_uint32_t v_ebx;
-  ogg_uint32_t v_ecx;
-  ogg_uint32_t v_edx;
+  ogg_uint32_t eax;
+  ogg_uint32_t ebx;
+  ogg_uint32_t ecx;
+  ogg_uint32_t edx;
 #if defined(USE_ASM)
 #if (defined(__amd64__) || defined(__x86_64__))
 # define cpuid(_op,_eax,_ebx,_ecx,_edx) \
@@ -56,38 +56,47 @@ ogg_uint32_t oc_cpu_flags_get(void){
    :"a" (_op) \
    :"cc" \
   )
-
-#ifdef _MSC_VER
-# include "cpu_asm_1_msvc.c"
-#else
-# include "cpu_asm_1_gcc.c"
-#endif
-
+  __asm__ __volatile__(
+   "pushfl\n\t"
+   "pushfl\n\t"
+   "popl          %0\n\t"
+   "movl          %0,%1\n\t"
+   "xorl   $0x200000,%0\n\t"
+   "pushl         %0\n\t"
+   "popfl\n\t"
+   "pushfl\n\t"
+   "popl          %0\n\t"
+   "popfl\n\t"
+   :"=r" (eax),
+    "=r" (ebx)
+   :
+   :"cc"
+  );
   /*No cpuid.*/
   if(eax==ebx)return 0;
 #endif
-  cpuid(0,v_eax,v_ebx,v_ecx,v_edx);
-  if(v_ebx==0x756e6547&&v_edx==0x49656e69&&v_ecx==0x6c65746e){
+  cpuid(0,eax,ebx,ecx,edx);
+  if(ebx==0x756e6547&&edx==0x49656e69&&ecx==0x6c65746e){
     /*Intel:*/
 inteltest:
     cpuid(1,eax,ebx,ecx,edx);
-    if((v_edx&0x00800000)==0)return 0;
+    if((edx&0x00800000)==0)return 0;
     flags=OC_CPU_X86_MMX;
-    if(v_edx&0x02000000)flags|=OC_CPU_X86_MMXEXT|OC_CPU_X86_SSE;
-    if(v_edx&0x04000000)flags|=OC_CPU_X86_SSE2;
+    if(edx&0x02000000)flags|=OC_CPU_X86_MMXEXT|OC_CPU_X86_SSE;
+    if(edx&0x04000000)flags|=OC_CPU_X86_SSE2;
   }
-  else if(v_ebx==0x68747541&&v_edx==0x69746e65&&v_ecx==0x444d4163 ||
-          v_ebx==0x646f6547&&v_edx==0x79622065&&v_ecx==0x43534e20){
+  else if(ebx==0x68747541&&edx==0x69746e65&&ecx==0x444d4163 ||
+          ebx==0x646f6547&&edx==0x79622065&&ecx==0x43534e20){
     /*AMD:*/
     /*Geode:*/
-    cpuid(0x80000000,v_eax,v_ebx,v_ecx,v_edx);
-    if(v_eax<0x80000001)goto inteltest;
-    cpuid(0x80000001,v_eax,v_ebx,v_ecx,v_edx);
-    if((v_edx&0x00800000)==0)return 0;
+    cpuid(0x80000000,eax,ebx,ecx,edx);
+    if(eax<0x80000001)goto inteltest;
+    cpuid(0x80000001,eax,ebx,ecx,edx);
+    if((edx&0x00800000)==0)return 0;
     flags=OC_CPU_X86_MMX;
-    if(v_edx&0x80000000)flags|=OC_CPU_X86_3DNOW;
-    if(v_edx&0x40000000)flags|=OC_CPU_X86_3DNOWEXT;
-    if(v_edx&0x00400000)flags|=OC_CPU_X86_MMXEXT;
+    if(edx&0x80000000)flags|=OC_CPU_X86_3DNOW;
+    if(edx&0x40000000)flags|=OC_CPU_X86_3DNOWEXT;
+    if(edx&0x00400000)flags|=OC_CPU_X86_MMXEXT;
   }
   else{
     /*Implement me.*/
