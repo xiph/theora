@@ -41,8 +41,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include;..\..\..\lib"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS; USE_ASM"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -62,8 +62,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="libogg.lib"
 				OutputFile="$(OutDir)/libtheora.dll"
 				LinkIncremental="2"
+				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\debug;"
 				ModuleDefinitionFile="..\..\libtheora.def"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(OutDir)/libtheora.pdb"
@@ -126,8 +128,8 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include;..\..\..\lib"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS; USE_ASM"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
@@ -150,8 +152,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="libogg.lib"
 				OutputFile="$(OutDir)/libtheora.dll"
 				LinkIncremental="1"
+				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\release;"
 				ModuleDefinitionFile="..\..\libtheora.def"
 				GenerateDebugInformation="false"
 				SubSystem="2"
@@ -216,8 +220,8 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include;..\..\..\lib"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS; THEORA_USE_ASM"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
@@ -241,10 +245,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="libogg.lib"
 				OutputFile="$(OutDir)/libtheora.dll"
 				LinkIncremental="1"
+				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\release;"
 				ModuleDefinitionFile="..\..\libtheora.def"
-				GenerateDebugInformation="true"
+				GenerateDebugInformation="false"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -307,8 +313,8 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include;..\..\..\lib"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS; THEORA_USE_ASM"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
@@ -332,10 +338,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="libogg.lib"
 				OutputFile="$(OutDir)/libtheora.dll"
 				LinkIncremental="1"
+				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\release;"
 				ModuleDefinitionFile="..\..\libtheora.def"
-				GenerateDebugInformation="true"
+				GenerateDebugInformation="false"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -394,8 +402,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include;..\..\..\lib;..\..\..\..\..\..\..\core\ogg\libogg\include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS; USE_ASM"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -462,8 +470,8 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\..\libogg\include;..\..\..\lib; ..\..\..\..\..\..\..\core\ogg\libogg\include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS; USE_ASM"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="2"
@@ -908,10 +916,6 @@
 							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 						/>
 					</FileConfiguration>
-				</File>
-				<File
-					RelativePath="..\..\..\lib\enc\encoder_disabled.c"
-					>
 				</File>
 				<File
 					RelativePath="..\..\..\lib\enc\encoder_huffman.c"
