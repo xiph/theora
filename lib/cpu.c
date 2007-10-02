@@ -56,22 +56,13 @@ ogg_uint32_t oc_cpu_flags_get(void){
    :"a" (_op) \
    :"cc" \
   )
-  __asm__ __volatile__(
-   "pushfl\n\t"
-   "pushfl\n\t"
-   "popl          %0\n\t"
-   "movl          %0,%1\n\t"
-   "xorl   $0x200000,%0\n\t"
-   "pushl         %0\n\t"
-   "popfl\n\t"
-   "pushfl\n\t"
-   "popl          %0\n\t"
-   "popfl\n\t"
-   :"=r" (eax),
-    "=r" (ebx)
-   :
-   :"cc"
-  );
+
+#ifdef _MSC_VER
+# include "cpu_asm_1_msvc.c"
+#else
+# include "cpu_asm_1_gcc.c"
+#endif
+
   /*No cpuid.*/
   if(eax==ebx)return 0;
 #endif
