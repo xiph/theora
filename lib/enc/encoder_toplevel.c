@@ -1395,12 +1395,14 @@ static int theora_encode_control(theora_state *th,int req,
  void *buf,size_t buf_sz) {
   
   int value;
+  CP_INSTANCE *cpi;
+  PB_INSTANCE *pbi;
   
   if(th == NULL)
     return TH_EFAULT;
 
-  CP_INSTANCE *cpi = th->internal_encode;
-  PB_INSTANCE *pbi = &cpi->pb;
+  cpi = th->internal_encode;
+  pbi = &cpi->pb;
   
   switch(req) {
     case TH_ENCCTL_SET_QUANT_PARAMS:
