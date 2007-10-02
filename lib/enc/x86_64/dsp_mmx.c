@@ -15,6 +15,8 @@
 
  ********************************************************************/
 
+#ifdef USE_ASM
+
 #include <stdlib.h>
 
 #include "codec_internal.h"
@@ -299,3 +301,4 @@ void dsp_mmx_init(DspFunctions *funcs)
   funcs->inter8x8_err = inter8x8_err__mmx;
 }
 
+#endif /* USE_ASM */

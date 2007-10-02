@@ -15,6 +15,8 @@
 
  ********************************************************************/
 
+#ifdef USE_ASM
+
 #include "codec_internal.h"
 
 typedef unsigned long long ogg_uint64_t;
@@ -180,3 +182,4 @@ void dsp_mmx_recon_init(DspFunctions *funcs)
   funcs->recon_inter8x8_half = recon_inter8x8_half__mmx;
 }
 
+#endif /* USE_ASM */

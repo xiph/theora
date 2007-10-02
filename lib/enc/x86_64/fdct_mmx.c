@@ -13,6 +13,8 @@
 /* mmx fdct implementation for x86_64 */
 /* $Id$ */
 
+#ifdef USE_ASM
+
 #include "theora/theora.h"
 #include "codec_internal.h"
 #include "dsp.h"
@@ -337,3 +339,5 @@ void dsp_mmx_fdct_init(DspFunctions *funcs)
   TH_DEBUG("enabling accelerated x86_64 mmx fdct function.\n");
   funcs->fdct_short = fdct_short__mmx;
 }
+
+#endif /* USE_ASM */

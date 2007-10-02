@@ -487,4 +487,15 @@ struct oc_state_dispatch_vtbl{
   oc_state_granule_time_func  granule_time;
 };
 
+#if defined(_MSC_VER) && !defined(TH_REALLY_NO_ASSEMBLY)
+# error You are compiling theora without inline assembly.\
+ This is probably not what you want.  Instead, please either\
+  (1) download the assembly .lib binaries or\
+  (2) compile them yourself using MinGW, and make Visual Studio\
+ link against them.\
+  Please seriously consider this before defining TH_REALLY_NO_ASSEMBLY\
+  to disable this message and compile without inline assembly.\
+  Thank you!
+#endif
+
 #endif
