@@ -10,6 +10,7 @@ OUT_FILE="lib/cpu_asm_1_msvc.c"
 
 echo "#ifdef USE_ASM" > ${OUT_FILE}
 echo "" >> ${OUT_FILE}
+echo "__asm {" >> ${OUT_FILE}
 
 cat ${IN_FILE}\
     | grep '\\n\\t'\
@@ -20,8 +21,8 @@ cat ${IN_FILE}\
     | sed -r 's/\$((0x)?[0-9]+)/\1/'\
     >> lib/cpu_asm_1_msvc.c
 
+echo "}" >> ${OUT_FILE}
 echo "" >> ${OUT_FILE}
 echo "#endif /* USE_ASM */" >> ${OUT_FILE}
 
 cat ${OUT_FILE}
-

@@ -1,5 +1,6 @@
 #ifdef USE_ASM
 
+__asm {
    pushfl
    pushfl
    popl          eax
@@ -10,5 +11,6 @@
    pushfl
    popl          eax
    popfl
+}
 
 #endif /* USE_ASM */
