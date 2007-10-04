@@ -13,11 +13,11 @@
 /* mmx fdct implementation for x86_64 */
 /* $Id$ */
 
-#ifdef USE_ASM
-
 #include "theora/theora.h"
 #include "codec_internal.h"
 #include "dsp.h"
+
+#if defined(USE_ASM)
 
 static const __attribute__ ((aligned(8),used)) ogg_int64_t xC1S7 = 0x0fb15fb15fb15fb15LL;
 static const __attribute__ ((aligned(8),used)) ogg_int64_t xC2S6 = 0x0ec83ec83ec83ec83LL;

@@ -15,9 +15,9 @@
 
  ********************************************************************/
 
-#ifdef USE_ASM
-
 #include "codec_internal.h"
+
+#if defined(USE_ASM)
 
 typedef unsigned long long ogg_uint64_t;
 

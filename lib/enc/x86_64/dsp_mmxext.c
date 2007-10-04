@@ -15,12 +15,12 @@
 
  ********************************************************************/
 
-#ifdef USE_ASM
-
 #include <stdlib.h>
 
 #include "codec_internal.h"
 #include "dsp.h"
+
+#if defined(USE_ASM)
 
 typedef unsigned long long ogg_uint64_t;
 
