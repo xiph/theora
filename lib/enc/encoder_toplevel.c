@@ -1393,10 +1393,9 @@ static ogg_int64_t theora_encode_granule_frame(theora_state *th,
 
 static int theora_encode_control(theora_state *th,int req,
  void *buf,size_t buf_sz) {
-  
-  int value;
   CP_INSTANCE *cpi;
   PB_INSTANCE *pbi;
+  int value;
   
   if(th == NULL)
     return TH_EFAULT;
