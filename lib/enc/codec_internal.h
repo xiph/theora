@@ -716,6 +716,7 @@ typedef struct CP_INSTANCE {
 
   DspFunctions   dsp;  /* Selected functions for this platform */
 
+  int               numThreads; /* Number of Threads to run the MV Search */
 } CP_INSTANCE;
 
 #define clamp255(x) ((unsigned char)((((x)<0)-1) & ((x) | -((x)>255))))

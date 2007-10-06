@@ -938,6 +938,7 @@ int theora_encode_init(theora_state *th, theora_info *c){
   cpi->MotionCompensation = 1;
   cpi->ThreshMapThreshold = 5;
   cpi->MaxConsDroppedFrames = 1;
+  cpi->numThreads = 1;
 
   /* Set encoder flags. */
   /* if not AutoKeyframing cpi->ForceKeyFrameEvery = is frequency */
@@ -1453,6 +1454,10 @@ static int theora_encode_control(theora_state *th,int req,
     case TH_ENCCTL_GET_SPLEVEL_MAX:
       value = 2;
       memcpy(buf, &value, sizeof(int));
+      return 0;
+    case TH_ENCCTL_SET_NUM_THREADS:
+      memcpy(&value, buf, sizeof(int));
+      cpi->numThreads = value;
       return 0;
     default:
       return TH_EIMPL;

@@ -15,6 +15,7 @@
 
  ********************************************************************/
 
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include "codec_internal.h"
@@ -984,87 +985,473 @@ ogg_uint32_t PickIntra( CP_INSTANCE *cpi,
   return 0;
 }
 
-static void AddMotionVector(CP_INSTANCE *cpi,
-                     MOTION_VECTOR *ThisMotionVector) {
-  cpi->MVList[cpi->MvListCount].x = ThisMotionVector->x;
-  cpi->MVList[cpi->MvListCount].y = ThisMotionVector->y;
-  cpi->MvListCount++;
+
+typedef struct threadMvList {
+  MOTION_VECTOR mv;
+  unsigned char valid;
+} THREAD_MV_LIST;
+
+typedef struct thread_param {
+  CP_INSTANCE *cpi;
+  ogg_uint32_t SBStartRow;
+  ogg_uint32_t SBEndRow;
+  ogg_uint32_t SBCols;
+  ogg_uint32_t PixelsPerLine;
+  THREAD_MV_LIST* mvList;
+  ogg_uint32_t *InterError;
+  ogg_uint32_t *IntraError;
+} THREAD_PARAM;
+
+static void AddMotionVector(THREAD_MV_LIST* mvList,
+			    ogg_int32_t SB, ogg_int32_t MB, ogg_int32_t B,
+			    MOTION_VECTOR *ThisMotionVector) {
+  const ogg_int32_t FragIndex = SB*(4*4) + MB*(2*2) + B; 
+  /* ATENTION: This mvList is not in raster order,
+     It is in the Hilber curve order.
+     This is just to keep the added Motion Vector in the
+     correct order of insertion */
+  mvList[FragIndex].mv.x = ThisMotionVector->x;
+  mvList[FragIndex].mv.y = ThisMotionVector->y;
+  mvList[FragIndex].valid = 1;
 }
 
 static void SetFragMotionVectorAndMode(CP_INSTANCE *cpi,
-                                ogg_int32_t FragIndex,
-                                MOTION_VECTOR *ThisMotionVector){
+				       ogg_int32_t FragIndex,
+				       MOTION_VECTOR *ThisMotionVector,
+				       unsigned char MBCodingMode){
   /* Note the coding mode and vector for each block */
   cpi->pb.FragMVect[FragIndex].x = ThisMotionVector->x;
   cpi->pb.FragMVect[FragIndex].y = ThisMotionVector->y;
-  cpi->pb.FragCodingMethod[FragIndex] = cpi->MBCodingMode;
+  cpi->pb.FragCodingMethod[FragIndex] = MBCodingMode;
 }
 
 static void SetMBMotionVectorsAndMode(CP_INSTANCE *cpi,
-                               ogg_int32_t YFragIndex,
-                               ogg_int32_t UFragIndex,
-                               ogg_int32_t VFragIndex,
-                               MOTION_VECTOR *ThisMotionVector){
-  SetFragMotionVectorAndMode(cpi, YFragIndex, ThisMotionVector);
-  SetFragMotionVectorAndMode(cpi, YFragIndex + 1, ThisMotionVector);
+				      ogg_int32_t YFragIndex,
+				      ogg_int32_t UFragIndex,
+				      ogg_int32_t VFragIndex,
+				      MOTION_VECTOR *ThisMotionVector,
+				      unsigned char MBCodingMode){
+  SetFragMotionVectorAndMode(cpi, YFragIndex, ThisMotionVector, MBCodingMode);
+  SetFragMotionVectorAndMode(cpi, YFragIndex + 1, ThisMotionVector, MBCodingMode);
   SetFragMotionVectorAndMode(cpi, YFragIndex + cpi->pb.HFragments,
-                             ThisMotionVector);
+                             ThisMotionVector, MBCodingMode);
   SetFragMotionVectorAndMode(cpi, YFragIndex + cpi->pb.HFragments + 1,
-                             ThisMotionVector);
-  SetFragMotionVectorAndMode(cpi, UFragIndex, ThisMotionVector);
-  SetFragMotionVectorAndMode(cpi, VFragIndex, ThisMotionVector);
+                             ThisMotionVector, MBCodingMode);
+  SetFragMotionVectorAndMode(cpi, UFragIndex, ThisMotionVector, MBCodingMode);
+  SetFragMotionVectorAndMode(cpi, VFragIndex, ThisMotionVector, MBCodingMode);
 }
+
+
+void* ThreadPickModes(void *arg) {
+  THREAD_PARAM* p = (THREAD_PARAM*)arg;
+
+  CP_INSTANCE *cpi = p->cpi;
+  const ogg_uint32_t SBStartRow = p->SBStartRow;
+  const ogg_uint32_t SBEndRow = p->SBEndRow;
+  const ogg_uint32_t SBCols = p->SBCols;
+  const ogg_uint32_t PixelsPerLine = p->PixelsPerLine;
+  THREAD_MV_LIST* mvList = p->mvList;
+  ogg_uint32_t *InterError = p->InterError;
+  ogg_uint32_t *IntraError = p->IntraError;
+
+
+  ogg_uint32_t  SBrow;      /* Super-Block row number */
+  ogg_uint32_t  SBcol;      /* Super-Block row number */
+  ogg_uint32_t  SB;             /* Super-Block indice */
+  ogg_uint32_t  MB, B;          /* Macro-Block, Block indices */
+
+  int           MBCodedFlag;
+
+  ogg_int32_t   YFragIndex;
+  ogg_int32_t   UFragIndex;
+  ogg_int32_t   VFragIndex;
+
+  ogg_uint32_t  UVRow;
+  ogg_uint32_t  UVColumn;
+  ogg_uint32_t  UVFragOffset;
+
+
+  ogg_uint32_t  BestError;              /* Best error so far. */
+  ogg_uint32_t  MBIntraError;           /* Intra error for macro block */
+  ogg_uint32_t  MBGFError;              /* Golden frame macro block error */
+  ogg_uint32_t  MBInterError;           /* Inter no MV macro block error */
+
+  ogg_uint32_t  MBLastInterError;       /* Inter with last used MV */
+  ogg_uint32_t  MBPriorLastInterError;  /* Inter with prior last MV */
+
+
+  MOTION_VECTOR InterMVect;             /* storage for motion vector */
+  ogg_uint32_t  MBInterMVError;         /* Inter MV macro block error */
+
+  MOTION_VECTOR InterMVectEx;     /* storage for motion vector result
+                                     from exhaustive search */
+  ogg_uint32_t  MBInterMVExError; /* Inter MV (exhaustive
+				     search) macro block error */
+
+  ogg_uint32_t  MBGF_MVError;     /* Golden frame plus MV error */
+  ogg_uint32_t  LastMBGF_MVError; /* Golden frame error with
+				     last used GF motion
+				     vector. */
+  MOTION_VECTOR GFMVect;          /* storage for motion vector */
+
+
+  ogg_uint32_t  MBInterFOURMVError;     /* Inter MV error when using 4
+                                           motion vectors per macro
+                                           block */
+  MOTION_VECTOR FourMVect[6];     /* storage for last used vectors (one
+                                     entry for each block in MB) */
+
+  MOTION_VECTOR LastInterMVect;   /* storage for last used Inter frame
+                                     MB motion vector */
+  MOTION_VECTOR PriorLastInterMVect;  /* storage for prior last used
+                                         Inter frame MB motion vector */
+  MOTION_VECTOR LastGFMVect;      /* storage for last used Golden
+                                     Frame MB motion vector */
+  MOTION_VECTOR ZeroVect;
+  ZeroVect.x = 0;
+  ZeroVect.y = 0;
+
+  /* Reset the Last MVs when change the row.
+     It must be done because the SBs are not passed on the raster order */
+  LastInterMVect.x = 0;
+  LastInterMVect.y = 0;
+  PriorLastInterMVect.x = 0;
+  PriorLastInterMVect.y = 0;
+  LastGFMVect.x = 0;
+  LastGFMVect.y = 0;
+
+  for( SBrow=SBStartRow; SBrow < SBEndRow; SBrow++){
+    for( SBcol=0; SBcol < SBCols; SBcol++){
+
+      SB = SBrow*SBCols + SBcol;
+
+      /* Check its four Macro-Blocks */
+      for ( MB=0; MB<4; MB++ ) {
+	/* There may be MB's lying out of frame which must be
+	   ignored. For these MB's Top left block will have a negative
+	   Fragment Index. */
+	if ( QuadMapToMBTopLeft(cpi->pb.BlockMap,SB,MB) < 0 ) continue;
+
+	/* Is the current macro block coded (in part or in whole) */
+	MBCodedFlag = 0;
+	for ( B=0; B<4; B++ ) {
+	  YFragIndex = QuadMapToIndex1( cpi->pb.BlockMap, SB, MB, B );
+
+	  /* Does Block lie in frame: */
+	  if ( YFragIndex >= 0 ) {
+	    /* In Frame: Is it coded: */
+	    if ( cpi->pb.display_fragments[YFragIndex] ) {
+	      MBCodedFlag = 1;
+	      break;
+	    }
+	  } else
+	    MBCodedFlag = 0;
+	}
+
+	/* This one isn't coded go to the next one */
+	if(!MBCodedFlag) continue;
+
+	/* Calculate U and V FragIndex from YFragIndex */
+	YFragIndex = QuadMapToMBTopLeft(cpi->pb.BlockMap, SB,MB);
+	UVRow = (YFragIndex / (cpi->pb.HFragments * 2));
+	UVColumn = (YFragIndex % cpi->pb.HFragments) / 2;
+	UVFragOffset = (UVRow * (cpi->pb.HFragments / 2)) + UVColumn;
+	UFragIndex = cpi->pb.YPlaneFragments + UVFragOffset;
+	VFragIndex = cpi->pb.YPlaneFragments + cpi->pb.UVPlaneFragments +
+	  UVFragOffset;
+
+
+	/**************************************************************
+         Find the block choice with the lowest error
+
+         NOTE THAT if U or V is coded but no Y from a macro block then
+         the mode will be CODE_INTER_NO_MV as this is the default
+         state to which the mode data structure is initialised in
+         encoder and decoder at the start of each frame. */
+
+	BestError = HUGE_ERROR;
+
+
+	/* Look at the intra coding error. */
+	MBIntraError = GetMBIntraError( cpi, YFragIndex, PixelsPerLine );
+	BestError = (BestError > MBIntraError) ? MBIntraError : BestError;
+
+	/* Get the golden frame error */
+	MBGFError = GetMBInterError( cpi, cpi->ConvDestBuffer,
+				     cpi->pb.GoldenFrame, YFragIndex,
+				     0, 0, PixelsPerLine );
+	BestError = (BestError > MBGFError) ? MBGFError : BestError;
+
+	/* Calculate the 0,0 case. */
+	MBInterError = GetMBInterError( cpi, cpi->ConvDestBuffer,
+					cpi->pb.LastFrameRecon,
+					YFragIndex, 0, 0, PixelsPerLine );
+	BestError = (BestError > MBInterError) ? MBInterError : BestError;
+
+	/* Measure error for last MV */
+	MBLastInterError =  GetMBInterError( cpi, cpi->ConvDestBuffer,
+					     cpi->pb.LastFrameRecon,
+					     YFragIndex, LastInterMVect.x,
+					     LastInterMVect.y, PixelsPerLine );
+	BestError = (BestError > MBLastInterError) ?
+	  MBLastInterError : BestError;
+
+	/* Measure error for prior last MV */
+	MBPriorLastInterError =  GetMBInterError( cpi, cpi->ConvDestBuffer,
+						  cpi->pb.LastFrameRecon,
+						  YFragIndex,
+						  PriorLastInterMVect.x,
+						  PriorLastInterMVect.y,
+						  PixelsPerLine );
+	BestError = (BestError > MBPriorLastInterError) ?
+	  MBPriorLastInterError : BestError;
+
+	/* Temporarily force usage of no motionvector blocks */
+	MBInterMVError = HUGE_ERROR;
+	InterMVect.x = 0;  /* Set 0,0 motion vector */
+	InterMVect.y = 0;
+
+	/* If the best error is above the required threshold search
+	   for a new inter MV */
+	if ( BestError > cpi->MinImprovementForNewMV ) {
+	  /* Use a mix of heirachical and exhaustive searches for
+	     quick mode. */
+	  if ( cpi->pb.info.quick_p ) {
+	    MBInterMVError = GetMBMVInterError( cpi, cpi->pb.LastFrameRecon,
+						YFragIndex, PixelsPerLine,
+						cpi->MVPixelOffsetY,
+						&InterMVect );
+
+	    /* If we still do not have a good match try an exhaustive
+	       MBMV search */
+	    if ( (MBInterMVError > cpi->ExhaustiveSearchThresh) &&
+		 (BestError > cpi->ExhaustiveSearchThresh) ) {
+
+	      MBInterMVExError =
+		GetMBMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
+					 YFragIndex, PixelsPerLine,
+					 &InterMVectEx );
+
+	      /* Is the Variance measure for the EX search
+		 better... If so then use it. */
+	      if ( MBInterMVExError < MBInterMVError ) {
+		MBInterMVError = MBInterMVExError;
+		InterMVect.x = InterMVectEx.x;
+		InterMVect.y = InterMVectEx.y;
+	      }
+	    }
+	  }else{
+	    /* Use an exhaustive search */
+	    MBInterMVError =
+	      GetMBMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
+				       YFragIndex, PixelsPerLine,
+				       &InterMVect );
+	  }
+
+
+	  /* Is the improvement, if any, good enough to justify a new MV */
+	  if ( (16 * MBInterMVError < (BestError * cpi->MVChangeFactor)) &&
+	       ((MBInterMVError + cpi->MinImprovementForNewMV) < BestError) ){
+	    BestError = MBInterMVError;
+	  }
+
+	}
+
+	/* If the best error is still above the required threshold
+	   search for a golden frame MV */
+	MBGF_MVError = HUGE_ERROR;
+	GFMVect.x = 0; /* Set 0,0 motion vector */
+	GFMVect.y = 0;
+
+	if ( BestError > cpi->MinImprovementForNewMV ) {
+	  /* Do an MV search in the golden reference frame */
+	  MBGF_MVError = GetMBMVInterError( cpi, cpi->pb.GoldenFrame,
+					    YFragIndex, PixelsPerLine,
+					    cpi->MVPixelOffsetY, &GFMVect );
+
+	  /* Measure error for last GFMV */
+	  LastMBGF_MVError =  GetMBInterError( cpi, cpi->ConvDestBuffer,
+					       cpi->pb.GoldenFrame,
+					       YFragIndex, LastGFMVect.x,
+					       LastGFMVect.y, PixelsPerLine );
+
+	  /* Check against last GF motion vector and reset if the
+	     search has thrown a worse result. */
+	  if ( LastMBGF_MVError < MBGF_MVError ) {
+	    GFMVect.x = LastGFMVect.x;
+	    GFMVect.y = LastGFMVect.y;
+	    MBGF_MVError = LastMBGF_MVError;
+	  }else{
+	    LastGFMVect.x = GFMVect.x;
+	    LastGFMVect.y = GFMVect.y;
+	  }
+
+	  /* Is the improvement, if any, good enough to justify a new MV */
+	  if ( (16 * MBGF_MVError < (BestError * cpi->MVChangeFactor)) &&
+	       ((MBGF_MVError + cpi->MinImprovementForNewMV) < BestError) ) {
+	    BestError = MBGF_MVError;
+	  }
+	}
+
+
+	/* Finally... If the best error is still to high then consider
+	   the 4MV mode */
+	MBInterFOURMVError = HUGE_ERROR;
+	if ( BestError > cpi->FourMVThreshold ) {
+	  /* Get the 4MV error. */
+	  MBInterFOURMVError =
+	    GetFOURMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
+				       YFragIndex, PixelsPerLine, FourMVect );
+
+	  /* If the improvement is great enough then use the four MV mode */
+	  if ( ((MBInterFOURMVError + cpi->MinImprovementForFourMV) <
+		BestError) && (16 * MBInterFOURMVError <
+			       (BestError * cpi->FourMvChangeFactor))) {
+	    BestError = MBInterFOURMVError;
+	  }
+	}
+
+	/********************************************************
+         end finding the best error
+         *******************************************************
+
+         Figure out what to do with the block we chose
+
+         Over-ride and force intra if error high and Intra error similar
+         Now choose a mode based on lowest error (with bias towards no MV) */
+
+	if ( (BestError > cpi->InterTripOutThresh) &&
+	     (10 * BestError > MBIntraError * 7 ) ) {
+	  SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
+				    VFragIndex,&ZeroVect, CODE_INTRA);
+	} else if ( BestError == MBInterError ) {
+	  SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
+				    VFragIndex,&ZeroVect, CODE_INTER_NO_MV);
+	} else if ( BestError == MBGFError ) {
+	  SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
+				    VFragIndex,&ZeroVect, CODE_USING_GOLDEN);
+	} else if ( BestError == MBLastInterError ) {
+	  SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
+				    VFragIndex,&LastInterMVect, CODE_INTER_LAST_MV);
+	} else if ( BestError == MBPriorLastInterError ) {
+	  MOTION_VECTOR TmpMVect;         /* Temporary MV storage */
+
+	  SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
+				    VFragIndex,&PriorLastInterMVect, CODE_INTER_PRIOR_LAST);
+
+	  /* Swap the prior and last MV cases over */
+	  TmpMVect.x = PriorLastInterMVect.x;
+	  TmpMVect.y = PriorLastInterMVect.y;
+	  PriorLastInterMVect.x = LastInterMVect.x;
+	  PriorLastInterMVect.y = LastInterMVect.y;
+	  LastInterMVect.x = TmpMVect.x;
+	  LastInterMVect.y = TmpMVect.y;
+
+	} else if ( BestError == MBInterMVError ) {
+
+	  SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
+				    VFragIndex,&InterMVect, CODE_INTER_PLUS_MV);
+
+	  /* Update Prior last mv with last mv */
+	  PriorLastInterMVect.x = LastInterMVect.x;
+	  PriorLastInterMVect.y = LastInterMVect.y;
+
+	  /* Note last inter MV for future use */
+	  LastInterMVect.x = InterMVect.x;
+	  LastInterMVect.y = InterMVect.y;
+
+	  AddMotionVector(mvList, SB, MB, 0,&InterMVect);
+
+	} else if ( BestError == MBGF_MVError ) {
+
+	  SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
+				    VFragIndex,&GFMVect, CODE_GOLDEN_MV);
+
+	  /* Note last inter GF MV for future use */
+	  LastGFMVect.x = GFMVect.x;
+	  LastGFMVect.y = GFMVect.y;
+
+	  AddMotionVector(mvList, SB, MB, 0, &GFMVect);
+
+	} else if ( BestError == MBInterFOURMVError ) {
+
+	  /* Calculate the UV vectors as the average of the Y plane ones. */
+	  /* First .x component */
+	  FourMVect[4].x = FourMVect[0].x + FourMVect[1].x +
+	    FourMVect[2].x + FourMVect[3].x;
+	  if ( FourMVect[4].x >= 0 )
+	    FourMVect[4].x = (FourMVect[4].x + 2) / 4;
+	  else
+	    FourMVect[4].x = (FourMVect[4].x - 2) / 4;
+	  FourMVect[5].x = FourMVect[4].x;
+
+	  /* Then .y component */
+	  FourMVect[4].y = FourMVect[0].y + FourMVect[1].y +
+	    FourMVect[2].y + FourMVect[3].y;
+	  if ( FourMVect[4].y >= 0 )
+	    FourMVect[4].y = (FourMVect[4].y + 2) / 4;
+	  else
+	    FourMVect[4].y = (FourMVect[4].y - 2) / 4;
+	  FourMVect[5].y = FourMVect[4].y;
+
+	  SetFragMotionVectorAndMode(cpi, YFragIndex, &FourMVect[0], CODE_INTER_FOURMV);
+	  SetFragMotionVectorAndMode(cpi, YFragIndex + 1, &FourMVect[1], CODE_INTER_FOURMV);
+	  SetFragMotionVectorAndMode(cpi, YFragIndex + cpi->pb.HFragments,
+				     &FourMVect[2], CODE_INTER_FOURMV);
+	  SetFragMotionVectorAndMode(cpi, YFragIndex + cpi->pb.HFragments + 1,
+				     &FourMVect[3], CODE_INTER_FOURMV);
+	  SetFragMotionVectorAndMode(cpi, UFragIndex, &FourMVect[4], CODE_INTER_FOURMV);
+	  SetFragMotionVectorAndMode(cpi, VFragIndex, &FourMVect[5], CODE_INTER_FOURMV);
+
+	  /* Note the four MVs values for current macro-block. */
+	  AddMotionVector(mvList, SB, MB, 0, &FourMVect[0]);
+	  AddMotionVector(mvList, SB, MB, 1, &FourMVect[1]);
+	  AddMotionVector(mvList, SB, MB, 2, &FourMVect[2]);
+	  AddMotionVector(mvList, SB, MB, 3, &FourMVect[3]);
+
+
+	  /* Update Prior last mv with last mv */
+	  PriorLastInterMVect.x = LastInterMVect.x;
+	  PriorLastInterMVect.y = LastInterMVect.y;
+
+	  /* Note last inter MV for future use */
+	  LastInterMVect.x = FourMVect[3].x;
+	  LastInterMVect.y = FourMVect[3].y;
+
+	} else {
+
+	  SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
+				    VFragIndex,&ZeroVect, CODE_INTRA);
+	}
+
+
+	/* setting up mode specific block types
+         *******************************************************/
+
+	*InterError += (BestError>>8);
+	*IntraError += (MBIntraError>>8);
+      }
+    }
+  }
+}
+
 
 ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                        ogg_uint32_t SBRows, ogg_uint32_t SBCols,
                        ogg_uint32_t PixelsPerLine,
                        ogg_uint32_t *InterError, ogg_uint32_t *IntraError) {
-  ogg_int32_t   YFragIndex;
-  ogg_int32_t   UFragIndex;
-  ogg_int32_t   VFragIndex;
-  ogg_uint32_t  MB, B;      /* Macro-Block, Block indices */
+  const int num_threads = cpi->numThreads; /* Number of Threads */
+
+  ogg_uint32_t *InterErrors = malloc(num_threads * sizeof(*InterErrors));
+  ogg_uint32_t *IntraErrors = malloc(num_threads * sizeof(*IntraErrors));
+  THREAD_MV_LIST* mvList = malloc(cpi->pb.UnitFragments * sizeof(*mvList));
+  int* thread_SBRows = malloc(num_threads * sizeof(*thread_SBRows));
+  pthread_t *threads = (pthread_t *)malloc(num_threads*sizeof(*threads));
+  THREAD_PARAM *p = (THREAD_PARAM *)malloc(num_threads*sizeof(*p));
+
   ogg_uint32_t  SBrow;      /* Super-Block row number */
-  ogg_uint32_t  SBcol;      /* Super-Block row number */
-  ogg_uint32_t  SB=0;       /* Super-Block index, initialised to first
-                               of this component */
+  int thread_id;
 
-  ogg_uint32_t  MBIntraError;           /* Intra error for macro block */
-  ogg_uint32_t  MBGFError;              /* Golden frame macro block error */
-  ogg_uint32_t  MBGF_MVError;           /* Golden frame plus MV error */
-  ogg_uint32_t  LastMBGF_MVError;       /* Golden frame error with
-                                           last used GF motion
-                                           vector. */
-  ogg_uint32_t  MBInterError;           /* Inter no MV macro block error */
-  ogg_uint32_t  MBLastInterError;       /* Inter with last used MV */
-  ogg_uint32_t  MBPriorLastInterError;  /* Inter with prior last MV */
-  ogg_uint32_t  MBInterMVError;         /* Inter MV macro block error */
-  ogg_uint32_t  MBInterMVExError;       /* Inter MV (exhaustive
-                                           search) macro block error */
-  ogg_uint32_t  MBInterFOURMVError;     /* Inter MV error when using 4
-                                           motion vectors per macro
-                                           block */
-  ogg_uint32_t  BestError;              /* Best error so far. */
-
-  MOTION_VECTOR FourMVect[6];     /* storage for last used vectors (one
-                                     entry for each block in MB) */
-  MOTION_VECTOR LastInterMVect;   /* storage for last used Inter frame
-                                     MB motion vector */
-  MOTION_VECTOR PriorLastInterMVect;  /* storage for prior last used
-                                         Inter frame MB motion vector */
-  MOTION_VECTOR TmpMVect;         /* Temporary MV storage */
-  MOTION_VECTOR LastGFMVect;      /* storage for last used Golden
-                                     Frame MB motion vector */
-  MOTION_VECTOR InterMVect;       /* storage for motion vector */
-  MOTION_VECTOR InterMVectEx;     /* storage for motion vector result
-                                     from exhaustive search */
-  MOTION_VECTOR GFMVect;          /* storage for motion vector */
-  MOTION_VECTOR ZeroVect;
-
-  ogg_uint32_t UVRow;
-  ogg_uint32_t UVColumn;
-  ogg_uint32_t UVFragOffset;
-
-  int          MBCodedFlag;
   unsigned char QIndex;
 
   /* initialize error scores */
@@ -1073,31 +1460,6 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
   /* clear down the default motion vector. */
   cpi->MvListCount = 0;
-  FourMVect[0].x = 0;
-  FourMVect[0].y = 0;
-  FourMVect[1].x = 0;
-  FourMVect[1].y = 0;
-  FourMVect[2].x = 0;
-  FourMVect[2].y = 0;
-  FourMVect[3].x = 0;
-  FourMVect[3].y = 0;
-  FourMVect[4].x = 0;
-  FourMVect[4].y = 0;
-  FourMVect[5].x = 0;
-  FourMVect[5].y = 0;
-  LastInterMVect.x = 0;
-  LastInterMVect.y = 0;
-  PriorLastInterMVect.x = 0;
-  PriorLastInterMVect.y = 0;
-  LastGFMVect.x = 0;
-  LastGFMVect.y = 0;
-  InterMVect.x = 0;
-  InterMVect.y = 0;
-  GFMVect.x = 0;
-  GFMVect.y = 0;
-
-  ZeroVect.x = 0;
-  ZeroVect.y = 0;
 
   QIndex = (unsigned char)cpi->pb.FrameQIndex;
 
@@ -1124,324 +1486,76 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
   cpi->FourMvChangeFactor = 8; /* cpi->MVChangeFactor - 0.05;  */
 
-  /* decide what block type and motion vectors to use on all of the frames */
-  for ( SBrow=0; SBrow<SBRows; SBrow++ ) {
-    for ( SBcol=0; SBcol<SBCols; SBcol++ ) {
-      /* Check its four Macro-Blocks */
-      for ( MB=0; MB<4; MB++ ) {
-        /* There may be MB's lying out of frame which must be
-           ignored. For these MB's Top left block will have a negative
-           Fragment Index. */
-        if ( QuadMapToMBTopLeft(cpi->pb.BlockMap,SB,MB) < 0 ) continue;
 
-        /* Is the current macro block coded (in part or in whole) */
-        MBCodedFlag = 0;
-        for ( B=0; B<4; B++ ) {
-          YFragIndex = QuadMapToIndex1( cpi->pb.BlockMap, SB, MB, B );
+  memset(mvList, 0, cpi->pb.UnitFragments * sizeof(*mvList));
+  memset(InterErrors, 0, num_threads * sizeof(*InterErrors));
+  memset(IntraErrors, 0, num_threads * sizeof(*IntraErrors));
 
-          /* Does Block lie in frame: */
-          if ( YFragIndex >= 0 ) {
-            /* In Frame: Is it coded: */
-            if ( cpi->pb.display_fragments[YFragIndex] ) {
-              MBCodedFlag = 1;
-              break;
-            }
-          } else
-            MBCodedFlag = 0;
-        }
-
-        /* This one isn't coded go to the next one */
-        if(!MBCodedFlag) continue;
-
-        /* Calculate U and V FragIndex from YFragIndex */
-        YFragIndex = QuadMapToMBTopLeft(cpi->pb.BlockMap, SB,MB);
-        UVRow = (YFragIndex / (cpi->pb.HFragments * 2));
-        UVColumn = (YFragIndex % cpi->pb.HFragments) / 2;
-        UVFragOffset = (UVRow * (cpi->pb.HFragments / 2)) + UVColumn;
-        UFragIndex = cpi->pb.YPlaneFragments + UVFragOffset;
-        VFragIndex = cpi->pb.YPlaneFragments + cpi->pb.UVPlaneFragments +
-          UVFragOffset;
-
-
-        /**************************************************************
-         Find the block choice with the lowest error
-
-         NOTE THAT if U or V is coded but no Y from a macro block then
-         the mode will be CODE_INTER_NO_MV as this is the default
-         state to which the mode data structure is initialised in
-         encoder and decoder at the start of each frame. */
-
-        BestError = HUGE_ERROR;
-
-
-        /* Look at the intra coding error. */
-        MBIntraError = GetMBIntraError( cpi, YFragIndex, PixelsPerLine );
-        BestError = (BestError > MBIntraError) ? MBIntraError : BestError;
-
-        /* Get the golden frame error */
-        MBGFError = GetMBInterError( cpi, cpi->ConvDestBuffer,
-                                     cpi->pb.GoldenFrame, YFragIndex,
-                                     0, 0, PixelsPerLine );
-        BestError = (BestError > MBGFError) ? MBGFError : BestError;
-
-        /* Calculate the 0,0 case. */
-        MBInterError = GetMBInterError( cpi, cpi->ConvDestBuffer,
-                                        cpi->pb.LastFrameRecon,
-                                        YFragIndex, 0, 0, PixelsPerLine );
-        BestError = (BestError > MBInterError) ? MBInterError : BestError;
-
-        /* Measure error for last MV */
-        MBLastInterError =  GetMBInterError( cpi, cpi->ConvDestBuffer,
-                                             cpi->pb.LastFrameRecon,
-                                             YFragIndex, LastInterMVect.x,
-                                             LastInterMVect.y, PixelsPerLine );
-        BestError = (BestError > MBLastInterError) ?
-          MBLastInterError : BestError;
-
-        /* Measure error for prior last MV */
-        MBPriorLastInterError =  GetMBInterError( cpi, cpi->ConvDestBuffer,
-                                                  cpi->pb.LastFrameRecon,
-                                                  YFragIndex,
-                                                  PriorLastInterMVect.x,
-                                                  PriorLastInterMVect.y,
-                                                  PixelsPerLine );
-        BestError = (BestError > MBPriorLastInterError) ?
-          MBPriorLastInterError : BestError;
-
-        /* Temporarily force usage of no motionvector blocks */
-        MBInterMVError = HUGE_ERROR;
-        InterMVect.x = 0;  /* Set 0,0 motion vector */
-        InterMVect.y = 0;
-
-        /* If the best error is above the required threshold search
-           for a new inter MV */
-        if ( BestError > cpi->MinImprovementForNewMV ) {
-          /* Use a mix of heirachical and exhaustive searches for
-             quick mode. */
-          if ( cpi->pb.info.quick_p ) {
-            MBInterMVError = GetMBMVInterError( cpi, cpi->pb.LastFrameRecon,
-                                                YFragIndex, PixelsPerLine,
-                                                cpi->MVPixelOffsetY,
-                                                &InterMVect );
-
-            /* If we still do not have a good match try an exhaustive
-               MBMV search */
-            if ( (MBInterMVError > cpi->ExhaustiveSearchThresh) &&
-                 (BestError > cpi->ExhaustiveSearchThresh) ) {
-
-              MBInterMVExError =
-                GetMBMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
-                                         YFragIndex, PixelsPerLine,
-                                         &InterMVectEx );
-
-              /* Is the Variance measure for the EX search
-                 better... If so then use it. */
-              if ( MBInterMVExError < MBInterMVError ) {
-                MBInterMVError = MBInterMVExError;
-                InterMVect.x = InterMVectEx.x;
-                InterMVect.y = InterMVectEx.y;
-              }
-            }
-          }else{
-            /* Use an exhaustive search */
-            MBInterMVError =
-              GetMBMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
-                                       YFragIndex, PixelsPerLine,
-                                       &InterMVect );
-          }
-
-
-          /* Is the improvement, if any, good enough to justify a new MV */
-          if ( (16 * MBInterMVError < (BestError * cpi->MVChangeFactor)) &&
-               ((MBInterMVError + cpi->MinImprovementForNewMV) < BestError) ){
-            BestError = MBInterMVError;
-          }
-
-        }
-
-        /* If the best error is still above the required threshold
-           search for a golden frame MV */
-        MBGF_MVError = HUGE_ERROR;
-        GFMVect.x = 0; /* Set 0,0 motion vector */
-        GFMVect.y = 0;
-        if ( BestError > cpi->MinImprovementForNewMV ) {
-          /* Do an MV search in the golden reference frame */
-          MBGF_MVError = GetMBMVInterError( cpi, cpi->pb.GoldenFrame,
-                                            YFragIndex, PixelsPerLine,
-                                            cpi->MVPixelOffsetY, &GFMVect );
-
-          /* Measure error for last GFMV */
-          LastMBGF_MVError =  GetMBInterError( cpi, cpi->ConvDestBuffer,
-                                               cpi->pb.GoldenFrame,
-                                               YFragIndex, LastGFMVect.x,
-                                               LastGFMVect.y, PixelsPerLine );
-
-          /* Check against last GF motion vector and reset if the
-             search has thrown a worse result. */
-          if ( LastMBGF_MVError < MBGF_MVError ) {
-            GFMVect.x = LastGFMVect.x;
-            GFMVect.y = LastGFMVect.y;
-            MBGF_MVError = LastMBGF_MVError;
-          }else{
-            LastGFMVect.x = GFMVect.x;
-            LastGFMVect.y = GFMVect.y;
-          }
-
-          /* Is the improvement, if any, good enough to justify a new MV */
-          if ( (16 * MBGF_MVError < (BestError * cpi->MVChangeFactor)) &&
-               ((MBGF_MVError + cpi->MinImprovementForNewMV) < BestError) ) {
-            BestError = MBGF_MVError;
-          }
-        }
-
-        /* Finally... If the best error is still to high then consider
-           the 4MV mode */
-        MBInterFOURMVError = HUGE_ERROR;
-        if ( BestError > cpi->FourMVThreshold ) {
-          /* Get the 4MV error. */
-          MBInterFOURMVError =
-            GetFOURMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
-                                       YFragIndex, PixelsPerLine, FourMVect );
-
-          /* If the improvement is great enough then use the four MV mode */
-          if ( ((MBInterFOURMVError + cpi->MinImprovementForFourMV) <
-                BestError) && (16 * MBInterFOURMVError <
-                               (BestError * cpi->FourMvChangeFactor))) {
-            BestError = MBInterFOURMVError;
-          }
-        }
-
-        /********************************************************
-         end finding the best error
-         *******************************************************
-
-         Figure out what to do with the block we chose
-
-         Over-ride and force intra if error high and Intra error similar
-         Now choose a mode based on lowest error (with bias towards no MV) */
-
-        if ( (BestError > cpi->InterTripOutThresh) &&
-             (10 * BestError > MBIntraError * 7 ) ) {
-          cpi->MBCodingMode = CODE_INTRA;
-          SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
-                                    VFragIndex,&ZeroVect);
-        } else if ( BestError == MBInterError ) {
-          cpi->MBCodingMode = CODE_INTER_NO_MV;
-          SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
-                                    VFragIndex,&ZeroVect);
-        } else if ( BestError == MBGFError ) {
-          cpi->MBCodingMode = CODE_USING_GOLDEN;
-          SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
-                                    VFragIndex,&ZeroVect);
-        } else if ( BestError == MBLastInterError ) {
-          cpi->MBCodingMode = CODE_INTER_LAST_MV;
-          SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
-                                    VFragIndex,&LastInterMVect);
-        } else if ( BestError == MBPriorLastInterError ) {
-          cpi->MBCodingMode = CODE_INTER_PRIOR_LAST;
-          SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
-                                    VFragIndex,&PriorLastInterMVect);
-
-          /* Swap the prior and last MV cases over */
-          TmpMVect.x = PriorLastInterMVect.x;
-          TmpMVect.y = PriorLastInterMVect.y;
-          PriorLastInterMVect.x = LastInterMVect.x;
-          PriorLastInterMVect.y = LastInterMVect.y;
-          LastInterMVect.x = TmpMVect.x;
-          LastInterMVect.y = TmpMVect.y;
-
-        } else if ( BestError == MBInterMVError ) {
-
-          cpi->MBCodingMode = CODE_INTER_PLUS_MV;
-          SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
-                                    VFragIndex,&InterMVect);
-
-          /* Update Prior last mv with last mv */
-          PriorLastInterMVect.x = LastInterMVect.x;
-          PriorLastInterMVect.y = LastInterMVect.y;
-
-          /* Note last inter MV for future use */
-          LastInterMVect.x = InterMVect.x;
-          LastInterMVect.y = InterMVect.y;
-
-          AddMotionVector( cpi, &InterMVect);
-
-        } else if ( BestError == MBGF_MVError ) {
-
-          cpi->MBCodingMode = CODE_GOLDEN_MV;
-          SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
-                                    VFragIndex,&GFMVect);
-
-          /* Note last inter GF MV for future use */
-          LastGFMVect.x = GFMVect.x;
-          LastGFMVect.y = GFMVect.y;
-
-          AddMotionVector( cpi, &GFMVect);
-        } else if ( BestError == MBInterFOURMVError ) {
-          cpi->MBCodingMode = CODE_INTER_FOURMV;
-
-          /* Calculate the UV vectors as the average of the Y plane ones. */
-          /* First .x component */
-          FourMVect[4].x = FourMVect[0].x + FourMVect[1].x +
-            FourMVect[2].x + FourMVect[3].x;
-          if ( FourMVect[4].x >= 0 )
-            FourMVect[4].x = (FourMVect[4].x + 2) / 4;
-          else
-            FourMVect[4].x = (FourMVect[4].x - 2) / 4;
-          FourMVect[5].x = FourMVect[4].x;
-
-          /* Then .y component */
-          FourMVect[4].y = FourMVect[0].y + FourMVect[1].y +
-            FourMVect[2].y + FourMVect[3].y;
-          if ( FourMVect[4].y >= 0 )
-            FourMVect[4].y = (FourMVect[4].y + 2) / 4;
-          else
-            FourMVect[4].y = (FourMVect[4].y - 2) / 4;
-          FourMVect[5].y = FourMVect[4].y;
-
-          SetFragMotionVectorAndMode(cpi, YFragIndex, &FourMVect[0]);
-          SetFragMotionVectorAndMode(cpi, YFragIndex + 1, &FourMVect[1]);
-          SetFragMotionVectorAndMode(cpi, YFragIndex + cpi->pb.HFragments,
-                                     &FourMVect[2]);
-          SetFragMotionVectorAndMode(cpi, YFragIndex + cpi->pb.HFragments + 1,
-                                     &FourMVect[3]);
-          SetFragMotionVectorAndMode(cpi, UFragIndex, &FourMVect[4]);
-          SetFragMotionVectorAndMode(cpi, VFragIndex, &FourMVect[5]);
-
-          /* Note the four MVs values for current macro-block. */
-          AddMotionVector( cpi, &FourMVect[0]);
-          AddMotionVector( cpi, &FourMVect[1]);
-          AddMotionVector( cpi, &FourMVect[2]);
-          AddMotionVector( cpi, &FourMVect[3]);
-
-          /* Update Prior last mv with last mv */
-          PriorLastInterMVect.x = LastInterMVect.x;
-          PriorLastInterMVect.y = LastInterMVect.y;
-
-          /* Note last inter MV for future use */
-          LastInterMVect.x = FourMVect[3].x;
-          LastInterMVect.y = FourMVect[3].y;
-
-        } else {
-
-          cpi->MBCodingMode = CODE_INTRA;
-          SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
-                                    VFragIndex,&ZeroVect);
-        }
-
-
-        /* setting up mode specific block types
-           *******************************************************/
-
-        *InterError += (BestError>>8);
-        *IntraError += (MBIntraError>>8);
-
-
-      }
-      SB++;
-
+  { /* Balance the number of SB rows per thread */
+    const int rows_per_thread = SBRows/num_threads;
+    const int fractional_part = SBRows - (rows_per_thread) * num_threads;
+    for (thread_id=0; thread_id < num_threads; thread_id++) {
+      if (thread_id < fractional_part)
+	thread_SBRows[thread_id] = rows_per_thread + 1;
+      else
+	thread_SBRows[thread_id] = rows_per_thread;
     }
   }
+
+  SBrow = 0;
+  /* decide what block type and motion vectors to use on all of the frames */
+  for ( thread_id=0; thread_id<num_threads-1; thread_id++ ) {
+    p[thread_id].cpi = cpi;
+    p[thread_id].SBStartRow = SBrow;
+    SBrow += thread_SBRows[thread_id];
+    p[thread_id].SBEndRow = SBrow;
+    p[thread_id].SBCols = SBCols;
+    p[thread_id].PixelsPerLine = PixelsPerLine;
+    p[thread_id].mvList = mvList;
+    p[thread_id].InterError = &InterErrors[thread_id];
+    p[thread_id].IntraError = &IntraErrors[thread_id];
+    pthread_create(&threads[thread_id], NULL, ThreadPickModes, (void *)(&p[thread_id]));
+  }
+
+  p[thread_id].cpi = cpi;
+  p[thread_id].SBStartRow = SBrow;
+  SBrow += thread_SBRows[thread_id];
+  p[thread_id].SBEndRow = SBrow;
+  p[thread_id].SBCols = SBCols;
+  p[thread_id].PixelsPerLine = PixelsPerLine;
+  p[thread_id].mvList = mvList;
+  p[thread_id].InterError = &InterErrors[thread_id];
+  p[thread_id].IntraError = &IntraErrors[thread_id];
+
+  ThreadPickModes((void *)(&p[thread_id]));
+
+  /* Synchronize threads */
+  for (thread_id=0; thread_id<num_threads-1; thread_id++) {
+    pthread_join(threads[thread_id],NULL);
+  }
+
+  for ( thread_id=0; thread_id<num_threads; thread_id++ ) {
+    (*InterError) += InterErrors[thread_id];
+    (*IntraError) += IntraErrors[thread_id];
+  }
+
+  { /* Put the Motion Vectors on the cpi->MVList with the correct fragment order */
+    int fragIndex;
+    for (fragIndex=0; fragIndex < cpi->pb.UnitFragments; fragIndex++) {
+      if( mvList[fragIndex].valid ) {
+	cpi->MVList[cpi->MvListCount].x = mvList[fragIndex].mv.x;
+	cpi->MVList[cpi->MvListCount].y = mvList[fragIndex].mv.y;
+	cpi->MvListCount++;
+      }
+    }
+  }
+
+  free(thread_SBRows);
+  free(p);
+  free(threads);
+  free(InterErrors);
+  free(IntraErrors);
+  free(mvList);
 
   /* Return number of pixels coded */
   return 0;

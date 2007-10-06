@@ -467,6 +467,12 @@ typedef struct theora_comment{
  * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(#th_cqi_cfg)</tt>.
  * \retval TH_IMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SETUP_CQI (18)
+/**Set the number of Threads running the Motion Vector Search
+ *
+ * \param[in] buf int: The number of threads.
+ */
+#define TH_ENCCTL_SET_NUM_THREADS (20)
+
 /*@}*/
 
 #define OC_FAULT       -1       /**< General failure */

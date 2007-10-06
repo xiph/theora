@@ -89,6 +89,7 @@ struct option options [] = {
   {"noise-sensitivity",required_argument,NULL,'n'},
   {"sharpness",required_argument,NULL,'m'},
   {"keyframe-freq",required_argument,NULL,'k'},
+  {"number-of-threads",required_argument,NULL,'t'},
   {NULL,0,NULL,0}
 };
 
@@ -119,6 +120,8 @@ int video_q=16;
 int noise_sensitivity=1;
 int sharpness=0;
 int keyframe_frequency=64;
+
+int numThreads=4;
 
 static void usage(void){
   fprintf(stderr,
@@ -160,6 +163,8 @@ static void usage(void){
           "                                 reduce file size but resulting video\n"
           "                                 is blurrier, defaults to 0)\n"
           "   -k --keyframe-freq <n>        Keyframe frequency from 8 to 1000\n"
+          "   -t --number-of-threads <n>    The number of threads to run the\n"
+          "                                 Motion Vector Search\n"
           "encoder_example accepts only uncompressed RIFF WAV format audio and\n"
           "YUV4MPEG2 uncompressed video.\n\n");
   exit(1);
@@ -732,6 +737,14 @@ int main(int argc,char *const *argv){
       }
       break;
 
+    case 't':
+      numThreads=rint(atof(optarg));
+      if(numThreads<1){
+        fprintf(stderr,"Illegal number of Threads\n");
+        exit(1);
+      }
+      break;
+
     default:
       usage();
     }
@@ -806,8 +819,12 @@ int main(int argc,char *const *argv){
   ti.noise_sensitivity=noise_sensitivity;
   ti.sharpness=sharpness;
 
+
   theora_encode_init(&td,&ti);
   theora_info_clear(&ti);
+
+  theora_control(&td,TH_ENCCTL_SET_NUM_THREADS,&numThreads,sizeof(numThreads));
+
 
   /* initialize Vorbis too, assuming we have audio to compress. */
   if(audio){
@@ -899,7 +916,7 @@ int main(int argc,char *const *argv){
       fwrite(og.body,1,og.body_len,outfile);
     }
   }
-
+  fprintf(stderr,"Number of Threads: %d\n", numThreads);
   /* setup complete.  Raw processing loop */
   fprintf(stderr,"Compressing....\n");
   while(1){
