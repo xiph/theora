@@ -254,7 +254,7 @@ static void EInitFragmentInfo(CP_INSTANCE * cpi){
                 sizeof(*cpi->ModeList));
   cpi->MVList =
     _ogg_malloc(cpi->pb.UnitFragments*
-                sizeof(cpi->MVList));
+                sizeof(*cpi->MVList));
   cpi->DCT_codes =
     _ogg_malloc(64*
                 sizeof(*cpi->DCT_codes));
