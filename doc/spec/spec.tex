@@ -782,8 +782,8 @@ The version number is divided into a major version, a minor version, amd a
 %r: afaik the released vp3 codec called itself 3.1 and is compatible w/ theora
 %r: even though we received the in-progress 3.2 codebase
 For the format defined in this specification, these are `3', `2', and
- `0', respectively, in reference to Theora's origin as a successor to the VP3.1
- format.
+ `1', respectively, in reference to Theora's origin as a successor to 
+ the VP3.1 format.
 
 \subsection{Quantization Matrices}
 
@@ -2071,7 +2071,7 @@ If \bitvar{VMIN} is not $2$, then stop.
 This stream is not decodable according to this specification.
 \item
 Read an 8-bit unsigned integer as \bitvar{VREV}.
-If \bitvar{VREV} is greater than $0$, then this stream
+If \bitvar{VREV} is greater than $1$, then this stream
 may contain optional features or interpretational changes 
 documented in a future version of this specification.
 Regardless of the value of \bitvar{VREV}, the stream is decodable 
