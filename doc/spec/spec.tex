@@ -7746,6 +7746,15 @@ on. In this way the granulepos field increased monotonically as required
 by the Ogg format, but contains information necessary to efficiently 
 find the previous keyframe to continue decoding after a seek.
 
+Prior to bitstream version 3.2.1, data packets were marked by a 
+granulepos derived from the index of the frame being decoded,
+rather than the count. That is they marked the beginning of the
+display interval of a frame rather than the end. Such streams
+have the VREV field of the identification header set to `0' 
+instead of `1'. They can be interpreted according to the description
+above by adding 1 to the more signification field of the split 
+granulepos when VREV is less than 1.
+
 \section{Multiplexed stream mapping}
 
 Applications supporting Ogg Theora I must support Theora bitstreams
