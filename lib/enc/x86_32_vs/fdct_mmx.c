@@ -14,13 +14,13 @@
 #include "dsp.h"
 
 
-static const  ogg_int64_t xC1S7 = 0x0fb15fb15fb15fb15LL;
-static const  ogg_int64_t xC2S6 = 0x0ec83ec83ec83ec83LL;
-static const  ogg_int64_t xC3S5 = 0x0d4dbd4dbd4dbd4dbLL;
-static const  ogg_int64_t xC4S4 = 0x0b505b505b505b505LL;
-static const  ogg_int64_t xC5S3 = 0x08e3a8e3a8e3a8e3aLL;
-static const  ogg_int64_t xC6S2 = 0x061f861f861f861f8LL;
-static const  ogg_int64_t xC7S1 = 0x031f131f131f131f1LL;
+static const  ogg_int64_t xC1S7 = 0x0fb15fb15fb15fb15;
+static const  ogg_int64_t xC2S6 = 0x0ec83ec83ec83ec83;
+static const  ogg_int64_t xC3S5 = 0x0d4dbd4dbd4dbd4db;
+static const  ogg_int64_t xC4S4 = 0x0b505b505b505b505;
+static const  ogg_int64_t xC5S3 = 0x08e3a8e3a8e3a8e3a;
+static const  ogg_int64_t xC6S2 = 0x061f861f861f861f8;
+static const  ogg_int64_t xC7S1 = 0x031f131f131f131f1;
 
 
 static __inline void Transpose_mmx( ogg_int16_t *InputData1, ogg_int16_t *OutputData1,

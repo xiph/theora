@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "Static_Release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\..\ogg\include" /I "..\..\theora\include" /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
+# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\..\ogg\include" /I "..\..\theora\include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /YX /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -64,7 +64,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "Static_Debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "..\..\ogg\include" /I "..\..\theora\include" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
+# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "..\..\ogg\include" /I "..\..\theora\include" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -85,83 +85,159 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\lib\blockmap.c
+SOURCE=..\lib\dec\apiwrapper.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\comment.c
+SOURCE=..\lib\enc\blockmap.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\dct.c
+SOURCE=..\lib\enc\common.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\dct_decode.c
+SOURCE=..\lib\cpu.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\dct_encode.c
+SOURCE=..\lib\enc\dct.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\decode.c
+SOURCE=..\lib\enc\dct_decode.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\encode.c
+SOURCE=..\lib\enc\dct_encode.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\encoder_toplevel.c
+SOURCE=..\lib\dec\decapiwrapper.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\frarray.c
+SOURCE=..\lib\dec\decinfo.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\frinit.c
+SOURCE=..\lib\dec\decode.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\huffman.c
+SOURCE=..\lib\dec\dequant.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\idct.c
+SOURCE=..\lib\enc\dsp.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\mcomp.c
+SOURCE=..\lib\enc\x86_32_vs\dsp_mmx.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\misc_common.c
+SOURCE=..\lib\enc\encode.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\pb.c
+SOURCE=..\lib\enc\encoder_huffman.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\pp.c
+SOURCE=..\lib\enc\encoder_idct.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\quant.c
+SOURCE=..\lib\enc\encoder_quant.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\reconstruct.c
+SOURCE=..\lib\enc\encoder_toplevel.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\scan.c
+SOURCE=..\lib\enc\x86_32_vs\fdct_mmx.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\toplevel.c
+SOURCE=..\lib\dec\fragment.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\frarray.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\frinit.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\huffdec.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\idct.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\info.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\internal.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\mcomp.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\misc_common.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\x86\mmxfrag.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\x86\mmxidct.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\x86\mmxstate.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\pb.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\pp.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\quant.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\x86_32_vs\recon_mmx.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\reconstruct.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\scan.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\state.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\x86\x86state.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -169,47 +245,103 @@ SOURCE=..\lib\toplevel.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=..\lib\block_inline.h
+SOURCE=..\lib\dec\apiwrapper.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\encoder_internal.h
+SOURCE=..\lib\enc\block_inline.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\encoder_lookup.h
+SOURCE=..\include\theora\codec.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\huffman.h
+SOURCE=..\lib\enc\codec_internal.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\hufftables.h
+SOURCE=..\lib\cpu.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\mcomp.h
+SOURCE=..\lib\dec\dct.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\ogg\ogg.h
+SOURCE=..\lib\dec\decint.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\ogg\os_types.h
+SOURCE=..\lib\dec\dequant.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\pp.h
+SOURCE=..\lib\enc\dsp.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\quant_lookup.h
+SOURCE=..\lib\enc\encoder_huffman.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\toplevel_lookup.h
+SOURCE=..\lib\enc\encoder_lookup.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\enquant.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\huffdec.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\huffman.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\hufftables.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\idct.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\internal.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\ocintrin.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\pp.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\quant.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\quant_lookup.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\theora\theora.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\theora\theoradec.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\toplevel_lookup.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\x86\x86int.h
 # End Source File
 # End Group
 # End Target

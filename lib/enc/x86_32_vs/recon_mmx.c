@@ -18,7 +18,7 @@
 #include "codec_internal.h"
 
 
-static const unsigned __int64 V128 = 0x8080808080808080LL;
+static const unsigned __int64 V128 = 0x8080808080808080;
 
 static void copy8x8__mmx (unsigned char *src,
 	                unsigned char *dest,

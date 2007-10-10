@@ -28,7 +28,7 @@
 #endif
 
 
-static const ogg_int64_t V128 = 0x0080008000800080LL;
+static const ogg_int64_t V128 = 0x0080008000800080;
 
 static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
                   ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine,

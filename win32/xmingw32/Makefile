@@ -99,6 +99,7 @@ cpu.c \
 
 LIBTHEORADEC_CHEADERS =   \
 ${LIBTHEORABASE_CHEADERS} \
+dec/apiwrapper.h \
 dec/decint.h \
 dec/dequant.h \
 dec/huffdec.h \
