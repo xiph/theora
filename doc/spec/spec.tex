@@ -7688,9 +7688,9 @@ Outside of an encapsulation, the mime type {\tt video/theora} may
 
 \section{Embedding in a logical bitstream}
 
-Ogg separates a {\em logical bitstream} consisting of the framing of
- a particular sequence of packets and complete within itself from
- the {\em physical bitstream} which may consist either of a single
+Ogg separates the concept of a {\em logical bitstream} consisting of the 
+ framing of a particular sequence of packets and complete within itself 
+ from the {\em physical bitstream} which may consist either of a single
  logical bitstream or a number of logical bitstreams multiplexed
  together.
 This section specifies the embedding of Theora packets in a logical Ogg
@@ -7700,11 +7700,12 @@ The mapping of Ogg Theora logical bitstreams into a multiplexed physical Ogg
 
 \subsection{Headers}
 
-The initial info header packet appears by itself in a single Ogg page.
+The initial identification header packet appears by itself in a 
+ single Ogg page.
 This page defines the start of the logical stream and MUST have
  the `beginning of stream' flag set.
 
-The second and third header packets (metadata comments and decoder
+The second and third header packets (comment metadata and decoder
  setup data) can together span one or more Ogg pages.
 If there are additional non-normative header packets, they MUST be
  included in this sequence of pages as well.
@@ -7719,29 +7720,34 @@ All header pages MUST have their granule position field set to zero.
 
 \subsection{Frame data}
 
-The first frame data packet in a logical bitstream MUST begin a fresh page.
+The first frame data packet in a logical bitstream MUST begin a new Ogg 
+ page.
 All other data packets are placed one at a time into Ogg pages
  until the end of the stream.
 Packets can span pages and multiple packets can be placed within any
  one page.
-The last page in the logical bitstream MUST have its `end of stream'
- flag set.
+The last page in the logical bitstream SHOULD have its 
+ 'end of stream' flag set to indicate complete transmission
+ of the available video.
 
 Frame data pages MUST be marked with a granule position corresponding to
- the end of the display interval of the last frame/packet that finishes in that page.
+ the end of the display interval of the last frame/packet that finishes 
+ in that page. See the next section for details.
 
 \subsection{Granule position}
 
 Data packets are marked by a granulepos derived from the count of decodable
 frames after that packet is processed. The field itself is divided into two
 sections, the width of the less significant section being given by the KFGSHIFT
-parameter decoded from the Identification Header. The more significant portion
-of the field gives the count of coded frames after the coding of the last keyframe
-in stream, and the less significant portion gives the count of frames since
-the last keyframe. Thus a stream would begin with a split granulepos of 
-$1|0$, followed by $1|1$, $1|2$, $1|3$, etc. Around a keyframe in the 
+parameter decoded from the identification header 
+(Section~\ref{sec:idheader}).
+The more significant portion of the field gives the count of coded 
+frames after the coding of the last keyframe in stream, and the less 
+significant portion gives the count of frames since the last keyframe.
+Thus a stream would begin with a split granulepos of $1|0$ (a keyframe),
+followed by $1|1$, $1|2$, $1|3$, etc. Around a  keyframe in the 
 middle of the stream the granulepos sequence might be $1234|35$, 
-$1234|36$, $1234|37$, $1271|0$ (for a keyframe), $1271|1$, and so
+$1234|36$, $1234|37$, $1271|0$ (for the keyframe), $1271|1$, and so
 on. In this way the granulepos field increased monotonically as required 
 by the Ogg format, but contains information necessary to efficiently 
 find the previous keyframe to continue decoding after a seek.
@@ -7804,14 +7810,13 @@ If there is more than one audio stream, or of any other stream
 %TBT: That's all pretty vague.
 
 After the `beginning of stream' pages, the header pages of each of
- the logical streams should be grouped together before any data pages
+ the logical streams MUST be grouped together before any data pages
  occur.
-%TBT: should or must?
 
 After all the header pages have been placed,
  the data pages are multiplexed together.
-They should be placed in the stream in increasing order by the playback
- time equivalents of their granule fields.
+They should be placed in the stream in increasing order by the 
+ time equivalents of their granule position fields.
 This facilitates seeking while limiting the buffering requirements of the
  playback demultiplexer.
 %TODO: A lot of this language is encoder-oriented.
