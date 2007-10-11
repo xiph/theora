@@ -63,7 +63,7 @@
 \pagestyle{headings}
 \bibliographystyle{alpha}
 
-\title{Theora I Specification}
+\title{Theora Specification}
 \author{Xiph.org Foundation}
 \date{\today}
 
@@ -303,7 +303,7 @@ A complete list of these features appears in Appendix~\ref{app:vp3-compat}.
 
 \section{Video Formats}
 
-Theora I currently supports progressive video data of arbitrary dimensions at a
+Theora currently supports progressive video data of arbitrary dimensions at a
  constant frame rate in one of several $Y'C_bC_r$ color spaces.
 The precise definition the supported color spaces appears in
  Section~\ref{sec:colorspaces}.
@@ -312,7 +312,7 @@ Three different chroma subsampling formats are supported: 4:2:0, 4:2:2,
 The precise details of each of these formats and their sampling locations are
  described in Section~\ref{sec:pixfmts}.
 
-The Theora I format does not support interlaced material, variable frame rates,
+The Theora format does not support interlaced material, variable frame rates,
  bit-depths larger than 8 bits per component, nor alternate color spaces such
  as RGB or arbitrary multi-channel spaces.
 Black and white content can be efficiently encoded, however, because the
@@ -327,7 +327,7 @@ Support for increased bit depths or additional color spaces is not planned.
 
 \section{Classification}
 
-Theora I is a block-based lossy transform codec that utilizes an
+Theora is a block-based lossy transform codec that utilizes an
  $8\times 8$ Type-II Discrete Cosine Transform and block-based motion
  compensation.
 This places it in the same class of codecs as MPEG-1, -2, -4, and H.263.
@@ -968,7 +968,7 @@ Such a mismatch problem would be devastating to Theora, since a single rounding
 
 \paragraph{Packet Type Decode}
 
-Theora I uses four packet types.
+Theora uses four packet types.
 The first three packet types mark each of the three Theora headers described
  above.
 The fourth packet type marks a video packet.
@@ -7763,7 +7763,7 @@ granulepos when VREV is less than 1.
 
 \section{Multiplexed stream mapping}
 
-Applications supporting Ogg Theora I must support Theora bitstreams
+Applications supporting Ogg Theora must support Theora bitstreams
  multiplexed with compressed audio data in the Vorbis I and Speex
  formats, and should support Ogg-encapsulated MNG graphics for overlays.
 

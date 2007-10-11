@@ -20,7 +20,7 @@ FIG_PDFS = $(FIG_SRCS:.fig=.pdf)
 # add any native-pdf figures here
 FIG_OBJS = $(FIG_PDFS)
 
-Theora_I_spec.pdf : spec.pdf
+Theora_spec.pdf : spec.pdf
 	$(MV) $< $@
 
 spec.pdf : $(SPEC_SRCS) $(FIG_OBJS) vp3huff.tex spec.bbl
@@ -71,6 +71,6 @@ clean:
 distclean: clean
 
 maintainer-clean: distclean
-	-$(RM) Theora_I_spec.pdf
+	-$(RM) Theora_spec.pdf
 
 maintainerclean: maintainer-clean
