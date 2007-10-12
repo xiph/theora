@@ -1,3 +1,7 @@
+libtheora 1.0beta3 (unreleased)
+
+ - dropped build support for Microsoft VS2003
+
 libtheora 1.0beta2 (2007 October 12)
 
  - Fix a crash bug on char-is-unsigned architectures (PowerPC)
