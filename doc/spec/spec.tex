@@ -1949,6 +1949,26 @@ These are indicated as they appear in the sections below.
 \section{Common Header Decode}
 \label{sub:common-header}
 
+\begin{figure}[Htbp]
+\begin{center}
+\begin{verbatim}
+  0                   1                   2                   3   
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |  header type  |      't'      |      'h'      |      'e'      |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |      'o'      |      'r'      |      'a'      |     data...   |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                 ... header-specific data ...                  |
+ |                              ...                              |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+\end{verbatim}
+\end{center}
+\caption{Common Header Packet Layout}
+\label{fig:commonheader}
+\end{figure}
+
+
 \paragraph{Input parameters:} None.
 
 \paragraph{Output parameters:}\hfill\\*
@@ -2003,6 +2023,40 @@ Packets with other header types (\hex{83}--\hex{FF}) are reserved and MUST be
 
 \section{Identification Header Decode}
 \label{sec:idheader}
+
+\begin{figure}[Htbp]
+\begin{center}
+\begin{verbatim}
+  0                   1                   2                   3   
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |      0x80     |      't'      |      'h'      |      'e'      |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |      'o'      |      'r'      |      'a'      |     VMAJ      |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |     VMIN      |     VREV      |           FMBW                |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |             FMBH              |           PICW...             |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |   ...PICW     |                 PICH                          |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |     PICX      |     PICY      |            FRN...             |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |           ...FRN              |            FRD...             |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |           ...FRD              |            PARN...            |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |    ...PARN    |                   PARD                        |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |      CS       |                  NOMBR                        |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |    QUAL   | KFGSHIFT| PF| Res |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+\end{verbatim}
+\end{center}
+\caption{Identification Header Packet}
+\label{fig:idheader}
+\end{figure}
 
 \paragraph{Input parameters:} None.
 
@@ -2267,7 +2321,8 @@ It is meant for short text comments, not aribtrary metadata; arbitrary metadata
  belongs in a separate logical stream that provides greater structure and
  machine parseability.
 
-%r: I tried to morph this a little more in the direction of our application space
+%r: I tried to morph this a little more in the direction of our 
+%   application space 
 The comment field is meant to be used much like someone jotting a quick note on
  the label of a video.
 It should be a little information to remember the disc or tape by and explain it to
@@ -2288,6 +2343,19 @@ In addition to the vector list, there is a single vector for a vendor name,
 
 \subsection{Comment Length Decode}
 \label{sub:comment-len}
+
+\begin{figure}
+\begin{center}
+\begin{tabular}{ | c | c | }
+ \hline
+ 4 byte length &
+ UTF-8 encoded string ...\\
+ \hline
+\end{tabular}
+\end{center}
+\caption{Length encoded string layout}
+\label{fig:comment-len}
+\end{figure}
 
 \paragraph{Input parameters:} None.
 
@@ -2337,6 +2405,22 @@ This construction is used so that on platforms with 8-bit bytes, the memory
 \end{enumerate}
 
 \subsection{Comment Header Decode}
+
+\begin{figure}
+\begin{center}
+\begin{tabular}{ | c | }
+  \hline
+  vendor string \\ \hline
+  number of comments \\ \hline
+  comment string \\ \hline
+  comment string \\ \hline
+  ... \\
+  \hline
+\end{tabular}
+\end{center}
+\caption{Comment Header Layout}
+\label{fig:commentheader}
+\end{figure}
 
 \paragraph{Input parameters:} None.
 
@@ -2464,6 +2548,8 @@ Field names are not restricted to occur only once within a comment header.
 
 \paragraph{Field Names}
 
+%r should this be an appendix?
+
 Below is a proposed, minimal list of standard field names with a description of
  their intended use.
 No field names are mandatory; a comment header may contain one or more, all, or
@@ -2471,7 +2557,30 @@ No field names are mandatory; a comment header may contain one or more, all, or
 
 \begin{description}
 \item{TITLE:} Video name.
-%TODO: Complete list
+\item{ARTIST:} Filmmaker or other creator name.
+\item{VERSION:} Subtitle, remix info, or other text distinguishing
+ versions of a video.
+\item{DATE:} Date associated with the video. Implementations SHOULD attempt
+ to parse this field as an ISO 8601 date for machine interpretation and 
+ conversion.
+\item{LOCATION:} Location associated with the video. This is usually the
+ filming location for non-fiction works.
+\item{COPYRIGHT:} Copyright statement.
+\item{LICENSE:} Copyright and other licensing information. 
+ Implementations wishing to do automatic parsing of e.g
+ of distribution terms SHOULD look here for a URL uniquely defining
+ the license. If no instance of this field is present, or if no 
+ instance contains a parseable URL, and implementation MAY look
+ in the COPYRIGHT field for such a URL.
+\item{ORGANIZATION:} Studio name, Publisher, or other organization
+ involved in the creation of the video.
+
+\item{DIRECTOR:} Director or Filmmaker credit, similar to ARTIST.
+\item{PRODUCER:} Producer credit for the video.
+\item{COMPOSER:} Music credit for the video.
+\item{ACTOR:} Acting credit for the video.
+
+\item{DESCRIPTION:} General description, summary, or blurb.
 \end{description}
 
 \section{Setup Header}
@@ -2482,6 +2591,28 @@ The Theora setup header contains the limit values used to drive the loop
  tables, and the Huffman tables used to unpack the DCT tokens.
 Because the contents of this header are specific to Theora, no concessions have
  been made to keep the fields octet-aligned for easy parsing.
+
+\begin{figure}
+\begin{center}
+\begin{tabular}{ | c | }
+ \hline
+ common header block \\ \hline
+ loop filter table resolution \\ \hline
+ loop filter table \\ \hline
+ scale table resolution \\ \hline
+ AC scale table \\ \hline
+ DC scale table \\ \hline
+ number of base matricies \\ \hline
+ base quatization matricies \\ \hline
+ ... \\ \hline
+ quant range interpolation table \\ \hline
+ DCT token Huffman tables \\
+ \hline
+\end{tabular}
+\end{center}
+\caption{Setup Header structure}
+\label{fig:setupheader}
+\end{figure}
 
 \subsection{Loop Filter Limit Table Decode}
 \label{sub:loop-filter-limits}
