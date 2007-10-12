@@ -2580,6 +2580,12 @@ No field names are mandatory; a comment header may contain one or more, all, or
 \item{COMPOSER:} Music credit for the video.
 \item{ACTOR:} Acting credit for the video.
 
+\item{TAG:} subject or category tag, keyword, or other content
+ classification labels. The value of each instance of this
+ field SHOULD be treated as a single label, with multiple
+ instances of the field for multiple tags. The value of
+ a single field SHOULD NOT be parsed into multiple tags
+ based on some internal delimeter.
 \item{DESCRIPTION:} General description, summary, or blurb.
 \end{description}
 
