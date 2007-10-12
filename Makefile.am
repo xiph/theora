@@ -17,7 +17,7 @@ SUBDIRS = lib include doc tests m4 $(EXAMPLES_DIR)
 # because of it, breaking make dist.  This works just as well.
 EXTRA_DIST = \
 	README CHANGES COPYING LICENSE \
-	autogen.sh win32 symbian SConstruct \
+	autogen.sh win32 macosx symbian SConstruct \
 	libtheora.spec libtheora.spec.in \
 	theora-uninstalled.pc.in
 
