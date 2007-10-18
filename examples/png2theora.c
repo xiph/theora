@@ -132,22 +132,24 @@ theora_open(const char *pathname)
     fwrite(og.header, og.header_len, 1, ogg_fp);
     fwrite(og.body, og.body_len, 1, ogg_fp);
   }
+  /* libogg flushes automatically after the first header */
 
   theora_comment_init(&tc);
   theora_encode_comment(&tc, &op);
   ogg_stream_packetin(&ogg_os, &op);
-  if(ogg_stream_pageout(&ogg_os, &og)) {
+  while(ogg_stream_pageout(&ogg_os, &og)) {
     fwrite(og.header, og.header_len, 1, ogg_fp);
     fwrite(og.body, og.body_len, 1, ogg_fp);
   }
 
   theora_encode_tables(&theora_td, &op);
   ogg_stream_packetin(&ogg_os, &op);
-  if(ogg_stream_pageout(&ogg_os, &og)) {
+  while(ogg_stream_pageout(&ogg_os, &og)) {
     fwrite(og.header, og.header_len, 1, ogg_fp);
     fwrite(og.body, og.body_len, 1, ogg_fp);
   }
 
+  /* flush at the end of the headers */
   if(ogg_stream_flush(&ogg_os, &og)) {
     fwrite(og.header, og.header_len, 1, ogg_fp);
     fwrite(og.body, og.body_len, 1, ogg_fp);
@@ -234,7 +236,7 @@ theora_write_frame(unsigned long w, unsigned long h, unsigned char *yuv)
   }
 
   ogg_stream_packetin(&ogg_os, &op);
-  if(ogg_stream_pageout(&ogg_os, &og)) {
+  while(ogg_stream_pageout(&ogg_os, &og)) {
     fwrite(og.header, og.header_len, 1, ogg_fp);
     fwrite(og.body, og.body_len, 1, ogg_fp);
   }
@@ -254,7 +256,11 @@ theora_close(void)
 
   if (theora_initialized) {
     theora_encode_packetout(&theora_td, 1, &op);
-    if(ogg_stream_pageout(&ogg_os, &og)) {
+    while(ogg_stream_pageout(&ogg_os, &og)) {
+      fwrite(og.header, og.header_len, 1, ogg_fp);
+      fwrite(og.body, og.body_len, 1, ogg_fp);
+    }
+    if(ogg_stream_flush(&ogg_os, &og)) {
       fwrite(og.header, og.header_len, 1, ogg_fp);
       fwrite(og.body, og.body_len, 1, ogg_fp);
     }
