@@ -1101,8 +1101,6 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
   QIndex = (unsigned char)cpi->pb.FrameQIndex;
 
-  if(!cpi->MotionCompensation)
-    return 0;
 
   /* change the quatization matrix to the one at best Q to compute the
      new error score */
@@ -1215,7 +1213,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
         /* If the best error is above the required threshold search
            for a new inter MV */
-        if ( BestError > cpi->MinImprovementForNewMV ) {
+        if ( BestError > cpi->MinImprovementForNewMV && cpi->MotionCompensation) {
           /* Use a mix of heirachical and exhaustive searches for
              quick mode. */
           if ( cpi->pb.info.quick_p ) {
@@ -1264,7 +1262,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         MBGF_MVError = HUGE_ERROR;
         GFMVect.x = 0; /* Set 0,0 motion vector */
         GFMVect.y = 0;
-        if ( BestError > cpi->MinImprovementForNewMV ) {
+        if ( BestError > cpi->MinImprovementForNewMV && cpi->MotionCompensation) {
           /* Do an MV search in the golden reference frame */
           MBGF_MVError = GetMBMVInterError( cpi, cpi->pb.GoldenFrame,
                                             YFragIndex, PixelsPerLine,
@@ -1297,7 +1295,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         /* Finally... If the best error is still to high then consider
            the 4MV mode */
         MBInterFOURMVError = HUGE_ERROR;
-        if ( BestError > cpi->FourMVThreshold ) {
+        if ( BestError > cpi->FourMVThreshold && cpi->MotionCompensation) {
           /* Get the 4MV error. */
           MBInterFOURMVError =
             GetFOURMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
