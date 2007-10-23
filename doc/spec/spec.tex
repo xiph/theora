@@ -3112,7 +3112,7 @@ The tree is decoded as follows:
 
 \begin{enumerate}
 \item
-For each consecutive value of \locvar{\hti} from $0$ to $80$, inclusive:
+For each consecutive value of \locvar{\hti} from $0$ to $79$, inclusive:
 \begin{enumerate}
 \item
 Set \locvar{HBITS} to the empty string.
@@ -3818,7 +3818,7 @@ If \bitvar{FTYPE} is 0 (intra frame):
 \begin{enumerate}
 \item
 For each consecutive value of \locvar{\mbi} from 0 to $(\bitvar{NMBS}-1)$,
- inclusive, assign $\bitvar{MBMODES}[\mbi]$ the value 0 (INTRA).
+ inclusive, assign $\bitvar{MBMODES}[\mbi]$ the value 1 (INTRA).
 \end{enumerate}
 \item
 Otherwise (inter frame):
