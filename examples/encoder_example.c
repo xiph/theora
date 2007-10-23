@@ -949,7 +949,8 @@ int main(int argc,char *const *argv){
         audioflag=0;
         timebase=audiotime;
       }
-      {
+
+      if(timebase!=-1.){
         int hundredths=timebase*100-(long)timebase*100;
         int seconds=(long)timebase%60;
         int minutes=((long)timebase/60)%60;
