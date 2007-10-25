@@ -118,6 +118,11 @@ if conf.CheckPKG('vorbis vorbisenc'):
   have_vorbis=True
 else:
   have_vorbis=False
+
+if conf.CheckPKG('libpng'):
+  have_libpng=True
+else:
+  have_libpng=False
   
 build_player_example=True
 if not conf.CheckHeader('sys/soundcard.h'):
@@ -182,3 +187,9 @@ if have_vorbis:
     plyex_Sources = Split("""player_example.c""")
     plyex.ParseConfig('sdl-config --cflags --libs')
     plyex.Program('examples/player_example', path('examples', plyex_Sources))
+
+png2theora = env.Copy()
+png2theora.Append(LIBS=['theora'], LIBPATH=['./lib'])
+png2theora_Sources = Split("""png2theora.c""")
+png2theora.ParseConfig('pkg-config --cflags --libs libpng')
+png2theora.Program('examples/png2theora', path('examples', png2theora_Sources))
