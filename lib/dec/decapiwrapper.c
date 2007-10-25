@@ -21,8 +21,6 @@
 #include "apiwrapper.h"
 #include "theora/theoradec.h"
 
-
-
 static void th_dec_api_clear(th_api_wrapper *_api){
   if(_api->setup)th_setup_free(_api->setup);
   if(_api->decode)th_decode_free(_api->decode);
@@ -31,6 +29,10 @@ static void th_dec_api_clear(th_api_wrapper *_api){
 
 static void theora_decode_clear(theora_state *_td){
   if(_td->i!=NULL)theora_info_clear(_td->i);
+#ifdef _TH_DEBUG_
+  fclose(debugout);
+  debugout=NULL;
+#endif
   memset(_td,0,sizeof(*_td));
 }
 
@@ -90,6 +92,7 @@ int theora_decode_init(theora_state *_td,theora_info *_ci){
   th_api_info    *apiinfo;
   th_api_wrapper *api;
   th_info         info;
+
   api=(th_api_wrapper *)_ci->codec_setup;
   /*Allocate our own combined API wrapper/theora_info struct.
     We put them both in one malloc'd block so that when the API wrapper is
@@ -127,6 +130,11 @@ int theora_decode_header(theora_info *_ci,theora_comment *_cc,ogg_packet *_op){
   th_api_wrapper *api;
   th_info         info;
   int             ret;
+
+#ifdef _TH_DEBUG_
+  debugout = fopen("theoradec-debugout.txt","w");
+#endif
+
   api=(th_api_wrapper *)_ci->codec_setup;
   /*Allocate an API wrapper struct on demand, since it will not also include a
      theora_info struct like the ones that are used in a theora_state struct.*/
@@ -183,5 +191,10 @@ int theora_decode_YUVout(theora_state *_td,yuv_buffer *_yuv){
     _yuv->u=buf[1].data;
     _yuv->v=buf[2].data;
   }
+
+#ifdef _TH_DEBUG_
+  dframe++;
+#endif 
+
   return ret;
 }

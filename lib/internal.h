@@ -28,11 +28,13 @@
 # include "dec/quant.h"
 
 /* debug macros */
-#ifdef DEBUG
+#ifdef _TH_DEBUG_
 #include <stdio.h>
-#define TH_DEBUG(x) fprintf(stderr, x)
+extern long dframe;
+extern FILE *debugout;
+#define TH_DEBUG(...) fprintf(debugout, __VA_ARGS__)
 #else
-#define TH_DEBUG(x)
+#define TH_DEBUG(...)
 #endif
 
 /*Thank you Microsoft, I know the order of operations.*/

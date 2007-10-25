@@ -26,6 +26,11 @@
 #include "dsp.h"
 #include "codec_internal.h"
 
+#ifdef _TH_DEBUG_
+FILE *debugout=NULL;
+long dframe=0;
+#endif
+
 #define A_TABLE_SIZE        29
 #define DF_CANDIDATE_WINDOW 5
 
@@ -36,26 +41,26 @@
 /*The default quantization parameters used by VP3.1.*/
 static const int OC_VP31_RANGE_SIZES[1]={63};
 static const th_quant_base OC_VP31_BASES_INTRA_Y[2]={
-  {
-     16, 11, 10, 16, 24,  40, 51, 61,
-     12, 12, 14, 19, 26,  58, 60, 55,
-     14, 13, 16, 24, 40,  57, 69, 56,
-     14, 17, 22, 29, 51,  87, 80, 62,
-     18, 22, 37, 58, 68, 109,103, 77,
-     24, 35, 55, 64, 81, 104,113, 92,
-     49, 64, 78, 87,103, 121,120,101,
-     72, 92, 95, 98,112, 100,103, 99
+  { 
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
   },
-  {
-     16, 11, 10, 16, 24,  40, 51, 61,
-     12, 12, 14, 19, 26,  58, 60, 55,
-     14, 13, 16, 24, 40,  57, 69, 56,
-     14, 17, 22, 29, 51,  87, 80, 62,
-     18, 22, 37, 58, 68, 109,103, 77,
-     24, 35, 55, 64, 81, 104,113, 92,
-     49, 64, 78, 87,103, 121,120,101,
-     72, 92, 95, 98,112, 100,103, 99
-  }
+  { 
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+  },
 };
 static const th_quant_base OC_VP31_BASES_INTRA_C[2]={
   {
@@ -80,26 +85,28 @@ static const th_quant_base OC_VP31_BASES_INTRA_C[2]={
   }
 };
 static const th_quant_base OC_VP31_BASES_INTER[2]={
-  {
-     16, 16, 16, 20, 24, 28, 32, 40,
-     16, 16, 20, 24, 28, 32, 40, 48,
-     16, 20, 24, 28, 32, 40, 48, 64,
-     20, 24, 28, 32, 40, 48, 64, 64,
-     24, 28, 32, 40, 48, 64, 64, 64,
-     28, 32, 40, 48, 64, 64, 64, 96,
-     32, 40, 48, 64, 64, 64, 96,128,
-     40, 48, 64, 64, 64, 96,128,128
+  { 
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
   },
-  {
-     16, 16, 16, 20, 24, 28, 32, 40,
-     16, 16, 20, 24, 28, 32, 40, 48,
-     16, 20, 24, 28, 32, 40, 48, 64,
-     20, 24, 28, 32, 40, 48, 64, 64,
-     24, 28, 32, 40, 48, 64, 64, 64,
-     28, 32, 40, 48, 64, 64, 64, 96,
-     32, 40, 48, 64, 64, 64, 96,128,
-     40, 48, 64, 64, 64, 96,128,128
-  }
+  { 
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+    10,10,10,10,10,10,10,10,
+  },
+
+  
 };
 
 const th_quant_info TH_VP31_QUANT_INFO={
@@ -928,7 +935,7 @@ int theora_encode_init(theora_state *th, theora_info *c){
   cpi->ExhaustiveSearchThresh = 2500;
   cpi->MinImprovementForFourMV = 100;
   cpi->FourMVThreshold = 10000;
-  cpi->BitRateCapFactor = 1.50;
+  cpi->BitRateCapFactor = 5.0;
   cpi->InterTripOutThresh = 5000;
   cpi->MVEnabled = 1;
   cpi->InterCodeCount = 127;
@@ -1129,6 +1136,10 @@ int theora_encode_YUVin(theora_state *t,
     ((cpi->CurrentFrame - cpi->LastKeyFrame)<<cpi->pb.keyframe_granule_shift)+
     cpi->LastKeyFrame - 1;
 
+#ifdef _TH_DEBUG_
+  dframe++;
+#endif  
+
   return 0;
 }
 
@@ -1178,6 +1189,10 @@ static void _tp_writelsbint(oggpack_buffer *opb, long value)
 int theora_encode_header(theora_state *t, ogg_packet *op){
   CP_INSTANCE *cpi=(CP_INSTANCE *)(t->internal_encode);
   int offset_y;
+
+#ifdef _TH_DEBUG_
+  debugout=fopen("theoraenc-debugout.txt","w");
+#endif
 
 #ifndef LIBOGG2
   oggpackB_reset(cpi->oggbuffer);
@@ -1345,6 +1360,12 @@ static void theora_encode_clear (theora_state  *th){
     _ogg_free(cpi->oggbuffer);
     _ogg_free(cpi);
   }
+
+#ifdef _TH_DEBUG_
+  fclose(debugout);
+  debugout=NULL;
+#endif
+
   memset(th,0,sizeof(*th));
 }
 

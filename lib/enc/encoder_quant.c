@@ -20,6 +20,11 @@
 #include "codec_internal.h"
 #include "quant_lookup.h"
 
+#ifdef _TH_DEBUG_
+#include <stdio.h>
+extern FILE *debugout;
+extern long dframe;
+#endif
 
 void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer* _opb) {
   
@@ -120,6 +125,64 @@ void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer* _opb) {
       oggpackB_write(_opb,indices[qti][pli][qri+1],nbits);
     }
   }
+
+#ifdef _TH_DEBUG_
+  /* dump the tables */
+  {
+    int i, j, k, l, m;
+    TH_DEBUG("loop filter limits = {");
+    for(i=0;i<64;){
+      TH_DEBUG("\n        ");
+      for(j=0;j<16;i++,j++)
+	TH_DEBUG("%3d ",_qinfo->loop_filter_limits[i]);
+    }
+    TH_DEBUG("\n}\n\n");
+
+    TH_DEBUG("ac scale = {");
+    for(i=0;i<64;){
+      TH_DEBUG("\n        ");
+      for(j=0;j<16;i++,j++)
+	TH_DEBUG("%3d ",_qinfo->ac_scale[i]);
+    }
+    TH_DEBUG("\n}\n\n");
+
+    TH_DEBUG("dc scale = {");
+    for(i=0;i<64;){
+      TH_DEBUG("\n        ");
+      for(j=0;j<16;i++,j++)
+	TH_DEBUG("%3d ",_qinfo->dc_scale[i]);
+    }
+    TH_DEBUG("\n}\n\n");
+
+    for(k=0;k<2;k++)
+      for(l=0;l<3;l++){
+	char *name[2][3]={
+	  {"intra Y bases","intra U bases", "intra V bases"},
+	  {"inter Y bases","inter U bases", "inter V bases"}
+	};
+
+	th_quant_ranges *r = &_qinfo->qi_ranges[k][l];
+	TH_DEBUG("%s = {\n",name[k][l]);
+	TH_DEBUG("        ranges = %d\n",r->nranges);
+	TH_DEBUG("        intervals = { ");
+	for(i=0;i<r->nranges;i++)
+	  TH_DEBUG("%3d ",r->sizes[i]);
+	TH_DEBUG("}\n");
+	TH_DEBUG("\n        matricies = { ");
+	for(m=0;m<r->nranges+1;m++){
+	  TH_DEBUG("\n          { ");
+	  for(i=0;i<64;){
+	    TH_DEBUG("\n            ");
+	    for(j=0;j<8;i++,j++)
+	      TH_DEBUG("%3d ",r->base_matrices[m][i]);
+	  }
+	  TH_DEBUG("\n          }");
+	}
+	TH_DEBUG("\n        }\n");
+      }
+  }
+    
+#endif
 }
 
 
@@ -233,7 +296,7 @@ static void init_quantizer ( CP_INSTANCE *cpi,
     case 0:
       ZBinFactor = 0.65;
       if ( scale_factor <= 50 )
-        RoundingFactor = 0.499;
+        RoundingFactor = 0.49;
       else
         RoundingFactor = 0.46;
       break;

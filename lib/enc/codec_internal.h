@@ -726,7 +726,6 @@ extern ogg_uint32_t YUVAnalyseFrame( PP_INSTANCE *ppi,
 
 extern void ClearPPInstance(PP_INSTANCE *ppi);
 extern void InitPPInstance(PP_INSTANCE *ppi, DspFunctions *funcs);
-extern int GetFrameType(PB_INSTANCE *pbi);
 extern void InitPBInstance(PB_INSTANCE *pbi);
 extern void ClearPBInstance(PB_INSTANCE *pbi);
 
@@ -842,14 +841,20 @@ extern void CopyBackExtraFrags(CP_INSTANCE *cpi);
 extern void UpdateUMVBorder( PB_INSTANCE *pbi,
                              unsigned char * DestReconPtr );
 extern void PInitFrameInfo(PP_INSTANCE * ppi);
-extern int GetFrameType(PB_INSTANCE *pbi);
-extern void SetFrameType( PB_INSTANCE *pbi,unsigned char FrType );
+
 extern double GetEstimatedBpb( CP_INSTANCE *cpi, ogg_uint32_t TargetQ );
 extern void ClearTmpBuffers(PB_INSTANCE * pbi);
 extern void InitTmpBuffers(PB_INSTANCE * pbi);
 extern void ScanYUVInit( PP_INSTANCE *  ppi,
                          SCAN_CONFIG_DATA * ScanConfigPtr);
-extern int LoadAndDecode(PB_INSTANCE *pbi);
+
+static inline int GetFrameType(PB_INSTANCE *pbi){
+  return pbi->FrameType;
+}
+
+static inline void SetFrameType( PB_INSTANCE *pbi,unsigned char FrType ){
+  pbi->FrameType = FrType;
+}
 
 
 #endif /* ENCODER_INTERNAL_H */

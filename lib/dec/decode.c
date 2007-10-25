@@ -24,8 +24,6 @@
 # include "png.h"
 #endif
 
-
-
 /*No post-processing.*/
 #define OC_PP_LEVEL_DISABLED  (0)
 /*Keep track of DC qi for each block only.*/
@@ -360,6 +358,7 @@ static int oc_dec_partial_sb_flags_unpack(oc_dec_ctx *_dec){
   int    run_count;
   theora_read1(&_dec->opb,&val);
   flag=(int)val;
+
   sb=_dec->state.sbs;
   sb_end=sb+_dec->state.nsbs;
   run_count=npartial=0;
@@ -373,6 +372,7 @@ static int oc_dec_partial_sb_flags_unpack(oc_dec_ctx *_dec){
       npartial+=flag;
       sb++;
     }
+
     while(--run_count>0&&sb<sb_end);
     if(full_run&&sb<sb_end){
       theora_read1(&_dec->opb,&val);
@@ -402,6 +402,7 @@ static void oc_dec_coded_sb_flags_unpack(oc_dec_ctx *_dec){
   for(;sb->coded_partially;sb++);
   theora_read1(&_dec->opb,&val);
   flag=(int)val;
+
   while(sb<sb_end){
     int full_run;
     run_count=oc_sb_run_unpack(&_dec->opb);

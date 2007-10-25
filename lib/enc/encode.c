@@ -153,6 +153,8 @@ static void EncodeDcTokenList (CP_INSTANCE *cpi) {
   /* Add the DC huffman table choice to the bitstream */
   oggpackB_write( opb, DcHuffChoice[1], DC_HUFF_CHOICE_BITS );
 
+  TH_DEBUG("dc hufftables = %d %d\n",(int)DcHuffChoice[0],(int)DcHuffChoice[1]);
+
   /* Encode the token list */
   for ( i = 0; i < cpi->OptimisedTokenCount; i++ ) {
 
@@ -559,6 +561,8 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
   ogg_int32_t EncodedCoeffs = 1;
   ogg_int32_t FragIndex;
   ogg_uint32_t HuffIndex; /* Index to group of tables used to code a token */
+
+  TH_DEBUG("\n>>>> beginning frame %d\n\n",dframe);
 
   /* Reset the count of second order optimised tokens */
   cpi->OptimisedTokenCount = 0;

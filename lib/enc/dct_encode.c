@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include "codec_internal.h"
 #include "dsp.h"
+#include "quant_lookup.h"
 
 
 static int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };

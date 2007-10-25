@@ -20,7 +20,7 @@
 #include "block_inline.h"
 
 /* Long run bit string coding */
-static ogg_uint32_t FrArrayCodeSBRun( CP_INSTANCE *cpi, ogg_uint32_t value ){
+static ogg_uint32_t FrArrayCodeSBRun( CP_INSTANCE *cpi, ogg_uint32_t value){
   ogg_uint32_t CodedVal = 0;
   ogg_uint32_t CodedBits = 0;
 
@@ -56,7 +56,6 @@ static ogg_uint32_t FrArrayCodeSBRun( CP_INSTANCE *cpi, ogg_uint32_t value ){
     CodedVal = 0x3F000 + (value - 34);
     CodedBits = 18;
   }
-  /* todo: handle value > 4129 extension */
 
   /* Add the bits to the encode holding buffer. */
   oggpackB_write( cpi->oggbuffer, CodedVal, CodedBits );
@@ -109,7 +108,7 @@ static ogg_uint32_t FrArrayCodeBlockRun( CP_INSTANCE *cpi,
 }
 
 void PackAndWriteDFArray( CP_INSTANCE *cpi ){
-  ogg_uint32_t  i;
+  ogg_uint32_t  i,j,k;
   unsigned char val;
   ogg_uint32_t  run_count;
 
@@ -123,6 +122,11 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
   memset( cpi->pb.SBCodedFlags, 0, cpi->pb.SuperBlocks );
   memset( cpi->PartiallyCodedFlags, 0, cpi->pb.SuperBlocks );
   memset( cpi->BlockCodedFlags, 0, cpi->pb.UnitFragments);
+
+#ifdef _TH_DEBUG_
+  unsigned char blockraster[cpi->pb.UnitFragments];
+  memset(blockraster,0,sizeof(blockraster));
+#endif
 
   for( SB = 0; SB < cpi->pb.SuperBlocks; SB++ ) {
     /* Check for coded blocks and macro-blocks */
@@ -139,9 +143,14 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
             if ( cpi->pb.display_fragments[DfBlockIndex] ) {
               cpi->pb.SBCodedFlags[SB] = 1; /* SB at least partly coded */
               cpi->BlockCodedFlags[BListIndex] = 1; /* Block is coded */
+
+#ifdef _TH_DEBUG_
+	      blockraster[DfBlockIndex]=1;
+#endif	      
+
             }else{
               cpi->pb.SBFullyFlags[SB] = 0; /* SB not fully coded */
-              cpi->BlockCodedFlags[BListIndex] = 0; /* Block is not coded */
+              //cpi->BlockCodedFlags[BListIndex] = 0; /* Block is not coded */
             }
 
             BListIndex++;
@@ -161,24 +170,95 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
     }
   }
 
+#ifdef _TH_DEBUG_
+  // assuming 4:2:0 right now
+  TH_DEBUG("predicted (partially coded frame)\n");
+  TH_DEBUG("superblock coded flags = {");
+  int x,y;
+  i=0;
+
+  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+31)/32;y++){
+    TH_DEBUG("\n   ");
+    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+31)/32;x++,i++)
+      TH_DEBUG("%x", ((cpi->pb.SBFullyFlags[i]!=0)|
+		      (cpi->PartiallyCodedFlags[i]!=0)));
+  }
+  TH_DEBUG("\n   ");
+  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+63)/64;y++){
+    TH_DEBUG("\n   ");
+    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+63)/64;x++,i++)
+      TH_DEBUG("%x", ((cpi->pb.SBFullyFlags[i]!=0)|
+		      (cpi->PartiallyCodedFlags[i]!=0)));
+  }
+  TH_DEBUG("\n   ");
+  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+63)/64;y++){
+    TH_DEBUG("\n   ");
+    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+63)/64;x++,i++)
+      TH_DEBUG("%x", ((cpi->pb.SBFullyFlags[i]!=0)|
+		      (cpi->PartiallyCodedFlags[i]!=0)));
+  }
+  TH_DEBUG("\n}\n");
+
+  if(i!=cpi->pb.SuperBlocks)
+    TH_DEBUG("WARNING!  superblock count, raster %d != flat %d\n",
+	     i,cpi->pb.SuperBlocks);
+
+  TH_DEBUG("block coded flags = {");
+
+  i=0;
+
+  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+7)/8;y++){
+    TH_DEBUG("\n   ");
+    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+7)/8;x++,i++)
+      TH_DEBUG("%x", blockraster[i]);
+  }
+  TH_DEBUG("\n   ");
+  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+15)/16;y++){
+    TH_DEBUG("\n   ");
+    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+15)/16;x++,i++)
+      TH_DEBUG("%x", blockraster[i]);
+  }
+  TH_DEBUG("\n   ");
+  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+15)/16;y++){
+    TH_DEBUG("\n   ");
+    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+15)/16;x++,i++)
+      TH_DEBUG("%x", blockraster[i]);
+  }
+  TH_DEBUG("\n}\n");
+
+  if(i!=cpi->pb.UnitFragments)
+    TH_DEBUG("WARNING!  block count, raster %d != flat %d\n",
+	     i,cpi->pb.UnitFragments);
+#endif	      
+
   /* Code list of partially coded Super-Block.  */
   val = cpi->PartiallyCodedFlags[0];
   oggpackB_write( cpi->oggbuffer, (ogg_uint32_t)val, 1);
-  i = 0;
+
+  i = 0; 
   while ( i < cpi->pb.SuperBlocks ) {
     run_count = 0;
-    while ( (i<cpi->pb.SuperBlocks) && (cpi->PartiallyCodedFlags[i]==val) ) {
+    while ( (i<cpi->pb.SuperBlocks) && 
+	    (cpi->PartiallyCodedFlags[i]==val) &&
+	    run_count<4129 ) {
       i++;
       run_count++;
     }
 
     /* Code the run */
-    FrArrayCodeSBRun( cpi, run_count );
-    val = ( val == 0 ) ? 1 : 0;
+    FrArrayCodeSBRun( cpi, run_count);
+
+    if(run_count >= 4129 && i < cpi->pb.SuperBlocks ){
+      val = cpi->PartiallyCodedFlags[i];
+      oggpackB_write( cpi->oggbuffer, (ogg_uint32_t)val, 1);
+      
+    }else
+      val = ( val == 0 ) ? 1 : 0;
   }
 
+
   /* RLC Super-Block fully/not coded. */
-  i = 0;
+  i = 0; 
 
   /* Skip partially coded blocks */
   while( (i < cpi->pb.SuperBlocks) && cpi->PartiallyCodedFlags[i] )
@@ -190,7 +270,9 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
 
     while ( i < cpi->pb.SuperBlocks ) {
       run_count = 0;
-      while ( (i < cpi->pb.SuperBlocks) && (cpi->pb.SBFullyFlags[i] == val) ) {
+      while ( (i < cpi->pb.SuperBlocks) && 
+	      (cpi->pb.SBFullyFlags[i] == val) &&
+	      run_count < 4129) {
         i++;
         /* Skip partially coded blocks */
         while( (i < cpi->pb.SuperBlocks) && cpi->PartiallyCodedFlags[i] )
@@ -200,9 +282,15 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
 
       /* Code the run */
       FrArrayCodeSBRun( cpi, run_count );
+
+    if(run_count >= 4129 && i < cpi->pb.SuperBlocks ){
+      val = cpi->PartiallyCodedFlags[i];
+      oggpackB_write( cpi->oggbuffer, (ogg_uint32_t)val, 1);
+    }else
       val = ( val == 0 ) ? 1 : 0;
     }
   }
+
 
   /*  Now code the block flags */
   if ( BListIndex > 0 ) {
@@ -219,403 +307,11 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
       }
 
       FrArrayCodeBlockRun( cpi, run_count );
+
       val = ( val == 0 ) ? 1 : 0;
-
     }
   }
 }
 
-static void FrArrayDeCodeInit(PB_INSTANCE *pbi){
-  /* Initialise the decoding of a run.  */
-  pbi->bit_pattern = 0;
-  pbi->bits_so_far = 0;
-}
 
-/* Short run bit string decoding */
-static int FrArrayDeCodeBlockRun(  PB_INSTANCE *pbi, ogg_uint32_t bit_value,
-                            ogg_int32_t * run_value ){
-  int  ret_val = 0;
-
-  /* Add in the new bit value. */
-  pbi->bits_so_far++;
-  pbi->bit_pattern = (pbi->bit_pattern << 1) + (bit_value & 1);
-
-  /* Coding scheme:
-     Codeword           RunLength
-     0x                    1-2
-     10x                   3-4
-     110x                  5-6
-     1110xx                7-10
-     11110xx              11-14
-     11111xxxx            15-30
-  */
-
-  switch ( pbi->bits_so_far ){
-  case 2:
-    /* If bit 1 is clear */
-    if ( !(pbi->bit_pattern & 0x0002) ){
-      ret_val = 1;
-      *run_value = (pbi->bit_pattern & 0x0001) + 1;
-    }
-    break;
-
-  case 3:
-    /* If bit 1 is clear */
-    if ( !(pbi->bit_pattern & 0x0002) ){
-      ret_val = 1;
-      *run_value = (pbi->bit_pattern & 0x0001) + 3;
-    }
-    break;
-
-  case 4:
-    /* If bit 1 is clear */
-    if ( !(pbi->bit_pattern & 0x0002) ){
-      ret_val = 1;
-      *run_value = (pbi->bit_pattern & 0x0001) + 5;
-    }
-    break;
-
-  case 6:
-    /* If bit 2 is clear */
-    if ( !(pbi->bit_pattern & 0x0004) ){
-      ret_val = 1;
-      *run_value = (pbi->bit_pattern & 0x0003) + 7;
-    }
-    break;
-
-  case 7:
-    /* If bit 2 is clear */
-    if ( !(pbi->bit_pattern & 0x0004) ){
-      ret_val = 1;
-      *run_value = (pbi->bit_pattern & 0x0003) + 11;
-    }
-    break;
-
-  case 9:
-    ret_val = 1;
-    *run_value = (pbi->bit_pattern & 0x000F) + 15;
-    break;
-  }
-
-  return ret_val;
-}
-
-/* Long run bit string decoding */
-static int FrArrayDeCodeSBRun (PB_INSTANCE *pbi, ogg_uint32_t bit_value,
-                        ogg_int32_t * run_value ){
-  int ret_val = 0;
-
-  /* Add in the new bit value. */
-  pbi->bits_so_far++;
-  pbi->bit_pattern = (pbi->bit_pattern << 1) + (bit_value & 1);
-
-  /* Coding scheme:
-     Codeword            RunLength
-     0                       1
-     10x                    2-3
-     110x                   4-5
-     1110xx                 6-9
-     11110xxx              10-17
-     111110xxxx            18-33
-     111111xxxxxxxxxxxx    34-4129
-  */
-
-  switch ( pbi->bits_so_far ){
-  case 1:
-    if ( pbi->bit_pattern == 0 ){
-      ret_val = 1;
-      *run_value = 1;
-    }
-    break;
-
-  case 3:
-    /* Bit 1 clear */
-    if ( !(pbi->bit_pattern & 0x0002) ){
-      ret_val = 1;
-      *run_value = (pbi->bit_pattern & 0x0001) + 2;
-    }
-    break;
-
-  case 4:
-    /* Bit 1 clear */
-    if ( !(pbi->bit_pattern & 0x0002) ){
-      ret_val = 1;
-      *run_value = (pbi->bit_pattern & 0x0001) + 4;
-    }
-    break;
-
-  case 6:
-    /* Bit 2 clear */
-    if ( !(pbi->bit_pattern & 0x0004) ){
-      ret_val = 1;
-      *run_value = (pbi->bit_pattern & 0x0003) + 6;
-    }
-    break;
-
-  case 8:
-    /* Bit 3 clear */
-    if ( !(pbi->bit_pattern & 0x0008) ){
-      ret_val = 1;
-      *run_value = (pbi->bit_pattern & 0x0007) + 10;
-    }
-    break;
-
-  case 10:
-    /* Bit 4 clear */
-    if ( !(pbi->bit_pattern & 0x0010) ){
-      ret_val = 1;
-      *run_value = (pbi->bit_pattern & 0x000F) + 18;
-    }
-    break;
-
-  case 18:
-    ret_val = 1;
-    *run_value = (pbi->bit_pattern & 0x0FFF) + 34;
-    break;
-
-  default:
-    ret_val = 0;
-    break;
-  }
-
-  /* todo: handle additional bits for values over 4129 */
-
-  return ret_val;
-}
-
-static void GetNextBInit(PB_INSTANCE *pbi){
-  long ret;
-
-  theora_read(pbi->opb,1,&ret);
-  pbi->NextBit = (unsigned char)ret;
-
-  /* Read run length */
-  FrArrayDeCodeInit(pbi);
-  do theora_read(pbi->opb,1,&ret);
-  while (FrArrayDeCodeBlockRun(pbi,ret,&pbi->BitsLeft)==0);
-
-}
-
-static unsigned char GetNextBBit (PB_INSTANCE *pbi){
-  long ret;
-  if ( !pbi->BitsLeft ){
-    /* Toggle the value.   */
-    pbi->NextBit = ( pbi->NextBit == 1 ) ? 0 : 1;
-
-    /* Read next run */
-    FrArrayDeCodeInit(pbi);
-    do theora_read(pbi->opb,1,&ret);
-    while (FrArrayDeCodeBlockRun(pbi,ret,&pbi->BitsLeft)==0);
-
-  }
-
-  /* Have  read a bit */
-  pbi->BitsLeft--;
-
-  /* Return next bit value */
-  return pbi->NextBit;
-}
-
-static void GetNextSbInit(PB_INSTANCE *pbi){
-  long ret;
-
-  theora_read(pbi->opb,1,&ret);
-  pbi->NextBit = (unsigned char)ret;
-
-  /* Read run length */
-  FrArrayDeCodeInit(pbi);
-  do theora_read(pbi->opb,1,&ret);
-  while (FrArrayDeCodeSBRun(pbi,ret,&pbi->BitsLeft)==0);
-
-}
-
-static unsigned char GetNextSbBit (PB_INSTANCE *pbi){
-  long ret;
-
-  if ( !pbi->BitsLeft ){
-    /* Toggle the value.   */
-    pbi->NextBit = ( pbi->NextBit == 1 ) ? 0 : 1;
-
-    /* Read next run */
-    FrArrayDeCodeInit(pbi);
-    do theora_read(pbi->opb,1,&ret);
-    while (FrArrayDeCodeSBRun(pbi,ret,&pbi->BitsLeft)==0);
-
-  }
-
-  /* Have  read a bit */
-  pbi->BitsLeft--;
-
-  /* Return next bit value */
-  return pbi->NextBit;
-}
-
-void QuadDecodeDisplayFragments ( PB_INSTANCE *pbi ){
-  ogg_uint32_t  SB, MB, B;
-  int    DataToDecode;
-
-  ogg_int32_t   dfIndex;
-  ogg_uint32_t  MBIndex = 0;
-
-  /* Reset various data structures common to key frames and inter frames. */
-  pbi->CodedBlockIndex = 0;
-  memset ( pbi->display_fragments, 0, pbi->UnitFragments );
-
-  /* For "Key frames" mark all blocks as coded and return. */
-  /* Else initialise the ArrayPtr array to 0 (all blocks uncoded by default) */
-  if ( GetFrameType(pbi) == KEY_FRAME ) {
-    memset( pbi->SBFullyFlags, 1, pbi->SuperBlocks );
-    memset( pbi->SBCodedFlags, 1, pbi->SuperBlocks );
-        memset( pbi->MBCodedFlags, 0, pbi->MacroBlocks );
-  }else{
-    memset( pbi->SBFullyFlags, 0, pbi->SuperBlocks );
-    memset( pbi->MBCodedFlags, 0, pbi->MacroBlocks );
-
-    /* Un-pack the list of partially coded Super-Blocks */
-    GetNextSbInit(pbi);
-    for( SB = 0; SB < pbi->SuperBlocks; SB++){
-      pbi->SBCodedFlags[SB] = GetNextSbBit (pbi);
-    }
-
-    /* Scan through the list of super blocks.  Unless all are marked
-       as partially coded we have more to do. */
-    DataToDecode = 0;
-    for ( SB=0; SB<pbi->SuperBlocks; SB++ ) {
-      if ( !pbi->SBCodedFlags[SB] ) {
-        DataToDecode = 1;
-        break;
-      }
-    }
-
-    /* Are there further block map bits to decode ? */
-    if ( DataToDecode ) {
-      /* Un-pack the Super-Block fully coded flags. */
-      GetNextSbInit(pbi);
-      for( SB = 0; SB < pbi->SuperBlocks; SB++) {
-        /* Skip blocks already marked as partially coded */
-        while( (SB < pbi->SuperBlocks) && pbi->SBCodedFlags[SB] )
-          SB++;
-
-        if ( SB < pbi->SuperBlocks ) {
-          pbi->SBFullyFlags[SB] = GetNextSbBit (pbi);
-
-          if ( pbi->SBFullyFlags[SB] )       /* If SB is fully coded. */
-            pbi->SBCodedFlags[SB] = 1;       /* Mark the SB as coded */
-        }
-      }
-    }
-
-    /* Scan through the list of coded super blocks.  If at least one
-       is marked as partially coded then we have a block list to
-       decode. */
-    for ( SB=0; SB<pbi->SuperBlocks; SB++ ) {
-      if ( pbi->SBCodedFlags[SB] && !pbi->SBFullyFlags[SB] ) {
-        /* Initialise the block list decoder. */
-        GetNextBInit(pbi);
-        break;
-      }
-    }
-  }
-
-  /* Decode the block data from the bit stream. */
-  for ( SB=0; SB<pbi->SuperBlocks; SB++ ){
-    for ( MB=0; MB<4; MB++ ){
-      /* If MB is in the frame */
-      if ( QuadMapToMBTopLeft(pbi->BlockMap, SB,MB) >= 0 ){
-        /* Only read block level data if SB was fully or partially coded */
-        if ( pbi->SBCodedFlags[SB] ) {
-          for ( B=0; B<4; B++ ){
-            /* If block is valid (in frame)... */
-            dfIndex = QuadMapToIndex1( pbi->BlockMap, SB, MB, B );
-            if ( dfIndex >= 0 ){
-              if ( pbi->SBFullyFlags[SB] )
-                pbi->display_fragments[dfIndex] = 1;
-              else
-                pbi->display_fragments[dfIndex] = GetNextBBit(pbi);
-
-              /* Create linear list of coded block indices */
-              if ( pbi->display_fragments[dfIndex] ) {
-                pbi->MBCodedFlags[MBIndex] = 1;
-                pbi->CodedBlockList[pbi->CodedBlockIndex] = dfIndex;
-                pbi->CodedBlockIndex++;
-              }
-            }
-          }
-        }
-        MBIndex++;
-
-      }
-    }
-  }
-}
-
-CODING_MODE FrArrayUnpackMode(PB_INSTANCE *pbi){
-  long ret;
-  /* Coding scheme:
-     Token                      Codeword           Bits
-     Entry   0 (most frequent)  0                   1
-     Entry   1                  10                  2
-     Entry   2                  110                 3
-     Entry   3                  1110                4
-     Entry   4                  11110               5
-     Entry   5                  111110              6
-     Entry   6                  1111110             7
-     Entry   7                  1111111             7
-  */
-
-  /* Initialise the decoding. */
-  pbi->bits_so_far = 0;
-
-  theora_read(pbi->opb,1,&ret);
-  pbi->bit_pattern = ret;
-
-  /* Do we have a match */
-  if ( pbi->bit_pattern == 0 )
-    return (CODING_MODE)0;
-
-  /* Get the next bit */
-  theora_read(pbi->opb,1,&ret);
-  pbi->bit_pattern = (pbi->bit_pattern << 1) | ret;
-
-  /* Do we have a match */
-  if ( pbi->bit_pattern == 0x0002 )
-    return (CODING_MODE)1;
-
-  theora_read(pbi->opb,1,&ret);
-  pbi->bit_pattern = (pbi->bit_pattern << 1) | ret;
-
-  /* Do we have a match  */
-  if ( pbi->bit_pattern == 0x0006 )
-    return (CODING_MODE)2;
-
-  theora_read(pbi->opb,1,&ret);
-  pbi->bit_pattern = (pbi->bit_pattern << 1) | ret;
-
-  /* Do we have a match */
-  if ( pbi->bit_pattern == 0x000E )
-    return (CODING_MODE)3;
-
-  theora_read(pbi->opb,1,&ret);
-  pbi->bit_pattern = (pbi->bit_pattern << 1) | ret;
-
-  /* Do we have a match */
-  if ( pbi->bit_pattern == 0x001E )
-    return (CODING_MODE)4;
-
-  theora_read(pbi->opb,1,&ret);
-  pbi->bit_pattern = (pbi->bit_pattern << 1) | ret;
-
-  /* Do we have a match */
-  if ( pbi->bit_pattern == 0x003E )
-    return (CODING_MODE)5;
-
-  theora_read(pbi->opb,1,&ret);
-  pbi->bit_pattern = (pbi->bit_pattern << 1) | ret;
-
-  /* Do we have a match */
-  if ( pbi->bit_pattern == 0x007E )
-    return (CODING_MODE)6;
-  else
-    return (CODING_MODE)7;
-}
 

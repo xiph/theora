@@ -33,7 +33,6 @@ encoder_sources = \
 	enc/encoder_toplevel.c \
 	enc/encoder_quant.c \
 	enc/blockmap.c \
-	enc/common.c \
 	enc/dct.c \
 	enc/dct_decode.c \
 	enc/frarray.c \
@@ -45,7 +44,7 @@ encoder_sources = \
 	enc/reconstruct.c \
 	enc/scan.c \
 	enc/dsp.c
-	
+
 if CPU_x86_64
 enc_arch_dir = enc/x86_64
 encoder_arch_sources= \
@@ -131,7 +130,6 @@ noinst_HEADERS = \
 	dec/ocintrin.h \
 	dec/quant.h \
 	dec/x86/x86int.h
-	
 
 libtheora_la_CFLAGS = $(OGG_CFLAGS)
 libtheora_la_LDFLAGS = -version-info @TH_LIB_CURRENT@:@TH_LIB_REVISION@:@TH_LIB_AGE@ @THEORA_LDFLAGS@
