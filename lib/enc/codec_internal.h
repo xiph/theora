@@ -848,11 +848,11 @@ extern void InitTmpBuffers(PB_INSTANCE * pbi);
 extern void ScanYUVInit( PP_INSTANCE *  ppi,
                          SCAN_CONFIG_DATA * ScanConfigPtr);
 
-static inline int GetFrameType(PB_INSTANCE *pbi){
+static int GetFrameType(PB_INSTANCE *pbi){
   return pbi->FrameType;
 }
 
-static inline void SetFrameType( PB_INSTANCE *pbi,unsigned char FrType ){
+static void SetFrameType( PB_INSTANCE *pbi,unsigned char FrType ){
   pbi->FrameType = FrType;
 }
 
