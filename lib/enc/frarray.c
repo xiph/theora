@@ -150,7 +150,7 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
 
             }else{
               cpi->pb.SBFullyFlags[SB] = 0; /* SB not fully coded */
-              //cpi->BlockCodedFlags[BListIndex] = 0; /* Block is not coded */
+              cpi->BlockCodedFlags[BListIndex] = 0; /* Block is not coded */
             }
 
             BListIndex++;
@@ -255,7 +255,6 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
     }else
       val = ( val == 0 ) ? 1 : 0;
   }
-
 
   /* RLC Super-Block fully/not coded. */
   i = 0; 
