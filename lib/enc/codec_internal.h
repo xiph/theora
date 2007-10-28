@@ -356,8 +356,6 @@ typedef struct PB_INSTANCE {
   ogg_uint32_t  UVSBCols;       /* Number of cols of SuperBlocks in a
                                    U or V frame */
 
-  ogg_uint32_t  YMacroBlocks;   /* Number of Macro-Blocks in Y component */
-  ogg_uint32_t  UVMacroBlocks;  /* Number of Macro-Blocks in U/V component */
   ogg_uint32_t  MacroBlocks;    /* Total number of Macro-Blocks */
 
   /**********************************************************************/
@@ -381,7 +379,7 @@ typedef struct PB_INSTANCE {
                                               skipped */
   ogg_int32_t   *CodedBlockList;           /* A list of fragment indices for
                                               coded blocks. */
-  MOTION_VECTOR *FragMVect;                /* fragment motion vectors */
+  MOTION_VECTOR *FragMVect;                /* Frag motion vectors */
 
   ogg_uint32_t  *FragTokenCounts;          /* Number of tokens per fragment */
   ogg_uint32_t  (*TokenList)[128];         /* Fragment Token Pointers */
@@ -467,28 +465,27 @@ typedef struct PB_INSTANCE {
 
   /* Dequantiser and rounding tables */
   ogg_uint16_t   *QThreshTable;
-  
-  Q_LIST_ENTRY  *dequant_Y_coeffs;
-  Q_LIST_ENTRY  *dequant_U_coeffs;
-  Q_LIST_ENTRY  *dequant_V_coeffs;
-  Q_LIST_ENTRY  *dequant_InterY_coeffs;
-  Q_LIST_ENTRY  *dequant_InterU_coeffs;
-  Q_LIST_ENTRY  *dequant_InterV_coeffs;
+  Q_LIST_ENTRY  dequant_Y_coeffs[64];
+  Q_LIST_ENTRY  dequant_U_coeffs[64];
+  Q_LIST_ENTRY  dequant_V_coeffs[64];
+  Q_LIST_ENTRY  dequant_InterY_coeffs[64];
+  Q_LIST_ENTRY  dequant_InterU_coeffs[64];
+  Q_LIST_ENTRY  dequant_InterV_coeffs[64];
+
   Q_LIST_ENTRY  *dequant_coeffs;        /* currently active quantizer */
   unsigned int   zigzag_index[64];
-  ogg_int32_t    quant_Y_coeffs[64];
-  ogg_int32_t    quant_UV_coeffs[64];
-  
 
   HUFF_ENTRY    *HuffRoot_VP3x[NUM_HUFF_TABLES];
   ogg_uint32_t  *HuffCodeArray_VP3x[NUM_HUFF_TABLES];
   unsigned char *HuffCodeLengthArray_VP3x[NUM_HUFF_TABLES];
   const unsigned char *ExtraBitLengths_VP3x;
 
-  th_quant_info  quant_info;
-  ogg_uint16_t   quant_tables[2][3][64][64];
+  th_quant_info   quant_info;
+  oc_quant_tables quant_tables[2][3];
 
   /* Quantiser and rounding tables */
+  /* this is scheduled to be replaced a new mechanism
+     that will simply reuse the dequantizer information. */
   ogg_int32_t    fp_quant_Y_coeffs[64]; /* used in reiniting quantizers */
   ogg_int32_t    fp_quant_U_coeffs[64];
   ogg_int32_t    fp_quant_V_coeffs[64];
@@ -523,6 +520,15 @@ typedef struct PB_INSTANCE {
   unsigned char *DataOutputInPtr;
 
   DspFunctions   dsp;  /* Selected functions for this platform */
+
+#ifdef _TH_DEBUG_
+  Q_LIST_ENTRY (*QFragQUAN)[64];           /* Fragment Coefficients
+                                               Array Pointers */
+  Q_LIST_ENTRY (*QFragFREQ)[64];            /* Fragment Coefficients
+                                               Array Pointers */
+  Q_LIST_ENTRY (*QFragTIME)[64];            /* Fragment Coefficients
+                                               Array Pointers */
+#endif
 
 } PB_INSTANCE;
 

@@ -15,6 +15,7 @@
 
  ********************************************************************/
 
+
 #if !defined(_internal_H)
 # define _internal_H (1)
 # include <stdlib.h>
@@ -43,7 +44,7 @@ extern FILE *debugout;
 # endif
 
 /*This library's version.*/
-# define OC_VENDOR_STRING "Xiph.Org libTheora I 20070915 3 2 1"
+# define OC_VENDOR_STRING "Xiph.Org libTheora I 20071025 3 2 1"
 
 /*Theora bitstream version.*/
 # define TH_VERSION_MAJOR (3)
@@ -77,28 +78,28 @@ extern FILE *debugout;
 /*Macroblock modes.*/
 /*Macro block is invalid: It is never coded.*/
 #define OC_MODE_INVALID        (-1)
-
-/*Encoded with no motion compensated prediction.*/
-#define OC_MODE_INTRA          (0)
 /*Encoded difference from the same macro block in the previous frame.*/
-#define OC_MODE_INTER_NOMV     (1)
-/*Encoded difference from the previous frame offset by the given motion
-   vector.*/
+#define OC_MODE_INTER_NOMV     (0)
+/*Encoded with no motion compensated prediction.*/
+#define OC_MODE_INTRA          (1)
+/*Encoded difference from the previous frame offset by the given motion 
+  vector.*/
 #define OC_MODE_INTER_MV       (2)
-/*Encoded difference from the previous frame offset by the last coded motion
-   vector.*/
+/*Encoded difference from the previous frame offset by the last coded motion 
+  vector.*/
 #define OC_MODE_INTER_MV_LAST  (3)
-/*Encoded difference from the previous frame offset by the second to last
-   coded motion vector.*/
+/*Encoded difference from the previous frame offset by the second to last 
+  coded motion vector.*/
 #define OC_MODE_INTER_MV_LAST2 (4)
-/*Encoded difference from the previous frame offset by the individual motion
-   vectors given for each block.*/
-#define OC_MODE_INTER_MV_FOUR  (5)
-/*Encoded difference from the same macro block in the previous golden frame.*/
-#define OC_MODE_GOLDEN_NOMV    (6)
-/*Encoded difference from the previous golden frame offset by the given motion
-   vector.*/
-#define OC_MODE_GOLDEN_MV      (7)
+/*Encoded difference from the same macro block in the previous golden 
+  frame.*/
+#define OC_MODE_GOLDEN_NOMV    (5)
+/*Encoded difference from the previous golden frame offset by the given motion 
+  vector.*/
+#define OC_MODE_GOLDEN_MV      (6)
+/*Encoded difference from the previous frame offset by the individual motion 
+  vectors given for each block.*/
+#define OC_MODE_INTER_MV_FOUR  (7)
 /*The number of (coded) modes.*/
 #define OC_NMODES              (8)
 
@@ -233,6 +234,12 @@ typedef struct{
   oc_border_info *border;
   /*The motion vector used for this fragment.*/
   oc_mv           mv;
+
+#ifdef _TH_DEBUG_
+  int quant[64];
+  int freq[64];
+  int time[64];
+#endif
 }oc_fragment;
 
 
@@ -270,7 +277,7 @@ typedef struct{
    int _src2_ystride,const ogg_int16_t *_residue);
   void (*state_frag_copy)(const oc_theora_state *_state,
    const int *_fragis,int _nfragis,int _dst_frame,int _src_frame,int _pli);
-  void (*state_frag_recon)(oc_theora_state *_state,const oc_fragment *_frag,
+  void (*state_frag_recon)(oc_theora_state *_state, oc_fragment *_frag,
    int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
    ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]);
   void (*restore_fpu)(void);
@@ -441,7 +448,7 @@ void oc_frag_recon_inter2(const oc_theora_state *_state,
  int _src2_ystride,const ogg_int16_t *_residue);
 void oc_state_frag_copy(const oc_theora_state *_state,const int *_fragis,
  int _nfragis,int _dst_frame,int _src_frame,int _pli);
-void oc_state_frag_recon(oc_theora_state *_state,const oc_fragment *_frag,
+void oc_state_frag_recon(oc_theora_state *_state, oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]);
 void oc_state_loop_filter_frag_rows(oc_theora_state *_state,int *_bv,
@@ -458,7 +465,7 @@ void oc_frag_recon_inter2_c(unsigned char *_dst,int _dst_ystride,
  int _src2_ystride,const ogg_int16_t *_residue);
 void oc_state_frag_copy_c(const oc_theora_state *_state,const int *_fragis,
  int _nfragis,int _dst_frame,int _src_frame,int _pli);
-void oc_state_frag_recon_c(oc_theora_state *_state,const oc_fragment *_frag,
+void oc_state_frag_recon_c(oc_theora_state *_state, oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]);
 void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,

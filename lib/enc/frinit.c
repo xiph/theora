@@ -141,6 +141,14 @@ void ClearFragmentInfo(PB_INSTANCE * pbi){
   if(pbi->FragCoefEOB) _ogg_free(pbi->FragCoefEOB);
   if(pbi->skipped_display_fragments) _ogg_free(pbi->skipped_display_fragments);
   if(pbi->QFragData) _ogg_free(pbi->QFragData);
+#ifdef _TH_DEBUG_
+  if(pbi->QFragTIME) _ogg_free(pbi->QFragTIME);
+  if(pbi->QFragFREQ) _ogg_free(pbi->QFragFREQ);
+  if(pbi->QFragQUAN) _ogg_free(pbi->QFragQUAN);
+  pbi->QFragTIME = 0;
+  pbi->QFragFREQ = 0;
+  pbi->QFragQUAN = 0;
+#endif
   if(pbi->TokenList) _ogg_free(pbi->TokenList);
   if(pbi->FragCodingMethod) _ogg_free(pbi->FragCodingMethod);
   if(pbi->FragCoordinates) _ogg_free(pbi->FragCoordinates);
@@ -234,6 +242,19 @@ void InitFragmentInfo(PB_INSTANCE * pbi){
 
   pbi->QFragData =
     _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->QFragData));
+
+#ifdef _TH_DEBUG_
+
+  pbi->QFragTIME =
+    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->QFragTIME));
+
+  pbi->QFragFREQ =
+    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->QFragFREQ));
+
+  pbi->QFragQUAN =
+    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->QFragQUAN));
+
+#endif
 
   pbi->TokenList =
     _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->TokenList));
@@ -374,9 +395,7 @@ void InitFrameDetails(PB_INSTANCE *pbi){
   pbi->SuperBlocks = pbi->YSuperBlocks+2*pbi->UVSuperBlocks;
 
   /* Useful externals */
-  pbi->YMacroBlocks = ((pbi->VFragments+1)/2)*((pbi->HFragments+1)/2);
-  pbi->UVMacroBlocks = ((pbi->VFragments/2+1)/2)*((pbi->HFragments/2+1)/2);
-  pbi->MacroBlocks = pbi->YMacroBlocks+2*pbi->UVMacroBlocks;
+  pbi->MacroBlocks = ((pbi->VFragments+1)/2)*((pbi->HFragments+1)/2);
 
   InitFragmentInfo(pbi);
   InitFrameInfo(pbi, FrameSize);

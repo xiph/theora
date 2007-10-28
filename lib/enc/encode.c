@@ -28,10 +28,10 @@
 #define HIGHBITDUPPED(X) (((ogg_int16_t) X)  >> 15)
 
 static ogg_uint32_t QuadCodeComponent ( CP_INSTANCE *cpi,
-                                 ogg_uint32_t FirstSB,
-                                 ogg_uint32_t SBRows,
-                                 ogg_uint32_t SBCols,
-                                 ogg_uint32_t PixelsPerLine ){
+					ogg_uint32_t FirstSB,
+					ogg_uint32_t SBRows,
+					ogg_uint32_t SBCols,
+					ogg_uint32_t PixelsPerLine){
 
   ogg_int32_t   FragIndex;      /* Fragment number */
   ogg_uint32_t  MB, B;          /* Macro-Block, Block indices */
@@ -45,10 +45,11 @@ static ogg_uint32_t QuadCodeComponent ( CP_INSTANCE *cpi,
   /* actually transform and quantize the image now that we've decided
      on the modes Parse in quad-tree ordering */
 
-  SB=FirstSB;
   for ( SBrow=0; SBrow<SBRows; SBrow++ ) {
     for ( SBcol=0; SBcol<SBCols; SBcol++ ) {
       /* Check its four Macro-Blocks  */
+      /* 'Macro-Block' is a misnomer in the chroma planes; this is
+	 really just a Hilbert curve iterator */
       for ( MB=0; MB<4; MB++ ) {
 
         if ( QuadMapToMBTopLeft(cpi->pb.BlockMap,SB,MB) >= 0 ) {
@@ -61,6 +62,7 @@ static ogg_uint32_t QuadCodeComponent ( CP_INSTANCE *cpi,
 
             /* Does Block lie in frame: */
             if ( FragIndex >= 0 ) {
+
               /* In Frame: Is it coded: */
               if ( cpi->pb.display_fragments[FragIndex] ) {
 
@@ -153,8 +155,6 @@ static void EncodeDcTokenList (CP_INSTANCE *cpi) {
   /* Add the DC huffman table choice to the bitstream */
   oggpackB_write( opb, DcHuffChoice[1], DC_HUFF_CHOICE_BITS );
 
-  TH_DEBUG("dc hufftables = %d %d\n",(int)DcHuffChoice[0],(int)DcHuffChoice[1]);
-
   /* Encode the token list */
   for ( i = 0; i < cpi->OptimisedTokenCount; i++ ) {
 
@@ -181,6 +181,7 @@ static void EncodeDcTokenList (CP_INSTANCE *cpi) {
       oggpackB_write( opb, ExtraBitsToken,
                        (ogg_uint32_t)cpi->pb.ExtraBitLengths_VP3x[Token] );
     }
+
   }
 
   /* Reset the count of second order optimised tokens */
@@ -341,9 +342,10 @@ static void PackModes (CP_INSTANCE *cpi) {
   /* If the chosen schems is scheme 0 send details of the mode
      frequency order */
   if ( BestScheme == 0 ) {
-    for ( j = 0; j < MAX_MODES; j++ )
+    for ( j = 0; j < MAX_MODES; j++ ){
       /* Note that the last two entries are implicit */
       oggpackB_write( opb, BestModeSchemes[j], (ogg_uint32_t)MODE_BITS );
+    }
     SchemeList = BestModeSchemes;
   }
   else {
@@ -353,19 +355,35 @@ static void PackModes (CP_INSTANCE *cpi) {
   /* Are we using one of the alphabet based schemes or the fallback scheme */
   if ( BestScheme < (MODE_METHODS - 1)) {
     /* Pack and encode the Mode list */
-    for ( i = 0; i < cpi->ModeListCount; i++ ) {
+    for ( i = 0; i < cpi->ModeListCount; i++) {
       /* Add the appropriate mode entropy token. */
       ModeIndex = SchemeList[cpi->ModeList[i]];
       oggpackB_write( opb, ModeBitPatterns[ModeIndex],
-                       (ogg_uint32_t)ModeBitLengths[ModeIndex] );
+		      (ogg_uint32_t)ModeBitLengths[ModeIndex] );
     }
   }else{
     /* Fall back to MODE_BITS per entry */
-    for ( i = 0; i < cpi->ModeListCount; i++ ) {
+    for ( i = 0; i < cpi->ModeListCount; i++)
       /* Add the appropriate mode entropy token. */
-      oggpackB_write( opb, cpi->ModeList[i], MODE_BITS  );
-    }
+      oggpackB_write( opb, cpi->ModeList[i], MODE_BITS  );  
   }
+  
+#ifdef _TH_DEBUG_
+  TH_DEBUG("mode encode scheme = %d\n",(int)BestScheme);
+  if ( BestScheme == 0 ) {
+    TH_DEBUG("mode scheme list = { ");
+    for ( j = 0; j < MAX_MODES; j++ )
+      TH_DEBUG("%d ",(int)BestModeSchemes[j]);
+    TH_DEBUG("}\n");
+  }
+  TH_DEBUG("mode list = { ");
+  for ( i = 0; i < cpi->ModeListCount; i++) {
+    if((i&0x1f)==0)
+      TH_DEBUG("\n   ");
+    TH_DEBUG("%d ",cpi->ModeList[i]);
+  }
+  TH_DEBUG("\n}\n");
+#endif
 }
 
 static void PackMotionVectors (CP_INSTANCE *cpi) {
@@ -403,6 +421,16 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
     oggpackB_write( opb, MvPatternPtr[cpi->MVList[i].y],
                      (ogg_uint32_t)MvBitsPtr[cpi->MVList[i].y] );
   }
+
+#ifdef _TH_DEBUG_
+  TH_DEBUG("motion vectors = {");
+  for ( i = 0; i < (ogg_int32_t)cpi->MvListCount; i++ ) {
+    if((i&0x7)==0)
+      TH_DEBUG("\n   ");
+    TH_DEBUG("%+03d,%+03d ",cpi->MVList[i].x,cpi->MVList[i].y);
+  }
+  TH_DEBUG("\n}\n");
+#endif
 }
 
 static void PackEOBRun( CP_INSTANCE *cpi) {
@@ -561,8 +589,6 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
   ogg_int32_t EncodedCoeffs = 1;
   ogg_int32_t FragIndex;
   ogg_uint32_t HuffIndex; /* Index to group of tables used to code a token */
-
-  TH_DEBUG("\n>>>> beginning frame %d\n\n",dframe);
 
   /* Reset the count of second order optimised tokens */
   cpi->OptimisedTokenCount = 0;
@@ -807,6 +833,7 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
         if( cpi->pb.display_fragments[i] ||
             (GetFrameType(&cpi->pb) == KEY_FRAME) ) {
           /* Type of Fragment */
+
           WhichFrame = Mode2Frame[cpi->pb.FragCodingMethod[i]];
 
           /* Check Borderline Cases */
@@ -878,6 +905,17 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
     }
   }
 
+#ifdef _TH_DEBUG_
+ {
+   int j;
+   for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) {
+     FragIndex = cpi->pb.CodedBlockList[i];
+     for(j=0;j<64;j++)
+       cpi->pb.QFragQUAN[FragIndex][j] = cpi->pb.QFragData[FragIndex][j];
+   }
+ }
+#endif
+
   /* Pack DC tokens and adjust the ones we couldn't predict 2d */
   for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) {
     /* Get the linear index for the current coded fragment. */
@@ -885,7 +923,6 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
     coded_pixels += DPCMTokenizeBlock ( cpi, FragIndex);
 
   }
-
 
   /* Bit pack the video data data */
   PackCodedVideo(cpi);
@@ -895,6 +932,74 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
 
   /* Reconstruct the reference frames */
   ReconRefFrames(&cpi->pb);
+
+#ifdef _TH_DEBUG_
+    {
+      int x,y,i,j,k,l;
+
+      /* dump fragment DCT components */
+      i=0;
+      for(y=0;y<cpi->pb.VFragments;y++){
+	for(x=0;x<cpi->pb.HFragments;x++,i++){
+	  TH_DEBUG("DCT Y [%d][%d] = {",x,y);
+	  if ( !cpi->pb.display_fragments[i] ) 
+	    TH_DEBUG(" not coded }\n");
+	  else{
+	    l=0;
+	    for(j=0;j<8;j++){
+	      TH_DEBUG("\n   ");
+	      for(k=0;k<8;k++,l++)
+		TH_DEBUG("%d:%d:%d ",
+			 cpi->pb.QFragQUAN[i][l],
+			 cpi->pb.QFragFREQ[i][l],
+			 cpi->pb.QFragTIME[i][l]);
+	    }
+	    TH_DEBUG(" }\n");
+	  }
+	}
+      }
+
+      for(y=0;y<(cpi->pb.VFragments>>1);y++){
+	for(x=0;x<(cpi->pb.HFragments>>1);x++,i++){
+	  TH_DEBUG("DCT U [%d][%d] = {",x,y);
+	  if ( !cpi->pb.display_fragments[i] ) 
+	    TH_DEBUG(" not coded }\n");
+	  else{
+	    l=0;
+	    for(j=0;j<8;j++){
+	      TH_DEBUG("\n   ");
+	      for(k=0;k<8;k++,l++)
+		TH_DEBUG("%d:%d:%d ",
+			 cpi->pb.QFragQUAN[i][l],
+			 cpi->pb.QFragFREQ[i][l],
+			 cpi->pb.QFragTIME[i][l]);
+	    }
+	    TH_DEBUG(" }\n");
+	  }
+	}
+      }
+
+      for(y=0;y<(cpi->pb.VFragments>>1);y++){
+	for(x=0;x<(cpi->pb.HFragments>>1);x++,i++){
+	  TH_DEBUG("DCT V [%d][%d] = {",x,y);
+	  if ( !cpi->pb.display_fragments[i] ) 
+	    TH_DEBUG(" not coded }\n");
+	  else{
+	    l=0;
+	    for(j=0;j<8;j++){
+	      TH_DEBUG("\n   ");
+	      for(k=0;k<8;k++,l++)
+		TH_DEBUG("%d:%d:%d ",
+			 cpi->pb.QFragQUAN[i][l],
+			 cpi->pb.QFragFREQ[i][l],
+			 cpi->pb.QFragTIME[i][l]);
+	    }
+	    TH_DEBUG(" }\n");
+	  }
+	}
+      }
+    }
+#endif
 
   UpdateFragQIndex(&cpi->pb);
 
@@ -944,7 +1049,6 @@ ogg_uint32_t PickIntra( CP_INSTANCE *cpi,
   ogg_uint32_t  SBcol;      /* Super-Block row number */
   ogg_uint32_t  SB=0;       /* Super-Block index, initialised to first of
                                this component */
-
   ogg_uint32_t UVRow;
   ogg_uint32_t UVColumn;
   ogg_uint32_t UVFragOffset;
@@ -977,8 +1081,7 @@ ogg_uint32_t PickIntra( CP_INSTANCE *cpi,
           cpi->pb.FragCodingMethod[cpi->pb.YPlaneFragments +
                                   cpi->pb.UVPlaneFragments + UVFragOffset] =
             cpi->MBCodingMode;
-
-        }
+	}
       }
 
       /* Next Super-Block */
@@ -1356,7 +1459,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
           cpi->MBCodingMode = CODE_INTER_PLUS_MV;
           SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
-                                    VFragIndex,&InterMVect);
+				    VFragIndex,&InterMVect);
 
           /* Update Prior last mv with last mv */
           PriorLastInterMVect.x = LastInterMVect.x;
@@ -1372,7 +1475,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
           cpi->MBCodingMode = CODE_GOLDEN_MV;
           SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
-                                    VFragIndex,&GFMVect);
+				    VFragIndex,&GFMVect);
 
           /* Note last inter GF MV for future use */
           LastGFMVect.x = GFMVect.x;
@@ -1428,7 +1531,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
           cpi->MBCodingMode = CODE_INTRA;
           SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
-                                    VFragIndex,&ZeroVect);
+				    VFragIndex,&ZeroVect);
         }
 
 
@@ -1453,12 +1556,16 @@ void WriteFrameHeader( CP_INSTANCE *cpi) {
   ogg_uint32_t i;
   oggpack_buffer *opb=cpi->oggbuffer;
 
+  TH_DEBUG("\n>>>> beginning frame %ld\n\n",dframe);
+
   /* Output the frame type (base/key frame or inter frame) */
   oggpackB_write( opb, cpi->pb.FrameType, 1 );
-
+  TH_DEBUG("frame type = video, %s\n",cpi->pb.FrameType?"predicted":"key");
+  
   /* Write out details of the current value of Q... variable resolution. */
   for ( i = 0; i < Q_TABLE_SIZE; i++ ) {
     if ( cpi->pb.ThisFrameQualityValue == cpi->pb.QThreshTable[i] ) {
+      TH_DEBUG("frame quality = { %d }\n",i);
       oggpackB_write( opb, i, 6 );
       break;
     }
@@ -1475,11 +1582,8 @@ void WriteFrameHeader( CP_INSTANCE *cpi) {
 
   /* If the frame was a base frame then write out the frame dimensions. */
   if ( cpi->pb.FrameType == KEY_FRAME ) {
-    /* Key frame type / method */
-    oggpackB_write( opb, cpi->pb.KeyFrameType, 1 );
-
-    /* Spare configuration bits */
-    oggpackB_write( opb, 0, 2 );
+    /* all bits reserved! */
+    oggpackB_write( opb, 0, 3 );
   }
 }
 

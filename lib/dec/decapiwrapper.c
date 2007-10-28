@@ -169,6 +169,11 @@ int theora_decode_packetin(theora_state *_td,ogg_packet *_op){
   int             ret;
   api=(th_api_wrapper *)_td->i->codec_setup;
   ret=th_decode_packetin(api->decode,_op,&gp);
+
+#ifdef _TH_DEBUG_
+  dframe++;
+#endif 
+
   if(ret<0)return OC_BADPACKET;
   _td->granulepos=gp;
   return 0;
@@ -178,6 +183,7 @@ int theora_decode_YUVout(theora_state *_td,yuv_buffer *_yuv){
   th_api_wrapper  *api;
   th_ycbcr_buffer  buf;
   int              ret;
+
   api=(th_api_wrapper *)_td->i->codec_setup;
   ret=th_decode_ycbcr_out(api->decode,buf);
   if(ret>=0){
@@ -191,10 +197,6 @@ int theora_decode_YUVout(theora_state *_td,yuv_buffer *_yuv){
     _yuv->u=buf[1].data;
     _yuv->v=buf[2].data;
   }
-
-#ifdef _TH_DEBUG_
-  dframe++;
-#endif 
 
   return ret;
 }

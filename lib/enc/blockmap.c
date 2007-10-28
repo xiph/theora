@@ -97,4 +97,3 @@ void CreateBlockMapping ( ogg_int32_t  (*BlockMap)[4][4],
   CreateMapping ( BlockMap, YSuperBlocks + UVSuperBlocks, (HFrags*VFrags*5)/4,
                   HFrags/2, VFrags/2 );
 }
-

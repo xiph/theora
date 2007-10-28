@@ -800,16 +800,16 @@ int oc_state_get_mv_offsets(oc_theora_state *_state,int *_offset0,
   return 1;
 }
 
-void oc_state_frag_recon(oc_theora_state *_state,const oc_fragment *_frag,
+void oc_state_frag_recon(oc_theora_state *_state, oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]){
   _state->opt_vtable.state_frag_recon(_state,_frag,_pli,_dct_coeffs,
    _last_zzi,_ncoefs,_dc_iquant,_ac_iquant);
 }
 
-void oc_state_frag_recon_c(oc_theora_state *_state,const oc_fragment *_frag,
+void oc_state_frag_recon_c(oc_theora_state *_state, oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
- ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]){
+ ogg_uint16_t _dc_iquant, const ogg_uint16_t _ac_iquant[64]){
   ogg_int16_t dct_buf[64];
   ogg_int16_t res_buf[64];
   int dst_framei;
@@ -845,10 +845,36 @@ void oc_state_frag_recon_c(oc_theora_state *_state,const oc_fragment *_frag,
     ogg_int16_t p;
     /*Why is the iquant product rounded in this case and no others?
       Who knows.*/
+
     p=(ogg_int16_t)((ogg_int32_t)_frag->dc*_dc_iquant+15>>5);
     for(ci=0;ci<64;ci++)res_buf[ci]=p;
+
+#ifdef _TH_DEBUG_
+    {
+      int i;
+      _frag->freq[0] = _frag->dc*_dc_iquant;
+      _frag->time[0] = p;
+      for(i=1;i<64;i++){
+	_frag->quant[i] = 0;
+	_frag->freq[i] = 0;
+	_frag->time[i] = p;
+      }
+    }
+#endif
+
   }
   else{
+
+#ifdef _TH_DEBUG_
+    {
+      int i;
+      for(i=1;i<_ncoefs;i++)
+	_frag->quant[i] = _dct_coeffs[i];
+      for(;i<64;i++)
+	_frag->quant[i] = 0;
+    }
+#endif
+
     /*First, dequantize the coefficients.*/
     dct_buf[0]=(ogg_int16_t)((ogg_int32_t)_frag->dc*_dc_iquant);
     for(zzi=1;zzi<_ncoefs;zzi++){
@@ -856,6 +882,21 @@ void oc_state_frag_recon_c(oc_theora_state *_state,const oc_fragment *_frag,
       ci=OC_FZIG_ZAG[zzi];
       dct_buf[ci]=(ogg_int16_t)((ogg_int32_t)_dct_coeffs[zzi]*_ac_iquant[ci]);
     }
+
+#ifdef _TH_DEBUG_
+    for(;zzi<64;zzi++){
+      int ci;
+      ci=OC_FZIG_ZAG[zzi];
+      dct_buf[ci]=0;
+    }
+
+    {
+      int i;
+      for(i=0;i<64;i++)
+	_frag->freq[i] = dct_buf[i];
+    }
+#endif
+
     /*Then, fill in the remainder of the coefficients with 0's, and perform
        the iDCT.*/
     if(_last_zzi<10){
@@ -866,6 +907,15 @@ void oc_state_frag_recon_c(oc_theora_state *_state,const oc_fragment *_frag,
       for(;zzi<64;zzi++)dct_buf[OC_FZIG_ZAG[zzi]]=0;
       oc_idct8x8_c(res_buf,dct_buf);
     }
+
+#ifdef _TH_DEBUG_
+    {
+      int i;
+      for(i=0;i<64;i++)
+	_frag->time[i] = res_buf[i];
+    }
+#endif
+
   }
   /*Fill in the target buffer.*/
   dst_framei=_state->ref_frame_idx[OC_FRAME_SELF];

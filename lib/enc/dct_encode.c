@@ -295,8 +295,7 @@ static void MotionBlockDifference (CP_INSTANCE * cpi, unsigned char * FiltPtr,
                                    half pixel MC */
   unsigned char  *ReconPtr1;    /* DCT reconstructed image pointers */
   unsigned char  *ReconPtr2;    /* Pointer used in half pixel MC */
-
-
+  
   switch(MvDevisor) {
   case 2:
     MvShift = 1;
@@ -367,7 +366,7 @@ static void MotionBlockDifference (CP_INSTANCE * cpi, unsigned char * FiltPtr,
 }
 
 void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
-                             ogg_uint32_t PixelsPerLine ) {
+                             ogg_uint32_t PixelsPerLine) {
   unsigned char *new_ptr1;    /* Pointers into current frame */
   unsigned char *old_ptr1;    /* Pointers into old frame */
   unsigned char *FiltPtr;     /* Pointers to srf filtered pixels */

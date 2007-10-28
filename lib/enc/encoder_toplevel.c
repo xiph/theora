@@ -900,6 +900,10 @@ int theora_encode_init(theora_state *th, theora_info *c){
 
   CP_INSTANCE *cpi;
 
+#ifdef _TH_DEBUG_
+  debugout=fopen("theoraenc-debugout.txt","w");
+#endif
+
   memset(th, 0, sizeof(*th));
   /*Currently only the 4:2:0 format is supported.*/
   if(c->pixelformat!=OC_PF_420)return OC_IMPL;
@@ -933,7 +937,7 @@ int theora_encode_init(theora_state *th, theora_info *c){
   cpi->ExhaustiveSearchThresh = 2500;
   cpi->MinImprovementForFourMV = 100;
   cpi->FourMVThreshold = 10000;
-  cpi->BitRateCapFactor = 5.0;
+  cpi->BitRateCapFactor = 1.5;
   cpi->InterTripOutThresh = 5000;
   cpi->MVEnabled = 1;
   cpi->InterCodeCount = 127;
@@ -1187,10 +1191,6 @@ static void _tp_writelsbint(oggpack_buffer *opb, long value)
 int theora_encode_header(theora_state *t, ogg_packet *op){
   CP_INSTANCE *cpi=(CP_INSTANCE *)(t->internal_encode);
   int offset_y;
-
-#ifdef _TH_DEBUG_
-  debugout=fopen("theoraenc-debugout.txt","w");
-#endif
 
 #ifndef LIBOGG2
   oggpackB_reset(cpi->oggbuffer);

@@ -40,6 +40,7 @@ extern unsigned OC_AC_QUANT_MIN[2];
 
 
 void oc_dequant_tables_init(oc_quant_table *_dequant[2][3],
- int _pp_dc_scale[64],const th_quant_info *_qinfo);
+			    int _pp_dc_scale[64],
+			    const th_quant_info *_qinfo);
 
 #endif

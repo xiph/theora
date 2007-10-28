@@ -136,7 +136,7 @@ libtheora_la_LDFLAGS = -version-info @TH_LIB_CURRENT@:@TH_LIB_REVISION@:@TH_LIB_
 libtheora_la_LIBADD = $(OGG_LIBS)
 
 debug:
-	$(MAKE) all CFLAGS="@DEBUG@" LDFLAGS="-lefence"
+	$(MAKE) all CFLAGS="@DEBUG@" 
 
 profile:
 	$(MAKE) all CFLAGS="@PROFILE@"

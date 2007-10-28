@@ -89,6 +89,15 @@ static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
   /* Set up pointer into the quantisation buffer. */
   pbi->quantized_list = &pbi->QFragData[FragmentNumber][0];
 
+#ifdef _TH_DEBUG_
+ {
+   int i;
+   for(i=0;i<64;i++)
+     pbi->QFragFREQ[FragmentNumber][dezigzag_index[i]]= 
+       pbi->quantized_list[i] * pbi->dequant_coeffs[i];
+ }
+#endif
+
   /* Invert quantisation and DCT to get pixel data. */
   switch(pbi->FragCoefEOB[FragmentNumber]){
   case 0:case 1:
@@ -104,6 +113,14 @@ static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
     dsp_IDctSlow(pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
   }
 
+#ifdef _TH_DEBUG_
+ {
+   int i;
+   for(i=0;i<64;i++)
+     pbi->QFragTIME[FragmentNumber][i]= pbi->ReconDataBuffer[i];
+ }
+#endif
+
   /* Convert fragment number to a pixel offset in a reconstruction buffer. */
   ReconPixelIndex = pbi->recon_pixel_index_table[FragmentNumber];
 
@@ -113,7 +130,7 @@ static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
 
 }
 
-static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
+static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber){
   unsigned char *LastFrameRecPtr;   /* Pointer into previous frame
                                        reconstruction. */
   unsigned char *LastFrameRecPtr2;  /* Pointer into previous frame
@@ -172,6 +189,15 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
   /* Set up pointer into the quantisation buffer. */
   pbi->quantized_list = &pbi->QFragData[FragmentNumber][0];
 
+#ifdef _TH_DEBUG_
+ {
+   int i;
+   for(i=0;i<64;i++)
+     pbi->QFragFREQ[FragmentNumber][dezigzag_index[i]]= 
+       pbi->quantized_list[i] * pbi->dequant_coeffs[i];
+ }
+#endif
+
   /* Invert quantisation and DCT to get pixel data. */
   switch(pbi->FragCoefEOB[FragmentNumber]){
   case 0:case 1:
@@ -186,6 +212,14 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
   default:
     dsp_IDctSlow(pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
   }
+
+#ifdef _TH_DEBUG_
+ {
+   int i;
+   for(i=0;i<64;i++)
+     pbi->QFragTIME[FragmentNumber][i]= pbi->ReconDataBuffer[i];
+ }
+#endif
 
   /* Convert fragment number to a pixel offset in a reconstruction buffer. */
   ReconPixelIndex = pbi->recon_pixel_index_table[FragmentNumber];
@@ -1153,7 +1187,6 @@ void ReconRefFrames (PB_INSTANCE *pbi){
 
           /* Inverse DCT and reconstitute buffer in thisframe */
           ExpandBlockA( pbi, i );
-
         }
       }
     }

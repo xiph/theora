@@ -91,8 +91,8 @@ unsigned char ModeSchemes[MODE_METHODS-2][MAX_MODES] =  {
   { 2,    4,    1,    0,    3,    5,    6,    7 },    /* L M  N P I G GM 4 */
 
   /* No MV dominates */
-  { 0,    4,    3,    1,    2,    5,    6,    7 },    /* N L P M I G GM 4 */
-  { 0,    5,    4,    2,    3,    1,    6,    7 },    /* N G L P M I GM 4 */
+  { 0,    4,    3,    1,    2,    5,    6,    7 },    /* N L  P M I G GM 4 */
+  { 0,    5,    4,    2,    3,    1,    6,    7 },    /* N G  L P M I GM 4 */
 
 };
 

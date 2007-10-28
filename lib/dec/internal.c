@@ -61,22 +61,22 @@ const int OC_IZIG_ZAG[64]={
 
 /*The predictor frame to use for each macro block mode.*/
 const int OC_FRAME_FOR_MODE[8]={
-  /*OC_MODE_INTRA*/
-  OC_FRAME_SELF,
   /*OC_MODE_INTER_NOMV*/
   OC_FRAME_PREV,
+  /*OC_MODE_INTRA*/
+  OC_FRAME_SELF,
   /*OC_MODE_INTER_MV*/
   OC_FRAME_PREV,
   /*OC_MODE_INTER_MV_LAST*/
   OC_FRAME_PREV,
   /*OC_MODE_INTER_MV_LAST2*/
   OC_FRAME_PREV,
-  /*OC_MODE_INTER_MV_FOUR*/
-  OC_FRAME_PREV,
   /*OC_MODE_GOLDEN*/
   OC_FRAME_GOLD,
   /*OC_MODE_GOLDEN_MV*/
   OC_FRAME_GOLD,
+  /*OC_MODE_INTER_MV_FOUR*/
+  OC_FRAME_PREV,
 };
 
 /*A map from physical macro block ordering to bitstream macro block

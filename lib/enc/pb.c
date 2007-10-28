@@ -29,30 +29,12 @@ void ClearTmpBuffers(PB_INSTANCE * pbi){
     _ogg_free(pbi->TmpDataBuffer);
   if(pbi->TmpReconBuffer)
     _ogg_free(pbi->TmpReconBuffer);
-  if(pbi->dequant_Y_coeffs)
-    _ogg_free(pbi->dequant_Y_coeffs);
-  if(pbi->dequant_U_coeffs)
-    _ogg_free(pbi->dequant_U_coeffs);
-  if(pbi->dequant_V_coeffs)
-    _ogg_free(pbi->dequant_V_coeffs);
-  if(pbi->dequant_InterY_coeffs)
-    _ogg_free(pbi->dequant_InterY_coeffs);
-  if(pbi->dequant_InterU_coeffs)
-    _ogg_free(pbi->dequant_InterU_coeffs);
-  if(pbi->dequant_InterV_coeffs)
-    _ogg_free(pbi->dequant_InterV_coeffs);
 
 
   pbi->ReconDataBuffer=0;
   pbi->DequantBuffer = 0;
   pbi->TmpDataBuffer = 0;
   pbi->TmpReconBuffer = 0;
-  pbi->dequant_Y_coeffs = 0;
-  pbi->dequant_U_coeffs = 0;
-  pbi->dequant_V_coeffs = 0;
-  pbi->dequant_InterY_coeffs = 0;
-  pbi->dequant_InterU_coeffs = 0;
-  pbi->dequant_InterV_coeffs = 0;
 
 }
 
@@ -73,24 +55,6 @@ void InitTmpBuffers(PB_INSTANCE * pbi){
 
   pbi->TmpReconBuffer       =
     _ogg_malloc(64 * sizeof(*pbi->TmpReconBuffer));
-
-  pbi->dequant_Y_coeffs     =
-    _ogg_malloc(64 * sizeof(*pbi->dequant_Y_coeffs));
-
-  pbi->dequant_U_coeffs    =
-    _ogg_malloc(64 * sizeof(*pbi->dequant_U_coeffs));
-
-  pbi->dequant_V_coeffs    =
-    _ogg_malloc(64 * sizeof(*pbi->dequant_V_coeffs));
-
-  pbi->dequant_InterY_coeffs =
-    _ogg_malloc(64 * sizeof(*pbi->dequant_InterY_coeffs));
-
-  pbi->dequant_InterU_coeffs =
-    _ogg_malloc(64 * sizeof(*pbi->dequant_InterU_coeffs));
-
-  pbi->dequant_InterV_coeffs =
-    _ogg_malloc(64 * sizeof(*pbi->dequant_InterV_coeffs));
 
 }
 
