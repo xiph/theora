@@ -1205,6 +1205,93 @@ void ReconRefFrames (PB_INSTANCE *pbi){
   /* Apply a loop filter to edge pixels of updated blocks */
   LoopFilter(pbi);
 
+#ifdef _TH_DEBUG_
+    {
+      int x,y,i,j,k,xn,yn;
+      int plane;
+      int buf;
+
+      /* dump fragment DCT components */
+      for(plane=0;plane<3;plane++){
+	char *plstr;
+	int offset;
+	switch(plane){
+	case 0:
+	  plstr="Y";
+	  xn = pbi->HFragments;
+	  yn = pbi->VFragments;
+	  offset = 0; 
+	  break;
+	case 1:
+	  plstr="U";
+	  xn = pbi->HFragments>>1;
+	  yn = pbi->VFragments>>1;
+	  offset = pbi->VFragments * pbi->HFragments;
+	  break;
+	case 2:
+	  plstr="V";
+	  xn = pbi->HFragments>>1;
+	  yn = pbi->VFragments>>1;
+	  offset = pbi->VFragments * pbi->HFragments + 
+	    ((pbi->VFragments * pbi->HFragments) >> 2);
+	  break;
+	}
+	for(y=0;y<yn;y++){
+	  for(x=0;x<xn;x++,i++){
+	    
+	    for(buf=0;buf<3;buf++){
+	      Q_LIST_ENTRY (*ptr)[64];
+	      char *bufn;
+	      
+	      switch(buf){
+	      case 0:
+		bufn = "coded";
+		ptr = pbi->QFragQUAN;
+		break;
+	      case 1:
+		bufn = "coeff";
+		ptr = pbi->QFragFREQ;
+		break;
+	      case 2:
+		bufn = "recon";
+		ptr = pbi->QFragTIME;
+		break;
+	      }
+	      
+	      i = offset + y*xn + x;
+	      
+	      TH_DEBUG("%s %s [%d][%d] = {",bufn,plstr,x,y);
+	      if ( !pbi->display_fragments[i] ) 
+		TH_DEBUG(" not coded }\n");
+	      else{
+		int l=0;
+		for(j=0;j<8;j++){
+		  TH_DEBUG("\n   ");
+		  for(k=0;k<8;k++,l++){
+		    TH_DEBUG("%d ",
+			     (unsigned int)abs(ptr[i][l]));
+		  }
+		}
+		TH_DEBUG(" }\n");
+	      }
+	    }
+	    
+	    /* and the loop filter output, which is a flat struct */
+	    TH_DEBUG("loop %s [%d][%d] = {",plstr,x,y);
+	    for(j=0;j<8;j++){
+	      int l = (y*8+j)*(xn*8) + x*8 + offset*64;
+	      TH_DEBUG("\n   ");
+	      for(k=0;k<8;k++,l++)
+		TH_DEBUG("%d ", pbi->LastFrameRecon[l]);
+	      
+	    }
+	    TH_DEBUG(" }\n\n");
+	  }
+	}
+      }
+    }
+#endif
+
   /* We may need to update the UMV border */
   UpdateUMVBorder(pbi, pbi->LastFrameRecon);
 

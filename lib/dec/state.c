@@ -515,10 +515,35 @@ static void oc_state_ref_bufs_init(oc_theora_state *_state){
   _state->ref_frame_idx[OC_FRAME_GOLD]=
    _state->ref_frame_idx[OC_FRAME_PREV]=
    _state->ref_frame_idx[OC_FRAME_SELF]=-1;
+
+#ifdef _TH_DEBUG_
+  _state->loop_debug[0].width = info->frame_width;
+  _state->loop_debug[0].height = info->frame_height;
+  _state->loop_debug[0].ystride = yhstride;
+  _state->loop_debug[0].data = malloc(yplane_sz);
+
+  _state->loop_debug[1].width = 
+    _state->loop_debug[2].width = 
+    info->frame_width>>!(info->pixel_fmt&1);
+  _state->loop_debug[1].height =
+    _state->loop_debug[2].height =
+    info->frame_height>>!(info->pixel_fmt&2);
+  _state->loop_debug[1].ystride = 
+    _state->loop_debug[2].ystride = chstride;
+  _state->loop_debug[1].data = malloc(cplane_sz);
+  _state->loop_debug[2].data = malloc(cplane_sz);
+
+#endif
 }
 
 static void oc_state_ref_bufs_clear(oc_theora_state *_state){
   _ogg_free(_state->ref_frame_data);
+
+#ifdef _TH_DEBUG_
+  _ogg_free(_state->loop_debug[0].data);
+  _ogg_free(_state->loop_debug[1].data);
+  _ogg_free(_state->loop_debug[2].data);
+#endif
 }
 
 
@@ -1058,6 +1083,7 @@ void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
   _bv+=256;
   iplane=_state->ref_frame_bufs[_refi]+_pli;
   fplane=_state->fplanes+_pli;
+
   /*The following loops are constructed somewhat non-intuitively on purpose.
     The main idea is: if a block boundary has at least one coded fragment on
      it, the filter is applied to it.
@@ -1090,6 +1116,16 @@ void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
     }
     frag0+=fplane->nhfrags;
   }
+
+#ifdef _TH_DEBUG_
+  int offset = _fragy0*fplane->nhfrags*8;
+  int len = (_fragy_end-_fragy0)*fplane->nhfrags*8*8;
+  memcpy(_state->loop_debug[_pli].data+offset, 
+	 _state->ref_frame_bufs[_refi][_pli].data+offset,
+	 len);
+#endif
+
+
 }
 
 #if defined(OC_DUMP_IMAGES)

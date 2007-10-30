@@ -2256,69 +2256,85 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
 
 #ifdef _TH_DEBUG_
     {
-
-      int x,y,i,j,k,l;
-      int w = _dec->state.info.frame_width;
-      int h = _dec->state.info.frame_height;
+      int x,y,i,j,k,xn,yn;
+      int plane;
+      int buf;
 
       /* dump fragment DCT components */
-      i=0;
-      for(y=0;y<(h>>3);y++){
-	for(x=0;x<(w>>3);x++,i++){
-	  TH_DEBUG("DCT Y [%d][%d] = {",x,y);
-	  if(!_dec->state.frags[i].coded)
-	    TH_DEBUG(" not coded }\n");
-	  else{
-	    l=0;
-	    for(j=0;j<8;j++){
-	      TH_DEBUG("\n   ");
-	      for(k=0;k<8;k++,l++)
-		TH_DEBUG("%d:%d:%d ",
-			 _dec->state.frags[i].quant[l],
-			 _dec->state.frags[i].freq[l],
-			 _dec->state.frags[i].time[l]);
-	    }
-	    TH_DEBUG(" }\n");
-	  }
+      for(plane=0;plane<3;plane++){
+	char *plstr;
+	int offset;
+	switch(plane){
+	case 0:
+	  plstr="Y";
+	  xn = _dec->state.info.frame_width>>3;
+	  yn = _dec->state.info.frame_height>>3;
+	  offset = 0; 
+	  break;
+	case 1:
+	  plstr="U";
+	  xn = _dec->state.info.frame_width>>4;
+	  yn = _dec->state.info.frame_height>>4;
+	  offset = xn*yn*4;
+	  break;
+	case 2:
+	  plstr="V";
+	  xn = _dec->state.info.frame_width>>4;
+	  yn = _dec->state.info.frame_height>>4;
+	  offset = xn*yn*5;
+	  break;
 	}
-      }
+	for(y=0;y<yn;y++){
+	  for(x=0;x<xn;x++,i++){
+	    
+	    for(buf=0;buf<3;buf++){
+	      int *ptr;
+	      char *bufn;
+	      
+	      i = offset + y*xn + x;
 
-      for(y=0;y<(h>>4);y++){
-	for(x=0;x<(w>>4);x++,i++){
-	  TH_DEBUG("DCT U [%d][%d] = {",x,y);
-	  if(!_dec->state.frags[i].coded)
-	    TH_DEBUG(" not coded }\n");
-	  else{
-	    l=0;
+	      switch(buf){
+	      case 0:
+		bufn = "coded";
+		ptr = _dec->state.frags[i].quant;
+		break;
+	      case 1:
+		bufn = "coeff";
+		ptr = _dec->state.frags[i].freq;
+		break;
+	      case 2:
+		bufn = "recon";
+		ptr = _dec->state.frags[i].time;
+		break;
+	      }
+	      
+	      
+	      TH_DEBUG("%s %s [%d][%d] = {",bufn,plstr,x,y);
+	      if(!_dec->state.frags[i].coded)
+		TH_DEBUG(" not coded }\n");
+	      else{
+		int l=0;
+		for(j=0;j<8;j++){
+		  TH_DEBUG("\n   ");
+		  for(k=0;k<8;k++,l++){
+		    TH_DEBUG("%d ",
+			     (unsigned int)abs(ptr[l]));
+		  }
+		}
+		TH_DEBUG(" }\n");
+	      }
+	    }
+	    
+	    /* and the loop filter output, which is a flat struct */
+	    TH_DEBUG("loop %s [%d][%d] = {",plstr,x,y);
 	    for(j=0;j<8;j++){
+	      int l = (y*8+j)*(xn*8) + x*8;
 	      TH_DEBUG("\n   ");
 	      for(k=0;k<8;k++,l++)
-		TH_DEBUG("%d:%d:%d ",
-			 _dec->state.frags[i].quant[l],
-			 _dec->state.frags[i].freq[l],
-			 _dec->state.frags[i].time[l]);
+		TH_DEBUG("%d ", _dec->state.loop_debug[plane].data[l]);
+	      
 	    }
-	    TH_DEBUG(" }\n");
-	  }
-	}
-      }
-
-      for(y=0;y<(h>>4);y++){
-	for(x=0;x<(w>>4);x++,i++){
-	  TH_DEBUG("DCT V [%d][%d] = {",x,y);
-	  if(!_dec->state.frags[i].coded)
-	    TH_DEBUG(" not coded }\n");
-	  else{
-	    l=0;
-	    for(j=0;j<8;j++){
-	      TH_DEBUG("\n   ");
-	      for(k=0;k<8;k++,l++)
-		TH_DEBUG("%d:%d:%d ",
-			 _dec->state.frags[i].quant[l],
-			 _dec->state.frags[i].freq[l],
-			 _dec->state.frags[i].time[l]);
-	    }
-	    TH_DEBUG(" }\n");
+	    TH_DEBUG(" }\n\n");
 	  }
 	}
       }
