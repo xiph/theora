@@ -15,8 +15,6 @@
 
  ********************************************************************/
 
-
-
 #if !defined(_internal_H)
 # define _internal_H (1)
 # include <stdlib.h>
@@ -240,6 +238,8 @@ typedef struct{
   int quant[64];
   int freq[64];
   int time[64];
+  int recon[64];
+  int loop[64];
 #endif
 }oc_fragment;
 
@@ -362,10 +362,6 @@ struct oc_theora_state{
   oc_quant_tables       dequant_table_data[2][3];
   /*Loop filter strength parameters.*/
   unsigned char         loop_filter_limits[64];
-
-#ifdef _TH_DEBUG_
-  th_ycbcr_buffer       loop_debug;
-#endif
 };
 
 

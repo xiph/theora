@@ -1664,6 +1664,40 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
   _pipe->uncoded_fragis[_pli]-=_pipe->nuncoded_fragis[_pli];
   oc_state_frag_copy(&_dec->state,_pipe->uncoded_fragis[_pli],
    _pipe->nuncoded_fragis[_pli],OC_FRAME_SELF,OC_FRAME_PREV,_pli);
+
+#ifdef _TH_DEBUG_
+  {
+    int i,j,k;
+    int framei=_dec->state.ref_frame_idx[OC_FRAME_SELF];
+    int ystride=_dec->state.ref_frame_bufs[framei][_pli].ystride;
+    int *fragi_end = _pipe->coded_fragis[_pli];
+    int *fragi = fragi_end-_pipe->ncoded_fragis[_pli];
+
+    for(;fragi<fragi_end;fragi++){
+      oc_fragment   *frag=_dec->state.frags+*fragi;
+      unsigned char *src=frag->buffer[framei];
+      for(i=0,j=0;j<8;j++){
+	for(k=0;k<8;k++,i++)
+	  frag->recon[i] = src[k];
+	src+=ystride;
+      }
+    }
+
+    fragi = _pipe->uncoded_fragis[_pli];
+    fragi_end = fragi+_pipe->nuncoded_fragis[_pli];
+
+    for(;fragi<fragi_end;fragi++){
+      oc_fragment   *frag=_dec->state.frags+*fragi;
+      unsigned char *src=frag->buffer[framei];
+      for(i=0,j=0;j<8;j++){
+	for(k=0;k<8;k++,i++)
+	  frag->recon[i] = src[k];
+	src+=ystride;
+      }
+    }
+  }
+#endif
+    
 }
 
 /*Filter a horizontal block edge.*/
@@ -2287,54 +2321,51 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
 	for(y=0;y<yn;y++){
 	  for(x=0;x<xn;x++,i++){
 	    
-	    for(buf=0;buf<3;buf++){
+	    for(buf=0;buf<4;buf++){
 	      int *ptr;
 	      char *bufn;
-	      
+	      int codecheck=0;
+
 	      i = offset + y*xn + x;
 
 	      switch(buf){
 	      case 0:
+		codecheck=1;
 		bufn = "coded";
 		ptr = _dec->state.frags[i].quant;
 		break;
 	      case 1:
+		codecheck=1;
 		bufn = "coeff";
 		ptr = _dec->state.frags[i].freq;
 		break;
 	      case 2:
-		bufn = "recon";
+		codecheck=1;
+		bufn = "idct";
 		ptr = _dec->state.frags[i].time;
+		break;
+	      case 3:
+		bufn = "recon";
+		ptr = _dec->state.frags[i].loop;
 		break;
 	      }
 	      
 	      
 	      TH_DEBUG("%s %s [%d][%d] = {",bufn,plstr,x,y);
-	      if(!_dec->state.frags[i].coded)
+	      if(codecheck && !_dec->state.frags[i].coded)
 		TH_DEBUG(" not coded }\n");
 	      else{
 		int l=0;
 		for(j=0;j<8;j++){
 		  TH_DEBUG("\n   ");
 		  for(k=0;k<8;k++,l++){
-		    TH_DEBUG("%d ",
-			     (unsigned int)abs(ptr[l]));
+		    TH_DEBUG("%d ",ptr[l]);
 		  }
 		}
 		TH_DEBUG(" }\n");
 	      }
 	    }
-	    
-	    /* and the loop filter output, which is a flat struct */
-	    TH_DEBUG("loop %s [%d][%d] = {",plstr,x,y);
-	    for(j=0;j<8;j++){
-	      int l = (y*8+j)*(xn*8) + x*8;
-	      TH_DEBUG("\n   ");
-	      for(k=0;k<8;k++,l++)
-		TH_DEBUG("%d ", _dec->state.loop_debug[plane].data[l]);
-	      
-	    }
-	    TH_DEBUG(" }\n\n");
+	    TH_DEBUG("\n");
 	  }
 	}
       }

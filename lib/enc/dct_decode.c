@@ -127,7 +127,6 @@ static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
   /* Get the pixel index for the first pixel in the fragment. */
   dsp_recon_intra8x8 (pbi->dsp, (unsigned char *)(&pbi->ThisFrameRecon[ReconPixelIndex]),
               (ogg_int16_t *)pbi->ReconDataBuffer, ReconPixelsPerLine);
-
 }
 
 static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber){
@@ -1207,7 +1206,7 @@ void ReconRefFrames (PB_INSTANCE *pbi){
 
 #ifdef _TH_DEBUG_
     {
-      int x,y,i,j,k,xn,yn;
+      int x,y,i,j,k,xn,yn,stride;
       int plane;
       int buf;
 
@@ -1221,12 +1220,14 @@ void ReconRefFrames (PB_INSTANCE *pbi){
 	  xn = pbi->HFragments;
 	  yn = pbi->VFragments;
 	  offset = 0; 
+	  stride = pbi->YStride;
 	  break;
 	case 1:
 	  plstr="U";
 	  xn = pbi->HFragments>>1;
 	  yn = pbi->VFragments>>1;
-	  offset = pbi->VFragments * pbi->HFragments;
+	  offset = pbi->VFragments * pbi->HFragments;	
+	  stride = pbi->UVStride;
 	  break;
 	case 2:
 	  plstr="V";
@@ -1234,6 +1235,7 @@ void ReconRefFrames (PB_INSTANCE *pbi){
 	  yn = pbi->VFragments>>1;
 	  offset = pbi->VFragments * pbi->HFragments + 
 	    ((pbi->VFragments * pbi->HFragments) >> 2);
+	  stride = pbi->UVStride;
 	  break;
 	}
 	for(y=0;y<yn;y++){
@@ -1253,7 +1255,7 @@ void ReconRefFrames (PB_INSTANCE *pbi){
 		ptr = pbi->QFragFREQ;
 		break;
 	      case 2:
-		bufn = "recon";
+		bufn = "idct";
 		ptr = pbi->QFragTIME;
 		break;
 	      }
@@ -1268,8 +1270,7 @@ void ReconRefFrames (PB_INSTANCE *pbi){
 		for(j=0;j<8;j++){
 		  TH_DEBUG("\n   ");
 		  for(k=0;k<8;k++,l++){
-		    TH_DEBUG("%d ",
-			     (unsigned int)abs(ptr[i][l]));
+		    TH_DEBUG("%d ",ptr[i][l]);
 		  }
 		}
 		TH_DEBUG(" }\n");
@@ -1277,13 +1278,12 @@ void ReconRefFrames (PB_INSTANCE *pbi){
 	    }
 	    
 	    /* and the loop filter output, which is a flat struct */
-	    TH_DEBUG("loop %s [%d][%d] = {",plstr,x,y);
+	    TH_DEBUG("recon %s [%d][%d] = {",plstr,x,y);
 	    for(j=0;j<8;j++){
-	      int l = (y*8+j)*(xn*8) + x*8 + offset*64;
+	      int l = pbi->recon_pixel_index_table[i] + j*stride;
 	      TH_DEBUG("\n   ");
 	      for(k=0;k<8;k++,l++)
 		TH_DEBUG("%d ", pbi->LastFrameRecon[l]);
-	      
 	    }
 	    TH_DEBUG(" }\n\n");
 	  }
