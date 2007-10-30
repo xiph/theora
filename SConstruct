@@ -171,24 +171,22 @@ env.Install(lib_dir, [libtheora_a, libtheora_so])
 
 # example programs
 dump_video = env.Copy()
-dump_video.Append(LIBS=['theora'], LIBPATH=['./lib'])
-dump_video_Sources = Split("""dump_video.c""")
+dump_video_Sources = Split("""dump_video.c ../lib/libtheora.a""")
 dump_video.Program('examples/dump_video', path('examples', dump_video_Sources))
 
 if have_vorbis:
   encex = dump_video.Copy()
   encex.ParseConfig('pkg-config --cflags --libs vorbisenc vorbis')
-  encex_Sources = Split("""encoder_example.c""")
+  encex_Sources = Split("""encoder_example.c ../lib/libtheora.a""")
   encex.Program('examples/encoder_example', path('examples', encex_Sources))
 
   if build_player_example:
     plyex = encex.Copy()
-    plyex_Sources = Split("""player_example.c""")
+    plyex_Sources = Split("""player_example.c ../lib/libtheora.a""")
     plyex.ParseConfig('sdl-config --cflags --libs')
     plyex.Program('examples/player_example', path('examples', plyex_Sources))
 
 png2theora = env.Copy()
-png2theora.Append(LIBS=['theora'], LIBPATH=['./lib'])
-png2theora_Sources = Split("""png2theora.c""")
+png2theora_Sources = Split("""png2theora.c ../lib/libtheora.a""")
 png2theora.ParseConfig('pkg-config --cflags --libs libpng')
 png2theora.Program('examples/png2theora', path('examples', png2theora_Sources))
