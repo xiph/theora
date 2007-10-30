@@ -55,6 +55,49 @@ if test $HAVE_DOXYGEN = "false"; then
         AC_MSG_WARN([*** doxygen not found, API documentation will not be built])
 fi
 
+dnl Check for tools used to build the format specification
+AC_CHECK_PROG(HAVE_PDFLATEX, pdflatex, yes)
+AC_CHECK_PROG(HAVE_BIBTEX, bibtex, yes)
+AC_CHECK_PROG(HAVE_TRANSFIG, fig2dev, yes)
+BUILD_SPEC="false"
+if test -r doc/spec/spec.tex; then
+ if test "x$HAVE_PDFLATEX" = "xyes"; then
+  if test "x$HAVE_BIBTEX" = "xyes"; then
+    if test "x$HAVE_TRANSFIG" = "xyes"; then
+      tex_pkg_list=`fgrep usepackage doc/spec/spec.tex | grep \{`
+      tex_pkg_ok="yes"
+      for pkg_line in $tex_pkg_list; do
+	pkg_name=`echo $pkg_line | sed -e 's/.*{\(.*\)}.*/\1/'`
+	AC_MSG_CHECKING([for Tex package $pkg_name])
+        cat >conftest.tex <<_ACEOF
+\\documentclass{book}
+$pkg_line
+\\begin{document}
+Hello World.
+\\end{document}
+_ACEOF
+	if pdflatex -interaction batchmode -halt-on-error conftest < /dev/null > /dev/null 2>&1; then
+          AC_MSG_RESULT([ok])
+        else
+	  tex_pkg_ok="no"
+	  AC_MSG_RESULT([no])
+        fi
+      done
+      if test -w conftest.tex; then rm conftest.tex; fi
+      if test -w conftest.tex; then rm conftest.aux; fi
+      if test -w conftest.pdf; then rm conftest.pdf; fi
+      if test "x$tex_pkg_ok" = "xyes"; then
+        BUILD_SPEC="true"
+      fi
+    fi
+  fi
+ fi
+fi
+AM_CONDITIONAL(BUILD_SPEC, $BUILD_SPEC)
+if test $BUILD_SPEC = "false"; then
+	AC_MSG_WARN([*** Format Specification will not built.])
+fi
+
 dnl Check for valgrind
 VALGRIND_ENVIRONMENT=""
 ac_enable_valgrind=no
@@ -323,7 +366,7 @@ AC_OUTPUT([
   lib/Makefile
   include/Makefile include/theora/Makefile
   examples/Makefile
-  doc/Makefile doc/Doxyfile
+  doc/Makefile doc/Doxyfile doc/spec/Makefile
   tests/Makefile
   m4/Makefile
   libtheora.spec
@@ -341,7 +384,11 @@ if test $HAVE_DOXYGEN = "false"; then
 else
   doc_build="yes"
 fi
-dnl need to handle spec build?
+if test $BUILD_SPEC = "false"; then
+  spec_build="no"
+else
+  spec_build="yes"
+fi
 
 AC_MSG_RESULT([
 ------------------------------------------------------------------------
@@ -352,8 +399,9 @@ AC_MSG_RESULT([
     Encoding support: ........... ${ac_enable_encode}
     Floating point support: ..... ${ac_enable_float}
     Assembly optimization: ...... ${cpu_optimization}
-    API Documentation: .......... ${doc_build}
     Build example code: ......... ${ac_enable_examples}
+    API Documentation: .......... ${doc_build}
+    Format Documentation: ....... ${spec_build}
 
   Installation paths:
 

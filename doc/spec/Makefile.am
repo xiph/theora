@@ -1,10 +1,13 @@
-# makefile to generate the spec document from it sources
+## Process this file with automake to produce Makefile.in
+
+# makefile to generate the spec document from sources
 # requires transfig and pdflatex
 
-# Alias some shell commands, so we might have a chance of running on non-Unix
-#  platforms some day.
-MV = mv
-RM = rm -f
+docdir = $(datadir)/doc/$(PACKAGE)-$(VERSION)
+
+built_docs = Theora.pdf
+
+doc_DATA = $(built_docs)
 
 SPEC_SRCS = spec.tex spec.bib
 
@@ -20,19 +23,24 @@ FIG_PDFS = $(FIG_SRCS:.fig=.pdf)
 # add any native-pdf figures here
 FIG_OBJS = $(FIG_PDFS)
 
-Theora_spec.pdf : spec.pdf
-	$(MV) $< $@
+EXTRA_DIST = $(built_docs) $(SPEC_SRCS) $(FIG_SRCS)
 
-spec.pdf : $(SPEC_SRCS) $(FIG_OBJS) vp3huff.tex spec.bbl
-	# three times is the charm with references
-	pdflatex --interaction nonstopmode spec.tex
-	pdflatex --interaction nonstopmode spec.tex
-	pdflatex --interaction nonstopmode spec.tex
+if BUILD_SPEC
+# latex three times is the charm with references
+# we get one for free building spec.bbl
+Theora.pdf : $(SPEC_SRCS) $(FIG_OBJS) vp3huff.tex spec.bbl
+	pdflatex -interaction nonstopmode spec.tex
+	pdflatex -interaction nonstopmode spec.tex
+	mv spec.pdf $@
+else
+Theora.pdf : 
+        echo "*** Warning: Missing tools; $@ will not be built."
+endif
 
+# Long tables require the .aux file to start from scratch
 spec.aux : spec.tex
-	#Long tables require the .aux file to start from scratch
 	-$(RM) spec.aux
-	pdflatex --interaction nonstopmode $<
+	pdflatex -interaction nonstopmode $<
 
 spec.bbl : spec.aux spec.bib
 	bibtex $<
@@ -40,19 +48,22 @@ spec.bbl : spec.aux spec.bib
 vp3huff.tex : vp3huff
 	./vp3huff > $@
 
+noinst_PROGRAMS = vp3huff
+vp3huff_SOURCES = vp3huff.c
+ 
 figures : $(FIG_OBJS)
 
 # rules to generate latex and pdf versions of the xfig figures
-%.tex : %.fig
+.fig.tex:
 	fig2dev -L latex $< $@
 
-%.pdf : %.fig
+.fig.pdf:
 	fig2dev -L pdf -p 0 $< $@
 
-.PHONY: clean distclean maintainer-clean
+SUFFIXES = .fig .tex .pdf
 
 # clean targets
-clean:
+clean-local:
 	-$(RM) $(FIG_TEXS)
 	-$(RM) $(FIG_AUXS)
 	-$(RM) $(FIG_PDFS)
@@ -68,9 +79,7 @@ clean:
 	-$(RM) spec.blg
 	-$(RM) spec.toc
 
-distclean: clean
-
-maintainer-clean: distclean
-	-$(RM) Theora_spec.pdf
+maintainer-clean-local:
+	-$(RM) $(built_docs)
 
 maintainerclean: maintainer-clean

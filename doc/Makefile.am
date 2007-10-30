@@ -1,20 +1,16 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = #python
+SUBDIRS = spec
 
 docdir = $(datadir)/doc/$(PACKAGE)-$(VERSION)
-
-built_docs =
 
 static_docs = vp3-format.txt color.html \
 	draft-ietf-avt-rtp-theora-00.xml \
 	draft-ietf-avt-rtp-theora-00.txt
 
-doc_DATA = $(built_docs) $(static_docs) doxygen-build.stamp
+doc_DATA = $(static_docs) doxygen-build.stamp
 
-EXTRA_DIST = $(built_docs) $(static_docs) spec Doxyfile.in
-
-CLEANFILES = $(built_docs)
+EXTRA_DIST = $(static_docs) Doxyfile.in
 
 if HAVE_DOXYGEN
 doxygen-build.stamp: Doxyfile $(top_srcdir)/include/theora/*.h
@@ -75,3 +71,4 @@ uninstall-local:
 clean-local:
 	if test -d libtheora; then rm -rf libtheora; fi
 	if test -f doxygen-build.stamp; then rm -f doxygen-build.stamp; fi
+
