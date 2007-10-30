@@ -14,7 +14,6 @@ encoder_sources = """
         enc/encoder_toplevel.c
         enc/encoder_quant.c
         enc/blockmap.c
-        enc/common.c
         enc/dct.c
         enc/dct_decode.c
         enc/frarray.c
