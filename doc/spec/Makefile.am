@@ -7,7 +7,9 @@ docdir = $(datadir)/doc/$(PACKAGE)-$(VERSION)
 
 built_docs = Theora.pdf
 
+if BUILD_SPEC
 doc_DATA = $(built_docs)
+endif
 
 SPEC_SRCS = spec.tex spec.bib
 
