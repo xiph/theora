@@ -1,6 +1,12 @@
 libtheora 1.0beta3 (unreleased)
 
- - dropped build support for Microsoft VS2003
+ - Build new libtheoradec and libtheoraenc libraries
+   supporting the new API from theora-exp.
+ - Fix a problem with decoder quantizer initialization
+ - Fix a page queue problem with png2theora.
+ - Dropped build support for Microsoft VS2003.
+ - Added the specification to the autotools build.
+ - Specification corrections.
 
 libtheora 1.0beta2 (2007 October 12)
 
