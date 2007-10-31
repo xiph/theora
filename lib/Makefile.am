@@ -83,29 +83,20 @@ decoder_sources = \
 	dec/quant.c \
 	dec/state.c
 
-if CPU_x86_64
 decoder_x86_sources = \
 	dec/x86/mmxidct.c \
 	dec/x86/mmxfrag.c \
 	dec/x86/mmxstate.c \
 	dec/x86/x86state.c
+if CPU_x86_64
+decoder_arch_sources = $(decoder_x86_sources)
 else
 if CPU_x86_32
-decoder_x86_sources = \
-	dec/x86/mmxidct.c \
-	dec/x86/mmxfrag.c \
-	dec/x86/mmxstate.c \
-	dec/x86/x86state.c
+decoder_arch_sources = $(decoder_x86_sources)
+else
+decoder_arch_sources =
 endif
 endif
-
-libtheora_la_SOURCES = \
-  cpu.c \
-	$(decoder_x86_sources) \
-	$(decoder_sources) \
-	$(encoder_arch_sources) \
-	$(encoder_sources) \
-  Version_script
 
 noinst_HEADERS = \
 	cpu.h \
@@ -130,6 +121,14 @@ noinst_HEADERS = \
 	dec/ocintrin.h \
 	dec/quant.h \
 	dec/x86/x86int.h
+
+libtheora_la_SOURCES = \
+  cpu.c \
+	$(decoder_arch_sources) \
+	$(decoder_sources) \
+	$(encoder_arch_sources) \
+	$(encoder_sources) \
+  Version_script
 
 libtheora_la_CFLAGS = $(OGG_CFLAGS)
 libtheora_la_LDFLAGS = -version-info @TH_LIB_CURRENT@:@TH_LIB_REVISION@:@TH_LIB_AGE@ @THEORA_LDFLAGS@
