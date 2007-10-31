@@ -250,7 +250,7 @@ ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi,
                                 ogg_int32_t FragIndex){
   ogg_uint32_t  token_count;
 
-  if ( GetFrameType(&cpi->pb) == KEY_FRAME ){
+  if ( cpi->pb.FrameType == KEY_FRAME ){
     /* Key frame so code block in INTRA mode. */
     cpi->pb.CodingMode = CODE_INTRA;
   }else{
@@ -394,7 +394,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
   /* adjusted / filtered pointers */
   FiltPtr = &cpi->ConvDestBuffer[cpi->pb.pixel_index_table[FragIndex]];
 
-  if ( GetFrameType(&cpi->pb) == KEY_FRAME ) {
+  if ( cpi->pb.FrameType == KEY_FRAME ) {
     /* Key frame so code block in INTRA mode. */
     cpi->pb.CodingMode = CODE_INTRA;
   }else{

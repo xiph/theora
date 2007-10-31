@@ -147,7 +147,7 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber){
                                         pixel is used */
 
   /* Get coding mode for this block */
-  if ( GetFrameType(pbi) == KEY_FRAME ){
+  if ( pbi->FrameType == KEY_FRAME ){
     pbi->CodingMode = CODE_INTRA;
   }else{
     /* Get Motion vector and mode for this block. */
@@ -1073,7 +1073,7 @@ void ReconRefFrames (PB_INSTANCE *pbi){
 
   void (*ExpandBlockA) ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber );
 
-  if ( GetFrameType(pbi) == KEY_FRAME )
+  if ( pbi->FrameType == KEY_FRAME )
     ExpandBlockA=ExpandKFBlock;
   else
     ExpandBlockA=ExpandBlock;
@@ -1117,7 +1117,7 @@ void ReconRefFrames (PB_INSTANCE *pbi){
 
         /* only do 2 prediction if fragment coded and on non intra or
            if all fragments are intra */
-        if( pbi->display_fragments[i] || (GetFrameType(pbi) == KEY_FRAME) ){
+        if( pbi->display_fragments[i] || (pbi->FrameType == KEY_FRAME) ){
           /* Type of Fragment */
           WhichFrame = Mode2Frame[pbi->FragCodingMethod[i]];
 
@@ -1297,7 +1297,7 @@ void ReconRefFrames (PB_INSTANCE *pbi){
 
   /* Reconstruct the golden frame if necessary.
      For VFW codec only on key frames */
-  if ( GetFrameType(pbi) == KEY_FRAME ){
+  if ( pbi->FrameType == KEY_FRAME ){
     CopyRecon( pbi, pbi->GoldenFrame, pbi->LastFrameRecon );
     /* We may need to update the UMV border */
     UpdateUMVBorder(pbi, pbi->GoldenFrame);

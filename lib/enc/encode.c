@@ -608,7 +608,7 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
   ClearDownQFragData(&cpi->pb);
 
   /* The tree is not needed (implicit) for key frames */
-  if ( GetFrameType(&cpi->pb) != KEY_FRAME ){
+  if ( cpi->pb.FrameType != KEY_FRAME ){
     /* Pack the quad tree fragment mapping. */
     PackAndWriteDFArray( cpi );
   }
@@ -617,7 +617,7 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
   cpi->FrameBitCount = oggpackB_bytes(cpi->oggbuffer) << 3;
 
   /* Mode and MV data not needed for key frames. */
-  if ( GetFrameType(&cpi->pb) != KEY_FRAME ){
+  if ( cpi->pb.FrameType != KEY_FRAME ){
     /* Pack and code the mode list. */
     PackModes(cpi);
     /* Pack the motion vectors */
@@ -831,7 +831,7 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
         /* only do 2 prediction if fragment coded and on non intra or
            if all fragments are intra */
         if( cpi->pb.display_fragments[i] ||
-            (GetFrameType(&cpi->pb) == KEY_FRAME) ) {
+            (cpi->pb.FrameType == KEY_FRAME) ) {
           /* Type of Fragment */
 
           WhichFrame = Mode2Frame[cpi->pb.FragCodingMethod[i]];

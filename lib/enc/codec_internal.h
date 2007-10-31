@@ -854,13 +854,4 @@ extern void InitTmpBuffers(PB_INSTANCE * pbi);
 extern void ScanYUVInit( PP_INSTANCE *  ppi,
                          SCAN_CONFIG_DATA * ScanConfigPtr);
 
-static int GetFrameType(PB_INSTANCE *pbi){
-  return pbi->FrameType;
-}
-
-static void SetFrameType( PB_INSTANCE *pbi,unsigned char FrType ){
-  pbi->FrameType = FrType;
-}
-
-
 #endif /* ENCODER_INTERNAL_H */
