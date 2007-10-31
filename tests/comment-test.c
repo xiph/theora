@@ -29,7 +29,7 @@ static int
 test_comments ()
 {
   theora_comment tc;
-  int i, n;
+  int n;
   char * value;
 
   INFO ("+ Initializing theora_comment");
