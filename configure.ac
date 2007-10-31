@@ -28,6 +28,20 @@ AC_SUBST(TH_LIB_CURRENT)
 AC_SUBST(TH_LIB_REVISION)
 AC_SUBST(TH_LIB_AGE)
 
+THDEC_LIB_CURRENT=1
+THDEC_LIB_REVISION=0
+THDEC_LIB_AGE=0
+AC_SUBST(THDEC_LIB_CURRENT)
+AC_SUBST(THDEC_LIB_REVISION)
+AC_SUBST(THDEC_LIB_AGE)
+
+THENC_LIB_CURRENT=1
+THENC_LIB_REVISION=0
+THENC_LIB_AGE=0
+AC_SUBST(THENC_LIB_CURRENT)
+AC_SUBST(THENC_LIB_REVISION)
+AC_SUBST(THENC_LIB_AGE)
+
 dnl Extra linker options (for version script)
 THEORA_LDFLAGS=""
 
@@ -183,18 +197,31 @@ AM_CONDITIONAL(OC_X86ASM,[test x$ac_enable_asm = xyes])
 # Test whenever ld supports -version-script
 AC_PROG_LD
 AC_PROG_LD_GNU
+AC_MSG_CHECKING([library versioning support])
+
+THDEC_VERSION_ARG=""
+THENC_VERSION_ARG=""
+TH_VERSION_ARG=""
 if test "x$lt_cv_prog_gnu_ld" = "xyes"; then
  case "$target_os" in
   linux* | solaris* )
-    SHLIB_VERSION_ARG='-Wl,--version-script=$(srcdir)/Version_script'
+    THDEC_VERSION_ARG='-Wl,--version-script=$(srcdir)/Version_script-dec'
+    THENC_VERSION_ARG='-Wl,--version-script=$(srcdir)/Version_script-enc'
+    TH_VERSION_ARG='-Wl,--version-script=$(srcdir)/Version_script'
+    AC_MSG_RESULT([yes])
     ;;
   *)
-    SHLIB_VERSION_ARG=""
+    # build without versioning
+    AC_MSG_RESULT([no])
     ;;
  esac
- THEORA_LDFLAGS="$THEORA_LDFLAGS $SHLIB_VERSION_ARG"
 fi
-
+ 
+THEORADEC_LDFLAGS="$THEORA_LDFLAGS $THDEC_VERSION_ARG"
+THEORAENC_LDFLAGS="$THEORA_LDFLAGS $THENC_VERSION_ARG"
+THEORA_LDFLAGS="$THEORA_LDFLAGS $TH_VERSION_ARG"
+AC_SUBST(THEORADEC_LDFLAGS)
+AC_SUBST(THEORAENC_LDFLAGS)
 AC_SUBST(THEORA_LDFLAGS)
 
 dnl --------------------------------------------------
