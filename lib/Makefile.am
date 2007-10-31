@@ -1,4 +1,6 @@
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/lib -I$(top_srcdir)/lib/dec -I$(top_srcdir)/lib/enc
+AM_CFLAGS = $(OGG_CFLAGS)
+LIBADD = $(OGG_LIBS)
 
 EXTRA_DIST = \
         enc/x86_32/dct_decode_mmx.c \
@@ -19,7 +21,7 @@ EXTRA_DIST = \
         enc/encode.c \
         enc/encoder_toplevel.c
 
-lib_LTLIBRARIES = libtheora.la
+lib_LTLIBRARIES = libtheoradec.la libtheoraenc.la libtheora.la
 
 if THEORA_DISABLE_ENCODE
 encoder_sources = \
@@ -122,17 +124,34 @@ noinst_HEADERS = \
 	dec/quant.h \
 	dec/x86/x86int.h
 
+libtheoradec_la_SOURCES = \
+  cpu.c \
+	$(decoder_arch_sources) \
+	$(decoder_sources) \
+  Version_script-dec
+libtheoradec_la_LDFLAGS = \
+  -version-info @THDEC_LIB_CURRENT@:@THDEC_LIB_REVISION@:@THDEC_LIB_AGE@ \
+  @THEORADEC_LDFLAGS@
+
+libtheoraenc_la_SOURCES = \
+  cpu.c \
+	$(encoder_arch_sources) \
+	$(encoder_sources) \
+  Version_script-enc
+libtheoraenc_la_LDFLAGS = \
+  -version-info @THENC_LIB_CURRENT@:@THENC_LIB_REVISION@:@THENC_LIB_AGE@ \
+  @THEORAENC_LDFLAGS@
+
 libtheora_la_SOURCES = \
   cpu.c \
 	$(decoder_arch_sources) \
 	$(decoder_sources) \
 	$(encoder_arch_sources) \
 	$(encoder_sources) \
-  Version_script
-
-libtheora_la_CFLAGS = $(OGG_CFLAGS)
-libtheora_la_LDFLAGS = -version-info @TH_LIB_CURRENT@:@TH_LIB_REVISION@:@TH_LIB_AGE@ @THEORA_LDFLAGS@
-libtheora_la_LIBADD = $(OGG_LIBS)
+  Version_script-old
+libtheora_la_LDFLAGS = \
+  -version-info @TH_LIB_CURRENT@:@TH_LIB_REVISION@:@TH_LIB_AGE@ \
+  @THEORA_LDFLAGS@
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@" 

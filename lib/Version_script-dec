@@ -1,10 +1,46 @@
 #
-# Export file for libtheora
+# Export file for libtheoradec
 #
 # Only the symbols listed in the global section will be callable from
 # applications linking to the libraries.
 #
 
+# The 1.x API
+libtheoradec_1.0
+{
+	global:
+		th_version_string;
+		th_version_number;
+
+		th_decode_headerin;
+		th_decode_alloc;
+		th_setup_free;
+		th_decode_ctl;
+		th_decode_packetin;
+		th_decode_ycbcr_out;
+		th_decode_free;
+
+		th_packet_isheader;
+		th_packet_iskeyframe;
+
+		th_granule_frame;
+		th_granule_time;
+
+		th_info_init;
+		th_info_clear;
+
+		th_comment_init;
+		th_comment_add;
+		th_comment_add_tag;
+		th_comment_query;
+		th_comment_query_count;
+		th_comment_clear;
+
+	local:
+		*;
+};
+
+# The deprecated legacy api from the libtheora alpha releases.
 # We use something that looks like an versioned so filename here 
 # to define the old API because of a historical confusion. This
 # label must be kept to maintain ABI compatibility.
@@ -14,13 +50,6 @@ libtheora.so.1.0
 	global:
 		theora_version_string;
 		theora_version_number;
-
-		theora_encode_init;
-		theora_encode_YUVin;
-		theora_encode_packetout;
-		theora_encode_header;
-		theora_encode_comment;
-		theora_encode_tables;
 
 		theora_decode_header;
 		theora_decode_init;
