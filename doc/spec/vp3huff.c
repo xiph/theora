@@ -866,7 +866,6 @@ int th_huff_codes2latex(const theora_huff_code _codes[80][32]){
   printf("\\twocolumn\n");
   for(i=0;i<80;i++){
     th_huff_entry entries[32];
-    int           bpos;
     int           maxlen;
     int           mask;
     int           j;
@@ -893,7 +892,7 @@ int th_huff_codes2latex(const theora_huff_code _codes[80][32]){
       int k;
       printf("\\bin{");
       for(k=maxlen;k-->entries[j].shift;){
-        printf("%c",(entries[j].pattern>>k&1)+'0');
+        printf("%c",(int)(entries[j].pattern>>k&1)+'0');
       }
       printf("}");
       for(;k>=0;k--)printf(" ");
