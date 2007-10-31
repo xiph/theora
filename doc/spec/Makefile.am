@@ -29,8 +29,11 @@ EXTRA_DIST = $(built_docs) $(SPEC_SRCS) $(FIG_SRCS)
 
 if BUILD_SPEC
 # latex three times is the charm with references
-# we get one for free building spec.bbl
-Theora.pdf : $(SPEC_SRCS) $(FIG_OBJS) vp3huff.tex spec.bbl
+# long tables require the .aux file to start from scratch
+Theora.pdf : $(SPEC_SRCS) $(FIG_OBJS) vp3huff.tex spec.bib
+	-$(RM) spec.aux
+	pdflatex -interaction nonstopmode spec.tex
+	bibtex spec.aux
 	pdflatex -interaction nonstopmode spec.tex
 	pdflatex -interaction nonstopmode spec.tex
 	mv spec.pdf $@
@@ -38,14 +41,6 @@ else
 Theora.pdf : 
         echo "*** Warning: Missing tools; $@ will not be built."
 endif
-
-# Long tables require the .aux file to start from scratch
-spec.aux : spec.tex
-	-$(RM) spec.aux
-	pdflatex -interaction nonstopmode $<
-
-spec.bbl : spec.aux spec.bib
-	bibtex $<
 
 vp3huff.tex : vp3huff
 	./vp3huff > $@
