@@ -700,7 +700,9 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
   const int              *map_idxs;
   long                    val;
   int                     map_nidxs;
+#ifdef _TH_DEBUG_
   int                     j=0;
+#endif
   oc_mv                   last_mv[2];
   oc_mv                   cbmvs[4];
   set_chroma_mvs=OC_SET_CHROMA_MVS_TABLE[_dec->state.info.pixel_fmt];

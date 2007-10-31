@@ -108,7 +108,7 @@ static ogg_uint32_t FrArrayCodeBlockRun( CP_INSTANCE *cpi,
 }
 
 void PackAndWriteDFArray( CP_INSTANCE *cpi ){
-  ogg_uint32_t  i,j,k;
+  ogg_uint32_t  i;
   unsigned char val;
   ogg_uint32_t  run_count;
 
