@@ -27,7 +27,7 @@ encoder_example_DEPENDENCIES = $(GETOPT_OBJS)
 
 png2theora_SOURCES = png2theora.c
 png2theora_CFLAGS = $(OGG_CFLAGS) $(PNG_CFLAGS)
-png2theora_LDADD = $(GETOPT_OBJS) $(LDADD) $(PNG_LIBS)
+png2theora_LDADD = $(GETOPT_OBJS) $(LDADD) $(PNG_LIBS) -lm
 png2theora_DEPENDENCIES = $(GETOPT_OBJS)
 
 debug:
