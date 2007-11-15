@@ -50,16 +50,6 @@ typedef struct
   void   (*recon8x8)    (unsigned char *ReconPtr, ogg_int16_t *ChangePtr, 
 			 ogg_uint32_t LineStep);
 
-  void   (*recon_intra8x8)    (unsigned char *ReconPtr, ogg_int16_t *ChangePtr, 
-                     ogg_uint32_t LineStep);
-
-  void   (*recon_inter8x8)    (unsigned char *ReconPtr, unsigned char *RefPtr, 
-                     ogg_int16_t *ChangePtr, ogg_uint32_t LineStep);
-
-  void   (*recon_inter8x8_half)  (unsigned char *ReconPtr, unsigned char *RefPtr1, 
-           unsigned char *RefPtr2, ogg_int16_t *ChangePtr, 
-         ogg_uint32_t LineStep);
-
   void   (*fdct_short)          (ogg_int16_t *InputData, ogg_int16_t *OutputData);
 
   ogg_uint32_t (*row_sad8)  (unsigned char *Src1, unsigned char *Src2);
@@ -137,14 +127,6 @@ extern void dsp_mmx_idct_init(DspFunctions *funcs);
 #define dsp_copy8x8_half(funcs,ptr1,ptr2,ptr3,str1) (funcs.copy8x8_half (ptr1,ptr2,ptr3,str1))
 
 #define dsp_recon8x8(funcs,ptr1,ptr2,str1) (funcs.recon8x8 (ptr1,ptr2,str1))
-
-#define dsp_recon_intra8x8(funcs,ptr1,ptr2,str1) (funcs.recon_intra8x8 (ptr1,ptr2,str1))
-
-#define dsp_recon_inter8x8(funcs,ptr1,ptr2,ptr3,str1) \
-  (funcs.recon_inter8x8 (ptr1,ptr2,ptr3,str1))
-
-#define dsp_recon_inter8x8_half(funcs,ptr1,ptr2,ptr3,ptr4,str1) \
-  (funcs.recon_inter8x8_half (ptr1,ptr2,ptr3,ptr4,str1))
 
 #define dsp_fdct_short(funcs,in,out) (funcs.fdct_short (in,out))
 
