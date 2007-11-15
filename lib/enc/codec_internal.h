@@ -646,7 +646,7 @@ typedef struct CP_INSTANCE {
 
   unsigned char    *extra_fragments;   /* extra updates not
                                           recommended by pre-processor */
-  ogg_int16_t      *OriginalDC;
+  ogg_int16_t      *PredictedDC;
 
   ogg_uint32_t     *FragmentLastQ;     /* Array used to keep track of
                                           quality at which each
@@ -670,7 +670,6 @@ typedef struct CP_INSTANCE {
   /*********************************************************************/
 
   ogg_uint32_t      RunLength;
-  ogg_uint32_t      MaxBitTarget;     /* Cut off target for rate capping */
   double            BitRateCapFactor; /* Factor relating delta frame target
                                          to cut off target. */
 

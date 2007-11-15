@@ -176,8 +176,8 @@ static void EClearFragmentInfo(CP_INSTANCE * cpi){
     _ogg_free( cpi->DCTDataBuffer);
   if(cpi->quantized_list)
     _ogg_free( cpi->quantized_list);
-  if(cpi->OriginalDC)
-    _ogg_free( cpi->OriginalDC);
+  if(cpi->PredictedDC)
+    _ogg_free( cpi->PredictedDC);
   if(cpi->PartiallyCodedFlags)
     _ogg_free(cpi->PartiallyCodedFlags);
   if(cpi->PartiallyCodedMbPatterns)
@@ -199,7 +199,7 @@ static void EClearFragmentInfo(CP_INSTANCE * cpi){
   cpi->DCT_codes = 0;
   cpi->DCTDataBuffer = 0;
   cpi->quantized_list = 0;
-  cpi->OriginalDC = 0;
+  cpi->PredictedDC = 0;
   cpi->BlockCodedFlags = 0;
 }
 
@@ -239,9 +239,9 @@ static void EInitFragmentInfo(CP_INSTANCE * cpi){
   cpi->FragTokens =
     _ogg_malloc(cpi->pb.UnitFragments*
                 sizeof(*cpi->FragTokens));
-  cpi->OriginalDC =
+  cpi->PredictedDC =
     _ogg_malloc(cpi->pb.UnitFragments*
-                sizeof(*cpi->OriginalDC));
+                sizeof(*cpi->PredictedDC));
   cpi->FragTokenCounts =
     _ogg_malloc(cpi->pb.UnitFragments*
                 sizeof(*cpi->FragTokenCounts));

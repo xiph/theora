@@ -20,7 +20,7 @@
 #include "dsp.h"
 #include "quant_lookup.h"
 
-
+#include <stdio.h>
 static int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };
 
 static unsigned char TokenizeDctValue (ogg_int16_t DataValue,
@@ -102,10 +102,13 @@ static unsigned char TokenizeDctValue (ogg_int16_t DataValue,
     tokens_added = 2;
   } else {
     TokenListPtr[0] = DCT_VAL_CATEGORY8;
-    if ( DataValue > 0 )
+    if ( DataValue > 0 ){
       TokenListPtr[1] = (511 - DCT_VAL_CAT8_MIN);
-    else
+      fprintf(stderr,"OVERFLOW \n");
+    }else{
       TokenListPtr[1] = (0x200) + (511 - DCT_VAL_CAT8_MIN);
+      fprintf(stderr,"OVERFLOW \n");
+    }
     tokens_added = 2;
   }
 
@@ -177,7 +180,8 @@ static unsigned char TokenizeDctRunValue (unsigned char RunLength,
   return tokens_added;
 }
 
-static unsigned char TokenizeDctBlock (ogg_int16_t * RawData,
+static unsigned char TokenizeDctBlock (ogg_int16_t DC,
+				       ogg_int16_t * RawData,
                                        ogg_uint32_t * TokenListPtr ) {
   ogg_uint32_t i;
   unsigned char  run_count;
@@ -187,15 +191,17 @@ static unsigned char TokenizeDctBlock (ogg_int16_t * RawData,
 
   /* Tokenize the block */
   for( i = 0; i < BLOCK_SIZE; i++ ){
+    ogg_int16_t val = (i ? RawData[i] : DC);
     run_count = 0;
 
     /* Look for a zero run.  */
     /* NOTE the use of & instead of && which is faster (and
        equivalent) in this instance. */
     /* NO, NO IT ISN'T --Monty */
-    while( (i < BLOCK_SIZE) && (!RawData[i]) ){
+    while( (i < BLOCK_SIZE) && (!val) ){
       run_count++;
       i++;
+      val = RawData[i];
     }
 
     /* If we have reached the end of the block then code EOB */
@@ -206,13 +212,12 @@ static unsigned char TokenizeDctBlock (ogg_int16_t * RawData,
       /* If we have a short zero run followed by a low data value code
          the two as a composite token. */
       if ( run_count ){
-        AbsData = abs(RawData[i]);
+        AbsData = abs(val);
 
         if ( ((AbsData == 1) && (run_count <= 17)) ||
              ((AbsData <= 3) && (run_count <= 3)) ) {
           /* Tokenise the run and subsequent value combination value */
-          token_count += TokenizeDctRunValue( run_count,
-                                              RawData[i],
+          token_count += TokenizeDctRunValue( run_count, val,
                                               &TokenListPtr[token_count] );
         }else{
 
@@ -229,14 +234,12 @@ static unsigned char TokenizeDctBlock (ogg_int16_t * RawData,
           token_count++;
 
           /* Now tokenize the value */
-          token_count += TokenizeDctValue( RawData[i],
-                                           &TokenListPtr[token_count] );
+          token_count += TokenizeDctValue( val, &TokenListPtr[token_count] );
         }
       }else{
         /* Else there was NO zero run. */
         /* Tokenise the value  */
-        token_count += TokenizeDctValue( RawData[i],
-                                         &TokenListPtr[token_count] );
+        token_count += TokenizeDctValue( val, &TokenListPtr[token_count] );
       }
     }
   }
@@ -259,7 +262,8 @@ ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi,
   }
 
   /* Tokenise the dct data. */
-  token_count = TokenizeDctBlock( cpi->pb.QFragData[FragIndex],
+  token_count = TokenizeDctBlock( cpi->PredictedDC[FragIndex],
+				  cpi->pb.QFragData[FragIndex],
                                   cpi->pb.TokenList[FragIndex] );
 
   cpi->FragTokenCounts[FragIndex] = token_count;
@@ -275,7 +279,7 @@ static int AllZeroDctData( Q_LIST_ENTRY * QuantList ){
   for ( i = 0; i < 64; i ++ )
     if ( QuantList[i] != 0 )
       return 0;
-
+  
   return 1;
 }
 

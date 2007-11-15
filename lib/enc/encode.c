@@ -510,10 +510,11 @@ static void PackToken ( CP_INSTANCE *cpi, ogg_int32_t FragmentNumber,
      array. */
   if ( Token == DCT_EOB_TOKEN )
     cpi->pb.FragCoeffs[FragmentNumber] = BLOCK_SIZE;
-  else
+  else{
     ExpandToken( cpi->pb.QFragData[FragmentNumber],
                  &cpi->pb.FragCoeffs[FragmentNumber],
                  Token, ExtraBitsToken );
+  }
 
   /* Update record of tokens coded and where we are in this fragment. */
   /* Is there an extra bits token */
@@ -596,16 +597,12 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
   cpi->TokensToBeCoded = cpi->TotTokenCount;
   cpi->TokensCoded = 0;
 
-  /* Calculate the bit rate at which this frame should be capped. */
-  cpi->MaxBitTarget = (ogg_uint32_t)((double)(cpi->ThisFrameTargetBytes * 8) *
-                                     cpi->BitRateCapFactor);
-
   /* Blank the various fragment data structures before we start. */
   memset(cpi->pb.FragCoeffs, 0, cpi->pb.UnitFragments);
   memset(cpi->FragTokens, 0, cpi->pb.UnitFragments);
 
   /* Clear down the QFragData structure for all coded blocks. */
-  ClearDownQFragData(&cpi->pb);
+  //ClearDownQFragData(&cpi->pb);
 
   /* The tree is not needed (implicit) for key frames */
   if ( cpi->pb.FrameType != KEY_FRAME ){
@@ -826,7 +823,7 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
     /* do prediction on all of Y, U or V */
     for ( m = 0 ; m < FragsDown ; m++) {
       for ( n = 0 ; n < FragsAcross ; n++, i++) {
-        cpi->OriginalDC[i] = cpi->pb.QFragData[i][0];
+        cpi->PredictedDC[i] = cpi->pb.QFragData[i][0];
 
         /* only do 2 prediction if fragment coded and on non intra or
            if all fragments are intra */
@@ -852,7 +849,7 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
             if((bc_mask[WhichCase]&pflag) &&
                cpi->pb.display_fragments[fn[k]] &&
                (Mode2Frame[cpi->pb.FragCodingMethod[fn[k]]] == WhichFrame)){
-              v[pcount]=cpi->OriginalDC[fn[k]];
+              v[pcount]=cpi->pb.QFragData[fn[k]][0];
               wpc|=pflag;
               pcount++;
             }
@@ -861,7 +858,7 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
           if(wpc==0) {
 
             /* fall back to the last coded fragment */
-            cpi->pb.QFragData[i][0] -= Last[WhichFrame];
+            cpi->PredictedDC[i] -= Last[WhichFrame];
 
           } else {
 
@@ -892,13 +889,13 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
               }
             }
 
-            cpi->pb.QFragData[i][0] -= PredictedDC;
+            cpi->PredictedDC[i] -= PredictedDC;
           }
 
           /* Save the last fragment coded for whatever frame we are
              predicting from */
 
-          Last[WhichFrame] = cpi->OriginalDC[i];
+          Last[WhichFrame] = cpi->pb.QFragData[i][0];
 
         }
       }
@@ -921,7 +918,6 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
     /* Get the linear index for the current coded fragment. */
     FragIndex = cpi->pb.CodedBlockList[i];
     coded_pixels += DPCMTokenizeBlock ( cpi, FragIndex);
-
   }
 
   /* Bit pack the video data data */
