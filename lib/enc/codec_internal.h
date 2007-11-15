@@ -104,7 +104,6 @@ typedef struct coeffNode{
 typedef struct{
   unsigned char * Yuv0ptr;
   unsigned char * Yuv1ptr;
-  unsigned char * SrfWorkSpcPtr;
   unsigned char * disp_fragments;
 
   ogg_uint32_t  * RegionIndex; /* Gives pixel index for top left of
@@ -611,7 +610,6 @@ typedef struct CP_INSTANCE {
 
   /*********************************************************************/
   /* Frames  Used in the selecetive convolution filtering of the Y plane. */
-  unsigned char    *ConvDestBuffer;
   YUV_BUFFER_ENTRY *yuv0ptr;
   YUV_BUFFER_ENTRY *yuv1ptr;
   /*********************************************************************/
@@ -644,8 +642,6 @@ typedef struct CP_INSTANCE {
   unsigned char    *PartiallyCodedMbPatterns;
   unsigned char    *UncodedMbFlags;
 
-  unsigned char    *extra_fragments;   /* extra updates not
-                                          recommended by pre-processor */
   ogg_int16_t      *PredictedDC;
 
   ogg_uint32_t     *FragmentLastQ;     /* Array used to keep track of
@@ -656,7 +652,6 @@ typedef struct CP_INSTANCE {
   ogg_uint32_t     *FragTokenCounts;   /* Number of tokens per fragment */
 
   ogg_uint32_t     *RunHuffIndices;
-  ogg_uint32_t     *LastCodedErrorScore;
   ogg_uint32_t     *ModeList;
   MOTION_VECTOR    *MVList;
 
@@ -841,7 +836,6 @@ extern void CreateBlockMapping ( ogg_int32_t  (*BlockMap)[4][4],
 extern void UpRegulateDataStream (CP_INSTANCE *cpi, ogg_uint32_t RegulationQ,
                                   ogg_int32_t RecoveryBlocks ) ;
 extern void RegulateQ( CP_INSTANCE *cpi, ogg_int32_t UpdateScore );
-extern void CopyBackExtraFrags(CP_INSTANCE *cpi);
 
 extern void UpdateUMVBorder( PB_INSTANCE *pbi,
                              unsigned char * DestReconPtr );

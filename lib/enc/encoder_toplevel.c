@@ -154,8 +154,6 @@ const th_quant_info TH_VP31_QUANT_INFO={
 
 
 static void EClearFragmentInfo(CP_INSTANCE * cpi){
-  if(cpi->extra_fragments)
-    _ogg_free(cpi->extra_fragments);
   if(cpi->FragmentLastQ)
     _ogg_free(cpi->FragmentLastQ);
   if(cpi->FragTokens)
@@ -164,8 +162,6 @@ static void EClearFragmentInfo(CP_INSTANCE * cpi){
     _ogg_free(cpi->FragTokenCounts);
   if(cpi->RunHuffIndices)
     _ogg_free(cpi->RunHuffIndices);
-  if(cpi->LastCodedErrorScore)
-    _ogg_free(cpi->LastCodedErrorScore);
   if(cpi->ModeList)
     _ogg_free(cpi->ModeList);
   if(cpi->MVList)
@@ -188,12 +184,10 @@ static void EClearFragmentInfo(CP_INSTANCE * cpi){
   if(cpi->BlockCodedFlags)
     _ogg_free(cpi->BlockCodedFlags);
 
-  cpi->extra_fragments = 0;
   cpi->FragmentLastQ = 0;
   cpi->FragTokens = 0;
   cpi->FragTokenCounts = 0;
   cpi->RunHuffIndices = 0;
-  cpi->LastCodedErrorScore = 0;
   cpi->ModeList = 0;
   cpi->MVList = 0;
   cpi->DCT_codes = 0;
@@ -207,10 +201,6 @@ static void EInitFragmentInfo(CP_INSTANCE * cpi){
 
   /* clear any existing info */
   EClearFragmentInfo(cpi);
-
-  /* Perform Fragment Allocations */
-  cpi->extra_fragments =
-    _ogg_malloc(cpi->pb.UnitFragments*sizeof(unsigned char));
 
   /* A note to people reading and wondering why malloc returns aren't
      checked:
@@ -248,9 +238,6 @@ static void EInitFragmentInfo(CP_INSTANCE * cpi){
   cpi->RunHuffIndices =
     _ogg_malloc(cpi->pb.UnitFragments*
                 sizeof(*cpi->RunHuffIndices));
-  cpi->LastCodedErrorScore =
-    _ogg_malloc(cpi->pb.UnitFragments*
-                sizeof(*cpi->LastCodedErrorScore));
   cpi->BlockCodedFlags =
     _ogg_malloc(cpi->pb.UnitFragments*
                 sizeof(*cpi->BlockCodedFlags));
@@ -282,9 +269,6 @@ static void EInitFragmentInfo(CP_INSTANCE * cpi){
 }
 
 static void EClearFrameInfo(CP_INSTANCE * cpi) {
-  if(cpi->ConvDestBuffer )
-    _ogg_free(cpi->ConvDestBuffer );
-  cpi->ConvDestBuffer = 0;
 
   if(cpi->yuv0ptr)
     _ogg_free(cpi->yuv0ptr);
@@ -319,9 +303,6 @@ static void EInitFrameInfo(CP_INSTANCE * cpi){
   EClearFrameInfo(cpi);
 
   /* allocate frames */
-  cpi->ConvDestBuffer =
-    _ogg_malloc(FrameSize*
-                sizeof(*cpi->ConvDestBuffer));
   cpi->yuv0ptr =
     _ogg_malloc(FrameSize*
                 sizeof(*cpi->yuv0ptr));
@@ -351,7 +332,6 @@ static void SetupKeyFrame(CP_INSTANCE *cpi) {
   /* Initialise the cpi->pb.display_fragments and other fragment
      structures for the first frame. */
   memset( cpi->pb.display_fragments, 1, cpi->pb.UnitFragments );
-  memset( cpi->extra_fragments, 1, cpi->pb.UnitFragments );
 
   /* Set up for a KEY FRAME */
   cpi->pb.FrameType = KEY_FRAME;
@@ -445,7 +425,7 @@ static void UpdateFrame(CP_INSTANCE *cpi){
 
   /* Copy back any extra frags that are to be updated by the codec
      as part of the background cleanup task */
-  CopyBackExtraFrags(cpi);
+  //CopyBackExtraFrags(cpi);
 
   /* Encode the data.  */
   EncodeData(cpi);
@@ -654,7 +634,6 @@ static int CompressFrame( CP_INSTANCE *cpi) {
   ogg_int32_t min_blocks_per_frame;
   ogg_uint32_t  i;
   int DropFrame = 0;
-  ogg_uint32_t  ResidueBlocksAdded=0;
   ogg_uint32_t  KFIndicator = 0;
 
   double QModStep;
@@ -672,7 +651,6 @@ static int CompressFrame( CP_INSTANCE *cpi) {
 
   /* Clear down the difference arrays for the current frame. */
   memset( cpi->pb.display_fragments, 0, cpi->pb.UnitFragments );
-  memset( cpi->extra_fragments, 0, cpi->pb.UnitFragments );
 
   /* Calculate the target bytes for this frame. */
   cpi->ThisFrameTargetBytes = cpi->frame_target_rate;
@@ -778,26 +756,6 @@ static int CompressFrame( CP_INSTANCE *cpi) {
     /* Get the baseline Q value */
     RegulateQ( cpi, cpi->MotionScore );
 
-    /* Recode blocks if the error score in last frame was high. */
-    ResidueBlocksAdded  = 0;
-    for ( i = 0; i < cpi->pb.UnitFragments; i++ ){
-      if ( !cpi->pb.display_fragments[i] ){
-        if ( cpi->LastCodedErrorScore[i] >=
-             ResidueErrorThresh[cpi->pb.FrameQIndex] ) {
-          cpi->pb.display_fragments[i] = 1; /* Force block update */
-          cpi->extra_fragments[i] = 1;      /* Insures up to date
-                                               pixel data is used. */
-          ResidueBlocksAdded ++;
-        }
-      }
-    }
-
-    /* Adjust the motion score to allow for residue blocks
-       added. These are assumed to have below average impact on
-       bitrate (Hence ResidueBlockFactor). */
-    cpi->MotionScore = cpi->MotionScore +
-      (ResidueBlocksAdded / ResidueBlockFactor[cpi->pb.FrameQIndex]);
-
     /* Estimate the min number of blocks at best Q */
     min_blocks_per_frame =
       (ogg_int32_t)(cpi->ThisFrameTargetBytes /
@@ -853,7 +811,7 @@ static int CompressFrame( CP_INSTANCE *cpi) {
           && ( cpi->LastKeyFrame > cpi->pb.info.keyframe_mindistance)
           ){
         CompressKeyFrame(cpi);  /* Code a key frame */
-        return;
+        return 0;
       }
 
     }
@@ -1018,7 +976,6 @@ int theora_encode_init(theora_state *th, theora_info *c){
   /* Set up pre-processor config pointers. */
   cpi->ScanConfig.Yuv0ptr = cpi->yuv0ptr;
   cpi->ScanConfig.Yuv1ptr = cpi->yuv1ptr;
-  cpi->ScanConfig.SrfWorkSpcPtr = cpi->ConvDestBuffer;
   cpi->ScanConfig.disp_fragments = cpi->pb.display_fragments;
   cpi->ScanConfig.RegionIndex = cpi->pb.pixel_index_table;
 

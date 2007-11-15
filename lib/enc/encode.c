@@ -596,31 +596,6 @@ static void PackToken ( CP_INSTANCE *cpi, ogg_int32_t FragmentNumber,
   }
 }
 
-static ogg_uint32_t GetBlockReconErrorSlow( CP_INSTANCE *cpi,
-                                     ogg_int32_t BlockIndex ) {
-  ogg_uint32_t  ErrorVal;
-
-  unsigned char * SrcDataPtr =
-    &cpi->ConvDestBuffer[cpi->pb.pixel_index_table[BlockIndex]];
-  unsigned char * RecDataPtr =
-    &cpi->pb.LastFrameRecon[cpi->pb.recon_pixel_index_table[BlockIndex]];
-  ogg_int32_t   SrcStride;
-  ogg_int32_t   RecStride;
-
-  /* Is the block a Y block or a UV block. */
-  if ( BlockIndex < (ogg_int32_t)cpi->pb.YPlaneFragments ) {
-    SrcStride = cpi->pb.info.width;
-    RecStride = cpi->pb.YStride;
-  }else{
-    SrcStride = cpi->pb.info.width >> 1;
-    RecStride = cpi->pb.UVStride;
-  }
-
-  ErrorVal = dsp_sad8x8 (cpi->dsp, SrcDataPtr, SrcStride, RecDataPtr, RecStride);
-
-  return ErrorVal;
-}
-
 static void PackCodedVideo (CP_INSTANCE *cpi) {
   ogg_int32_t i;
   ogg_int32_t EncodedCoeffs = 1;
@@ -961,15 +936,6 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
 
   UpdateFragQIndex(&cpi->pb);
 
-  /* Measure the inter reconstruction error for all the blocks that
-     were coded */
-  /* for use as part of the recovery monitoring process in subsequent frames. */
-  for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) {
-    cpi->LastCodedErrorScore[ cpi->pb.CodedBlockList[i] ] =
-      GetBlockReconErrorSlow( cpi, cpi->pb.CodedBlockList[i] );
-
-  }
-
   /* Return total number of coded pixels */
   return coded_pixels;
 }
@@ -1242,19 +1208,19 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         BestError = (BestError > MBIntraError) ? MBIntraError : BestError;
 
         /* Get the golden frame error */
-        MBGFError = GetMBInterError( cpi, cpi->ConvDestBuffer,
+        MBGFError = GetMBInterError( cpi, cpi->yuv1ptr,
                                      cpi->pb.GoldenFrame, YFragIndex,
                                      0, 0, PixelsPerLine );
         BestError = (BestError > MBGFError) ? MBGFError : BestError;
 
         /* Calculate the 0,0 case. */
-        MBInterError = GetMBInterError( cpi, cpi->ConvDestBuffer,
+        MBInterError = GetMBInterError( cpi, cpi->yuv1ptr,
                                         cpi->pb.LastFrameRecon,
                                         YFragIndex, 0, 0, PixelsPerLine );
         BestError = (BestError > MBInterError) ? MBInterError : BestError;
 
         /* Measure error for last MV */
-        MBLastInterError =  GetMBInterError( cpi, cpi->ConvDestBuffer,
+        MBLastInterError =  GetMBInterError( cpi, cpi->yuv1ptr,
                                              cpi->pb.LastFrameRecon,
                                              YFragIndex, LastInterMVect.x,
                                              LastInterMVect.y, PixelsPerLine );
@@ -1262,7 +1228,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
           MBLastInterError : BestError;
 
         /* Measure error for prior last MV */
-        MBPriorLastInterError =  GetMBInterError( cpi, cpi->ConvDestBuffer,
+        MBPriorLastInterError =  GetMBInterError( cpi, cpi->yuv1ptr,
                                                   cpi->pb.LastFrameRecon,
                                                   YFragIndex,
                                                   PriorLastInterMVect.x,
@@ -1334,7 +1300,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                                             cpi->MVPixelOffsetY, &GFMVect );
 
           /* Measure error for last GFMV */
-          LastMBGF_MVError =  GetMBInterError( cpi, cpi->ConvDestBuffer,
+          LastMBGF_MVError =  GetMBInterError( cpi, cpi->yuv1ptr,
                                                cpi->pb.GoldenFrame,
                                                YFragIndex, LastGFMVect.x,
                                                LastGFMVect.y, PixelsPerLine );

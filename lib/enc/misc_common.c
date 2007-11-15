@@ -92,7 +92,6 @@ static void UpRegulateMB( CP_INSTANCE *cpi, ogg_uint32_t RegulationQ,
       if ( ( !cpi->pb.display_fragments[FragIndex] ) &&
            ( (NoCheck) || (cpi->FragmentLastQ[FragIndex] > RegulationQ) ) ){
         cpi->pb.display_fragments[FragIndex] = 1;
-        cpi->extra_fragments[FragIndex] = 1;
         cpi->FragmentLastQ[FragIndex] = RegulationQ;
         cpi->MotionScore++;
       }
@@ -109,7 +108,6 @@ static void UpRegulateMB( CP_INSTANCE *cpi, ogg_uint32_t RegulationQ,
     if ( ( !cpi->pb.display_fragments[FragIndex] ) &&
          ( (NoCheck) || (cpi->FragmentLastQ[FragIndex] > RegulationQ) ) ) {
       cpi->pb.display_fragments[FragIndex] = 1;
-      cpi->extra_fragments[FragIndex] = 1;
       cpi->FragmentLastQ[FragIndex] = RegulationQ;
       cpi->MotionScore++;
     }
@@ -118,7 +116,6 @@ static void UpRegulateMB( CP_INSTANCE *cpi, ogg_uint32_t RegulationQ,
     if ( ( !cpi->pb.display_fragments[FragIndex] ) &&
          ( (NoCheck) || (cpi->FragmentLastQ[FragIndex] > RegulationQ) ) ) {
       cpi->pb.display_fragments[FragIndex] = 1;
-      cpi->extra_fragments[FragIndex] = 1;
       cpi->FragmentLastQ[FragIndex] = RegulationQ;
       cpi->MotionScore++;
     }
@@ -286,54 +283,6 @@ void RegulateQ( CP_INSTANCE *cpi, ogg_int32_t UpdateScore ) {
     /* Initialise quality tables. */
     UpdateQC( cpi, cpi->pb.ThisFrameQualityValue );
     cpi->pb.LastFrameQualityValue = cpi->pb.ThisFrameQualityValue;
-  }
-}
-
-void CopyBackExtraFrags(CP_INSTANCE *cpi){
-  ogg_uint32_t  i,j;
-  unsigned char * SrcPtr;
-  unsigned char * DestPtr;
-  ogg_uint32_t  PlaneLineStep;
-  ogg_uint32_t  PixelIndex;
-
-  /*  Copy back for Y plane. */
-  PlaneLineStep = cpi->pb.info.width;
-  for ( i = 0; i < cpi->pb.YPlaneFragments; i++ ) {
-    /* We are only interested in updated fragments. */
-    if ( cpi->extra_fragments[i] ) {
-      /* Get the start index for the fragment. */
-      PixelIndex = cpi->pb.pixel_index_table[i];
-      SrcPtr = &cpi->yuv1ptr[PixelIndex];
-      DestPtr = &cpi->ConvDestBuffer[PixelIndex];
-
-      for ( j = 0; j < VFRAGPIXELS; j++ ) {
-        memcpy( DestPtr, SrcPtr, HFRAGPIXELS);
-
-        SrcPtr += PlaneLineStep;
-        DestPtr += PlaneLineStep;
-      }
-    }
-  }
-
-  /* Now the U and V planes */
-  PlaneLineStep = cpi->pb.info.width / 2;
-  for ( i = cpi->pb.YPlaneFragments;
-        i < (cpi->pb.YPlaneFragments + (2 * cpi->pb.UVPlaneFragments)) ;
-        i++ ) {
-
-    /* We are only interested in updated fragments. */
-    if ( cpi->extra_fragments[i] ) {
-      /* Get the start index for the fragment. */
-      PixelIndex = cpi->pb.pixel_index_table[i];
-      SrcPtr = &cpi->yuv1ptr[PixelIndex];
-      DestPtr = &cpi->ConvDestBuffer[PixelIndex];
-
-      for ( j = 0; j < VFRAGPIXELS; j++ ) {
-        memcpy( DestPtr, SrcPtr, HFRAGPIXELS);
-        SrcPtr += PlaneLineStep;
-        DestPtr += PlaneLineStep;
-      }
-    }
   }
 }
 

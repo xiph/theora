@@ -277,7 +277,6 @@ void ScanYUVInit( PP_INSTANCE *  ppi, SCAN_CONFIG_DATA * ScanConfigPtr){
   /* Set up the various imported data structure pointers. */
   ppi->ScanConfig.Yuv0ptr = ScanConfigPtr->Yuv0ptr;
   ppi->ScanConfig.Yuv1ptr = ScanConfigPtr->Yuv1ptr;
-  ppi->ScanConfig.SrfWorkSpcPtr = ScanConfigPtr->SrfWorkSpcPtr;
   ppi->ScanConfig.disp_fragments = ScanConfigPtr->disp_fragments;
 
   ppi->ScanConfig.RegionIndex = ScanConfigPtr->RegionIndex;
@@ -1696,43 +1695,6 @@ static void LineSearchScoreRow( PP_INSTANCE *ppi,
   }
 }
 
-static void RowCopy( PP_INSTANCE *ppi, ogg_uint32_t BlockMapIndex ){
-
-  ogg_uint32_t   i,j;
-
-  ogg_uint32_t   PixelIndex = ppi->ScanPixelIndexTable[BlockMapIndex];
-  signed char   * BlockMapPtr = &ppi->ScanDisplayFragments[BlockMapIndex];
-  signed char   * PrevFragmentsPtr = &ppi->PrevFragments[0][BlockMapIndex];
-
-  unsigned char  * SourcePtr;
-  unsigned char  * DestPtr;
-
-  /* Copy pixels from changed blocks back to reference frame. */
-  for ( i = 0; i < (ogg_uint32_t)ppi->PlaneHFragments; i ++ ){
-    /* If the fragement is marked for update or was recently marked
-       for update (PrevFragmentsPtr[i]) */
-    if ( (BlockMapPtr[i] > BLOCK_NOT_CODED) ||
-         (PrevFragmentsPtr[i] == BLOCK_CODED) ){
-      /* Set up the various pointers required. */
-      SourcePtr = &ppi->ScanConfig.Yuv1ptr[PixelIndex];
-      DestPtr = &ppi->ScanConfig.SrfWorkSpcPtr[PixelIndex];
-
-      /* For each row of the block */
-      for ( j = 0; j < VFRAGPIXELS; j++ ){
-        /* Copy the data unaltered from source to destination */
-        memcpy(DestPtr,SourcePtr,8);
-
-        /* Increment pointers for next line in the block */
-        SourcePtr += ppi->PlaneWidth;
-        DestPtr += ppi->PlaneWidth;
-      }
-    }
-
-    /* Increment pixel index for next block. */
-    PixelIndex += HFRAGPIXELS;
-  }
-}
-
 static void RowBarEnhBlockMap( PP_INSTANCE *ppi,
                                signed char   * UpdatedBlockMapPtr,
                                signed char   * BarBlockMapPtr,
@@ -2225,10 +2187,6 @@ static void AnalysePlane( PP_INSTANCE *ppi,
 
       BarCopyBack(ppi, &ppi->ScanDisplayFragments[ScoreFragIndex4],
                   &ppi->BarBlockMap[(RowNumber4 % 3) * ppi->PlaneHFragments]);
-
-      /* Copy over the data from any blocks marked for update into the
-         output buffer. */
-      RowCopy(ppi, ScoreFragIndex4);
     }
   }
 }
