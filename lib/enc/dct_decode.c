@@ -70,65 +70,6 @@ void SetupLoopFilter(PB_INSTANCE *pbi){
   SetupBoundingValueArray_Generic(pbi, FLimit);
 }
 
-static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
-  ogg_uint32_t ReconPixelsPerLine;
-  ogg_int32_t     ReconPixelIndex;
-
-  /* Select the appropriate inverse Q matrix and line stride */
-  if ( FragmentNumber<(ogg_int32_t)pbi->YPlaneFragments ){
-    ReconPixelsPerLine = pbi->YStride;
-    pbi->dequant_coeffs = pbi->dequant_Y_coeffs;
-  }else if ( FragmentNumber<(ogg_int32_t)(pbi->YPlaneFragments + pbi->UVPlaneFragments) ){
-    ReconPixelsPerLine = pbi->UVStride;
-    pbi->dequant_coeffs = pbi->dequant_U_coeffs;
-  }else{
-    ReconPixelsPerLine = pbi->UVStride;
-    pbi->dequant_coeffs = pbi->dequant_V_coeffs;
-  }
-
-  /* Set up pointer into the quantisation buffer. */
-  pbi->quantized_list = &pbi->QFragData[FragmentNumber][0];
-
-#ifdef _TH_DEBUG_
- {
-   int i;
-   for(i=0;i<64;i++)
-     pbi->QFragFREQ[FragmentNumber][dezigzag_index[i]]= 
-       pbi->quantized_list[i] * pbi->dequant_coeffs[i];
- }
-#endif
-
-  /* Invert quantisation and DCT to get pixel data. */
-  switch(pbi->FragCoefEOB[FragmentNumber]){
-  case 0:case 1:
-    IDct1( pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
-    break;
-  case 2: case 3:
-    dsp_IDct3(pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
-    break;
-  case 4:case 5:case 6:case 7:case 8: case 9:case 10:
-    dsp_IDct10(pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
-    break;
-  default:
-    dsp_IDctSlow(pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
-  }
-
-#ifdef _TH_DEBUG_
- {
-   int i;
-   for(i=0;i<64;i++)
-     pbi->QFragTIME[FragmentNumber][i]= pbi->ReconDataBuffer[i];
- }
-#endif
-
-  /* Convert fragment number to a pixel offset in a reconstruction buffer. */
-  ReconPixelIndex = pbi->recon_pixel_index_table[FragmentNumber];
-
-  /* Get the pixel index for the first pixel in the fragment. */
-  dsp_recon_intra8x8 (pbi->dsp, (unsigned char *)(&pbi->ThisFrameRecon[ReconPixelIndex]),
-              (ogg_int16_t *)pbi->ReconDataBuffer, ReconPixelsPerLine);
-}
-
 static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber){
   unsigned char *LastFrameRecPtr;   /* Pointer into previous frame
                                        reconstruction. */
@@ -511,54 +452,6 @@ static void CopyNotRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
   }
 }
 
-void ExpandToken( Q_LIST_ENTRY * ExpandedBlock,
-                  unsigned char * CoeffIndex, ogg_uint32_t Token,
-                  ogg_int32_t ExtraBits ){
-  /* Is the token is a combination run and value token. */
-  if ( Token >= DCT_RUN_CATEGORY1 ){
-    /* Expand the token and additional bits to a zero run length and
-       data value.  */
-    if ( Token < DCT_RUN_CATEGORY2 ) {
-      /* Decoding method depends on token */
-      if ( Token < DCT_RUN_CATEGORY1B ) {
-        /* Step on by the zero run length */
-        *CoeffIndex += (unsigned char)((Token - DCT_RUN_CATEGORY1) + 1);
-
-      } else if ( Token == DCT_RUN_CATEGORY1B ) {
-        /* Bits 0-1 determines the zero run length */
-        *CoeffIndex += (6 + (ExtraBits & 0x03));
-
-      }else{
-        /* Bits 0-2 determines the zero run length */
-        *CoeffIndex += (10 + (ExtraBits & 0x07));
-
-      }
-    }else{
-      /* If token == DCT_RUN_CATEGORY2 we have a single 0 followed by
-         a value */
-      if ( Token == DCT_RUN_CATEGORY2 ){
-        /* Step on by the zero run length */
-        *CoeffIndex += 1;
-
-      }else{
-        /* else we have 2->3 zeros followed by a value */
-        /* Bit 0 determines the zero run length */
-        *CoeffIndex += 2 + (ExtraBits & 0x01);
-      }
-    }
-
-    /* Step on over value */
-    *CoeffIndex += 1;
-
-  } else if ( Token == DCT_SHORT_ZRL_TOKEN ||  Token == DCT_ZRL_TOKEN ) {
-    /* Token is a ZRL token so step on by the appropriate number of zeros */
-    *CoeffIndex += ExtraBits + 1;
-  } else {
-    /* Step on the coefficient index. */
-    *CoeffIndex += 1;
-  }
-}
-
 void ClearDownQFragData(PB_INSTANCE *pbi){
   ogg_int32_t       i;
   Q_LIST_ENTRY *    QFragPtr;
@@ -898,49 +791,13 @@ void LoopFilter(PB_INSTANCE *pbi){
 void ReconRefFrames (PB_INSTANCE *pbi){
   ogg_int32_t i,j;
   unsigned char *SwapReconBuffersTemp;
-  int FragsAcross=pbi->HFragments;
-  int FromFragment,ToFragment;
-  int FragsDown = pbi->VFragments;
-
-  void (*ExpandBlockA) ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber );
-
-  if ( pbi->FrameType == KEY_FRAME )
-    ExpandBlockA=ExpandKFBlock;
-  else
-    ExpandBlockA=ExpandBlock;
 
   SetupLoopFilter(pbi);
 
-  /* for y,u,v */
-  for ( j = 0; j < 3 ; j++) {
-    /* pick which fragments based on Y, U, V */
-    switch(j){
-    case 0: /* y */
-      FromFragment = 0;
-      ToFragment = pbi->YPlaneFragments;
-      FragsAcross = pbi->HFragments;
-      FragsDown = pbi->VFragments;
-      break;
-    case 1: /* u */
-      FromFragment = pbi->YPlaneFragments;
-      ToFragment = pbi->YPlaneFragments + pbi->UVPlaneFragments ;
-      FragsAcross = pbi->HFragments >> 1;
-      FragsDown = pbi->VFragments >> 1;
-      break;
-    /*case 2:  v */
-    default:    
-      FromFragment = pbi->YPlaneFragments + pbi->UVPlaneFragments;
-      ToFragment = pbi->YPlaneFragments + (2 * pbi->UVPlaneFragments) ;
-      FragsAcross = pbi->HFragments >> 1;
-      FragsDown = pbi->VFragments >> 1;
-      break;
-    }
+  /* Inverse DCT and reconstitute buffer in thisframe */
+  for(i=0;i<pbi->UnitFragments;i++)
+    ExpandBlock( pbi, i );
 
-    /* Inverse DCT and reconstitute buffer in thisframe */
-    for(i=FromFragment;i<ToFragment;i++)
-      ExpandBlockA( pbi, i );
-  }
-  
   /* Copy the current reconstruction back to the last frame recon buffer. */
   if(pbi->CodedBlockIndex > (ogg_int32_t) (pbi->UnitFragments >> 1)){
     SwapReconBuffersTemp = pbi->ThisFrameRecon;

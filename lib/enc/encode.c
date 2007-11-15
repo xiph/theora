@@ -496,6 +496,48 @@ static void PackEOBRun( CP_INSTANCE *cpi) {
   cpi->RunLength = 0;
 }
 
+static int TokenCoeffs( ogg_uint32_t Token,
+		 ogg_int32_t ExtraBits ){
+  if ( Token == DCT_EOB_TOKEN )
+    return BLOCK_SIZE;
+
+  /* Is the token is a combination run and value token. */
+  if ( Token >= DCT_RUN_CATEGORY1 ){
+    /* Expand the token and additional bits to a zero run length and
+       data value.  */
+    if ( Token < DCT_RUN_CATEGORY2 ) {
+      /* Decoding method depends on token */
+      if ( Token < DCT_RUN_CATEGORY1B ) {
+        /* Step on by the zero run length */
+        return(Token - DCT_RUN_CATEGORY1) + 2;
+      } else if ( Token == DCT_RUN_CATEGORY1B ) {
+        /* Bits 0-1 determines the zero run length */
+        return 7 + (ExtraBits & 0x03);
+      }else{
+        /* Bits 0-2 determines the zero run length */
+        return 11 + (ExtraBits & 0x07);
+      }
+    }else{
+      /* If token == DCT_RUN_CATEGORY2 we have a single 0 followed by
+         a value */
+      if ( Token == DCT_RUN_CATEGORY2 ){
+        /* Step on by the zero run length */
+        return  2;
+      }else{
+        /* else we have 2->3 zeros followed by a value */
+        /* Bit 0 determines the zero run length */
+        return 3 + (ExtraBits & 0x01);
+      }
+    }
+  } 
+
+  if ( Token == DCT_SHORT_ZRL_TOKEN ||  Token == DCT_ZRL_TOKEN ) 
+    /* Token is a ZRL token so step on by the appropriate number of zeros */
+    return ExtraBits + 1;
+
+  return 1;
+}
+
 static void PackToken ( CP_INSTANCE *cpi, ogg_int32_t FragmentNumber,
                  ogg_uint32_t HuffIndex ) {
   ogg_uint32_t Token =
@@ -508,13 +550,7 @@ static void PackToken ( CP_INSTANCE *cpi, ogg_int32_t FragmentNumber,
   /* Update the record of what coefficient we have got up to for this
      block and unpack the encoded token back into the quantised data
      array. */
-  if ( Token == DCT_EOB_TOKEN )
-    cpi->pb.FragCoeffs[FragmentNumber] = BLOCK_SIZE;
-  else{
-    ExpandToken( cpi->pb.QFragData[FragmentNumber],
-                 &cpi->pb.FragCoeffs[FragmentNumber],
-                 Token, ExtraBitsToken );
-  }
+  cpi->pb.FragCoeffs[FragmentNumber] += TokenCoeffs ( Token, ExtraBitsToken );
 
   /* Update record of tokens coded and where we are in this fragment. */
   /* Is there an extra bits token */
@@ -913,18 +949,12 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
  }
 #endif
 
-  /* Pack DC tokens and adjust the ones we couldn't predict 2d */
-  for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) {
-    /* Get the linear index for the current coded fragment. */
-    FragIndex = cpi->pb.CodedBlockList[i];
-    coded_pixels += DPCMTokenizeBlock ( cpi, FragIndex);
-  }
+  /* Pack DCT tokens */
+  for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) 
+    coded_pixels += DPCMTokenizeBlock ( cpi, cpi->pb.CodedBlockList[i] );
 
   /* Bit pack the video data data */
   PackCodedVideo(cpi);
-
-  /* End the bit packing run. */
-  /* EndAddBitsToBuffer(cpi); */
 
   /* Reconstruct the reference frames */
   ReconRefFrames(&cpi->pb);
