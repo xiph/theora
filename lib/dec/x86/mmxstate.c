@@ -22,11 +22,6 @@
 
 #if defined(USE_ASM)
 
-static const __attribute__((aligned(8),used)) ogg_int64_t OC_V3=
- 0x0003000300030003LL;
-static const __attribute__((aligned(8),used)) ogg_int64_t OC_V4=
- 0x0004000400040004LL;
-
 static const __attribute__((aligned(8),used)) int OC_FZIG_ZAGMMX[64]={
    0, 8, 1, 2, 9,16,24,17,
   10, 3,32,11,18,25, 4,12,
@@ -297,19 +292,21 @@ static void loop_filter_v(unsigned char *_pix,int _ystride,
     "punpcklbw %%mm0,%%mm4\n\t"
     "punpckhbw %%mm0,%%mm3\n\t"
     "punpcklbw %%mm0,%%mm2\n\t"
-    /*Preload...*/
-    "movq %[OC_V3],%%mm0\n\t"
-    /*mm3:mm2=_pix[0...8+_ystride*2]-_pix[0...8+_ystride]*/
+    /*mm0=3 3 3 3
+      mm3:mm2=_pix[0...8+_ystride*2]-_pix[0...8+_ystride]*/
+    "pcmpeqw %%mm0,%%mm0\n\t"
     "psubw %%mm5,%%mm3\n\t"
+    "psrlw $14,%%mm0\n\t"
     "psubw %%mm4,%%mm2\n\t"
     /*Scale by 3.*/
     "pmullw %%mm0,%%mm3\n\t"
     "pmullw %%mm0,%%mm2\n\t"
-    /*Preload...*/
-    "movq %[OC_V4],%%mm0\n\t"
-    /*f=mm3:mm2==_pix[0...8]-_pix[0...8+_ystride*3]+
+    /*mm0=4 4 4 4
+      f=mm3:mm2==_pix[0...8]-_pix[0...8+_ystride*3]+
        3*(_pix[0...8+_ystride*2]-_pix[0...8+_ystride])*/
+    "psrlw $1,%%mm0\n\t"
     "paddw %%mm7,%%mm3\n\t"
+    "psllw $2,%%mm0\n\t"
     "paddw %%mm6,%%mm2\n\t"
     /*Add 4.*/
     "paddw %%mm0,%%mm3\n\t"
@@ -432,8 +429,7 @@ static void loop_filter_v(unsigned char *_pix,int _ystride,
     "movq %%mm4,(%[pix],%[ystride])\n\t"
     "movq %%mm1,(%[pix],%[ystride],2)\n\t"
     :[s]"=&S"(esi)
-    :[pix]"r"(_pix),[ystride]"r"((long)_ystride),[ll]"r"(_ll),
-     [OC_V3]"m"(OC_V3),[OC_V4]"m"(OC_V4)
+    :[pix]"r"(_pix),[ystride]"r"((long)_ystride),[ll]"r"(_ll)
     :"memory"
   );
 }
@@ -484,14 +480,20 @@ static void loop_filter_h4(unsigned char *_pix,long _ystride,
     "psubw %%mm3,%%mm1\n\t"
     /*Save a copy of pix[2] for later.*/
     "movq %%mm0,%%mm4\n\t"
-    /*mm0=mm0-mm5==pix[2]-pix[1]*/
+    /*mm2=3 3 3 3
+      mm0=mm0-mm5==pix[2]-pix[1]*/
+    "pcmpeqw %%mm2,%%mm2\n\t"
     "psubw %%mm5,%%mm0\n\t"
+    "psrlw $14,%%mm2\n\t"
     /*Scale by 3.*/
-    "pmullw %[OC_V3],%%mm0\n\t"
-    /*f=mm1==_pix[0]-_pix[3]+ 3*(_pix[2]-_pix[1])*/
+    "pmullw %%mm2,%%mm0\n\t"
+    /*mm2=4 4 4 4
+      f=mm1==_pix[0]-_pix[3]+ 3*(_pix[2]-_pix[1])*/
+    "psrlw $1,%%mm2\n\t"
     "paddw %%mm1,%%mm0\n\t"
+    "psllw $2,%%mm2\n\t"
     /*Add 4.*/
-    "paddw %[OC_V4],%%mm0\n\t"
+    "paddw %%mm2,%%mm0\n\t"
     /*"Divide" by 8, producing the residuals R_i.*/
     "psraw $3,%%mm0\n\t"
     /*Now compute lflim of mm0 cf. Section 7.10 of the sepc.*/
@@ -570,7 +572,7 @@ static void loop_filter_h4(unsigned char *_pix,long _ystride,
     "movw %%di,1(%[pix],%[s])\n\t"
     :[s]"=&S"(esi),[d]"=&D"(edi),
      [pix]"+r"(_pix),[ystride]"+r"(_ystride),[ll]"+r"(_ll)
-    :[OC_V3]"m"(OC_V3),[OC_V4]"m"(OC_V4)
+    :
     :"memory"
   );
 }
@@ -584,8 +586,8 @@ static void loop_filter_h(unsigned char *_pix,int _ystride,
 
 /*We copy the whole function because the MMX routines will be inlined 4 times,
    and we can do just a single emms call at the end this way.
-  We also do not utilize the _bv lookup table, instead computing the values
-   that would lie in it on the fly.*/
+  We also do not use the _bv lookup table, instead computing the values that
+   would lie in it on the fly.*/
 
 /*Apply the loop filter to a given set of fragment rows in the given plane.
   The filter may be run on the bottom edge, affecting pixels in the next row of

@@ -21,28 +21,29 @@
 
 #if defined(USE_ASM)
 
-static const __attribute__((aligned(8),used)) ogg_int64_t OC_V128=
- 0x0080008000800080LL;
-
 void oc_frag_recon_intra_mmx(unsigned char *_dst,int _dst_ystride,
  const ogg_int16_t *_residue){
   int i;
   for(i=8;i-->0;){
     __asm__ __volatile__(
-      /*Set mm0 to 0x0080008000800080.*/
-      "movq %[OC_V128],%%mm0\n\t"
+      /*Set mm0 to 0xFFFFFFFFFFFFFFFF.*/
+      "pcmpeqw %%mm0,%%mm0\n\t"
       /*First four input values*/
       "movq (%[residue]),%%mm2\n\t"
-      /*Set mm1=mm0.*/
-      "movq %%mm0,%%mm1\n\t"
+      /*Set mm0 to 0x8000800080008000.*/
+      "psllw $15,%%mm0\n\t"
       /*Next four input values.*/
       "movq 8(%[residue]),%%mm3\n\t"
-      /*Add 128 and saturate to 16 bits.*/
-      "paddsw %%mm3,%%mm1\n\t"
+      /*Set mm0 to 0x0080008000800080.*/
+      "psrlw $8,%%mm0\n\t"
       /*_residue+=16*/
       "lea 0x10(%[residue]),%[residue]\n\t"
+      /*Set mm1=mm0.*/
+      "movq %%mm0,%%mm1\n\t"
       /*Add 128 and saturate to 16 bits.*/
       "paddsw %%mm2,%%mm0\n\t"
+      /*Add 128 and saturate to 16 bits.*/
+      "paddsw %%mm3,%%mm1\n\t"
       /*Pack saturate with next(high) four values.*/
       "packuswb %%mm1,%%mm0\n\t"
       /*Writeback.*/
@@ -50,7 +51,7 @@ void oc_frag_recon_intra_mmx(unsigned char *_dst,int _dst_ystride,
       /*_dst+=_dst_ystride*/
       "lea  (%[dst],%[dst_ystride]),%[dst]\n\t"
       :[dst]"+r"(_dst),[residue]"+r"(_residue)
-      :[dst_ystride]"r"((long)_dst_ystride),[OC_V128]"m"(OC_V128)
+      :[dst_ystride]"r"((long)_dst_ystride)
       :"memory"
     );
   }

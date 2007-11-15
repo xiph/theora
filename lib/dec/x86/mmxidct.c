@@ -26,22 +26,16 @@
 #if defined(USE_ASM)
 
 /*These are offsets into the table of constants below.*/
-/*4 masks, in order: low word to high.*/
-#define OC_MASK_OFFSET    (0)
 /*7 rows of cosines, in order: pi/16 * (1 ... 7).*/
-#define OC_COSINE_OFFSET (32)
+#define OC_COSINE_OFFSET (0)
 /*A row of 8's.*/
-#define OC_EIGHT_OFFSET  (88)
+#define OC_EIGHT_OFFSET  (56)
 
 
 
 /*A table of constants used by the MMX routines.*/
 static const ogg_uint16_t __attribute__((aligned(8),used))
- OC_IDCT_CONSTS[(4+7+1)*4]={
-  65535,    0,    0,    0,
-      0,65535,    0,    0,
-      0,    0,65535,    0,
-      0,    0,    0,65535,
+ OC_IDCT_CONSTS[(7+1)*4]={
   (ogg_uint16_t)OC_C1S7,(ogg_uint16_t)OC_C1S7,
   (ogg_uint16_t)OC_C1S7,(ogg_uint16_t)OC_C1S7,
   (ogg_uint16_t)OC_C2S6,(ogg_uint16_t)OC_C2S6,
@@ -316,7 +310,6 @@ static const ogg_uint16_t __attribute__((aligned(8),used))
   "#end OC_COLUMN_IDCT\n\t" \
 
 #define OC_MID(_m,_i) OC_M2STR(_m+(_i)*8)"(%[c])"
-#define OC_M(_i)      OC_MID(OC_MASK_OFFSET,_i)
 #define OC_C(_i)      OC_MID(OC_COSINE_OFFSET,_i-1)
 #define OC_8          OC_MID(OC_EIGHT_OFFSET,0)
 
