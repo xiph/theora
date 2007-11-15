@@ -452,17 +452,6 @@ static void CopyNotRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
   }
 }
 
-void ClearDownQFragData(PB_INSTANCE *pbi){
-  ogg_int32_t       i;
-  Q_LIST_ENTRY *    QFragPtr;
-
-  for ( i = 0; i < pbi->CodedBlockIndex; i++ ) {
-    /* Get the linear index for the current fragment. */
-    QFragPtr = pbi->QFragData[pbi->CodedBlockList[i]];
-    memset(QFragPtr, 0, 64*sizeof(Q_LIST_ENTRY));
-  }
-}
-
 static void FilterHoriz__c(unsigned char * PixelPtr,
                         ogg_int32_t LineLength,
                         ogg_int16_t *BoundingValuePtr){

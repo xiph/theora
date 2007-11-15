@@ -285,7 +285,6 @@ static int AllZeroDctData( Q_LIST_ENTRY * QuantList ){
 
 static void MotionBlockDifference (CP_INSTANCE * cpi, unsigned char * FiltPtr,
                             ogg_int16_t *DctInputPtr, ogg_int32_t MvDevisor,
-                            unsigned char* old_ptr1, unsigned char* new_ptr1,
                             ogg_uint32_t FragIndex,ogg_uint32_t PixelsPerLine,
                             ogg_uint32_t ReconPixelsPerLine) {
 
@@ -359,20 +358,16 @@ static void MotionBlockDifference (CP_INSTANCE * cpi, unsigned char * FiltPtr,
   if ( AbsRefOffset == 0 ){
     dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
                PixelsPerLine, ReconPixelsPerLine);
-    dsp_copy8x8 (cpi->dsp, new_ptr1, old_ptr1, PixelsPerLine);
   } else {
     /* Fractional pixel MVs. */
     /* Note that we only use two pixel values even for the diagonal */
     dsp_sub8x8avg2(cpi->dsp, FiltPtr, ReconPtr1,ReconPtr2,DctInputPtr,
                  PixelsPerLine, ReconPixelsPerLine);
-    dsp_copy8x8 (cpi->dsp, new_ptr1, old_ptr1, PixelsPerLine);
   }
 }
 
 void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
                              ogg_uint32_t PixelsPerLine) {
-  unsigned char *new_ptr1;    /* Pointers into current frame */
-  unsigned char *old_ptr1;    /* Pointers into old frame */
   unsigned char *FiltPtr;     /* Pointers to srf filtered pixels */
   ogg_int16_t   *DctInputPtr; /* Pointer into buffer containing input to DCT */
   int LeftEdge;               /* Flag if block at left edge of component */
@@ -382,8 +377,6 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
   ogg_int32_t   MvDevisor;      /* Defines MV resolution (2 = 1/2
                                    pixel for Y or 4 = 1/4 for UV) */
 
-  new_ptr1 = &cpi->yuv1ptr[cpi->pb.pixel_index_table[FragIndex]];
-  old_ptr1 = &cpi->yuv0ptr[cpi->pb.pixel_index_table[FragIndex]];
   DctInputPtr   = cpi->DCTDataBuffer;
 
   /* Set plane specific values */
@@ -436,7 +429,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
   if ( ModeUsesMC[cpi->pb.CodingMode] ){
 
     MotionBlockDifference(cpi, FiltPtr, DctInputPtr, MvDevisor,
-                          old_ptr1, new_ptr1, FragIndex, PixelsPerLine,
+                          FragIndex, PixelsPerLine,
                           ReconPixelsPerLine);
 
   } else if ( (cpi->pb.CodingMode==CODE_INTER_NO_MV ) ||
@@ -451,10 +444,8 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
 
     dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
                PixelsPerLine, ReconPixelsPerLine);
-    dsp_copy8x8 (cpi->dsp, new_ptr1, old_ptr1, PixelsPerLine);
   } else if ( cpi->pb.CodingMode==CODE_INTRA ) {
     dsp_sub8x8_128(cpi->dsp, FiltPtr, DctInputPtr, PixelsPerLine);
-    dsp_copy8x8 (cpi->dsp, new_ptr1, old_ptr1, PixelsPerLine);
   }
 
   /* Proceed to encode the data into the encode buffer if the encoder

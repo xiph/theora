@@ -650,7 +650,7 @@ static void CompressKeyFrame(CP_INSTANCE *cpi){
 
 }
 
-static void CompressFrame( CP_INSTANCE *cpi) {
+static int CompressFrame( CP_INSTANCE *cpi) {
   ogg_int32_t min_blocks_per_frame;
   ogg_uint32_t  i;
   int DropFrame = 0;
@@ -880,6 +880,8 @@ static void CompressFrame( CP_INSTANCE *cpi) {
        invariant */
     UpdateFrame(cpi);
   }
+
+  return DropFrame;
 }
 
 /********************** The toplevel: encode ***********************/
@@ -1060,6 +1062,7 @@ int theora_encode_init(theora_state *th, theora_info *c){
 
 int theora_encode_YUVin(theora_state *t,
                          yuv_buffer *yuv){
+  int dropped = 0;
   ogg_int32_t i;
   unsigned char *LocalDataPtr;
   unsigned char *InputDataPtr;
@@ -1124,7 +1127,7 @@ int theora_encode_YUVin(theora_state *t,
       cpi->ThisIsKeyFrame = 0;
     } else  {
       /* Compress the frame. */
-      CompressFrame( cpi );
+      dropped = CompressFrame( cpi );
     }
 
   }
@@ -1137,6 +1140,17 @@ int theora_encode_YUVin(theora_state *t,
   t->granulepos=
     ((cpi->CurrentFrame - cpi->LastKeyFrame)<<cpi->pb.keyframe_granule_shift)+
     cpi->LastKeyFrame - 1;
+
+  if(!dropped){
+    unsigned char *tmp = cpi->yuv0ptr;
+    cpi->yuv0ptr = cpi->yuv1ptr;
+    cpi->yuv1ptr = tmp;
+    
+    cpi->ScanConfig.Yuv0ptr = cpi->yuv0ptr;
+    cpi->ScanConfig.Yuv1ptr = cpi->yuv1ptr;
+    cpi->pp.ScanConfig.Yuv0ptr = cpi->yuv0ptr;
+    cpi->pp.ScanConfig.Yuv1ptr = cpi->yuv1ptr;
+  }
 
 #ifdef _TH_DEBUG_
   dframe++;
