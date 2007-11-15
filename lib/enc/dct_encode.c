@@ -283,10 +283,14 @@ static int AllZeroDctData( Q_LIST_ENTRY * QuantList ){
   return 1;
 }
 
-static void MotionBlockDifference (CP_INSTANCE * cpi, unsigned char * FiltPtr,
-                            ogg_int16_t *DctInputPtr, ogg_int32_t MvDevisor,
-                            ogg_uint32_t FragIndex,ogg_uint32_t PixelsPerLine,
-                            ogg_uint32_t ReconPixelsPerLine) {
+static void BlockUpdateDifference (CP_INSTANCE * cpi, 
+				   unsigned char *FiltPtr,
+				   ogg_int16_t *DctInputPtr, 
+				   unsigned char *thisrecon,
+				   ogg_int32_t MvDevisor,
+				   ogg_uint32_t FragIndex,
+				   ogg_uint32_t PixelsPerLine,
+				   ogg_uint32_t ReconPixelsPerLine) {
 
   ogg_int32_t MvShift;
   ogg_int32_t MvModMask;
@@ -298,71 +302,94 @@ static void MotionBlockDifference (CP_INSTANCE * cpi, unsigned char * FiltPtr,
                                    half pixel MC */
   unsigned char  *ReconPtr1;    /* DCT reconstructed image pointers */
   unsigned char  *ReconPtr2;    /* Pointer used in half pixel MC */
-  
-  switch(MvDevisor) {
-  case 2:
-    MvShift = 1;
-    MvModMask = 1;
-    break;
-  case 4:
-    MvShift = 2;
-    MvModMask = 3;
-    break;
-  default:
-    break;
-  }
+   
+  if ( ModeUsesMC[cpi->pb.CodingMode] ){
+    switch(MvDevisor) {
+    case 2:
+      MvShift = 1;
+      MvModMask = 1;
+      break;
+    case 4:
+      MvShift = 2;
+      MvModMask = 3;
+      break;
+    default:
+      break;
+    }
+    
+    cpi->MVector.x = cpi->pb.FragMVect[FragIndex].x;
+    cpi->MVector.y = cpi->pb.FragMVect[FragIndex].y;
+    
+    /* Set up the baseline offset for the motion vector. */
+    MVOffset = ((cpi->MVector.y / MvDevisor) * ReconPixelsPerLine) +
+      (cpi->MVector.x / MvDevisor);
+    
+    /* Work out the offset of the second reference position for 1/2
+       pixel interpolation.  For the U and V planes the MV specifies 1/4
+       pixel accuracy. This is adjusted to 1/2 pixel as follows ( 0->0,
+       1/4->1/2, 1/2->1/2, 3/4->1/2 ). */
+    ReconPtr2Offset = 0;
+    AbsXOffset = cpi->MVector.x % MvDevisor;
+    AbsYOffset = cpi->MVector.y % MvDevisor;
+    
+    if ( AbsXOffset ) {
+      if ( cpi->MVector.x > 0 )
+	ReconPtr2Offset += 1;
+      else
+	ReconPtr2Offset -= 1;
+    }
+    
+    if ( AbsYOffset ) {
+      if ( cpi->MVector.y > 0 )
+	ReconPtr2Offset += ReconPixelsPerLine;
+      else
+	ReconPtr2Offset -= ReconPixelsPerLine;
+    }
+    
+    if ( cpi->pb.CodingMode==CODE_GOLDEN_MV ) {
+      ReconPtr1 = &cpi->
+	pb.GoldenFrame[cpi->pb.recon_pixel_index_table[FragIndex]];
+    } else {
+      ReconPtr1 = &cpi->
+	pb.LastFrameRecon[cpi->pb.recon_pixel_index_table[FragIndex]];
+    }
+    
+    ReconPtr1 += MVOffset;
+    ReconPtr2 =  ReconPtr1 + ReconPtr2Offset;
+    
+    AbsRefOffset = abs((int)(ReconPtr1 - ReconPtr2));
+    
+    /* Is the MV offset exactly pixel alligned */
+    if ( AbsRefOffset == 0 ){
+      dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
+		 PixelsPerLine, ReconPixelsPerLine);
+      dsp_copy8x8 (cpi->dsp, ReconPtr1, thisrecon, ReconPixelsPerLine);
+    } else {
+      /* Fractional pixel MVs. */
+      /* Note that we only use two pixel values even for the diagonal */
+      dsp_sub8x8avg2(cpi->dsp, FiltPtr, ReconPtr1,ReconPtr2,DctInputPtr,
+		     PixelsPerLine, ReconPixelsPerLine);
+      dsp_copy8x8_half (cpi->dsp, ReconPtr1, ReconPtr2, thisrecon, ReconPixelsPerLine);
+    }
 
-  cpi->MVector.x = cpi->pb.FragMVect[FragIndex].x;
-  cpi->MVector.y = cpi->pb.FragMVect[FragIndex].y;
-
-  /* Set up the baseline offset for the motion vector. */
-  MVOffset = ((cpi->MVector.y / MvDevisor) * ReconPixelsPerLine) +
-    (cpi->MVector.x / MvDevisor);
-
-  /* Work out the offset of the second reference position for 1/2
-     pixel interpolation.  For the U and V planes the MV specifies 1/4
-     pixel accuracy. This is adjusted to 1/2 pixel as follows ( 0->0,
-     1/4->1/2, 1/2->1/2, 3/4->1/2 ). */
-  ReconPtr2Offset = 0;
-  AbsXOffset = cpi->MVector.x % MvDevisor;
-  AbsYOffset = cpi->MVector.y % MvDevisor;
-
-  if ( AbsXOffset ) {
-    if ( cpi->MVector.x > 0 )
-      ReconPtr2Offset += 1;
-    else
-      ReconPtr2Offset -= 1;
-  }
-
-  if ( AbsYOffset ) {
-    if ( cpi->MVector.y > 0 )
-      ReconPtr2Offset += ReconPixelsPerLine;
-    else
-      ReconPtr2Offset -= ReconPixelsPerLine;
-  }
-
-  if ( cpi->pb.CodingMode==CODE_GOLDEN_MV ) {
-    ReconPtr1 = &cpi->
-      pb.GoldenFrame[cpi->pb.recon_pixel_index_table[FragIndex]];
-  } else {
-    ReconPtr1 = &cpi->
-      pb.LastFrameRecon[cpi->pb.recon_pixel_index_table[FragIndex]];
-  }
-
-  ReconPtr1 += MVOffset;
-  ReconPtr2 =  ReconPtr1 + ReconPtr2Offset;
-
-  AbsRefOffset = abs((int)(ReconPtr1 - ReconPtr2));
-
-  /* Is the MV offset exactly pixel alligned */
-  if ( AbsRefOffset == 0 ){
-    dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
-               PixelsPerLine, ReconPixelsPerLine);
-  } else {
-    /* Fractional pixel MVs. */
-    /* Note that we only use two pixel values even for the diagonal */
-    dsp_sub8x8avg2(cpi->dsp, FiltPtr, ReconPtr1,ReconPtr2,DctInputPtr,
-                 PixelsPerLine, ReconPixelsPerLine);
+  } else { 
+    if ( (cpi->pb.CodingMode==CODE_INTER_NO_MV ) ||
+	 ( cpi->pb.CodingMode==CODE_USING_GOLDEN ) ) {
+      if ( cpi->pb.CodingMode==CODE_INTER_NO_MV ) {
+	ReconPtr1 = &cpi->
+	  pb.LastFrameRecon[cpi->pb.recon_pixel_index_table[FragIndex]];
+      } else {
+	ReconPtr1 = &cpi->
+	  pb.GoldenFrame[cpi->pb.recon_pixel_index_table[FragIndex]];
+      }
+      
+      dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
+		 PixelsPerLine, ReconPixelsPerLine);
+      dsp_copy8x8 (cpi->dsp, ReconPtr1, thisrecon, ReconPixelsPerLine);
+    } else if ( cpi->pb.CodingMode==CODE_INTRA ) {
+      dsp_sub8x8_128(cpi->dsp, FiltPtr, DctInputPtr, PixelsPerLine);
+      dsp_set8x8(cpi->dsp, 128, thisrecon, ReconPixelsPerLine);
+    }
   }
 }
 
@@ -374,18 +401,20 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
   ogg_uint32_t  ReconPixelsPerLine; /* Line length for recon buffers. */
 
   unsigned char   *ReconPtr1;   /* DCT reconstructed image pointers */
-  ogg_int32_t   MvDevisor;      /* Defines MV resolution (2 = 1/2
+  ogg_int32_t   MvDivisor;      /* Defines MV resolution (2 = 1/2
                                    pixel for Y or 4 = 1/4 for UV) */
 
   DctInputPtr   = cpi->DCTDataBuffer;
 
+  ReconPtr1 = &cpi->pb.ThisFrameRecon[cpi->pb.recon_pixel_index_table[FragIndex]];
+
   /* Set plane specific values */
   if (FragIndex < (ogg_int32_t)cpi->pb.YPlaneFragments){
     ReconPixelsPerLine = cpi->pb.YStride;
-    MvDevisor = 2;                  /* 1/2 pixel accuracy in Y */
+    MvDivisor = 2;                  /* 1/2 pixel accuracy in Y */
   }else{
     ReconPixelsPerLine = cpi->pb.UVStride;
-    MvDevisor = 4;                  /* UV planes at 1/2 resolution of Y */
+    MvDivisor = 4;                  /* UV planes at 1/2 resolution of Y */
   }
 
   /* adjusted / filtered pointers */
@@ -426,28 +455,13 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
     }
   }
 
-  if ( ModeUsesMC[cpi->pb.CodingMode] ){
-
-    MotionBlockDifference(cpi, FiltPtr, DctInputPtr, MvDevisor,
-                          FragIndex, PixelsPerLine,
-                          ReconPixelsPerLine);
-
-  } else if ( (cpi->pb.CodingMode==CODE_INTER_NO_MV ) ||
-              ( cpi->pb.CodingMode==CODE_USING_GOLDEN ) ) {
-    if ( cpi->pb.CodingMode==CODE_INTER_NO_MV ) {
-      ReconPtr1 = &cpi->
-        pb.LastFrameRecon[cpi->pb.recon_pixel_index_table[FragIndex]];
-    } else {
-      ReconPtr1 = &cpi->
-        pb.GoldenFrame[cpi->pb.recon_pixel_index_table[FragIndex]];
-    }
-
-    dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
-               PixelsPerLine, ReconPixelsPerLine);
-  } else if ( cpi->pb.CodingMode==CODE_INTRA ) {
-    dsp_sub8x8_128(cpi->dsp, FiltPtr, DctInputPtr, PixelsPerLine);
-  }
-
+  /* produces the appropriate motion compensation block, applies it to
+     the reconstruction buffer, and proces a difference block for
+     forward DCT */
+  BlockUpdateDifference(cpi, FiltPtr, DctInputPtr, ReconPtr1,
+			MvDivisor, FragIndex, PixelsPerLine,
+			ReconPixelsPerLine);
+  
   /* Proceed to encode the data into the encode buffer if the encoder
      is enabled. */
   /* Perform a 2D DCT transform on the data. */

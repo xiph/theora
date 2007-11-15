@@ -163,87 +163,9 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber){
 
   /* Convert fragment number to a pixel offset in a reconstruction buffer. */
   ReconPixelIndex = pbi->recon_pixel_index_table[FragmentNumber];
+  dsp_recon8x8 (pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
+		pbi->ReconDataBuffer, ReconPixelsPerLine);
 
-  /* Action depends on decode mode. */
-  if ( pbi->CodingMode == CODE_INTER_NO_MV ){
-    /* Inter with no motion vector */
-    /* Reconstruct the pixel data using the last frame reconstruction
-       and change data when the motion vector is (0,0), the recon is
-       based on the lastframe without loop filtering---- for testing */
-    dsp_recon_inter8x8 (pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
-                &pbi->LastFrameRecon[ReconPixelIndex],
-                  pbi->ReconDataBuffer, ReconPixelsPerLine);
-  }else if ( ModeUsesMC[pbi->CodingMode] ) {
-    /* The mode uses a motion vector. */
-    /* Get vector from list */
-    pbi->MVector.x = pbi->FragMVect[FragmentNumber].x;
-    pbi->MVector.y = pbi->FragMVect[FragmentNumber].y;
-
-    /* Work out the base motion vector offset and the 1/2 pixel offset
-       if any.  For the U and V planes the MV specifies 1/4 pixel
-       accuracy. This is adjusted to 1/2 pixel as follows ( 0->0,
-       1/4->1/2, 1/2->1/2, 3/4->1/2 ). */
-    MVOffset = 0;
-    ReconPtr2Offset = 0;
-    if ( pbi->MVector.x > 0 ){
-      MVOffset = pbi->MVector.x >> MvShift;
-      if ( pbi->MVector.x & MvModMask )
-        ReconPtr2Offset += 1;
-    } else if ( pbi->MVector.x < 0 ) {
-      MVOffset -= (-pbi->MVector.x) >> MvShift;
-      if ( (-pbi->MVector.x) & MvModMask )
-        ReconPtr2Offset -= 1;
-    }
-
-    if ( pbi->MVector.y > 0 ){
-      MVOffset += (pbi->MVector.y >>  MvShift) * ReconPixelsPerLine;
-      if ( pbi->MVector.y & MvModMask )
-        ReconPtr2Offset += ReconPixelsPerLine;
-    } else if ( pbi->MVector.y < 0 ){
-      MVOffset -= ((-pbi->MVector.y) >> MvShift) * ReconPixelsPerLine;
-      if ( (-pbi->MVector.y) & MvModMask )
-        ReconPtr2Offset -= ReconPixelsPerLine;
-    }
-
-    /* Set up the first of the two reconstruction buffer pointers. */
-    if ( pbi->CodingMode==CODE_GOLDEN_MV ) {
-      LastFrameRecPtr = &pbi->GoldenFrame[ReconPixelIndex] + MVOffset;
-    }else{
-      LastFrameRecPtr = &pbi->LastFrameRecon[ReconPixelIndex] + MVOffset;
-    }
-
-    /* Set up the second of the two reconstruction pointers. */
-    LastFrameRecPtr2 = LastFrameRecPtr + ReconPtr2Offset;
-
-    /* Select the appropriate reconstruction function */
-    if ( (int)(LastFrameRecPtr - LastFrameRecPtr2) == 0 ) {
-      /* Reconstruct the pixel dats from the reference frame and change data
-         (no half pixel in this case as the two references were the same. */
-      dsp_recon_inter8x8 (pbi->dsp,
-          &pbi->ThisFrameRecon[ReconPixelIndex],
-                  LastFrameRecPtr, pbi->ReconDataBuffer,
-                  ReconPixelsPerLine);
-    }else{
-      /* Fractional pixel reconstruction. */
-      /* Note that we only use two pixels per reconstruction even for
-         the diagonal. */
-      dsp_recon_inter8x8_half(pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
-                            LastFrameRecPtr, LastFrameRecPtr2,
-                            pbi->ReconDataBuffer, ReconPixelsPerLine);
-    }
-  } else if ( pbi->CodingMode == CODE_USING_GOLDEN ){
-    /* Golden frame with motion vector */
-    /* Reconstruct the pixel data using the golden frame
-       reconstruction and change data */
-    dsp_recon_inter8x8 (pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
-                &pbi->GoldenFrame[ ReconPixelIndex ],
-                  pbi->ReconDataBuffer, ReconPixelsPerLine);
-  } else {
-    /* Simple Intra coding */
-    /* Get the pixel index for the first pixel in the fragment. */
-    dsp_recon_intra8x8 (pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
-              pbi->ReconDataBuffer, ReconPixelsPerLine);
-  }
 }
 
 static void UpdateUMV_HBorders( PB_INSTANCE *pbi,

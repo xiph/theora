@@ -22,6 +22,28 @@
 #define DSP_OP_DIFF(a,b) (((int)(a)) - ((int)(b)))
 #define DSP_OP_ABS_DIFF(a,b) abs((((int)(a)) - ((int)(b))))
 
+static void set8x8__c (unsigned char val, unsigned char *ptr,
+		       ogg_uint32_t PixelsPerLine){
+  int i;
+  
+  /* For each block row */
+  memset(ptr,val,8);
+  ptr+=PixelsPerLine;
+  memset(ptr,val,8);
+  ptr+=PixelsPerLine;
+  memset(ptr,val,8);
+  ptr+=PixelsPerLine;
+  memset(ptr,val,8);
+  ptr+=PixelsPerLine;
+  memset(ptr,val,8);
+  ptr+=PixelsPerLine;
+  memset(ptr,val,8);
+  ptr+=PixelsPerLine;
+  memset(ptr,val,8);
+  ptr+=PixelsPerLine;
+  memset(ptr,val,8);
+}
+
 static void sub8x8__c (unsigned char *FiltPtr, unsigned char *ReconPtr,
                   ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine,
                   ogg_uint32_t ReconPixelsPerLine) {
@@ -385,6 +407,7 @@ void dsp_init(DspFunctions *funcs)
   /* TH_DEBUG("setting dsp functions to C defaults.\n"); */
   funcs->save_fpu = nop;
   funcs->restore_fpu = nop;
+  funcs->set8x8 = set8x8__c;
   funcs->sub8x8 = sub8x8__c;
   funcs->sub8x8_128 = sub8x8_128__c;
   funcs->sub8x8avg2 = sub8x8avg2__c;

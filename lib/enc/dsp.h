@@ -26,6 +26,9 @@ typedef struct
   void   (*save_fpu)            (void);
   void   (*restore_fpu)         (void);
 
+  void   (*set8x8)      (unsigned char val, unsigned char *ptr,
+			 ogg_uint32_t PixelsPerLine);
+
   void   (*sub8x8)      (unsigned char *FiltPtr, unsigned char *ReconPtr,
                         ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine,
          ogg_uint32_t ReconPixelsPerLine);
@@ -40,6 +43,12 @@ typedef struct
 
   void   (*copy8x8)      (unsigned char *src, unsigned char *dest, 
                      ogg_uint32_t stride);
+
+  void   (*copy8x8_half)      (unsigned char *src1, unsigned char *src2, 
+			       unsigned char *dest, ogg_uint32_t stride);
+
+  void   (*recon8x8)    (unsigned char *ReconPtr, ogg_int16_t *ChangePtr, 
+			 ogg_uint32_t LineStep);
 
   void   (*recon_intra8x8)    (unsigned char *ReconPtr, ogg_int16_t *ChangePtr, 
                      ogg_uint32_t LineStep);
@@ -115,6 +124,8 @@ extern void dsp_mmx_idct_init(DspFunctions *funcs);
 
 #define dsp_restore_fpu(funcs) (funcs.restore_fpu ())
 
+#define dsp_set8x8(funcs,a1,a2,a3) (funcs.set8x8 (a1,a2,a3))
+
 #define dsp_sub8x8(funcs,a1,a2,a3,a4,a5) (funcs.sub8x8 (a1,a2,a3,a4,a5))
 
 #define dsp_sub8x8_128(funcs,a1,a2,a3) (funcs.sub8x8_128 (a1,a2,a3))
@@ -122,6 +133,10 @@ extern void dsp_mmx_idct_init(DspFunctions *funcs);
 #define dsp_sub8x8avg2(funcs,a1,a2,a3,a4,a5,a6) (funcs.sub8x8avg2 (a1,a2,a3,a4,a5,a6))
 
 #define dsp_copy8x8(funcs,ptr1,ptr2,str1) (funcs.copy8x8 (ptr1,ptr2,str1))
+
+#define dsp_copy8x8_half(funcs,ptr1,ptr2,ptr3,str1) (funcs.copy8x8_half (ptr1,ptr2,ptr3,str1))
+
+#define dsp_recon8x8(funcs,ptr1,ptr2,str1) (funcs.recon8x8 (ptr1,ptr2,str1))
 
 #define dsp_recon_intra8x8(funcs,ptr1,ptr2,str1) (funcs.recon_intra8x8 (ptr1,ptr2,str1))
 
