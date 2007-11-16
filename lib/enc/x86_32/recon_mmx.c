@@ -86,7 +86,7 @@ static void recon8x8__mmx (unsigned char *ReconPtr,
 
     "  movq        %%mm2, (%0)         \n\t" /* store result */
 
-    "  lea         (%0, %3), %0        \n\t" /* next row of output */
+    "  lea         (%0, %2), %0        \n\t" /* next row of output */
     "  jc          1b                  \n\t"
       : "+r" (ReconPtr)
       : "r" (ChangePtr),
