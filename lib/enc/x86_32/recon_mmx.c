@@ -90,7 +90,7 @@ static void recon8x8__mmx (unsigned char *ReconPtr,
     "  jc          1b                  \n\t"
       : "+r" (ReconPtr)
       : "r" (ChangePtr),
-        "r" (LineStep),
+        "r" (LineStep)
       : "memory", "edi"
   );
 }
