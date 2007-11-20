@@ -93,10 +93,6 @@ SOURCE=..\lib\enc\blockmap.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\enc\common.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\lib\cpu.c
 # End Source File
 # Begin Source File

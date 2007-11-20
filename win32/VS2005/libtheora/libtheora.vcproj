@@ -620,10 +620,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\common.c"
-					>
-				</File>
-				<File
 					RelativePath="..\..\..\lib\enc\dct.c"
 					>
 					<FileConfiguration
