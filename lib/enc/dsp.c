@@ -16,6 +16,7 @@
  ********************************************************************/
 
 #include <stdlib.h>
+#include <string.h>
 #include "codec_internal.h"
 
 #define DSP_OP_AVG(a,b) ((((int)(a)) + ((int)(b)))/2)
@@ -24,8 +25,6 @@
 
 static void set8x8__c (unsigned char val, unsigned char *ptr,
 		       ogg_uint32_t PixelsPerLine){
-  int i;
-  
   /* For each block row */
   memset(ptr,val,8);
   ptr+=PixelsPerLine;

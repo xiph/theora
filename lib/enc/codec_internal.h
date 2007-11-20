@@ -146,7 +146,6 @@ typedef struct codec_setup_info {
 
 /** Decoder (Playback) instance -- installed in a theora_state */
 typedef struct PB_INSTANCE {
-  oggpack_buffer *opb;
   theora_info     info;
   
   /* flag to indicate if the headers already have been written */
@@ -255,9 +254,6 @@ typedef struct PB_INSTANCE {
   MOTION_VECTOR  MVector;
   ogg_int32_t    ReconPtr2Offset;       /* Offset for second reconstruction
                                            in half pixel MC */
-  ogg_int16_t   *quantized_list;
-  ogg_int16_t   *ReconDataBuffer;
-
   ogg_uint32_t   DcHuffChoice;          /* Huffman table selection variables */
   unsigned char  ACHuffChoice;
 
@@ -277,7 +273,6 @@ typedef struct PB_INSTANCE {
   ogg_int16_t    dequant_InterU_coeffs[64];
   ogg_int16_t    dequant_InterV_coeffs[64]; 
 
-  ogg_int16_t   *dequant_coeffs;        /* currently active quantizer */
   unsigned int   zigzag_index[64];
 
   HUFF_ENTRY    *HuffRoot_VP3x[NUM_HUFF_TABLES];

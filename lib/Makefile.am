@@ -40,7 +40,6 @@ encoder_sources = \
 	enc/frarray.c \
 	enc/frinit.c \
 	enc/mcomp.c \
-	enc/pb.c \
 	enc/reconstruct.c \
 	enc/dsp.c
 

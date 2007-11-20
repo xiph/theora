@@ -588,8 +588,6 @@ static void init_dequantizer ( PB_INSTANCE *pbi,
     j = pbi->zigzag_index[i];
     pbi->dequant_InterV_coeffs[j] = InterV_coeffs[i];
   }
-
-  pbi->dequant_coeffs = pbi->dequant_Y_coeffs;
 }
 
 void UpdateQ( PB_INSTANCE *pbi, int NewQIndex ){

@@ -71,100 +71,73 @@ void SetupLoopFilter(PB_INSTANCE *pbi){
 }
 
 static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber){
-  unsigned char *LastFrameRecPtr;   /* Pointer into previous frame
-                                       reconstruction. */
-  unsigned char *LastFrameRecPtr2;  /* Pointer into previous frame
-                                       reconstruction for 1/2 pixel MC. */
-
   ogg_uint32_t   ReconPixelsPerLine; /* Pixels per line */
   ogg_int32_t    ReconPixelIndex;    /* Offset for block into a
                                         reconstruction buffer */
-  ogg_int32_t    ReconPtr2Offset;    /* Offset for second
-                                        reconstruction in half pixel
-                                        MC */
-  ogg_int32_t    MVOffset;           /* Baseline motion vector offset */
-  ogg_int32_t    MvShift  ;          /* Shift to correct to 1/2 or 1/4 pixel */
-  ogg_int32_t    MvModMask;          /* Mask to determine whether 1/2
-                                        pixel is used */
+  ogg_int16_t    reconstruct[64];
+  ogg_int16_t    *quantizers;
+  ogg_int16_t    *data = &pbi->QFragData[FragmentNumber][0];
 
-  /* Get coding mode for this block */
-  if ( pbi->FrameType == KEY_FRAME ){
-    pbi->CodingMode = CODE_INTRA;
-  }else{
-    /* Get Motion vector and mode for this block. */
-    pbi->CodingMode = pbi->FragCodingMethod[FragmentNumber];
-  }
+  int            mode = pbi->FragCodingMethod[FragmentNumber];
 
   /* Select the appropriate inverse Q matrix and line stride */
-  if ( FragmentNumber<(ogg_int32_t)pbi->YPlaneFragments ) {
+  if ( FragmentNumber<pbi->YPlaneFragments ) {
     ReconPixelsPerLine = pbi->YStride;
-    MvShift = 1;
-    MvModMask = 0x00000001;
-
-    /* Select appropriate dequantiser matrix. */
-    if ( pbi->CodingMode == CODE_INTRA )
-      pbi->dequant_coeffs = pbi->dequant_Y_coeffs;
+    if ( mode == CODE_INTRA )
+      quantizers = pbi->dequant_Y_coeffs;
     else
-      pbi->dequant_coeffs = pbi->dequant_InterY_coeffs;
+      quantizers = pbi->dequant_InterY_coeffs;
+
   }else{
     ReconPixelsPerLine = pbi->UVStride;
-    MvShift = 2;
-    MvModMask = 0x00000003;
-
-    /* Select appropriate dequantiser matrix. */
-    if ( pbi->CodingMode == CODE_INTRA )
-      if ( FragmentNumber < 
-                (ogg_int32_t)(pbi->YPlaneFragments + pbi->UVPlaneFragments) )
-        pbi->dequant_coeffs = pbi->dequant_U_coeffs;
+    if ( mode == CODE_INTRA )
+      if ( FragmentNumber < pbi->YPlaneFragments + pbi->UVPlaneFragments )
+        quantizers = pbi->dequant_U_coeffs;
       else
-        pbi->dequant_coeffs = pbi->dequant_V_coeffs;
+        quantizers = pbi->dequant_V_coeffs;
     else
-      if ( FragmentNumber < 
-                (ogg_int32_t)(pbi->YPlaneFragments + pbi->UVPlaneFragments) )
-        pbi->dequant_coeffs = pbi->dequant_InterU_coeffs;
+      if ( FragmentNumber < pbi->YPlaneFragments + pbi->UVPlaneFragments )
+        quantizers = pbi->dequant_InterU_coeffs;
       else
-        pbi->dequant_coeffs = pbi->dequant_InterV_coeffs;
+        quantizers = pbi->dequant_InterV_coeffs;
   }
-
-  /* Set up pointer into the quantisation buffer. */
-  pbi->quantized_list = &pbi->QFragData[FragmentNumber][0];
 
 #ifdef _TH_DEBUG_
  {
    int i;
    for(i=0;i<64;i++)
      pbi->QFragFREQ[FragmentNumber][dezigzag_index[i]]= 
-       pbi->quantized_list[i] * pbi->dequant_coeffs[i];
+       pbi->quantized_list[i] * quantizers[i];
  }
 #endif
 
   /* Invert quantisation and DCT to get pixel data. */
   switch(pbi->FragCoefEOB[FragmentNumber]){
   case 0:case 1:
-    IDct1( pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
+    IDct1( data, quantizers, reconstruct );
     break;
   case 2: case 3:
-    dsp_IDct3(pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
+    dsp_IDct3(pbi->dsp, data, quantizers, reconstruct );
     break;
   case 4:case 5:case 6:case 7:case 8: case 9:case 10:
-    dsp_IDct10(pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
+    dsp_IDct10(pbi->dsp, data, quantizers, reconstruct );
     break;
   default:
-    dsp_IDctSlow(pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
+    dsp_IDctSlow(pbi->dsp, data, quantizers, reconstruct );
   }
 
 #ifdef _TH_DEBUG_
  {
    int i;
    for(i=0;i<64;i++)
-     pbi->QFragTIME[FragmentNumber][i]= pbi->ReconDataBuffer[i];
+     pbi->QFragTIME[FragmentNumber][i]= reconstruct[i];
  }
 #endif
 
   /* Convert fragment number to a pixel offset in a reconstruction buffer. */
   ReconPixelIndex = pbi->recon_pixel_index_table[FragmentNumber];
   dsp_recon8x8 (pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
-		pbi->ReconDataBuffer, ReconPixelsPerLine);
+		reconstruct, ReconPixelsPerLine);
 
 }
 

@@ -466,8 +466,6 @@ int theora_encode_init(theora_state *th, theora_info *c){
   c->version_minor=TH_VERSION_MINOR;
   c->version_subminor=TH_VERSION_SUB;
 
-  InitTmpBuffers(&cpi->pb);
-
   /* Initialise Configuration structure to legal values */
   if(c->quality>63)c->quality=63;
   if(c->quality<0)c->quality=32;
@@ -857,7 +855,6 @@ static void theora_encode_clear (theora_state  *th){
     ClearFrameInfo(&cpi->pb);
     EClearFragmentInfo(cpi);
     EClearFrameInfo(cpi);
-    ClearTmpBuffers(&cpi->pb);
 
     oggpackB_writeclear(cpi->oggbuffer);
     _ogg_free(cpi->oggbuffer);
