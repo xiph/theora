@@ -121,7 +121,7 @@ static void dequant_slow( ogg_int16_t * dequant_coeffs,
 
 
 
-void IDctSlow__c(  Q_LIST_ENTRY * InputData,
+void IDctSlow__c(  ogg_int16_t * InputData,
                 ogg_int16_t *QuantMatrix,
                 ogg_int16_t * OutputData ) {
   ogg_int32_t IntermediateData[64];
@@ -350,7 +350,7 @@ static void dequant_slow10( ogg_int16_t * dequant_coeffs,
 
 }
 
-void IDct10__c( Q_LIST_ENTRY * InputData,
+void IDct10__c( ogg_int16_t * InputData,
              ogg_int16_t *QuantMatrix,
              ogg_int16_t * OutputData ){
   ogg_int32_t IntermediateData[64];
@@ -542,7 +542,7 @@ void IDct10__c( Q_LIST_ENTRY * InputData,
   0   0   0  0  0  0  0  0
 **************************/
 
-void IDct1( Q_LIST_ENTRY * InputData,
+void IDct1( ogg_int16_t * InputData,
             ogg_int16_t *QuantMatrix,
             ogg_int16_t * OutputData ){
   int loop;

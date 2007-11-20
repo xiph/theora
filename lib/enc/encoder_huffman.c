@@ -223,43 +223,6 @@ void InitHuffmanSet( PB_INSTANCE *pbi ){
   }
 }
 
-static int ReadHuffTree(HUFF_ENTRY * HuffRoot, int depth,
-                        oggpack_buffer *opb) {
-  long bit;
-  long ret;
-  theora_read(opb,1,&bit);
-  if(bit < 0) return OC_BADHEADER;
-  else if(!bit) {
-    int ret;
-    if (++depth > 32) return OC_BADHEADER;
-    HuffRoot->ZeroChild = (HUFF_ENTRY *)_ogg_calloc(1, sizeof(HUFF_ENTRY));
-    ret = ReadHuffTree(HuffRoot->ZeroChild, depth, opb);
-    if (ret < 0) return ret;
-    HuffRoot->OneChild = (HUFF_ENTRY *)_ogg_calloc(1, sizeof(HUFF_ENTRY));
-    ret = ReadHuffTree(HuffRoot->OneChild, depth, opb);
-    if (ret < 0) return ret;
-    HuffRoot->Value = -1;
-  } else {
-    HuffRoot->ZeroChild = NULL;
-    HuffRoot->OneChild = NULL;
-    theora_read(opb,5,&ret);
-    HuffRoot->Value=ret;;
-    if (HuffRoot->Value < 0) return OC_BADHEADER;
-  }
-  return 0;
-}
-
-int ReadHuffmanTrees(codec_setup_info *ci, oggpack_buffer *opb) {
-  int i;
-  for (i=0; i<NUM_HUFF_TABLES; i++) {
-     int ret;
-     ci->HuffRoot[i] = (HUFF_ENTRY *)_ogg_calloc(1, sizeof(HUFF_ENTRY));
-     ret = ReadHuffTree(ci->HuffRoot[i], 0, opb);
-     if (ret) return ret;
-  }
-  return 0;
-}
-
 static void WriteHuffTree(HUFF_ENTRY *HuffRoot, oggpack_buffer *opb) {
   if (HuffRoot->Value >= 0) {
     oggpackB_write(opb, 1, 1);

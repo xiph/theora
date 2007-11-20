@@ -501,9 +501,9 @@ void select_quantiser(PB_INSTANCE *pbi, int type) {
 
 void quantize( PB_INSTANCE *pbi,
                ogg_int16_t * DCT_block,
-               Q_LIST_ENTRY * quantized_list){
+               ogg_int16_t * quantized_list){
   ogg_uint32_t  i;              /* Row index */
-  Q_LIST_ENTRY  val;            /* Quantised value. */
+  ogg_int16_t  val;            /* Quantised value. */
 
   ogg_int32_t * FquantRoundPtr = pbi->fquant_round;
   ogg_int32_t * FquantCoeffsPtr = pbi->fquant_coeffs;
@@ -513,7 +513,7 @@ void quantize( PB_INSTANCE *pbi,
   ogg_int32_t temp;
 
   /* Set the quantized_list to default to 0 */
-  memset( quantized_list, 0, 64 * sizeof(Q_LIST_ENTRY) );
+  memset( quantized_list, 0, 64 * sizeof(*quantized_list) );
 
   /* Note that we add half divisor to effect rounding on positive number */
   for( i = 0; i < VFRAGPIXELS; i++) {
@@ -523,12 +523,12 @@ void quantize( PB_INSTANCE *pbi,
     for( col = 0; col < 8; col++) {
       if ( DCT_blockPtr[col] >= FquantZBinSizePtr[col] ) {
         temp = FquantCoeffsPtr[col] * ( DCT_blockPtr[col] + FquantRoundPtr[col] ) ;
-        val = (Q_LIST_ENTRY) (temp>>16);
+        val = (temp>>16);
         quantized_list[ZigZagPtr[col]] = ( val > 511 ) ? 511 : val;
       } else if ( DCT_blockPtr[col] <= -FquantZBinSizePtr[col] ) {
         temp = FquantCoeffsPtr[col] *
           ( DCT_blockPtr[col] - FquantRoundPtr[col] ) + MIN16;
-        val = (Q_LIST_ENTRY) (temp>>16);
+        val = (temp>>16);
         quantized_list[ZigZagPtr[col]] = ( val < -511 ) ? -511 : val;
       }
     }

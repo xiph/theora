@@ -758,7 +758,6 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
   int FragsAcross=cpi->pb.HFragments;
   int FragsDown = cpi->pb.VFragments;
   int FromFragment,ToFragment;
-  ogg_int32_t   FragIndex;
   int WhichFrame;
   int WhichCase;
 
@@ -933,8 +932,6 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
 
   /* Reconstruct the reference frames */
   ReconRefFrames(&cpi->pb);
-
-  UpdateFragQIndex(&cpi->pb);
 
   /* Return total number of coded pixels */
   return coded_pixels;
@@ -1208,19 +1205,19 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         BestError = (BestError > MBIntraError) ? MBIntraError : BestError;
 
         /* Get the golden frame error */
-        MBGFError = GetMBInterError( cpi, cpi->yuv1ptr,
+        MBGFError = GetMBInterError( cpi, cpi->yuvptr,
                                      cpi->pb.GoldenFrame, YFragIndex,
                                      0, 0, PixelsPerLine );
         BestError = (BestError > MBGFError) ? MBGFError : BestError;
 
         /* Calculate the 0,0 case. */
-        MBInterError = GetMBInterError( cpi, cpi->yuv1ptr,
+        MBInterError = GetMBInterError( cpi, cpi->yuvptr,
                                         cpi->pb.LastFrameRecon,
                                         YFragIndex, 0, 0, PixelsPerLine );
         BestError = (BestError > MBInterError) ? MBInterError : BestError;
 
         /* Measure error for last MV */
-        MBLastInterError =  GetMBInterError( cpi, cpi->yuv1ptr,
+        MBLastInterError =  GetMBInterError( cpi, cpi->yuvptr,
                                              cpi->pb.LastFrameRecon,
                                              YFragIndex, LastInterMVect.x,
                                              LastInterMVect.y, PixelsPerLine );
@@ -1228,7 +1225,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
           MBLastInterError : BestError;
 
         /* Measure error for prior last MV */
-        MBPriorLastInterError =  GetMBInterError( cpi, cpi->yuv1ptr,
+        MBPriorLastInterError =  GetMBInterError( cpi, cpi->yuvptr,
                                                   cpi->pb.LastFrameRecon,
                                                   YFragIndex,
                                                   PriorLastInterMVect.x,
@@ -1300,7 +1297,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                                             cpi->MVPixelOffsetY, &GFMVect );
 
           /* Measure error for last GFMV */
-          LastMBGF_MVError =  GetMBInterError( cpi, cpi->yuv1ptr,
+          LastMBGF_MVError =  GetMBInterError( cpi, cpi->yuvptr,
                                                cpi->pb.GoldenFrame,
                                                YFragIndex, LastGFMVect.x,
                                                LastGFMVect.y, PixelsPerLine );

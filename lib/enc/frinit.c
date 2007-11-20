@@ -19,52 +19,6 @@
 #include "codec_internal.h"
 
 
-void InitializeFragCoordinates(PB_INSTANCE *pbi){
-
-  ogg_uint32_t i, j;
-
-  ogg_uint32_t HorizFrags = pbi->HFragments;
-  ogg_uint32_t VertFrags = pbi->VFragments;
-  ogg_uint32_t StartFrag = 0;
-
-  /* Y */
-
-  for(i = 0; i< VertFrags; i++){
-    for(j = 0; j< HorizFrags; j++){
-
-      ogg_uint32_t ThisFrag = i * HorizFrags + j;
-      pbi->FragCoordinates[ ThisFrag ].x=j * BLOCK_HEIGHT_WIDTH;
-      pbi->FragCoordinates[ ThisFrag ].y=i * BLOCK_HEIGHT_WIDTH;
-
-    }
-  }
-
-  /* U */
-  HorizFrags >>= 1;
-  VertFrags >>= 1;
-  StartFrag = pbi->YPlaneFragments;
-
-  for(i = 0; i< VertFrags; i++) {
-    for(j = 0; j< HorizFrags; j++) {
-      ogg_uint32_t ThisFrag = StartFrag + i * HorizFrags + j;
-      pbi->FragCoordinates[ ThisFrag ].x=j * BLOCK_HEIGHT_WIDTH;
-      pbi->FragCoordinates[ ThisFrag ].y=i * BLOCK_HEIGHT_WIDTH;
-
-    }
-  }
-
-  /* V */
-  StartFrag = pbi->YPlaneFragments + pbi->UVPlaneFragments;
-  for(i = 0; i< VertFrags; i++) {
-    for(j = 0; j< HorizFrags; j++) {
-      ogg_uint32_t ThisFrag = StartFrag + i * HorizFrags + j;
-      pbi->FragCoordinates[ ThisFrag ].x=j * BLOCK_HEIGHT_WIDTH;
-      pbi->FragCoordinates[ ThisFrag ].y=i * BLOCK_HEIGHT_WIDTH;
-
-    }
-  }
-}
-
 static void CalcPixelIndexTable( PB_INSTANCE *pbi){
   ogg_uint32_t i;
   ogg_uint32_t * PixelIndexTablePtr;
@@ -139,7 +93,6 @@ void ClearFragmentInfo(PB_INSTANCE * pbi){
   if(pbi->FragMVect) _ogg_free(pbi->FragMVect);
   if(pbi->FragCoeffs) _ogg_free(pbi->FragCoeffs);
   if(pbi->FragCoefEOB) _ogg_free(pbi->FragCoefEOB);
-  if(pbi->skipped_display_fragments) _ogg_free(pbi->skipped_display_fragments);
   if(pbi->QFragData) _ogg_free(pbi->QFragData);
 #ifdef _TH_DEBUG_
   if(pbi->QFragTIME) _ogg_free(pbi->QFragTIME);
@@ -151,11 +104,6 @@ void ClearFragmentInfo(PB_INSTANCE * pbi){
 #endif
   if(pbi->TokenList) _ogg_free(pbi->TokenList);
   if(pbi->FragCodingMethod) _ogg_free(pbi->FragCodingMethod);
-  if(pbi->FragCoordinates) _ogg_free(pbi->FragCoordinates);
-
-  if(pbi->FragQIndex) _ogg_free(pbi->FragQIndex);
-  if(pbi->PPCoefBuffer) _ogg_free(pbi->PPCoefBuffer);
-  if(pbi->FragmentVariances) _ogg_free(pbi->FragmentVariances);
 
   if(pbi->BlockMap) _ogg_free(pbi->BlockMap);
 
@@ -164,12 +112,8 @@ void ClearFragmentInfo(PB_INSTANCE * pbi){
   if(pbi->MBFullyFlags) _ogg_free(pbi->MBFullyFlags);
   if(pbi->MBCodedFlags) _ogg_free(pbi->MBCodedFlags);
 
-  if(pbi->_Nodes) _ogg_free(pbi->_Nodes);
-  pbi->_Nodes = 0;
-
   pbi->QFragData = 0;
   pbi->TokenList = 0;
-  pbi->skipped_display_fragments = 0;
   pbi->FragCoeffs = 0;
   pbi->FragCoefEOB = 0;
   pbi->display_fragments = 0;
@@ -187,7 +131,6 @@ void ClearFragmentInfo(PB_INSTANCE * pbi){
   pbi->SBFullyFlags = 0;
   pbi->QFragData = 0;
   pbi->TokenList = 0;
-  pbi->skipped_display_fragments = 0;
   pbi->FragCoeffs = 0;
   pbi->FragCoefEOB = 0;
   pbi->display_fragments = 0;
@@ -196,15 +139,7 @@ void ClearFragmentInfo(PB_INSTANCE * pbi){
   pbi->FragTokenCounts = 0;
   pbi->CodedBlockList = 0;
   pbi->FragCodingMethod = 0;
-  pbi->FragCoordinates = 0;
   pbi->FragMVect = 0;
-
-  pbi->PPCoefBuffer=0;
-  pbi->PPCoefBuffer=0;
-  pbi->FragQIndex = 0;
-  pbi->FragQIndex = 0;
-  pbi->FragmentVariances= 0;
-  pbi->FragmentVariances = 0 ;
 }
 
 void InitFragmentInfo(PB_INSTANCE * pbi){
@@ -237,9 +172,6 @@ void InitFragmentInfo(PB_INSTANCE * pbi){
   pbi->FragCoefEOB =
     _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->FragCoefEOB));
 
-  pbi->skipped_display_fragments =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->skipped_display_fragments));
-
   pbi->QFragData =
     _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->QFragData));
 
@@ -261,21 +193,6 @@ void InitFragmentInfo(PB_INSTANCE * pbi){
 
   pbi->FragCodingMethod =
     _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->FragCodingMethod));
-
-  pbi->FragCoordinates =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->FragCoordinates));
-
-  pbi->FragQIndex =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->FragQIndex));
-
-  pbi->PPCoefBuffer =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->PPCoefBuffer));
-
-  pbi->FragmentVariances =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->FragmentVariances));
-
-  pbi->_Nodes =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->_Nodes));
 
   /* Super Block Initialization */
   pbi->SBCodedFlags =
@@ -303,21 +220,10 @@ void ClearFrameInfo(PB_INSTANCE * pbi){
     _ogg_free(pbi->GoldenFrame);
   if(pbi->LastFrameRecon)
     _ogg_free(pbi->LastFrameRecon);
-  if(pbi->PostProcessBuffer)
-    _ogg_free(pbi->PostProcessBuffer);
-
 
   pbi->ThisFrameRecon = 0;
   pbi->GoldenFrame = 0;
   pbi->LastFrameRecon = 0;
-  pbi->PostProcessBuffer = 0;
-
-
-  pbi->ThisFrameRecon = 0;
-  pbi->GoldenFrame = 0;
-  pbi->LastFrameRecon = 0;
-  pbi->PostProcessBuffer = 0;
-
 }
 
 void InitFrameInfo(PB_INSTANCE * pbi, unsigned int FrameSize){
@@ -335,21 +241,10 @@ void InitFrameInfo(PB_INSTANCE * pbi, unsigned int FrameSize){
   pbi->LastFrameRecon =
     _ogg_malloc(FrameSize*sizeof(*pbi->LastFrameRecon));
 
-  pbi->PostProcessBuffer =
-    _ogg_malloc(FrameSize*sizeof(*pbi->PostProcessBuffer));
-
 }
 
 void InitFrameDetails(PB_INSTANCE *pbi){
   int FrameSize;
-
-  /*pbi->PostProcessingLevel = 0;
-    pbi->PostProcessingLevel = 4;
-    pbi->PostProcessingLevel = 5;
-    pbi->PostProcessingLevel = 6;*/
-
-  pbi->PostProcessingLevel = 0;
-
 
     /* Set the frame size etc. */
 
@@ -399,7 +294,6 @@ void InitFrameDetails(PB_INSTANCE *pbi){
 
   InitFragmentInfo(pbi);
   InitFrameInfo(pbi, FrameSize);
-  InitializeFragCoordinates(pbi);
 
   /* Configure mapping between quad-tree and fragments */
   CreateBlockMapping ( pbi->BlockMap, pbi->YSuperBlocks,

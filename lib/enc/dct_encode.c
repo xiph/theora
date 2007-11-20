@@ -25,95 +25,72 @@ static int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };
 
 static unsigned char TokenizeDctValue (ogg_int16_t DataValue,
                                        ogg_uint32_t * TokenListPtr ){
-  unsigned char tokens_added = 0;
-  ogg_uint32_t AbsDataVal = abs( (ogg_int32_t)DataValue );
-
+  int AbsDataVal = abs(DataValue);
+  int neg = (DataValue<0);
   /* Values are tokenised as category value and a number of additional
      bits that define the position within the category.  */
 
-  if ( DataValue == 0 ) return 0;
+  if ( AbsDataVal == 0 ) return 0;
 
   if ( AbsDataVal == 1 ){
-    if ( DataValue == 1 )
-      TokenListPtr[0] = ONE_TOKEN;
-    else
-      TokenListPtr[0] = MINUS_ONE_TOKEN;
-    tokens_added = 1;
+
+    TokenListPtr[0] = (neg ? MINUS_ONE_TOKEN : ONE_TOKEN);
+    return 1;
+
   } else if ( AbsDataVal == 2 ) {
-    if ( DataValue == 2 )
-      TokenListPtr[0] = TWO_TOKEN;
-    else
-      TokenListPtr[0] = MINUS_TWO_TOKEN;
-    tokens_added = 1;
+
+    TokenListPtr[0] = (neg ? MINUS_TWO_TOKEN : TWO_TOKEN);
+    return 1;
+
   } else if ( AbsDataVal <= MAX_SINGLE_TOKEN_VALUE ) {
+
     TokenListPtr[0] = LOW_VAL_TOKENS + (AbsDataVal - DCT_VAL_CAT2_MIN);
-    if ( DataValue > 0 )
-      TokenListPtr[1] = 0;
-    else
-      TokenListPtr[1] = 1;
-    tokens_added = 2;
+    TokenListPtr[1] = neg;
+    return 2;
+
   } else if ( AbsDataVal <= 8 ) {
+
     /* Bit 1 determines sign, Bit 0 the value */
     TokenListPtr[0] = DCT_VAL_CATEGORY3;
-    if ( DataValue > 0 )
-      TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT3_MIN);
-    else
-      TokenListPtr[1] = (0x02) + (AbsDataVal - DCT_VAL_CAT3_MIN);
-    tokens_added = 2;
+    TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT3_MIN) + (neg << 1);
+    return 2;
+
   } else if ( AbsDataVal <= 12 ) {
+
     /* Bit 2 determines sign, Bit 0-2 the value */
     TokenListPtr[0] = DCT_VAL_CATEGORY4;
-    if ( DataValue > 0 )
-      TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT4_MIN);
-    else
-      TokenListPtr[1] = (0x04) + (AbsDataVal - DCT_VAL_CAT4_MIN);
-    tokens_added = 2;
+    TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT4_MIN) + (neg << 2);
+    return 2;
+
   } else if ( AbsDataVal <= 20 ) {
+
     /* Bit 3 determines sign, Bit 0-2 the value */
     TokenListPtr[0] = DCT_VAL_CATEGORY5;
-    if ( DataValue > 0 )
-      TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT5_MIN);
-    else
-      TokenListPtr[1] = (0x08) + (AbsDataVal - DCT_VAL_CAT5_MIN);
-    tokens_added = 2;
+    TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT5_MIN) + (neg << 3);
+    return 2;
+
   } else if ( AbsDataVal <= 36 ) {
+
     /* Bit 4 determines sign, Bit 0-3 the value */
     TokenListPtr[0] = DCT_VAL_CATEGORY6;
-    if ( DataValue > 0 )
-      TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT6_MIN);
-    else
-      TokenListPtr[1] = (0x010) + (AbsDataVal - DCT_VAL_CAT6_MIN);
-    tokens_added = 2;
+    TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT6_MIN) + (neg << 4);
+    return 2;
+
   } else if ( AbsDataVal <= 68 ) {
+
     /* Bit 5 determines sign, Bit 0-4 the value */
     TokenListPtr[0] = DCT_VAL_CATEGORY7;
-    if ( DataValue > 0 )
-      TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT7_MIN);
-    else
-      TokenListPtr[1] = (0x20) + (AbsDataVal - DCT_VAL_CAT7_MIN);
-    tokens_added = 2;
-  } else if ( AbsDataVal <= 511 ) {
+    TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT7_MIN) + (neg << 5);
+    return 2;
+
+  } else {
+
     /* Bit 9 determines sign, Bit 0-8 the value */
     TokenListPtr[0] = DCT_VAL_CATEGORY8;
-    if ( DataValue > 0 )
-      TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT8_MIN);
-    else
-      TokenListPtr[1] = (0x200) + (AbsDataVal - DCT_VAL_CAT8_MIN);
-    tokens_added = 2;
-  } else {
-    TokenListPtr[0] = DCT_VAL_CATEGORY8;
-    if ( DataValue > 0 ){
-      TokenListPtr[1] = (511 - DCT_VAL_CAT8_MIN);
-      fprintf(stderr,"OVERFLOW \n");
-    }else{
-      TokenListPtr[1] = (0x200) + (511 - DCT_VAL_CAT8_MIN);
-      fprintf(stderr,"OVERFLOW \n");
-    }
-    tokens_added = 2;
-  }
+    TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT8_MIN) + (neg <<9 );
+    return 2;
 
-  /* Return the total number of tokens added */
-  return tokens_added;
+  } 
 }
 
 static unsigned char TokenizeDctRunValue (unsigned char RunLength,
@@ -273,7 +250,7 @@ ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi,
   return BLOCK_SIZE;
 }
 
-static int AllZeroDctData( Q_LIST_ENTRY * QuantList ){
+static int AllZeroDctData( ogg_int16_t * QuantList ){
   ogg_uint32_t i;
 
   for ( i = 0; i < 64; i ++ )
@@ -418,7 +395,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
   }
 
   /* adjusted / filtered pointers */
-  FiltPtr = &cpi->yuv1ptr[cpi->pb.pixel_index_table[FragIndex]];
+  FiltPtr = &cpi->yuvptr[cpi->pb.pixel_index_table[FragIndex]];
 
   if ( cpi->pb.FrameType == KEY_FRAME ) {
     /* Key frame so code block in INTRA mode. */

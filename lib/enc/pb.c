@@ -23,19 +23,8 @@ void ClearTmpBuffers(PB_INSTANCE * pbi){
 
   if(pbi->ReconDataBuffer)
     _ogg_free(pbi->ReconDataBuffer);
-  if(pbi->DequantBuffer)
-    _ogg_free(pbi->DequantBuffer);
-  if(pbi->TmpDataBuffer)
-    _ogg_free(pbi->TmpDataBuffer);
-  if(pbi->TmpReconBuffer)
-    _ogg_free(pbi->TmpReconBuffer);
-
 
   pbi->ReconDataBuffer=0;
-  pbi->DequantBuffer = 0;
-  pbi->TmpDataBuffer = 0;
-  pbi->TmpReconBuffer = 0;
-
 }
 
 void InitTmpBuffers(PB_INSTANCE * pbi){
@@ -46,16 +35,6 @@ void InitTmpBuffers(PB_INSTANCE * pbi){
   /* Adjust the position of all of our temporary */
   pbi->ReconDataBuffer      =
     _ogg_malloc(64*sizeof(*pbi->ReconDataBuffer));
-
-  pbi->DequantBuffer        =
-    _ogg_malloc(64 * sizeof(*pbi->DequantBuffer));
-
-  pbi->TmpDataBuffer        =
-    _ogg_malloc(64 * sizeof(*pbi->TmpDataBuffer));
-
-  pbi->TmpReconBuffer       =
-    _ogg_malloc(64 * sizeof(*pbi->TmpReconBuffer));
-
 }
 
 void ClearPBInstance(PB_INSTANCE *pbi){
@@ -79,15 +58,4 @@ void InitPBInstance(PB_INSTANCE *pbi){
 #else
   pbi->opb = _ogg_malloc(oggpack_buffersize());
 #endif
-
-  /* variables needing initialization (not being set to 0) */
-
-  pbi->ModifierPointer[0] = &pbi->Modifier[0][255];
-  pbi->ModifierPointer[1] = &pbi->Modifier[1][255];
-  pbi->ModifierPointer[2] = &pbi->Modifier[2][255];
-  pbi->ModifierPointer[3] = &pbi->Modifier[3][255];
-
-  pbi->DecoderErrorCode = 0;
-  pbi->KeyFrameType = DCT_KEY_FRAME;
-  pbi->FramesHaveBeenSkipped = 0;
 }
