@@ -125,25 +125,6 @@ typedef struct HUFF_ENTRY {
 
 } HUFF_ENTRY;
 
-typedef struct qmat_range_table {
-  int startq, startqi; /* index where this range starts */
-  ogg_int16_t *qmat;  /* qmat at this range boundary */
-} qmat_range_table;
-
-/** codec setup data, maps to the third bitstream header */
-typedef struct codec_setup_info {
-  ogg_uint32_t QThreshTable[Q_TABLE_SIZE];
-  ogg_int16_t DcScaleFactorTable[Q_TABLE_SIZE];
-
-  int MaxQMatrixIndex;
-  ogg_int16_t *qmats;
-  qmat_range_table *range_table[6];
-
-  HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES];
-
-  unsigned char LoopFilterLimitValues[Q_TABLE_SIZE];
-} codec_setup_info;
-
 /** Decoder (Playback) instance -- installed in a theora_state */
 typedef struct PB_INSTANCE {
   theora_info     info;
@@ -506,12 +487,8 @@ extern void InitQTables( PB_INSTANCE *pbi );
 extern void quant_tables_init( PB_INSTANCE *pbi, const th_quant_info *qinfo);
 extern void InitHuffmanSet( PB_INSTANCE *pbi );
 extern void ClearHuffmanSet( PB_INSTANCE *pbi );
-extern int  ReadHuffmanTrees(codec_setup_info *ci, oggpack_buffer *opb);
 extern void WriteHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES],
                               oggpack_buffer *opb);
-extern void InitHuffmanTrees(PB_INSTANCE *pbi, const codec_setup_info *ci);
-extern void ClearHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES]);
-extern int  ReadFilterTables(codec_setup_info *ci, oggpack_buffer *opb);
 extern void QuadDecodeDisplayFragments ( PB_INSTANCE *pbi );
 extern void PackAndWriteDFArray( CP_INSTANCE *cpi );
 extern void UpdateFragQIndex(PB_INSTANCE *pbi);

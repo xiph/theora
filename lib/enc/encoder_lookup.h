@@ -17,7 +17,7 @@
 
 #include "codec_internal.h"
 
-ogg_uint32_t MvPattern[(MAX_MV_EXTENT * 2) + 1] = {
+static const ogg_uint32_t MvPattern[(MAX_MV_EXTENT * 2) + 1] = {
   0x000000ff, 0x000000fd, 0x000000fb, 0x000000f9,
   0x000000f7, 0x000000f5, 0x000000f3, 0x000000f1,
   0x000000ef, 0x000000ed, 0x000000eb, 0x000000e9,
@@ -36,7 +36,7 @@ ogg_uint32_t MvPattern[(MAX_MV_EXTENT * 2) + 1] = {
   0x000000fa, 0x000000fc, 0x000000fe,
 };
 
-ogg_uint32_t MvBits[(MAX_MV_EXTENT * 2) + 1] = {
+static const ogg_uint32_t MvBits[(MAX_MV_EXTENT * 2) + 1] = {
   8, 8, 8, 8, 8, 8, 8, 8,
   8, 8, 8, 8, 8, 8, 8, 8,
   7, 7, 7, 7, 7, 7, 7, 7,
@@ -47,7 +47,7 @@ ogg_uint32_t MvBits[(MAX_MV_EXTENT * 2) + 1] = {
   8, 8, 8, 8, 8, 8, 8,
 };
 
-ogg_uint32_t MvPattern2[(MAX_MV_EXTENT * 2) + 1] = {
+static const ogg_uint32_t MvPattern2[(MAX_MV_EXTENT * 2) + 1] = {
   0x0000003f, 0x0000003d, 0x0000003b, 0x00000039,
   0x00000037, 0x00000035, 0x00000033, 0x00000031,
   0x0000002f, 0x0000002d, 0x0000002b, 0x00000029,
@@ -66,7 +66,7 @@ ogg_uint32_t MvPattern2[(MAX_MV_EXTENT * 2) + 1] = {
   0x0000003a, 0x0000003c, 0x0000003e,
 };
 
-ogg_uint32_t MvBits2[(MAX_MV_EXTENT * 2) + 1] = {
+static const ogg_uint32_t MvBits2[(MAX_MV_EXTENT * 2) + 1] = {
   6, 6, 6, 6, 6, 6, 6, 6,
   6, 6, 6, 6, 6, 6, 6, 6,
   6, 6, 6, 6, 6, 6, 6, 6,
@@ -77,13 +77,13 @@ ogg_uint32_t MvBits2[(MAX_MV_EXTENT * 2) + 1] = {
   6, 6, 6, 6, 6, 6, 6,
 };
 
-ogg_uint32_t ModeBitPatterns[MAX_MODES] = {
+static const ogg_uint32_t ModeBitPatterns[MAX_MODES] = {
   0x00, 0x02, 0x06, 0x0E, 0x1E, 0x3E, 0x7E, 0x7F };
 
-ogg_int32_t ModeBitLengths[MAX_MODES] =  {
+static const ogg_int32_t ModeBitLengths[MAX_MODES] =  {
   1,    2,    3,    4,    5,    6,    7,    7 };
 
-unsigned char ModeSchemes[MODE_METHODS-2][MAX_MODES] =  {
+static const unsigned char ModeSchemes[MODE_METHODS-2][MAX_MODES] =  {
   /* Last Mv dominates */
   { 3,    4,    2,    0,    1,    5,    6,    7 },    /* L P  M N I G GM 4 */
   { 2,    4,    3,    0,    1,    5,    6,    7 },    /* L P  N M I G GM 4 */
@@ -96,8 +96,7 @@ unsigned char ModeSchemes[MODE_METHODS-2][MAX_MODES] =  {
 
 };
 
-
-ogg_uint32_t MvThreshTable[Q_TABLE_SIZE] = {
+static const ogg_uint32_t MvThreshTable[Q_TABLE_SIZE] = {
   65, 65, 65, 65, 50, 50, 50, 50,
   40, 40, 40, 40, 40, 40, 40, 40,
   30, 30, 30, 30, 30, 30, 30, 30,
@@ -108,7 +107,7 @@ ogg_uint32_t MvThreshTable[Q_TABLE_SIZE] = {
   0,  0,  0,  0,  0,  0,  0,  0
 };
 
-ogg_uint32_t MVChangeFactorTable[Q_TABLE_SIZE] = {
+static const ogg_uint32_t MVChangeFactorTable[Q_TABLE_SIZE] = {
   11, 11, 11, 11, 12, 12, 12, 12,
   13, 13, 13, 13, 13, 13, 13, 13,
   14, 14, 14, 14, 14, 14, 14, 14,
@@ -117,4 +116,63 @@ ogg_uint32_t MVChangeFactorTable[Q_TABLE_SIZE] = {
   14, 14, 14, 14, 14, 14, 14, 14,
   15, 15, 15, 15, 15, 15, 15, 15,
   15, 15, 15, 15, 15, 15, 15, 15
+};
+
+#define PUR 8
+#define PU 4
+#define PUL 2
+#define PL 1
+#define HIGHBITDUPPED(X) (((ogg_int16_t) X)  >> 15)
+
+/* predictor multiplier up-left, up, up-right,left, shift
+   Entries are packed in the order L, UL, U, UR, with missing entries
+   moved to the end (before the shift parameters). */
+static const ogg_int16_t pc[16][6]={
+  {0,0,0,0,0,0},
+  {1,0,0,0,0,0},      /* PL */
+  {1,0,0,0,0,0},      /* PUL */
+  {1,0,0,0,0,0},      /* PUL|PL */
+  {1,0,0,0,0,0},      /* PU */
+  {1,1,0,0,1,1},      /* PU|PL */
+  {0,1,0,0,0,0},      /* PU|PUL */
+  {29,-26,29,0,5,31}, /* PU|PUL|PL */
+  {1,0,0,0,0,0},      /* PUR */
+  {75,53,0,0,7,127},  /* PUR|PL */
+  {1,1,0,0,1,1},      /* PUR|PUL */
+  {75,0,53,0,7,127},  /* PUR|PUL|PL */
+  {1,0,0,0,0,0},      /* PUR|PU */
+  {75,0,53,0,7,127},  /* PUR|PU|PL */
+  {3,10,3,0,4,15},    /* PUR|PU|PUL */
+  {29,-26,29,0,5,31}  /* PUR|PU|PUL|PL */
+};
+
+/* boundary case bit masks. */
+static const int bc_mask[8]={
+  /* normal case no boundary condition */
+  PUR|PU|PUL|PL,
+  /* left column */
+  PUR|PU,
+  /* top row */
+  PL,
+  /* top row, left column */
+  0,
+  /* right column */
+  PU|PUL|PL,
+  /* right and left column */
+  PU,
+  /* top row, right column */
+  PL,
+  /* top row, right and left column */
+  0
+};
+
+static const ogg_int16_t Mode2Frame[] = {
+  1,  /* CODE_INTER_NO_MV     0 => Encoded diff from same MB last frame  */
+  0,  /* CODE_INTRA           1 => DCT Encoded Block */
+  1,  /* CODE_INTER_PLUS_MV   2 => Encoded diff from included MV MB last frame */
+  1,  /* CODE_INTER_LAST_MV   3 => Encoded diff from MRU MV MB last frame */
+  1,  /* CODE_INTER_PRIOR_MV  4 => Encoded diff from included 4 separate MV blocks */
+  2,  /* CODE_USING_GOLDEN    5 => Encoded diff from same MB golden frame */
+  2,  /* CODE_GOLDEN_MV       6 => Encoded diff from included MV MB golden frame */
+  1   /* CODE_INTER_FOUR_MV   7 => Encoded diff from included 4 separate MV blocks */
 };

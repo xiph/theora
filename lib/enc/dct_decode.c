@@ -20,17 +20,6 @@
 #include "codec_internal.h"
 #include "quant_lookup.h"
 
-
-#define GOLDEN_FRAME_THRESH_Q   50
-#define PUR 8
-#define PU 4
-#define PUL 2
-#define PL 1
-#define HIGHBITDUPPED(X) (((signed short) X)  >> 15)
-
-
-static const int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };
-
 static void SetupBoundingValueArray_Generic(PB_INSTANCE *pbi,
                                             ogg_int32_t FLimit){
 
@@ -45,22 +34,6 @@ static void SetupBoundingValueArray_Generic(PB_INSTANCE *pbi,
     BoundingValuePtr[i] = i;
     BoundingValuePtr[i+FLimit] = FLimit-i;
   }
-}
-
-/* handle the in-loop filter limit value table */
-
-int ReadFilterTables(codec_setup_info *ci, oggpack_buffer *opb){
-  int i;
-  int bits, value;
-
-  theora_read(opb, 3, &bits);
-  for(i=0;i<Q_TABLE_SIZE;i++){
-    theora_read(opb,bits,&value);
-    ci->LoopFilterLimitValues[i]=value;
-  }
-  if(bits<0)return OC_BADHEADER;
-
-  return 0;
 }
 
 void SetupLoopFilter(PB_INSTANCE *pbi){
@@ -673,7 +646,7 @@ void LoopFilter(PB_INSTANCE *pbi){
 }
 
 void ReconRefFrames (PB_INSTANCE *pbi){
-  ogg_int32_t i,j;
+  ogg_int32_t i;
   unsigned char *SwapReconBuffersTemp;
 
   SetupLoopFilter(pbi);

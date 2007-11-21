@@ -188,6 +188,14 @@ static void  DestroyHuffTree(HUFF_ENTRY *root_ptr){
   }
 }
 
+static void  ClearHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES]){
+  int i;
+  for(i=0; i<NUM_HUFF_TABLES; i++) {
+    DestroyHuffTree(HuffRoot[i]);
+    HuffRoot[i] = NULL;
+  }
+}
+
 void ClearHuffmanSet( PB_INSTANCE *pbi ){
   int i;
 
@@ -242,32 +250,3 @@ void WriteHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES],
   }
 }
 
-static HUFF_ENTRY *CopyHuffTree(const HUFF_ENTRY *HuffSrc) {
-  if(HuffSrc){
-    HUFF_ENTRY *HuffDst;
-    HuffDst = (HUFF_ENTRY *)_ogg_calloc(1, sizeof(HUFF_ENTRY));
-    HuffDst->Value = HuffSrc->Value;
-    if (HuffSrc->Value < 0) {
-      HuffDst->ZeroChild = CopyHuffTree(HuffSrc->ZeroChild);
-      HuffDst->OneChild = CopyHuffTree(HuffSrc->OneChild);
-    }
-    return HuffDst;
-  }
-  return NULL;
-}
-
-void InitHuffmanTrees(PB_INSTANCE *pbi, const codec_setup_info *ci) {
-  int i;
-  pbi->ExtraBitLengths_VP3x = ExtraBitLengths_VP31;
-  for(i=0; i<NUM_HUFF_TABLES; i++){
-    pbi->HuffRoot_VP3x[i] = CopyHuffTree(ci->HuffRoot[i]);
-  }
-}
-
-void  ClearHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES]){
-  int i;
-  for(i=0; i<NUM_HUFF_TABLES; i++) {
-    DestroyHuffTree(HuffRoot[i]);
-    HuffRoot[i] = NULL;
-  }
-}

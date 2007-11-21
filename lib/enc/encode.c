@@ -21,11 +21,143 @@
 #include "encoder_lookup.h"
 #include "block_inline.h"
 
-#define PUR 8
-#define PU 4
-#define PUL 2
-#define PL 1
-#define HIGHBITDUPPED(X) (((ogg_int16_t) X)  >> 15)
+static void PredictDC(CP_INSTANCE *cpi, ogg_int16_t *predicted){
+  ogg_int32_t   i,j;
+  int k,m,n;
+
+  /* value left value up-left, value up, value up-right, missing
+      values skipped. */
+  int v[4];
+
+  /* fragment number left, up-left, up, up-right */
+  int fn[4];
+
+  /* predictor count. */
+  int pcount;
+
+  /*which predictor constants to use */
+  ogg_int16_t wpc;
+
+  /* last used inter predictor (Raster Order) */
+  ogg_int16_t Last[3];  /* last value used for given frame */
+
+  int FragsAcross;
+  int FragsDown;
+  int FromFragment,ToFragment;
+  int WhichFrame;
+  int WhichCase;
+
+  /* for y,u,v */
+  for ( j = 0; j < 3 ; j++) {
+    /* pick which fragments based on Y, U, V */
+    switch(j){
+    case 0: /* y */
+      FromFragment = 0;
+      ToFragment = cpi->pb.YPlaneFragments;
+      FragsAcross = cpi->pb.HFragments;
+      FragsDown = cpi->pb.VFragments;
+      break;
+    case 1: /* u */
+      FromFragment = cpi->pb.YPlaneFragments;
+      ToFragment = cpi->pb.YPlaneFragments + cpi->pb.UVPlaneFragments ;
+      FragsAcross = cpi->pb.HFragments >> 1;
+      FragsDown = cpi->pb.VFragments >> 1;
+      break;
+    /*case 2:  v */
+    default:
+      FromFragment = cpi->pb.YPlaneFragments + cpi->pb.UVPlaneFragments;
+      ToFragment = cpi->pb.YPlaneFragments + (2 * cpi->pb.UVPlaneFragments) ;
+      FragsAcross = cpi->pb.HFragments >> 1;
+      FragsDown = cpi->pb.VFragments >> 1;
+      break;
+    }
+
+    /* initialize our array of last used DC Components */
+    for(k=0;k<3;k++)Last[k]=0;
+    i=FromFragment;
+
+    /* do prediction on all of Y, U or V */
+    for ( m = 0 ; m < FragsDown ; m++) {
+      for ( n = 0 ; n < FragsAcross ; n++, i++) {
+        predicted[i] = cpi->pb.QFragData[i][0];
+
+        /* only do 2 prediction if fragment coded and on non intra or
+           if all fragments are intra */
+        if( cpi->pb.display_fragments[i] ||
+            (cpi->pb.FrameType == KEY_FRAME) ) {
+          /* Type of Fragment */
+
+          WhichFrame = Mode2Frame[cpi->pb.FragCodingMethod[i]];
+
+          /* Check Borderline Cases */
+          WhichCase = (n==0) + ((m==0) << 1) + ((n+1 == FragsAcross) << 2);
+
+          fn[0]=i-1;
+          fn[1]=i-FragsAcross-1;
+          fn[2]=i-FragsAcross;
+          fn[3]=i-FragsAcross+1;
+
+          /* fragment valid for prediction use if coded and it comes
+             from same frame as the one we are predicting */
+          for(k=pcount=wpc=0; k<4; k++) {
+            int pflag;
+            pflag=1<<k;
+            if((bc_mask[WhichCase]&pflag) &&
+               cpi->pb.display_fragments[fn[k]] &&
+               (Mode2Frame[cpi->pb.FragCodingMethod[fn[k]]] == WhichFrame)){
+              v[pcount]=cpi->pb.QFragData[fn[k]][0];
+              wpc|=pflag;
+              pcount++;
+            }
+          }
+
+          if(wpc==0) {
+
+            /* fall back to the last coded fragment */
+            predicted[i] -= Last[WhichFrame];
+
+          } else {
+
+            /* don't do divide if divisor is 1 or 0 */
+            ogg_int16_t DC = pc[wpc][0]*v[0];
+            for(k=1; k<pcount; k++)
+              DC += pc[wpc][k]*v[k];
+	    
+            /* if we need to do a shift */
+            if(pc[wpc][4] != 0 ) {
+	      
+              /* If negative add in the negative correction factor */
+              DC += (HIGHBITDUPPED(DC) & pc[wpc][5]);
+              /* Shift in lieu of a divide */
+              DC >>= pc[wpc][4];
+
+            }
+
+            /* check for outranging on the two predictors that can outrange */
+            if((wpc&(PU|PUL|PL)) == (PU|PUL|PL)){
+              if( abs(DC - v[2]) > 128) {
+                DC = v[2];
+              } else if( abs(DC - v[0]) > 128) {
+                DC = v[0];
+              } else if( abs(DC - v[1]) > 128) {
+                DC = v[1];
+              }
+            }
+
+            predicted[i] -= DC;
+          }
+
+          /* Save the last fragment coded for whatever frame we are
+             predicting from */
+
+          Last[WhichFrame] = cpi->pb.QFragData[i][0];
+
+        }
+      }
+    }
+  }
+}
+
 
 static ogg_uint32_t QuadCodeComponent ( CP_INSTANCE *cpi,
 					ogg_uint32_t FirstSB,
@@ -271,7 +403,7 @@ static void EncodeAcTokenList (CP_INSTANCE *cpi) {
 static void PackModes (CP_INSTANCE *cpi) {
   ogg_uint32_t    i,j;
   unsigned char   ModeIndex;
-  unsigned char  *SchemeList;
+  const unsigned char  *SchemeList;
 
   unsigned char   BestModeSchemes[MAX_MODES];
   ogg_int32_t     ModeCount[MAX_MODES];
@@ -389,8 +521,8 @@ static void PackModes (CP_INSTANCE *cpi) {
 static void PackMotionVectors (CP_INSTANCE *cpi) {
   ogg_int32_t  i;
   ogg_uint32_t MethodBits[2] = {0,0};
-  ogg_uint32_t * MvBitsPtr;
-  ogg_uint32_t * MvPatternPtr;
+  const ogg_uint32_t * MvBitsPtr;
+  const ogg_uint32_t * MvPatternPtr;
 
   oggpack_buffer *opb=cpi->oggbuffer;
 
@@ -691,103 +823,25 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
 
 }
 
-static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
-  ogg_int32_t   i,j;
+ogg_uint32_t EncodeData(CP_INSTANCE *cpi){
+  ogg_int32_t   i;
   ogg_uint32_t  coded_pixels=0;
-  int           QIndex;
-  int k,m,n;
 
-  /* predictor multiplier up-left, up, up-right,left, shift
-     Entries are packed in the order L, UL, U, UR, with missing entries
-      moved to the end (before the shift parameters). */
-  static const ogg_int16_t pc[16][6]={
-    {0,0,0,0,0,0},
-    {1,0,0,0,0,0},      /* PL */
-    {1,0,0,0,0,0},      /* PUL */
-    {1,0,0,0,0,0},      /* PUL|PL */
-    {1,0,0,0,0,0},      /* PU */
-    {1,1,0,0,1,1},      /* PU|PL */
-    {0,1,0,0,0,0},      /* PU|PUL */
-    {29,-26,29,0,5,31}, /* PU|PUL|PL */
-    {1,0,0,0,0,0},      /* PUR */
-    {75,53,0,0,7,127},  /* PUR|PL */
-    {1,1,0,0,1,1},      /* PUR|PUL */
-    {75,0,53,0,7,127},  /* PUR|PUL|PL */
-    {1,0,0,0,0,0},      /* PUR|PU */
-    {75,0,53,0,7,127},  /* PUR|PU|PL */
-    {3,10,3,0,4,15},    /* PUR|PU|PUL */
-    {29,-26,29,0,5,31}  /* PUR|PU|PUL|PL */
-  };
-
-  /* boundary case bit masks. */
-  static const int bc_mask[8]={
-    /* normal case no boundary condition */
-    PUR|PU|PUL|PL,
-    /* left column */
-    PUR|PU,
-    /* top row */
-    PL,
-    /* top row, left column */
-    0,
-    /* right column */
-    PU|PUL|PL,
-    /* right and left column */
-    PU,
-    /* top row, right column */
-    PL,
-    /* top row, right and left column */
-    0
-  };
-
-  /* value left value up-left, value up, value up-right, missing
-      values skipped. */
-  int v[4];
-
-  /* fragment number left, up-left, up, up-right */
-  int fn[4];
-
-  /* predictor count. */
-  int pcount;
-
-  /*which predictor constants to use */
-  ogg_int16_t wpc;
-
-  /* last used inter predictor (Raster Order) */
-  ogg_int16_t Last[3];  /* last value used for given frame */
-
-  int FragsAcross=cpi->pb.HFragments;
-  int FragsDown = cpi->pb.VFragments;
-  int FromFragment,ToFragment;
-  int WhichFrame;
-  int WhichCase;
-
-  static const ogg_int16_t Mode2Frame[] = {
-    1,  /* CODE_INTER_NO_MV     0 => Encoded diff from same MB last frame  */
-    0,  /* CODE_INTRA           1 => DCT Encoded Block */
-    1,  /* CODE_INTER_PLUS_MV   2 => Encoded diff from included MV MB last frame */
-    1,  /* CODE_INTER_LAST_MV   3 => Encoded diff from MRU MV MB last frame */
-    1,  /* CODE_INTER_PRIOR_MV  4 => Encoded diff from included 4 separate MV blocks */
-    2,  /* CODE_USING_GOLDEN    5 => Encoded diff from same MB golden frame */
-    2,  /* CODE_GOLDEN_MV       6 => Encoded diff from included MV MB golden frame */
-    1   /* CODE_INTER_FOUR_MV   7 => Encoded diff from included 4 separate MV blocks */
-  };
-
-  ogg_int16_t PredictedDC;
-
+  /* Zero the count of tokens so far this frame. */
+  cpi->TotTokenCount = 0;
+  
+  /* Zero the mode and MV list indices. */
+  cpi->ModeListCount = 0;
+  
+  /* Zero Decoder EOB run count */
+  cpi->pb.EOB_Run = 0;
+  
   /* Initialise the coded block indices variables. These allow
      subsequent linear access to the quad tree ordered list of coded
      blocks */
   cpi->pb.CodedBlockIndex = 0;
 
-  /* Set the inter/intra descision control variables. */
-  QIndex = Q_TABLE_SIZE - 1;
-  while ( QIndex >= 0 ) {
-    if ( (QIndex == 0) ||
-         ( cpi->pb.QThreshTable[QIndex] >= cpi->pb.ThisFrameQualityValue) )
-      break;
-    QIndex --;
-  }
-
+  dsp_save_fpu (cpi->dsp);
 
   /* Encode and tokenise the Y, U and V components */
   coded_pixels = QuadCodeComponent(cpi, 0, cpi->pb.YSBRows, cpi->pb.YSBCols,
@@ -801,116 +855,7 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
                                     cpi->pb.UVSBRows, cpi->pb.UVSBCols,
                                     cpi->pb.info.width>>1 );
 
-  /* for y,u,v */
-  for ( j = 0; j < 3 ; j++) {
-    /* pick which fragments based on Y, U, V */
-    switch(j){
-    case 0: /* y */
-      FromFragment = 0;
-      ToFragment = cpi->pb.YPlaneFragments;
-      FragsAcross = cpi->pb.HFragments;
-      FragsDown = cpi->pb.VFragments;
-      break;
-    case 1: /* u */
-      FromFragment = cpi->pb.YPlaneFragments;
-      ToFragment = cpi->pb.YPlaneFragments + cpi->pb.UVPlaneFragments ;
-      FragsAcross = cpi->pb.HFragments >> 1;
-      FragsDown = cpi->pb.VFragments >> 1;
-      break;
-    /*case 2:  v */
-    default:
-      FromFragment = cpi->pb.YPlaneFragments + cpi->pb.UVPlaneFragments;
-      ToFragment = cpi->pb.YPlaneFragments + (2 * cpi->pb.UVPlaneFragments) ;
-      FragsAcross = cpi->pb.HFragments >> 1;
-      FragsDown = cpi->pb.VFragments >> 1;
-      break;
-    }
-
-    /* initialize our array of last used DC Components */
-    for(k=0;k<3;k++)Last[k]=0;
-    i=FromFragment;
-
-    /* do prediction on all of Y, U or V */
-    for ( m = 0 ; m < FragsDown ; m++) {
-      for ( n = 0 ; n < FragsAcross ; n++, i++) {
-        cpi->PredictedDC[i] = cpi->pb.QFragData[i][0];
-
-        /* only do 2 prediction if fragment coded and on non intra or
-           if all fragments are intra */
-        if( cpi->pb.display_fragments[i] ||
-            (cpi->pb.FrameType == KEY_FRAME) ) {
-          /* Type of Fragment */
-
-          WhichFrame = Mode2Frame[cpi->pb.FragCodingMethod[i]];
-
-          /* Check Borderline Cases */
-          WhichCase = (n==0) + ((m==0) << 1) + ((n+1 == FragsAcross) << 2);
-
-          fn[0]=i-1;
-          fn[1]=i-FragsAcross-1;
-          fn[2]=i-FragsAcross;
-          fn[3]=i-FragsAcross+1;
-
-          /* fragment valid for prediction use if coded and it comes
-             from same frame as the one we are predicting */
-          for(k=pcount=wpc=0; k<4; k++) {
-            int pflag;
-            pflag=1<<k;
-            if((bc_mask[WhichCase]&pflag) &&
-               cpi->pb.display_fragments[fn[k]] &&
-               (Mode2Frame[cpi->pb.FragCodingMethod[fn[k]]] == WhichFrame)){
-              v[pcount]=cpi->pb.QFragData[fn[k]][0];
-              wpc|=pflag;
-              pcount++;
-            }
-          }
-
-          if(wpc==0) {
-
-            /* fall back to the last coded fragment */
-            cpi->PredictedDC[i] -= Last[WhichFrame];
-
-          } else {
-
-            /* don't do divide if divisor is 1 or 0 */
-            PredictedDC = pc[wpc][0]*v[0];
-            for(k=1; k<pcount; k++){
-              PredictedDC += pc[wpc][k]*v[k];
-            }
-
-            /* if we need to do a shift */
-            if(pc[wpc][4] != 0 ) {
-
-              /* If negative add in the negative correction factor */
-              PredictedDC += (HIGHBITDUPPED(PredictedDC) & pc[wpc][5]);
-              /* Shift in lieu of a divide */
-              PredictedDC >>= pc[wpc][4];
-
-            }
-
-            /* check for outranging on the two predictors that can outrange */
-            if((wpc&(PU|PUL|PL)) == (PU|PUL|PL)){
-              if( abs(PredictedDC - v[2]) > 128) {
-                PredictedDC = v[2];
-              } else if( abs(PredictedDC - v[0]) > 128) {
-                PredictedDC = v[0];
-              } else if( abs(PredictedDC - v[1]) > 128) {
-                PredictedDC = v[1];
-              }
-            }
-
-            cpi->PredictedDC[i] -= PredictedDC;
-          }
-
-          /* Save the last fragment coded for whatever frame we are
-             predicting from */
-
-          Last[WhichFrame] = cpi->pb.QFragData[i][0];
-
-        }
-      }
-    }
-  }
+  PredictDC(cpi, cpi->PredictedDC);
 
 #ifdef _TH_DEBUG_
  {
@@ -933,31 +878,10 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
   /* Reconstruct the reference frames */
   ReconRefFrames(&cpi->pb);
 
+  dsp_restore_fpu (cpi->dsp);
+
   /* Return total number of coded pixels */
   return coded_pixels;
-}
-
-ogg_uint32_t EncodeData(CP_INSTANCE *cpi){
-    ogg_uint32_t coded_pixels = 0;
-
-    /* Zero the count of tokens so far this frame. */
-    cpi->TotTokenCount = 0;
-
-    /* Zero the mode and MV list indices. */
-    cpi->ModeListCount = 0;
-
-    /* Zero Decoder EOB run count */
-    cpi->pb.EOB_Run = 0;
-
-    dsp_save_fpu (cpi->dsp);
-
-    /* Encode any fragments coded using DCT. */
-    coded_pixels += QuadCodeDisplayFragments (cpi);
-
-    dsp_restore_fpu (cpi->dsp);
-
-    return coded_pixels;
-
 }
 
 ogg_uint32_t PickIntra( CP_INSTANCE *cpi,
