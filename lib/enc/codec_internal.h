@@ -77,17 +77,6 @@ enum BlockMode {
 
 #define MAX_MV_EXTENT 31  /* Max search distance in half pixel increments */
 
-typedef struct CONFIG_TYPE2{
-  double       OutputFrameRate;
-  ogg_uint32_t TargetBandwidth;
-
-  ogg_uint32_t FirstFrameQ;
-  ogg_uint32_t BaseQ;
-  ogg_uint32_t MaxQ;            /* Absolute Max Q allowed. */
-  ogg_uint32_t ActiveMaxQ;      /* Currently active Max Q */
-
-} CONFIG_TYPE2;
-
 typedef struct coeffNode{
   int i;
   struct coeffNode *next;
@@ -315,22 +304,22 @@ typedef struct CP_INSTANCE {
      is the only assumption that library makes about our internal format.*/
   oc_state_dispatch_vtbl dispatch_vtbl;
 
+  unsigned char   *yuvptr;
+
   /* Compressor Configuration */
-  CONFIG_TYPE2     Configuration;
+  int              BaseQ;
   int              GoldenFrameEnabled;
   int              InterPrediction;
   int              MotionCompensation;
 
-  ogg_uint32_t     LastKeyFrame ;
+  ogg_uint32_t     LastKeyFrame;
 
   /* Compressor Statistics */
   ogg_int64_t      KeyFrameCount; /* Count of key frames. */
   ogg_int64_t      TotKeyFrameBytes;
 
   /* Frame Statistics  */
-  signed char      InterCodeCount;
   ogg_int64_t      CurrentFrame;
-  ogg_uint32_t     FrameBitCount;
   int              ThisIsFirstFrame;
   int              ThisIsKeyFrame;
 
@@ -341,10 +330,6 @@ typedef struct CP_INSTANCE {
   ogg_uint32_t     ExhaustiveSearchThresh;
   ogg_uint32_t     MinImprovementForFourMV;
   ogg_uint32_t     FourMVThreshold;
-
-   /*********************************************************************/
-  unsigned char    *yuvptr;
-  /*********************************************************************/
 
   /*********************************************************************/
   /* Token Buffers */
@@ -434,9 +419,6 @@ typedef struct CP_INSTANCE {
 
 #define clamp255(x) ((unsigned char)((((x)<0)-1) & ((x) | -((x)>255))))
 
-extern void InitPBInstance(PB_INSTANCE *pbi);
-extern void ClearPBInstance(PB_INSTANCE *pbi);
-
 extern void IDct1( ogg_int16_t * InputData,
                    ogg_int16_t *QuantMatrix,
                    ogg_int16_t * OutputData );
@@ -455,9 +437,6 @@ extern void ReconInterHalfPixel2( PB_INSTANCE *pbi, unsigned char * ReconPtr,
                                   ogg_uint32_t LineStep ) ;
 
 extern void SetupLoopFilter(PB_INSTANCE *pbi);
-extern void CopyBlock(unsigned char *src,
-                      unsigned char *dest,
-                      unsigned int srcstride);
 extern void LoopFilter(PB_INSTANCE *pbi);
 extern void ReconRefFrames (PB_INSTANCE *pbi);
 extern void ExpandToken( ogg_int16_t * ExpandedBlock,
@@ -476,25 +455,17 @@ extern ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi,
                                        ogg_int32_t FragIndex);
 extern void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
                                     ogg_uint32_t PixelsPerLine ) ;
-extern void ClearFragmentInfo(PB_INSTANCE * pbi);
-extern void InitFragmentInfo(PB_INSTANCE * pbi);
-extern void ClearFrameInfo(PB_INSTANCE * pbi);
-extern void InitFrameInfo(PB_INSTANCE * pbi, unsigned int FrameSize);
-extern void InitializeFragCoordinates(PB_INSTANCE *pbi);
 extern void InitFrameDetails(PB_INSTANCE *pbi);
 extern void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer *opb);
 extern void InitQTables( PB_INSTANCE *pbi );
-extern void quant_tables_init( PB_INSTANCE *pbi, const th_quant_info *qinfo);
 extern void InitHuffmanSet( PB_INSTANCE *pbi );
 extern void ClearHuffmanSet( PB_INSTANCE *pbi );
 extern void WriteHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES],
                               oggpack_buffer *opb);
-extern void QuadDecodeDisplayFragments ( PB_INSTANCE *pbi );
 extern void PackAndWriteDFArray( CP_INSTANCE *cpi );
-extern void UpdateFragQIndex(PB_INSTANCE *pbi);
-extern void PostProcess(PB_INSTANCE *pbi);
 extern void InitMotionCompensation ( CP_INSTANCE *cpi );
-extern ogg_uint32_t GetMBIntraError (CP_INSTANCE *cpi, ogg_uint32_t FragIndex,
+extern ogg_uint32_t GetMBIntraError (CP_INSTANCE *cpi, 
+				     ogg_uint32_t FragIndex,
                                      ogg_uint32_t PixelsPerLine ) ;
 extern ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
                                      unsigned char * SrcPtr,
@@ -531,7 +502,6 @@ extern ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                               ogg_uint32_t *InterError,
                               ogg_uint32_t *IntraError);
 
-extern CODING_MODE FrArrayUnpackMode(PB_INSTANCE *pbi);
 extern void CreateBlockMapping ( ogg_int32_t  (*BlockMap)[4][4],
                                  ogg_uint32_t YSuperBlocks,
                                  ogg_uint32_t UVSuperBlocks,
@@ -539,8 +509,5 @@ extern void CreateBlockMapping ( ogg_int32_t  (*BlockMap)[4][4],
 
 extern void UpdateUMVBorder( PB_INSTANCE *pbi,
                              unsigned char * DestReconPtr );
-
-extern void ClearTmpBuffers(PB_INSTANCE * pbi);
-extern void InitTmpBuffers(PB_INSTANCE * pbi);
 
 #endif /* ENCODER_INTERNAL_H */

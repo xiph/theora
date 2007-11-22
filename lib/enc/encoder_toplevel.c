@@ -232,14 +232,13 @@ static void CompressFirstFrame(CP_INSTANCE *cpi) {
   SetupKeyFrame(cpi);
 
   cpi->pb.ThisFrameQualityValue = 
-    cpi->pb.quant_info.ac_scale[cpi->Configuration.BaseQ];
+    cpi->pb.quant_info.ac_scale[cpi->BaseQ];
 
   /* Initialise quantizer. */
   UpdateQC(cpi, cpi->pb.ThisFrameQualityValue );
 
   /* Compress and output the frist frame. */
-  PickIntra( cpi,
-             cpi->pb.YSBRows, cpi->pb.YSBCols);
+  PickIntra( cpi, cpi->pb.YSBRows, cpi->pb.YSBCols);
   UpdateFrame(cpi);
 
 }
@@ -255,13 +254,12 @@ static void CompressKeyFrame(CP_INSTANCE *cpi){
   UpdateQC(cpi, cpi->pb.ThisFrameQualityValue );
 
   /* Compress and output the frist frame. */
-  PickIntra( cpi,
-             cpi->pb.YSBRows, cpi->pb.YSBCols);
+  PickIntra( cpi, cpi->pb.YSBRows, cpi->pb.YSBCols);
   UpdateFrame(cpi);
 
 }
 
-static int CompressFrame( CP_INSTANCE *cpi) {
+static int CompressFrame( CP_INSTANCE *cpi ) {
   ogg_uint32_t  i;
   ogg_uint32_t  KFIndicator = 0;
 
@@ -286,8 +284,7 @@ static int CompressFrame( CP_INSTANCE *cpi) {
     /* for now, mark all blocks to be coded... */
     for(i=0;i<cpi->pb.UnitFragments;i++)
       cpi->pb.display_fragments[i]=1;
-
-
+    
     /* Select modes and motion vectors for each of the blocks : return
        an error score for inter and intra */
     PickModes( cpi, cpi->pb.YSBRows, cpi->pb.YSBCols,
@@ -352,16 +349,10 @@ int theora_encode_init(theora_state *th, theora_info *c){
   c->version_minor=TH_VERSION_MINOR;
   c->version_subminor=TH_VERSION_SUB;
 
-  /* Initialise Configuration structure to legal values */
   if(c->quality>63)c->quality=63;
   if(c->quality<0)c->quality=32;
   if(c->target_bitrate<0)c->target_bitrate=0;
-  /* we clamp target_bitrate to 24 bits after setting up the encoder */
-
-  cpi->Configuration.BaseQ = c->quality;
-  cpi->Configuration.FirstFrameQ = c->quality;
-  cpi->Configuration.MaxQ = c->quality;
-  cpi->Configuration.ActiveMaxQ = c->quality;
+  cpi->BaseQ = c->quality;
 
   cpi->MVChangeFactor    =    14;
   cpi->FourMvChangeFactor =   8;
@@ -371,7 +362,6 @@ int theora_encode_init(theora_state *th, theora_info *c){
   cpi->FourMVThreshold = 10000;
   cpi->InterTripOutThresh = 5000;
   cpi->MVEnabled = 1;
-  cpi->InterCodeCount = 127;
   cpi->GoldenFrameEnabled = 1;
   cpi->InterPrediction = 1;
   cpi->MotionCompensation = 1;
@@ -413,13 +403,6 @@ int theora_encode_init(theora_state *th, theora_info *c){
   cpi->oggbufferstate = ogg_buffer_create();
   oggpackB_writeinit(cpi->oggbuffer, cpi->oggbufferstate);
 #endif 
-
-  /* Set data rate related variables. */
-  cpi->Configuration.TargetBandwidth = (c->target_bitrate) / 8;
-
-  cpi->Configuration.OutputFrameRate =
-    (double)( c->fps_numerator /
-              c->fps_denominator );
 
   InitFrameDetails(&cpi->pb);
   EInitFragmentInfo(cpi);
@@ -463,7 +446,6 @@ int theora_encode_YUVin(theora_state *t,
   if (yuv->y_height != (int)cpi->pb.info.height ||
       yuv->y_width != (int)cpi->pb.info.width )
     return(-1);
-
 
   /* Copy over input YUV to internal YUV buffers. */
   /* we invert the image for backward compatibility with VP3 */
@@ -515,7 +497,7 @@ int theora_encode_YUVin(theora_state *t,
       cpi->ThisIsKeyFrame = 0;
     } else  {
       /* Compress the frame. */
-      dropped = CompressFrame( cpi );
+      dropped = CompressFrame(cpi);
     }
 
   }
@@ -737,8 +719,6 @@ static void theora_encode_clear (theora_state  *th){
   if(cpi){
 
     ClearHuffmanSet(&cpi->pb);
-    ClearFragmentInfo(&cpi->pb);
-    ClearFrameInfo(&cpi->pb);
     EClearFragmentInfo(cpi);
     EClearFrameInfo(cpi);
 

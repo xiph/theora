@@ -46,6 +46,7 @@ static void CalcPixelIndexTable( PB_INSTANCE *pbi){
 
   /************************************************************************/
   /* Now calculate the pixel index table for image reconstruction buffers */
+
   PixelIndexTablePtr = pbi->recon_pixel_index_table;
   for ( i = 0; i < pbi->YPlaneFragments; i++ ){
     PixelIndexTablePtr[ i ] =
@@ -82,7 +83,7 @@ static void CalcPixelIndexTable( PB_INSTANCE *pbi){
   }
 }
 
-void ClearFragmentInfo(PB_INSTANCE * pbi){
+static void ClearFragmentInfo(PB_INSTANCE * pbi){
 
   /* free prior allocs if present */
   if(pbi->display_fragments) _ogg_free(pbi->display_fragments);
@@ -142,7 +143,7 @@ void ClearFragmentInfo(PB_INSTANCE * pbi){
   pbi->FragMVect = 0;
 }
 
-void InitFragmentInfo(PB_INSTANCE * pbi){
+static void InitFragmentInfo(PB_INSTANCE * pbi){
 
   /* clear any existing info */
   ClearFragmentInfo(pbi);
@@ -213,7 +214,7 @@ void InitFragmentInfo(PB_INSTANCE * pbi){
 
 }
 
-void ClearFrameInfo(PB_INSTANCE * pbi){
+static void ClearFrameInfo(PB_INSTANCE * pbi){
   if(pbi->ThisFrameRecon )
     _ogg_free(pbi->ThisFrameRecon );
   if(pbi->GoldenFrame)
@@ -226,7 +227,7 @@ void ClearFrameInfo(PB_INSTANCE * pbi){
   pbi->LastFrameRecon = 0;
 }
 
-void InitFrameInfo(PB_INSTANCE * pbi, unsigned int FrameSize){
+static void InitFrameInfo(PB_INSTANCE * pbi, unsigned int FrameSize){
 
   /* clear any existing info */
   ClearFrameInfo(pbi);

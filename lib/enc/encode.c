@@ -301,7 +301,6 @@ static void EncodeDcTokenList (CP_INSTANCE *cpi) {
       HuffIndex = (ogg_uint32_t)DC_HUFF_OFFSET + (ogg_uint32_t)DcHuffChoice[1];
 
     /* Add the bits to the encode holding buffer. */
-    cpi->FrameBitCount += cpi->pb.HuffCodeLengthArray_VP3x[HuffIndex][Token];
     oggpackB_write( opb, cpi->pb.HuffCodeArray_VP3x[HuffIndex][Token],
                      (ogg_uint32_t)cpi->
                      pb.HuffCodeLengthArray_VP3x[HuffIndex][Token] );
@@ -309,7 +308,6 @@ static void EncodeDcTokenList (CP_INSTANCE *cpi) {
     /* If the token is followed by an extra bits token then code it */
     if ( cpi->pb.ExtraBitLengths_VP3x[Token] > 0 ) {
       /* Add the bits to the encode holding buffer.  */
-      cpi->FrameBitCount += cpi->pb.ExtraBitLengths_VP3x[Token];
       oggpackB_write( opb, ExtraBitsToken,
                        (ogg_uint32_t)cpi->pb.ExtraBitLengths_VP3x[Token] );
     }
@@ -382,7 +380,6 @@ static void EncodeAcTokenList (CP_INSTANCE *cpi) {
       AcHuffChoice[cpi->OptimisedTokenListPl[i]];
 
     /* Add the bits to the encode holding buffer. */
-    cpi->FrameBitCount += cpi->pb.HuffCodeLengthArray_VP3x[HuffIndex][Token];
     oggpackB_write( opb, cpi->pb.HuffCodeArray_VP3x[HuffIndex][Token],
                      (ogg_uint32_t)cpi->
                      pb.HuffCodeLengthArray_VP3x[HuffIndex][Token] );
@@ -390,7 +387,6 @@ static void EncodeAcTokenList (CP_INSTANCE *cpi) {
     /* If the token is followed by an extra bits token then code it */
     if ( cpi->pb.ExtraBitLengths_VP3x[Token] > 0 ) {
       /* Add the bits to the encode holding buffer. */
-      cpi->FrameBitCount += cpi->pb.ExtraBitLengths_VP3x[Token];
       oggpackB_write( opb, ExtraBitsToken,
                        (ogg_uint32_t)cpi->pb.ExtraBitLengths_VP3x[Token] );
     }
@@ -753,9 +749,6 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
     PackAndWriteDFArray( cpi );
   }
 
-  /* Note the number of bits used to code the tree itself. */
-  cpi->FrameBitCount = oggpackB_bytes(cpi->oggbuffer) << 3;
-
   /* Mode and MV data not needed for key frames. */
   if ( cpi->pb.FrameType != KEY_FRAME ){
     /* Pack and code the mode list. */
@@ -763,8 +756,6 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
     /* Pack the motion vectors */
     PackMotionVectors (cpi);
   }
-
-  cpi->FrameBitCount = oggpackB_bytes(cpi->oggbuffer) << 3;
 
   /* Optimise the DC tokens */
   for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) {
