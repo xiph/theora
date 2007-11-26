@@ -114,7 +114,7 @@ typedef struct{
 typedef struct fragment {
   int coded;
   mv_t mv;
-  ogg_int16_t dc;
+  ogg_int16_t pred_dc;
   ogg_int16_t dct[64];
 
   ogg_uint32_t raw_index;
@@ -167,10 +167,6 @@ typedef struct PB_INSTANCE {
   ogg_uint32_t  ReconYDataOffset;
   ogg_uint32_t  ReconUDataOffset;
   ogg_uint32_t  ReconVDataOffset;
-  ogg_uint32_t  YSuperBlocks;   /* Number of SuperBlocks in a Y frame */
-  ogg_uint32_t  UVSuperBlocks;  /* Number of SuperBlocks in a U or V frame */
-  ogg_uint32_t  SuperBlocks;    /* Total number of SuperBlocks in a
-                                   Y,U,V frame */
 
   ogg_uint32_t  YSBRows;        /* Number of rows of SuperBlocks in a
                                    Y frame */
@@ -180,8 +176,6 @@ typedef struct PB_INSTANCE {
                                    U or V frame */
   ogg_uint32_t  UVSBCols;       /* Number of cols of SuperBlocks in a
                                    U or V frame */
-
-  ogg_uint32_t  MacroBlocks;    /* Total number of Macro-Blocks */
 
   /**********************************************************************/
   /* Frames  */
@@ -328,6 +322,34 @@ typedef struct CP_INSTANCE {
   ogg_int32_t       TokensCoded;
   /********************************************************************/
   /* SuperBlock, MacroBLock and Fragment Information */
+  fragment_t       *yfrag;
+  fragment_t       *ufrag;
+  fragment_t       *vfrag;
+  macroblock_t     *macrob;
+  superblock_t     *ysuper;
+  superblock_t     *usuper;
+  superblock_t     *vsuper;
+
+  ogg_uint32_t      yfrag_h;
+  ogg_uint32_t      yfrag_v;
+  ogg_uint32_t      yfrag_n;
+  ogg_uint32_t      uvfrag_h;
+  ogg_uint32_t      uvfrag_v;
+  ogg_uint32_t      uvfrag_n;
+  ogg_uint32_t      frag_n;
+
+  ogg_uint32_t      macrob_h;
+  ogg_uint32_t      macrob_v;
+  ogg_uint32_t      macrob_n;
+  
+  ogg_uint32_t      ysuper_h;
+  ogg_uint32_t      ysuper_v;
+  ogg_uint32_t      ysuper_n;
+  ogg_uint32_t      uvsuper_h;
+  ogg_uint32_t      uvsuper_v;
+  ogg_uint32_t      uvsuper_n;
+  ogg_uint32_t      super_n;
+
   /* Coded flag arrays and counters for them */
   unsigned char    *PartiallyCodedFlags;
   unsigned char    *PartiallyCodedMbPatterns;

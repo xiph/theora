@@ -156,6 +156,21 @@ static void EClearFrameInfo(CP_INSTANCE * cpi) {
     _ogg_free(cpi->OptimisedTokenListPl);
   cpi->OptimisedTokenListPl = 0;
 
+  if(cpi->yfrag)_ogg_free(cpi->yfrag);
+  if(cpi->ufrag)_ogg_free(cpi->ufrag);
+  if(cpi->vfrag)_ogg_free(cpi->vfrag);
+  if(cpi->macrob)_ogg_free(cpi->macrob);
+  if(cpi->ysuper)_ogg_free(cpi->ysuper);
+  if(cpi->usuper)_ogg_free(cpi->usuper);
+  if(cpi->vsuper)_ogg_free(cpi->vsuper);
+  cpi->yfrag = 0;
+  cpi->ufrag = 0;
+  cpi->vfrag = 0;
+  cpi->macrob = 0;
+  cpi->ysuper = 0;
+  cpi->usuper = 0;
+  cpi->vsuper = 0;
+
 }
 
 static void EInitFrameInfo(CP_INSTANCE * cpi){
@@ -180,6 +195,60 @@ static void EInitFrameInfo(CP_INSTANCE * cpi){
   cpi->OptimisedTokenListPl =
     _ogg_malloc(FrameSize*
                 sizeof(*cpi->OptimisedTokenListPl));
+
+  /* new block abstraction setup... babysteps... */
+  cpi->yfrag_h = (cpi->info.width >> 3);
+  cpi->yfrag_v = (cpi->info.height >> 3);
+  cpi->yfrag_n = cpi->yfrag_h * cpi->yfrag_v;
+  cpi->uvfrag_h = (cpi->yfrag_h >> 1);
+  cpi->uvfrag_v = (cpi->yfrag_v >> 1);
+  cpi->uvfrag_n = cpi->uvfrag_h * cpi->uvfrag_v;
+  cpi->frag_n = cpi->yfrag_n + cpi->uvfrag_n*2;
+
+  cpi->macrob_h = (cpi->yfrag_h >> 1);
+  cpi->macrob_v = (cpi->yfrag_v >> 1);
+  cpi->macrob_n = cpi->macrob_h * cpi->macrob_v;
+
+  cpi->ysuper_h = (cpi->info.width >> 5) + ((cpi->info.width & 0x1f) ? 1 : 0);
+  cpi->ysuper_v = (cpi->info.height >> 5) + ((cpi->info.height & 0x1f) ? 1 : 0);
+  cpi->ysuper_n = cpi->ysuper_h * cpi->ysuper_v;
+  cpi->uvsuper_h = (cpi->info.width >> 6) + ((cpi->info.width & 0x3f) ? 1 : 0);
+  cpi->uvsuper_v = (cpi->info.height >> 6) + ((cpi->info.height & 0x3f) ? 1 : 0);
+  cpi->uvsuper_n = cpi->uvsuper_h * cpi->uvsuper_v;
+  cpi->super_n = cpi->ysuper_n + cpi->uvsuper_n*2;
+
+  cpi->yfrag = calloc(cpi->yfrag_n, sizeof(*cpi->yfrag));
+  cpi->ufrag = calloc(cpi->uvfrag_n, sizeof(*cpi->ufrag));
+  cpi->vfrag = calloc(cpi->uvfrag_n, sizeof(*cpi->vfrag));
+
+  cpi->macrob = calloc(cpi->macrob_n, sizeof(*cpi->macrob));
+
+  cpi->ysuper = calloc(cpi->ysuper_n, sizeof(*cpi->ysuper));
+  cpi->usuper = calloc(cpi->uvsuper_n, sizeof(*cpi->usuper));
+  cpi->vsuper = calloc(cpi->uvsuper_n, sizeof(*cpi->vsuper));
+
+  /* fill in superblock fragment pointers */
+
+  /* complicated for one bad reason; superblock (and fragment) zero is
+     the bottom-left-most, but any uncoded 'extra' space needed to pad
+     out to multiples of 32 pixels hangs off the bottom of the image,
+     not the top. What exactly was VP3 thinking? */
+
+  {
+    int row,col,frag;
+    int hilbertx[16] = {0,1,1,0,0,0,1,1,2,2,3,3,3,2,2,3};
+    int hilberty[16] = {0,0,1,1,2,3,3,2,2,3,3,2,1,1,0,0};
+
+    /* Y */
+    for(row=0;row<cpi->ysuper_v;row++){
+      for(col=0;row<cpi->ysuper_h;col++){
+	for(frag=0;frag<16;frag++){
+	  /* translate to fragment index */
+	  
+	}
+      }
+    }
+  }
 }
 
 static void SetupKeyFrame(CP_INSTANCE *cpi) {
