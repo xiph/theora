@@ -40,9 +40,9 @@ static const __attribute__((aligned(8),used)) int OC_FZIG_ZAGMMX[64]={
 
 
 
-void oc_state_frag_recon_mmx(oc_theora_state *_state,const oc_fragment *_frag,
- int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
- ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]){
+void oc_state_frag_recon_mmx(oc_theora_state *_state, oc_fragment *_frag,
+			     int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
+			     ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]){
   ogg_int16_t  __attribute__((aligned(8))) res_buf[64];
   int dst_framei;
   int dst_ystride;

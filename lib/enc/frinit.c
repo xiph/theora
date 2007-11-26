@@ -19,7 +19,8 @@
 #include "codec_internal.h"
 
 
-static void CalcPixelIndexTable( PB_INSTANCE *pbi){
+static void CalcPixelIndexTable( CP_INSTANCE *cpi){
+  PB_INSTANCE *pbi = &cpi->pb;
   ogg_uint32_t i;
   ogg_uint32_t * PixelIndexTablePtr;
 
@@ -28,7 +29,7 @@ static void CalcPixelIndexTable( PB_INSTANCE *pbi){
   for ( i = 0; i < pbi->YPlaneFragments; i++ ) {
     PixelIndexTablePtr[ i ] =
       ((i / pbi->HFragments) * VFRAGPIXELS *
-       pbi->info.width);
+       cpi->info.width);
     PixelIndexTablePtr[ i ] +=
       ((i % pbi->HFragments) * HFRAGPIXELS);
   }
@@ -38,7 +39,7 @@ static void CalcPixelIndexTable( PB_INSTANCE *pbi){
     PixelIndexTablePtr[ i ] =
       ((i / (pbi->HFragments / 2) ) *
        (VFRAGPIXELS *
-        (pbi->info.width / 2)) );
+        (cpi->info.width / 2)) );
     PixelIndexTablePtr[ i ] +=
       ((i % (pbi->HFragments / 2) ) *
        HFRAGPIXELS) + pbi->YPlaneSize;
@@ -244,24 +245,25 @@ static void InitFrameInfo(PB_INSTANCE * pbi, unsigned int FrameSize){
 
 }
 
-void InitFrameDetails(PB_INSTANCE *pbi){
+void InitFrameDetails(CP_INSTANCE *cpi){
   int FrameSize;
+  PB_INSTANCE *pbi = &cpi->pb;
 
     /* Set the frame size etc. */
 
-  pbi->YPlaneSize = pbi->info.width *
-    pbi->info.height;
+  pbi->YPlaneSize = cpi->info.width *
+    cpi->info.height;
   pbi->UVPlaneSize = pbi->YPlaneSize / 4;
-  pbi->HFragments = pbi->info.width / HFRAGPIXELS;
-  pbi->VFragments = pbi->info.height / VFRAGPIXELS;
+  pbi->HFragments = cpi->info.width / HFRAGPIXELS;
+  pbi->VFragments = cpi->info.height / VFRAGPIXELS;
   pbi->UnitFragments = ((pbi->VFragments * pbi->HFragments)*3)/2;
   pbi->YPlaneFragments = pbi->HFragments * pbi->VFragments;
   pbi->UVPlaneFragments = pbi->YPlaneFragments / 4;
 
-  pbi->YStride = (pbi->info.width + STRIDE_EXTRA);
+  pbi->YStride = (cpi->info.width + STRIDE_EXTRA);
   pbi->UVStride = pbi->YStride / 2;
   pbi->ReconYPlaneSize = pbi->YStride *
-    (pbi->info.height + STRIDE_EXTRA);
+    (cpi->info.height + STRIDE_EXTRA);
   pbi->ReconUVPlaneSize = pbi->ReconYPlaneSize / 4;
   FrameSize = pbi->ReconYPlaneSize + 2 * pbi->ReconUVPlaneSize;
 
@@ -276,14 +278,14 @@ void InitFrameDetails(PB_INSTANCE *pbi){
     (pbi->UVStride * (UMV_BORDER/2)) + (UMV_BORDER/2);
 
   /* Image dimensions in Super-Blocks */
-  pbi->YSBRows = (pbi->info.height/32)  +
-    ( pbi->info.height%32 ? 1 : 0 );
-  pbi->YSBCols = (pbi->info.width/32)  +
-    ( pbi->info.width%32 ? 1 : 0 );
-  pbi->UVSBRows = ((pbi->info.height/2)/32)  +
-    ( (pbi->info.height/2)%32 ? 1 : 0 );
-  pbi->UVSBCols = ((pbi->info.width/2)/32)  +
-    ( (pbi->info.width/2)%32 ? 1 : 0 );
+  pbi->YSBRows = (cpi->info.height/32)  +
+    ( cpi->info.height%32 ? 1 : 0 );
+  pbi->YSBCols = (cpi->info.width/32)  +
+    ( cpi->info.width%32 ? 1 : 0 );
+  pbi->UVSBRows = ((cpi->info.height/2)/32)  +
+    ( (cpi->info.height/2)%32 ? 1 : 0 );
+  pbi->UVSBCols = ((cpi->info.width/2)/32)  +
+    ( (cpi->info.width/2)%32 ? 1 : 0 );
 
   /* Super-Blocks per component */
   pbi->YSuperBlocks = pbi->YSBRows * pbi->YSBCols;
@@ -302,7 +304,7 @@ void InitFrameDetails(PB_INSTANCE *pbi){
 
   /* Re-initialise the pixel index table. */
 
-  CalcPixelIndexTable( pbi );
+  CalcPixelIndexTable( cpi );
 
 }
 

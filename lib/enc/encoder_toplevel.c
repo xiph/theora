@@ -231,12 +231,6 @@ static void CompressFirstFrame(CP_INSTANCE *cpi) {
 
   SetupKeyFrame(cpi);
 
-  cpi->pb.ThisFrameQualityValue = 
-    cpi->pb.quant_info.ac_scale[cpi->BaseQ];
-
-  /* Initialise quantizer. */
-  UpdateQC(cpi, cpi->pb.ThisFrameQualityValue );
-
   /* Compress and output the frist frame. */
   PickIntra( cpi, cpi->pb.YSBRows, cpi->pb.YSBCols);
   UpdateFrame(cpi);
@@ -249,9 +243,6 @@ static void CompressKeyFrame(CP_INSTANCE *cpi){
   cpi->KeyFrameCount += 1;
 
   SetupKeyFrame(cpi);
-
-  /* Initialise DCT tables. */
-  UpdateQC(cpi, cpi->pb.ThisFrameQualityValue );
 
   /* Compress and output the frist frame. */
   PickIntra( cpi, cpi->pb.YSBRows, cpi->pb.YSBCols);
@@ -288,16 +279,16 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
     /* Select modes and motion vectors for each of the blocks : return
        an error score for inter and intra */
     PickModes( cpi, cpi->pb.YSBRows, cpi->pb.YSBCols,
-               cpi->pb.info.width,
+               cpi->info.width,
                &InterError, &IntraError );
 
     /* decide whether we really should have made this frame a key frame */
     /* forcing out a keyframe if the max interval is up is done at a higher level */
-    if( cpi->pb.info.keyframe_auto_p){
+    if( cpi->info.keyframe_auto_p){
       if( ( 2* IntraError < 5 * InterError )
           && ( KFIndicator >= (ogg_uint32_t)
-               cpi->pb.info.keyframe_auto_threshold)
-          && ( cpi->LastKeyFrame > cpi->pb.info.keyframe_mindistance)
+               cpi->info.keyframe_auto_threshold)
+          && ( cpi->LastKeyFrame > cpi->info.keyframe_mindistance)
           ){
         CompressKeyFrame(cpi);  /* Code a key frame */
         return 0;
@@ -383,15 +374,15 @@ int theora_encode_init(theora_state *th, theora_info *c){
   if(c->keyframe_mindistance>32768)c->keyframe_mindistance=32768;
   if(c->keyframe_mindistance>c->keyframe_frequency_force)
     c->keyframe_mindistance=c->keyframe_frequency_force;
-  cpi->pb.keyframe_granule_shift=_ilog(c->keyframe_frequency_force-1);
+  cpi->keyframe_granule_shift=_ilog(c->keyframe_frequency_force-1);
 
   /* clamp the target_bitrate to a maximum of 24 bits so we get a
      more meaningful value when we write this out in the header. */
   if(c->target_bitrate>(1<<24)-1)c->target_bitrate=(1<<24)-1;
 
   /* copy in config */
-  memcpy(&cpi->pb.info,c,sizeof(*c));
-  th->i=&cpi->pb.info;
+  memcpy(&cpi->info,c,sizeof(*c));
+  th->i=&cpi->info;
   th->granulepos=-1;
 
   /* Set up an encode buffer */
@@ -404,7 +395,7 @@ int theora_encode_init(theora_state *th, theora_info *c){
   oggpackB_writeinit(cpi->oggbuffer, cpi->oggbufferstate);
 #endif 
 
-  InitFrameDetails(&cpi->pb);
+  InitFrameDetails(cpi);
   EInitFragmentInfo(cpi);
   EInitFrameInfo(cpi);
 
@@ -426,7 +417,7 @@ int theora_encode_init(theora_state *th, theora_info *c){
   cpi->ThisIsFirstFrame = 1;
   cpi->readyflag = 1;
   
-  cpi->pb.HeadersWritten = 0;
+  cpi->HeadersWritten = 0;
 
   return 0;
 }
@@ -443,8 +434,8 @@ int theora_encode_YUVin(theora_state *t,
   if(cpi->doneflag)return OC_EINVAL;
 
   /* If frame size has changed, abort out for now */
-  if (yuv->y_height != (int)cpi->pb.info.height ||
-      yuv->y_width != (int)cpi->pb.info.width )
+  if (yuv->y_height != (int)cpi->info.height ||
+      yuv->y_width != (int)cpi->info.width )
     return(-1);
 
   /* Copy over input YUV to internal YUV buffers. */
@@ -489,7 +480,7 @@ int theora_encode_YUVin(theora_state *t,
     /* don't allow generating invalid files that overflow the p-frame
        shift, even if keyframe_auto_p is turned off */
     if(cpi->LastKeyFrame >= (ogg_uint32_t)
-       cpi->pb.info.keyframe_frequency_force)
+       cpi->info.keyframe_frequency_force)
       cpi->ThisIsKeyFrame = 1;
     
     if ( cpi->ThisIsKeyFrame ) {
@@ -507,7 +498,7 @@ int theora_encode_YUVin(theora_state *t,
   cpi->packetflag=1;
 
   t->granulepos=
-    ((cpi->CurrentFrame - cpi->LastKeyFrame)<<cpi->pb.keyframe_granule_shift)+
+    ((cpi->CurrentFrame - cpi->LastKeyFrame)<<cpi->keyframe_granule_shift)+
     cpi->LastKeyFrame - 1;
 
 #ifdef _TH_DEBUG_
@@ -576,30 +567,30 @@ int theora_encode_header(theora_state *t, ogg_packet *op){
   oggpackB_write(cpi->oggbuffer,TH_VERSION_MINOR,8);
   oggpackB_write(cpi->oggbuffer,TH_VERSION_SUB,8);
 
-  oggpackB_write(cpi->oggbuffer,cpi->pb.info.width>>4,16);
-  oggpackB_write(cpi->oggbuffer,cpi->pb.info.height>>4,16);
-  oggpackB_write(cpi->oggbuffer,cpi->pb.info.frame_width,24);
-  oggpackB_write(cpi->oggbuffer,cpi->pb.info.frame_height,24);
-  oggpackB_write(cpi->oggbuffer,cpi->pb.info.offset_x,8);
+  oggpackB_write(cpi->oggbuffer,cpi->info.width>>4,16);
+  oggpackB_write(cpi->oggbuffer,cpi->info.height>>4,16);
+  oggpackB_write(cpi->oggbuffer,cpi->info.frame_width,24);
+  oggpackB_write(cpi->oggbuffer,cpi->info.frame_height,24);
+  oggpackB_write(cpi->oggbuffer,cpi->info.offset_x,8);
   /* Applications use offset_y to mean offset from the top of the image; the
    * meaning in the bitstream is the opposite (from the bottom). Transform.
    */
-  offset_y = cpi->pb.info.height - cpi->pb.info.frame_height - 
-    cpi->pb.info.offset_y;
+  offset_y = cpi->info.height - cpi->info.frame_height - 
+    cpi->info.offset_y;
   oggpackB_write(cpi->oggbuffer,offset_y,8);
 
-  oggpackB_write(cpi->oggbuffer,cpi->pb.info.fps_numerator,32);
-  oggpackB_write(cpi->oggbuffer,cpi->pb.info.fps_denominator,32);
-  oggpackB_write(cpi->oggbuffer,cpi->pb.info.aspect_numerator,24);
-  oggpackB_write(cpi->oggbuffer,cpi->pb.info.aspect_denominator,24);
+  oggpackB_write(cpi->oggbuffer,cpi->info.fps_numerator,32);
+  oggpackB_write(cpi->oggbuffer,cpi->info.fps_denominator,32);
+  oggpackB_write(cpi->oggbuffer,cpi->info.aspect_numerator,24);
+  oggpackB_write(cpi->oggbuffer,cpi->info.aspect_denominator,24);
 
-  oggpackB_write(cpi->oggbuffer,cpi->pb.info.colorspace,8);
-  oggpackB_write(cpi->oggbuffer,cpi->pb.info.target_bitrate,24);
-  oggpackB_write(cpi->oggbuffer,cpi->pb.info.quality,6);
+  oggpackB_write(cpi->oggbuffer,cpi->info.colorspace,8);
+  oggpackB_write(cpi->oggbuffer,cpi->info.target_bitrate,24);
+  oggpackB_write(cpi->oggbuffer,cpi->info.quality,6);
 
-  oggpackB_write(cpi->oggbuffer,cpi->pb.keyframe_granule_shift,5);
+  oggpackB_write(cpi->oggbuffer,cpi->keyframe_granule_shift,5);
 
-  oggpackB_write(cpi->oggbuffer,cpi->pb.info.pixelformat,2);
+  oggpackB_write(cpi->oggbuffer,cpi->info.pixelformat,2);
 
   oggpackB_write(cpi->oggbuffer,0,3); /* spare config bits */
 
@@ -708,7 +699,7 @@ int theora_encode_tables(theora_state *t, ogg_packet *op){
   op->granulepos=0;
   cpi->packetflag=0;
 
-  cpi->pb.HeadersWritten = 1;
+  cpi->HeadersWritten = 1;
 
   return(0);
 }
@@ -747,11 +738,11 @@ static double theora_encode_granule_time(theora_state *th,
   if(cpi)pbi=&cpi->pb;
 
   if(granulepos>=0){
-    ogg_int64_t iframe=granulepos>>pbi->keyframe_granule_shift;
-    ogg_int64_t pframe=granulepos-(iframe<<pbi->keyframe_granule_shift);
+    ogg_int64_t iframe=granulepos>>cpi->keyframe_granule_shift;
+    ogg_int64_t pframe=granulepos-(iframe<<cpi->keyframe_granule_shift);
 
     return (iframe+pframe)*
-      ((double)pbi->info.fps_denominator/pbi->info.fps_numerator);
+      ((double)cpi->info.fps_denominator/cpi->info.fps_numerator);
 
   }
 #endif
@@ -768,8 +759,8 @@ static ogg_int64_t theora_encode_granule_frame(theora_state *th,
   if(cpi)pbi=&cpi->pb;
 
   if(granulepos>=0){
-    ogg_int64_t iframe=granulepos>>pbi->keyframe_granule_shift;
-    ogg_int64_t pframe=granulepos-(iframe<<pbi->keyframe_granule_shift);
+    ogg_int64_t iframe=granulepos>>cpi->keyframe_granule_shift;
+    ogg_int64_t pframe=granulepos-(iframe<<cpi->keyframe_granule_shift);
 
     return (iframe+pframe);
   }
@@ -794,7 +785,7 @@ static int theora_encode_control(theora_state *th,int req,
     case TH_ENCCTL_SET_QUANT_PARAMS:
       if( ( buf==NULL&&buf_sz!=0 )
   	   || ( buf!=NULL&&buf_sz!=sizeof(th_quant_info) )
-  	   || cpi->pb.HeadersWritten ){
+  	   || cpi->HeadersWritten ){
         return TH_EINVAL;
       }
       
@@ -803,7 +794,7 @@ static int theora_encode_control(theora_state *th,int req,
       
       return 0;
     case TH_ENCCTL_SET_VP3_COMPATIBLE:
-      if(cpi->pb.HeadersWritten)
+      if(cpi->HeadersWritten)
         return TH_EINVAL;
       
       memcpy(&pbi->quant_info, &TH_VP31_QUANT_INFO, sizeof(th_quant_info));
@@ -819,17 +810,17 @@ static int theora_encode_control(theora_state *th,int req,
       switch(value) {
         case 0:
           cpi->MotionCompensation = 1;
-          pbi->info.quick_p = 0;
+          cpi->info.quick_p = 0;
         break;
         
         case 1:
           cpi->MotionCompensation = 1;
-          pbi->info.quick_p = 1;
+          cpi->info.quick_p = 1;
         break;
         
         case 2:
           cpi->MotionCompensation = 0;
-          pbi->info.quick_p = 1;
+          cpi->info.quick_p = 1;
         break;
         
         default:

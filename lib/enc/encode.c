@@ -836,15 +836,15 @@ ogg_uint32_t EncodeData(CP_INSTANCE *cpi){
 
   /* Encode and tokenise the Y, U and V components */
   coded_pixels = QuadCodeComponent(cpi, 0, cpi->pb.YSBRows, cpi->pb.YSBCols,
-                                   cpi->pb.info.width );
+                                   cpi->info.width );
   coded_pixels += QuadCodeComponent(cpi, cpi->pb.YSuperBlocks,
                                     cpi->pb.UVSBRows,
                                     cpi->pb.UVSBCols,
-                                    cpi->pb.info.width>>1 );
+                                    cpi->info.width>>1 );
   coded_pixels += QuadCodeComponent(cpi,
                                     cpi->pb.YSuperBlocks+cpi->pb.UVSuperBlocks,
                                     cpi->pb.UVSBRows, cpi->pb.UVSBCols,
-                                    cpi->pb.info.width>>1 );
+                                    cpi->info.width>>1 );
 
   PredictDC(cpi, cpi->PredictedDC);
 
@@ -867,7 +867,7 @@ ogg_uint32_t EncodeData(CP_INSTANCE *cpi){
   PackCodedVideo(cpi);
 
   /* Reconstruct the reference frames */
-  ReconRefFrames(&cpi->pb);
+  ReconRefFrames(cpi);
 
   dsp_restore_fpu (cpi->dsp);
 
@@ -1008,7 +1008,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
   ogg_uint32_t UVFragOffset;
 
   int          MBCodedFlag;
-  unsigned char QIndex;
+  unsigned char QIndex = cpi->BaseQ; // temporary
 
   /* initialize error scores */
   *InterError = 0;
@@ -1042,16 +1042,13 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
   ZeroVect.x = 0;
   ZeroVect.y = 0;
 
-  QIndex = (unsigned char)cpi->pb.FrameQIndex;
-
-
   /* change the quatization matrix to the one at best Q to compute the
      new error score */
   cpi->MinImprovementForNewMV = (MvThreshTable[QIndex] << 12);
   cpi->InterTripOutThresh = (5000<<12);
   cpi->MVChangeFactor = MVChangeFactorTable[QIndex]; /* 0.9 */
 
-  if ( cpi->pb.info.quick_p ) {
+  if ( cpi->info.quick_p ) {
     cpi->ExhaustiveSearchThresh = (1000<<12);
     cpi->FourMVThreshold = (2500<<12);
   } else {
@@ -1159,7 +1156,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         if ( BestError > cpi->MinImprovementForNewMV && cpi->MotionCompensation) {
           /* Use a mix of heirachical and exhaustive searches for
              quick mode. */
-          if ( cpi->pb.info.quick_p ) {
+          if ( cpi->info.quick_p ) {
             MBInterMVError = GetMBMVInterError( cpi, cpi->pb.LastFrameRecon,
                                                 YFragIndex, PixelsPerLine,
                                                 cpi->MVPixelOffsetY,
@@ -1389,7 +1386,6 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 }
 
 void WriteFrameHeader( CP_INSTANCE *cpi) {
-  ogg_uint32_t i;
   oggpack_buffer *opb=cpi->oggbuffer;
 
   TH_DEBUG("\n>>>> beginning frame %ld\n\n",dframe);
@@ -1399,19 +1395,7 @@ void WriteFrameHeader( CP_INSTANCE *cpi) {
   TH_DEBUG("frame type = video, %s\n",cpi->pb.FrameType?"predicted":"key");
   
   /* Write out details of the current value of Q... variable resolution. */
-  for ( i = 0; i < Q_TABLE_SIZE; i++ ) {
-    if ( cpi->pb.ThisFrameQualityValue == cpi->pb.QThreshTable[i] ) {
-      TH_DEBUG("frame quality = { %d }\n",i);
-      oggpackB_write( opb, i, 6 );
-      break;
-    }
-  }
-
-  if ( i == Q_TABLE_SIZE ) {
-    /* An invalid DCT value was specified.  */
-    /*IssueWarning( "Invalid Q Multiplier" );*/
-    oggpackB_write( opb, 31, 6 );
-  }
+  oggpackB_write( opb, cpi->BaseQ, 6 ); // temporary
 
   /* we only support one Q index per frame */
   oggpackB_write( opb, 0, 1 );

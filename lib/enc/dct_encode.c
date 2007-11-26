@@ -228,15 +228,7 @@ static unsigned char TokenizeDctBlock (ogg_int16_t DC,
 
 ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi,
                                 ogg_int32_t FragIndex){
-  ogg_uint32_t  token_count;
-
-  if ( cpi->pb.FrameType == KEY_FRAME ){
-    /* Key frame so code block in INTRA mode. */
-    cpi->pb.CodingMode = CODE_INTRA;
-  }else{
-    /* Get Motion vector and mode for this block. */
-    cpi->pb.CodingMode = cpi->pb.FragCodingMethod[FragIndex];
-  }
+  int token_count;
 
   /* Tokenise the dct data. */
   token_count = TokenizeDctBlock( cpi->PredictedDC[FragIndex],
@@ -267,7 +259,8 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
 				   ogg_int32_t MvDevisor,
 				   ogg_uint32_t FragIndex,
 				   ogg_uint32_t PixelsPerLine,
-				   ogg_uint32_t ReconPixelsPerLine) {
+				   ogg_uint32_t ReconPixelsPerLine,
+				   int mode) {
 
   ogg_int32_t MvShift;
   ogg_int32_t MvModMask;
@@ -280,7 +273,7 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
   unsigned char  *ReconPtr1;    /* DCT reconstructed image pointers */
   unsigned char  *ReconPtr2;    /* Pointer used in half pixel MC */
    
-  if ( ModeUsesMC[cpi->pb.CodingMode] ){
+  if ( ModeUsesMC[mode] ){
     switch(MvDevisor) {
     case 2:
       MvShift = 1;
@@ -323,7 +316,7 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
 	ReconPtr2Offset -= ReconPixelsPerLine;
     }
     
-    if ( cpi->pb.CodingMode==CODE_GOLDEN_MV ) {
+    if ( mode==CODE_GOLDEN_MV ) {
       ReconPtr1 = &cpi->
 	pb.GoldenFrame[cpi->pb.recon_pixel_index_table[FragIndex]];
     } else {
@@ -350,9 +343,9 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
     }
 
   } else { 
-    if ( (cpi->pb.CodingMode==CODE_INTER_NO_MV ) ||
-	 ( cpi->pb.CodingMode==CODE_USING_GOLDEN ) ) {
-      if ( cpi->pb.CodingMode==CODE_INTER_NO_MV ) {
+    if ( ( mode==CODE_INTER_NO_MV ) ||
+	 ( mode==CODE_USING_GOLDEN ) ) {
+      if ( mode==CODE_INTER_NO_MV ) {
 	ReconPtr1 = &cpi->
 	  pb.LastFrameRecon[cpi->pb.recon_pixel_index_table[FragIndex]];
       } else {
@@ -363,14 +356,15 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
       dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
 		 PixelsPerLine, ReconPixelsPerLine);
       dsp_copy8x8 (cpi->dsp, ReconPtr1, thisrecon, ReconPixelsPerLine);
-    } else if ( cpi->pb.CodingMode==CODE_INTRA ) {
+    } else if ( mode==CODE_INTRA ) {
       dsp_sub8x8_128(cpi->dsp, FiltPtr, DctInputPtr, PixelsPerLine);
       dsp_set8x8(cpi->dsp, 128, thisrecon, ReconPixelsPerLine);
     }
   }
 }
 
-void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
+void TransformQuantizeBlock (CP_INSTANCE *cpi, 
+			     ogg_int32_t FragIndex,
                              ogg_uint32_t PixelsPerLine) {
   unsigned char *FiltPtr;     /* Pointers to srf filtered pixels */
   ogg_int16_t   *DctInputPtr; /* Pointer into buffer containing input to DCT */
@@ -380,6 +374,9 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
   unsigned char   *ReconPtr1;   /* DCT reconstructed image pointers */
   ogg_int32_t   MvDivisor;      /* Defines MV resolution (2 = 1/2
                                    pixel for Y or 4 = 1/4 for UV) */
+  int qi = cpi->BaseQ;
+  ogg_int32_t     *q;
+  int mode;
 
   DctInputPtr   = cpi->DCTDataBuffer;
 
@@ -399,10 +396,10 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
 
   if ( cpi->pb.FrameType == KEY_FRAME ) {
     /* Key frame so code block in INTRA mode. */
-    cpi->pb.CodingMode = CODE_INTRA;
+    mode = CODE_INTRA;
   }else{
     /* Get Motion vector and mode for this block. */
-    cpi->pb.CodingMode = cpi->pb.FragCodingMethod[FragIndex];
+    mode = cpi->pb.FragCodingMethod[FragIndex];
   }
 
   /* Selection of Quantiser matrix and set other plane related values. */
@@ -410,25 +407,25 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
     LeftEdge = !(FragIndex%cpi->pb.HFragments);
 
     /* Select the appropriate Y quantiser matrix */
-    if ( cpi->pb.CodingMode == CODE_INTRA )
-      select_quantiser(&cpi->pb, BLOCK_Y);
+    if ( mode == CODE_INTRA )
+      q=cpi->pb.iquant_tables[0][0][qi];
     else
-      select_quantiser(&cpi->pb, BLOCK_INTER_Y);
+      q=cpi->pb.iquant_tables[1][0][qi];
   } else {
     LeftEdge = !((FragIndex-cpi->pb.YPlaneFragments)%(cpi->pb.HFragments>>1));
 	
     if(FragIndex < (ogg_int32_t)cpi->pb.YPlaneFragments + (ogg_int32_t)cpi->pb.UVPlaneFragments) {
       /* U plane */
-      if ( cpi->pb.CodingMode == CODE_INTRA )
-        select_quantiser(&cpi->pb, BLOCK_U);
+      if ( mode == CODE_INTRA )
+	q=cpi->pb.iquant_tables[0][1][qi];
       else
-        select_quantiser(&cpi->pb, BLOCK_INTER_U);
+	q=cpi->pb.iquant_tables[1][1][qi];
     } else {
       /* V plane */
-      if ( cpi->pb.CodingMode == CODE_INTRA )
-        select_quantiser(&cpi->pb, BLOCK_V);
+      if ( mode == CODE_INTRA )
+	q=cpi->pb.iquant_tables[0][2][qi];
       else
-        select_quantiser(&cpi->pb, BLOCK_INTER_V);
+	q=cpi->pb.iquant_tables[1][2][qi];
     }
   }
 
@@ -437,7 +434,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
      forward DCT */
   BlockUpdateDifference(cpi, FiltPtr, DctInputPtr, ReconPtr1,
 			MvDivisor, FragIndex, PixelsPerLine,
-			ReconPixelsPerLine);
+			ReconPixelsPerLine, mode);
   
   /* Proceed to encode the data into the encode buffer if the encoder
      is enabled. */
@@ -445,9 +442,9 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
   dsp_fdct_short(cpi->dsp, cpi->DCTDataBuffer, cpi->DCT_codes );
 
   /* Quantize that transform data. */
-  quantize ( &cpi->pb, cpi->DCT_codes, cpi->pb.QFragData[FragIndex] );
+  quantize ( &cpi->pb, q, cpi->DCT_codes, cpi->pb.QFragData[FragIndex] );
 
-  if ( (cpi->pb.CodingMode == CODE_INTER_NO_MV) &&
+  if ( (mode == CODE_INTER_NO_MV) &&
        ( AllZeroDctData(cpi->pb.QFragData[FragIndex]) ) ) {
     cpi->pb.display_fragments[FragIndex] = 0;
   }

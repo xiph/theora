@@ -36,43 +36,38 @@ static void SetupBoundingValueArray_Generic(PB_INSTANCE *pbi,
   }
 }
 
-void SetupLoopFilter(PB_INSTANCE *pbi){
-  ogg_int32_t FLimit;
-
-  FLimit = pbi->quant_info.loop_filter_limits[pbi->FrameQIndex];
-  SetupBoundingValueArray_Generic(pbi, FLimit);
-}
-
-static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber){
+static void ExpandBlock ( CP_INSTANCE *cpi, ogg_int32_t FragmentNumber){
+  PB_INSTANCE   *pbi = &cpi->pb;
   ogg_uint32_t   ReconPixelsPerLine; /* Pixels per line */
   ogg_int32_t    ReconPixelIndex;    /* Offset for block into a
                                         reconstruction buffer */
   ogg_int16_t    reconstruct[64];
-  ogg_int16_t    *quantizers;
-  ogg_int16_t    *data = &pbi->QFragData[FragmentNumber][0];
+  ogg_int16_t  *quantizers;
+  ogg_int16_t   *data = &pbi->QFragData[FragmentNumber][0];
 
   int            mode = pbi->FragCodingMethod[FragmentNumber];
+  int            qi = cpi->BaseQ; // temporary 
 
   /* Select the appropriate inverse Q matrix and line stride */
   if ( FragmentNumber<pbi->YPlaneFragments ) {
     ReconPixelsPerLine = pbi->YStride;
     if ( mode == CODE_INTRA )
-      quantizers = pbi->dequant_Y_coeffs;
+      quantizers = pbi->quant_tables[0][0][qi];
     else
-      quantizers = pbi->dequant_InterY_coeffs;
+      quantizers = pbi->quant_tables[1][0][qi];
 
   }else{
     ReconPixelsPerLine = pbi->UVStride;
     if ( mode == CODE_INTRA )
       if ( FragmentNumber < pbi->YPlaneFragments + pbi->UVPlaneFragments )
-        quantizers = pbi->dequant_U_coeffs;
+	quantizers = pbi->quant_tables[0][1][qi];
       else
-        quantizers = pbi->dequant_V_coeffs;
+	quantizers = pbi->quant_tables[0][2][qi];
     else
       if ( FragmentNumber < pbi->YPlaneFragments + pbi->UVPlaneFragments )
-        quantizers = pbi->dequant_InterU_coeffs;
+	quantizers = pbi->quant_tables[1][1][qi];
       else
-        quantizers = pbi->dequant_InterV_coeffs;
+	quantizers = pbi->quant_tables[1][2][qi];
   }
 
 #ifdef _TH_DEBUG_
@@ -172,15 +167,16 @@ static void UpdateUMV_HBorders( PB_INSTANCE *pbi,
   }
 }
 
-static void UpdateUMV_VBorders( PB_INSTANCE *pbi,
+static void UpdateUMV_VBorders( CP_INSTANCE *cpi,
                                 unsigned char * DestReconPtr,
                                 ogg_uint32_t  PlaneFragOffset ){
-  ogg_uint32_t  i;
-  ogg_uint32_t  PixelIndex;
+  PB_INSTANCE   *pbi = &cpi->pb;
+  ogg_uint32_t   i;
+  ogg_uint32_t   PixelIndex;
 
-  ogg_uint32_t  PlaneStride;
-  ogg_uint32_t  LineFragments;
-  ogg_uint32_t  PlaneBorderWidth;
+  ogg_uint32_t   PlaneStride;
+  ogg_uint32_t   LineFragments;
+  ogg_uint32_t   PlaneBorderWidth;
   ogg_uint32_t   PlaneHeight;
 
   unsigned char   *SrcPtr1;
@@ -194,13 +190,13 @@ static void UpdateUMV_VBorders( PB_INSTANCE *pbi,
     PlaneStride = pbi->YStride;
     PlaneBorderWidth = UMV_BORDER;
     LineFragments = pbi->HFragments;
-    PlaneHeight = pbi->info.height;
+    PlaneHeight = cpi->info.height;
   }else{
     /* U or V plane. */
     PlaneStride = pbi->UVStride;
     PlaneBorderWidth = UMV_BORDER / 2;
     LineFragments = pbi->HFragments / 2;
-    PlaneHeight = pbi->info.height / 2;
+    PlaneHeight = cpi->info.height / 2;
   }
 
   /* Setup the source data values and destination pointers for the
@@ -227,22 +223,23 @@ static void UpdateUMV_VBorders( PB_INSTANCE *pbi,
   }
 }
 
-void UpdateUMVBorder( PB_INSTANCE *pbi,
+void UpdateUMVBorder( CP_INSTANCE *cpi,
                       unsigned char * DestReconPtr ) {
   ogg_uint32_t  PlaneFragOffset;
+  PB_INSTANCE   *pbi = &cpi->pb;
 
   /* Y plane */
   PlaneFragOffset = 0;
-  UpdateUMV_VBorders( pbi, DestReconPtr, PlaneFragOffset );
+  UpdateUMV_VBorders( cpi, DestReconPtr, PlaneFragOffset );
   UpdateUMV_HBorders( pbi, DestReconPtr, PlaneFragOffset );
 
   /* Then the U and V Planes */
   PlaneFragOffset = pbi->YPlaneFragments;
-  UpdateUMV_VBorders( pbi, DestReconPtr, PlaneFragOffset );
+  UpdateUMV_VBorders( cpi, DestReconPtr, PlaneFragOffset );
   UpdateUMV_HBorders( pbi, DestReconPtr, PlaneFragOffset );
 
   PlaneFragOffset = pbi->YPlaneFragments + pbi->UVPlaneFragments;
-  UpdateUMV_VBorders( pbi, DestReconPtr, PlaneFragOffset );
+  UpdateUMV_VBorders( cpi, DestReconPtr, PlaneFragOffset );
   UpdateUMV_HBorders( pbi, DestReconPtr, PlaneFragOffset );
 }
 
@@ -367,7 +364,8 @@ static void FilterVert__c(unsigned char * PixelPtr,
   }
 }
 
-void LoopFilter(PB_INSTANCE *pbi){
+static void LoopFilter(CP_INSTANCE *cpi){
+  PB_INSTANCE   *pbi = &cpi->pb;
   ogg_int32_t i;
 
   ogg_int16_t * BoundingValuePtr=pbi->FiltBoundingValue+127;
@@ -377,20 +375,9 @@ void LoopFilter(PB_INSTANCE *pbi){
   ogg_int32_t LineFragments;
   ogg_int32_t LineLength;
   ogg_int32_t FLimit;
-  int QIndex;
   int j,m,n;
 
-  /* Set the limit value for the loop filter based upon the current
-     quantizer. */
-  QIndex = Q_TABLE_SIZE - 1;
-  while ( QIndex >= 0 ) {
-    if ( (QIndex == 0) ||
-         ( pbi->quant_info.ac_scale[QIndex] >= pbi->ThisFrameQualityValue) )
-      break;
-    QIndex --;
-  }
-
-  FLimit = pbi->quant_info.loop_filter_limits[QIndex];
+  FLimit = cpi->pb.quant_info.loop_filter_limits[cpi->BaseQ]; // temp
   if ( FLimit == 0 ) return;
   SetupBoundingValueArray_Generic(pbi, FLimit);
 
@@ -645,15 +632,14 @@ void LoopFilter(PB_INSTANCE *pbi){
   }
 }
 
-void ReconRefFrames (PB_INSTANCE *pbi){
+void ReconRefFrames (CP_INSTANCE *cpi){
+  PB_INSTANCE *pbi = &cpi->pb;
   ogg_int32_t i;
   unsigned char *SwapReconBuffersTemp;
 
-  SetupLoopFilter(pbi);
-
   /* Inverse DCT and reconstitute buffer in thisframe */
   for(i=0;i<pbi->UnitFragments;i++)
-    ExpandBlock( pbi, i );
+    ExpandBlock( cpi, i );
 
   /* Copy the current reconstruction back to the last frame recon buffer. */
   if(pbi->CodedBlockIndex > (ogg_int32_t) (pbi->UnitFragments >> 1)){
@@ -666,105 +652,105 @@ void ReconRefFrames (PB_INSTANCE *pbi){
   }
 
   /* Apply a loop filter to edge pixels of updated blocks */
-  LoopFilter(pbi);
+  LoopFilter(cpi);
 
 #ifdef _TH_DEBUG_
-    {
-      int x,y,i,j,k,xn,yn,stride;
-      int plane;
-      int buf;
-
-      /* dump fragment DCT components */
-      for(plane=0;plane<3;plane++){
-	char *plstr;
-	int offset;
-	switch(plane){
-	case 0:
-	  plstr="Y";
-	  xn = pbi->HFragments;
-	  yn = pbi->VFragments;
-	  offset = 0; 
-	  stride = pbi->YStride;
-	  break;
-	case 1:
-	  plstr="U";
-	  xn = pbi->HFragments>>1;
-	  yn = pbi->VFragments>>1;
-	  offset = pbi->VFragments * pbi->HFragments;	
-	  stride = pbi->UVStride;
-	  break;
-	case 2:
-	  plstr="V";
-	  xn = pbi->HFragments>>1;
-	  yn = pbi->VFragments>>1;
-	  offset = pbi->VFragments * pbi->HFragments + 
-	    ((pbi->VFragments * pbi->HFragments) >> 2);
-	  stride = pbi->UVStride;
-	  break;
-	}
-	for(y=0;y<yn;y++){
-	  for(x=0;x<xn;x++,i++){
+  {
+    int x,y,i,j,k,xn,yn,stride;
+    int plane;
+    int buf;
+    
+    /* dump fragment DCT components */
+    for(plane=0;plane<3;plane++){
+      char *plstr;
+      int offset;
+      switch(plane){
+      case 0:
+	plstr="Y";
+	xn = pbi->HFragments;
+	yn = pbi->VFragments;
+	offset = 0; 
+	stride = pbi->YStride;
+	break;
+      case 1:
+	plstr="U";
+	xn = pbi->HFragments>>1;
+	yn = pbi->VFragments>>1;
+	offset = pbi->VFragments * pbi->HFragments;	
+	stride = pbi->UVStride;
+	break;
+      case 2:
+	plstr="V";
+	xn = pbi->HFragments>>1;
+	yn = pbi->VFragments>>1;
+	offset = pbi->VFragments * pbi->HFragments + 
+	  ((pbi->VFragments * pbi->HFragments) >> 2);
+	stride = pbi->UVStride;
+	break;
+      }
+      for(y=0;y<yn;y++){
+	for(x=0;x<xn;x++,i++){
+	  
+	  for(buf=0;buf<3;buf++){
+	    Q_LIST_ENTRY (*ptr)[64];
+	    char *bufn;
 	    
-	    for(buf=0;buf<3;buf++){
-	      Q_LIST_ENTRY (*ptr)[64];
-	      char *bufn;
-	      
-	      switch(buf){
-	      case 0:
-		bufn = "coded";
-		ptr = pbi->QFragQUAN;
-		break;
-	      case 1:
-		bufn = "coeff";
-		ptr = pbi->QFragFREQ;
-		break;
-	      case 2:
-		bufn = "idct";
-		ptr = pbi->QFragTIME;
-		break;
-	      }
-	      
-	      i = offset + y*xn + x;
-	      
-	      TH_DEBUG("%s %s [%d][%d] = {",bufn,plstr,x,y);
-	      if ( !pbi->display_fragments[i] ) 
-		TH_DEBUG(" not coded }\n");
-	      else{
-		int l=0;
-		for(j=0;j<8;j++){
-		  TH_DEBUG("\n   ");
-		  for(k=0;k<8;k++,l++){
-		    TH_DEBUG("%d ",ptr[i][l]);
-		  }
+	    switch(buf){
+	    case 0:
+	      bufn = "coded";
+	      ptr = pbi->QFragQUAN;
+	      break;
+	    case 1:
+	      bufn = "coeff";
+	      ptr = pbi->QFragFREQ;
+	      break;
+	    case 2:
+	      bufn = "idct";
+	      ptr = pbi->QFragTIME;
+	      break;
+	    }
+	    
+	    i = offset + y*xn + x;
+	    
+	    TH_DEBUG("%s %s [%d][%d] = {",bufn,plstr,x,y);
+	    if ( !pbi->display_fragments[i] ) 
+	      TH_DEBUG(" not coded }\n");
+	    else{
+	      int l=0;
+	      for(j=0;j<8;j++){
+		TH_DEBUG("\n   ");
+		for(k=0;k<8;k++,l++){
+		  TH_DEBUG("%d ",ptr[i][l]);
 		}
-		TH_DEBUG(" }\n");
 	      }
+	      TH_DEBUG(" }\n");
 	    }
-	    
-	    /* and the loop filter output, which is a flat struct */
-	    TH_DEBUG("recon %s [%d][%d] = {",plstr,x,y);
-	    for(j=0;j<8;j++){
-	      int l = pbi->recon_pixel_index_table[i] + j*stride;
-	      TH_DEBUG("\n   ");
-	      for(k=0;k<8;k++,l++)
-		TH_DEBUG("%d ", pbi->LastFrameRecon[l]);
-	    }
-	    TH_DEBUG(" }\n\n");
 	  }
+	  
+	  /* and the loop filter output, which is a flat struct */
+	  TH_DEBUG("recon %s [%d][%d] = {",plstr,x,y);
+	  for(j=0;j<8;j++){
+	    int l = pbi->recon_pixel_index_table[i] + j*stride;
+	    TH_DEBUG("\n   ");
+	    for(k=0;k<8;k++,l++)
+	      TH_DEBUG("%d ", pbi->LastFrameRecon[l]);
+	  }
+	  TH_DEBUG(" }\n\n");
 	}
       }
     }
+  }
 #endif
-
+  
   /* We may need to update the UMV border */
-  UpdateUMVBorder(pbi, pbi->LastFrameRecon);
-
+  UpdateUMVBorder(cpi, pbi->LastFrameRecon);
+  
   /* Reconstruct the golden frame if necessary.
      For VFW codec only on key frames */
   if ( pbi->FrameType == KEY_FRAME ){
     CopyRecon( pbi, pbi->GoldenFrame, pbi->LastFrameRecon );
     /* We may need to update the UMV border */
-    UpdateUMVBorder(pbi, pbi->GoldenFrame);
+    UpdateUMVBorder(cpi, pbi->GoldenFrame);
   }
 }
 

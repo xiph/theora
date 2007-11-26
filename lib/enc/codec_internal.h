@@ -77,17 +77,10 @@ enum BlockMode {
 
 #define MAX_MV_EXTENT 31  /* Max search distance in half pixel increments */
 
-typedef struct coeffNode{
-  int i;
-  struct coeffNode *next;
-} COEFFNODE;
-
 typedef struct{
   ogg_int32_t   x;
   ogg_int32_t   y;
 } MOTION_VECTOR;
-
-typedef MOTION_VECTOR COORDINATE;
 
 /** block coding modes */
 typedef enum{
@@ -111,31 +104,46 @@ typedef struct HUFF_ENTRY {
   struct HUFF_ENTRY *Next;
   ogg_int32_t        Value;
   ogg_uint32_t       Frequency;
-
 } HUFF_ENTRY;
+
+typedef struct{
+  ogg_int32_t   x;
+  ogg_int32_t   y;
+} mv_t;
+
+typedef struct fragment {
+  int coded;
+  mv_t mv;
+  ogg_int16_t dc;
+  ogg_int16_t dct[64];
+
+  ogg_uint32_t raw_index;
+  ogg_uint32_t recon_index;
+} fragment_t;
+
+typedef struct macroblock {
+  int mode;
+  fragment_t *f[4]; // hilbert order
+} macroblock_t;
+
+#define SB_MB_ULFRAG(sb,mbnum) (sb->f[ ((mbnum)<2? ((mbnum)==0?3:5) : ((mbnum)==2?9:13)) ])
+typedef struct superblock {
+  fragment_t *f[16]; // hilbert order
+} superblock_t;
+
+typedef ogg_int16_t    quant_table[64];
+typedef quant_table    quant_tables[64];
+
+typedef ogg_int32_t    iquant_table[64];
+typedef iquant_table   iquant_tables[64];
 
 /** Decoder (Playback) instance -- installed in a theora_state */
 typedef struct PB_INSTANCE {
-  theora_info     info;
-  
-  /* flag to indicate if the headers already have been written */
-  int             HeadersWritten;
-  
-  /* how far do we shift the granulepos to seperate out P frame counts? */
-  int             keyframe_granule_shift;
 
 
   /***********************************************************************/
   /* Frame Info */
-  CODING_MODE   CodingMode;
   unsigned char FrameType;
-  ogg_uint32_t  QualitySetting;
-  ogg_uint32_t  FrameQIndex;            /* Quality specified as a
-                                           table index */
-  ogg_uint32_t  ThisFrameQualityValue;  /* Quality value for this frame  */
-  ogg_int32_t   CodedBlockIndex;        /* Number of Coded Blocks */
-  ogg_uint32_t  CodedBlocksThisFrame;   /* Index into coded blocks */
-  ogg_uint32_t  FrameSize;              /* The number of bytes in the frame. */
 
   /**********************************************************************/
   /* Frame Size & Index Information */
@@ -190,6 +198,7 @@ typedef struct PB_INSTANCE {
                                               pixel in recon buffer */
 
   unsigned char *display_fragments;        /* Fragment update map */
+  int            CodedBlockIndex;
   ogg_int32_t   *CodedBlockList;           /* A list of fragment indices for
                                               coded blocks. */
   MOTION_VECTOR *FragMVect;                /* Frag motion vectors */
@@ -230,56 +239,14 @@ typedef struct PB_INSTANCE {
   /* Loop filter bounding values */
   ogg_int16_t    FiltBoundingValue[256];
 
-  /* Naming convention for all quant matrices and related data structures:
-   * Fields containing "Inter" in their name are for Inter frames, the
-   * rest is Intra. */
-
-  /* Dequantiser and rounding tables */
-  ogg_uint16_t  *QThreshTable;
-  ogg_int16_t    dequant_Y_coeffs[64];
-  ogg_int16_t    dequant_U_coeffs[64];
-  ogg_int16_t    dequant_V_coeffs[64];
-  ogg_int16_t    dequant_InterY_coeffs[64];
-  ogg_int16_t    dequant_InterU_coeffs[64];
-  ogg_int16_t    dequant_InterV_coeffs[64]; 
-
-  unsigned int   zigzag_index[64];
-
   HUFF_ENTRY    *HuffRoot_VP3x[NUM_HUFF_TABLES];
   ogg_uint32_t  *HuffCodeArray_VP3x[NUM_HUFF_TABLES];
   unsigned char *HuffCodeLengthArray_VP3x[NUM_HUFF_TABLES];
   const unsigned char *ExtraBitLengths_VP3x;
 
-  th_quant_info   quant_info;
-  oc_quant_tables quant_tables[2][3];
-
-  /* Quantiser and rounding tables */
-  /* this is scheduled to be replaced a new mechanism
-     that will simply reuse the dequantizer information. */
-  ogg_int32_t    fp_quant_Y_coeffs[64]; /* used in reiniting quantizers */
-  ogg_int32_t    fp_quant_U_coeffs[64];
-  ogg_int32_t    fp_quant_V_coeffs[64];
-  ogg_int32_t    fp_quant_Inter_Y_coeffs[64];
-  ogg_int32_t    fp_quant_Inter_U_coeffs[64];
-  ogg_int32_t    fp_quant_Inter_V_coeffs[64];
-  
-  ogg_int32_t    fp_quant_Y_round[64];
-  ogg_int32_t    fp_quant_U_round[64];
-  ogg_int32_t    fp_quant_V_round[64];
-  ogg_int32_t    fp_quant_Inter_Y_round[64];
-  ogg_int32_t    fp_quant_Inter_U_round[64];
-  ogg_int32_t    fp_quant_Inter_V_round[64];
-  
-  ogg_int32_t    fp_ZeroBinSize_Y[64];
-  ogg_int32_t    fp_ZeroBinSize_U[64];
-  ogg_int32_t    fp_ZeroBinSize_V[64];
-  ogg_int32_t    fp_ZeroBinSize_Inter_Y[64];
-  ogg_int32_t    fp_ZeroBinSize_Inter_U[64];
-  ogg_int32_t    fp_ZeroBinSize_Inter_V[64];
-
-  ogg_int32_t   *fquant_coeffs;
-  ogg_int32_t   *fquant_round;
-  ogg_int32_t   *fquant_ZbSize;
+  th_quant_info  quant_info;
+  quant_tables   quant_tables[2][3];
+  iquant_tables  iquant_tables[2][3];
 
   /* Predictor used in choosing entropy table for decoding block patterns. */
   unsigned char  BlockPatternPredictor;
@@ -304,7 +271,15 @@ typedef struct CP_INSTANCE {
      is the only assumption that library makes about our internal format.*/
   oc_state_dispatch_vtbl dispatch_vtbl;
 
+  theora_info     info;
   unsigned char   *yuvptr;
+  
+  /* flag to indicate if the headers already have been written */
+  int             HeadersWritten;
+  /* how far do we shift the granulepos to seperate out P frame counts? */
+  int             keyframe_granule_shift;
+
+
 
   /* Compressor Configuration */
   int              BaseQ;
@@ -436,26 +411,21 @@ extern void ReconInterHalfPixel2( PB_INSTANCE *pbi, unsigned char * ReconPtr,
                                   ogg_int16_t * ChangePtr,
                                   ogg_uint32_t LineStep ) ;
 
-extern void SetupLoopFilter(PB_INSTANCE *pbi);
-extern void LoopFilter(PB_INSTANCE *pbi);
-extern void ReconRefFrames (PB_INSTANCE *pbi);
+extern void ReconRefFrames (CP_INSTANCE *cpi);
 extern void ExpandToken( ogg_int16_t * ExpandedBlock,
                          unsigned char * CoeffIndex, ogg_uint32_t Token,
                          ogg_int32_t ExtraBits );
 
-extern void select_quantiser (PB_INSTANCE *pbi, int type);
-
 extern void quantize( PB_INSTANCE *pbi,
+		      ogg_int32_t *iquant_table,
                       ogg_int16_t * DCT_block,
                       ogg_int16_t * quantized_list);
-extern void UpdateQ( PB_INSTANCE *pbi, int NewQIndex );
-extern void UpdateQC( CP_INSTANCE *cpi, ogg_uint32_t NewQ );
 extern void fdct_short ( ogg_int16_t * InputData, ogg_int16_t * OutputData );
 extern ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi,
                                        ogg_int32_t FragIndex);
 extern void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
                                     ogg_uint32_t PixelsPerLine ) ;
-extern void InitFrameDetails(PB_INSTANCE *pbi);
+extern void InitFrameDetails(CP_INSTANCE *cpi);
 extern void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer *opb);
 extern void InitQTables( PB_INSTANCE *pbi );
 extern void InitHuffmanSet( PB_INSTANCE *pbi );
@@ -506,8 +476,5 @@ extern void CreateBlockMapping ( ogg_int32_t  (*BlockMap)[4][4],
                                  ogg_uint32_t YSuperBlocks,
                                  ogg_uint32_t UVSuperBlocks,
                                  ogg_uint32_t HFrags, ogg_uint32_t VFrags );
-
-extern void UpdateUMVBorder( PB_INSTANCE *pbi,
-                             unsigned char * DestReconPtr );
 
 #endif /* ENCODER_INTERNAL_H */
