@@ -375,7 +375,8 @@ png_read(const char *pathname, unsigned int *w, unsigned int *h, unsigned char *
   png_init_io(png_ptr, fp);
   png_set_sig_bytes(png_ptr, 8);
 
-  png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_STRIP_16, NULL);
+  png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_STRIP_16 |
+    PNG_TRANSFORM_STRIP_ALPHA | PNG_TRANSFORM_PACKING, NULL);
 
   row_pointers = png_get_rows(png_ptr, info_ptr);
 
