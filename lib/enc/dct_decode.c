@@ -38,38 +38,15 @@ static void SetupBoundingValueArray_Generic(PB_INSTANCE *pbi,
 
 static void ExpandBlock ( CP_INSTANCE *cpi, fragment_t *fp, ogg_int32_t FragmentNumber){
   PB_INSTANCE   *pbi = &cpi->pb;
-  ogg_uint32_t   ReconPixelsPerLine; /* Pixels per line */
-  ogg_int32_t    ReconPixelIndex;    /* Offset for block into a
-                                        reconstruction buffer */
-  ogg_int16_t    reconstruct[64];
-  ogg_int16_t  *quantizers;
-  ogg_int16_t   *data = fp->dct;
-
   int            mode = fp->mode;
   int            qi = cpi->BaseQ; // temporary 
-
-  /* Select the appropriate inverse Q matrix and line stride */
-  if ( FragmentNumber<pbi->YPlaneFragments ) {
-    ReconPixelsPerLine = pbi->YStride;
-    if ( mode == CODE_INTRA )
-      quantizers = pbi->quant_tables[0][0][qi];
-    else
-      quantizers = pbi->quant_tables[1][0][qi];
-
-  }else{
-    ReconPixelsPerLine = pbi->UVStride;
-    if ( mode == CODE_INTRA )
-      if ( FragmentNumber < pbi->YPlaneFragments + pbi->UVPlaneFragments )
-	quantizers = pbi->quant_tables[0][1][qi];
-      else
-	quantizers = pbi->quant_tables[0][2][qi];
-    else
-      if ( FragmentNumber < pbi->YPlaneFragments + pbi->UVPlaneFragments )
-	quantizers = pbi->quant_tables[1][1][qi];
-      else
-	quantizers = pbi->quant_tables[1][2][qi];
-  }
-
+  int            plane = (fp<cpi->frag[1] ? 0 : (fp<cpi->frag[2] ? 1 : 2));
+  ogg_uint32_t   ReconPixelsPerLine = cpi->recon_stride[plane];
+  int            inter = (mode != CODE_INTRA);
+  ogg_int16_t    reconstruct[64];
+  ogg_int16_t  *quantizers = pbi->quant_tables[inter][plane][qi];
+  ogg_int16_t   *data = fp->dct;
+  
 #ifdef _TH_DEBUG_
  {
    int i;
@@ -103,57 +80,37 @@ static void ExpandBlock ( CP_INSTANCE *cpi, fragment_t *fp, ogg_int32_t Fragment
 #endif
 
   /* Convert fragment number to a pixel offset in a reconstruction buffer. */
-  ReconPixelIndex = pbi->recon_pixel_index_table[FragmentNumber];
-  dsp_recon8x8 (pbi->dsp, &pbi->ThisFrameRecon[ReconPixelIndex],
+  dsp_recon8x8 (pbi->dsp, &pbi->ThisFrameRecon[fp->recon_index],
 		reconstruct, ReconPixelsPerLine);
 
 }
 
-static void UpdateUMV_HBorders( PB_INSTANCE *pbi,
-                                unsigned char * DestReconPtr,
-                                ogg_uint32_t  PlaneFragOffset ) {
+static void UpdateUMV_HBorders( CP_INSTANCE *cpi,
+                                unsigned char *DestReconPtr,
+				int plane){
   ogg_uint32_t  i;
   ogg_uint32_t  PixelIndex;
 
-  ogg_uint32_t  PlaneStride;
-  ogg_uint32_t  BlockVStep;
-  ogg_uint32_t  PlaneFragments;
-  ogg_uint32_t  LineFragments;
-  ogg_uint32_t  PlaneBorderWidth;
+  ogg_uint32_t  PlaneStride = cpi->recon_stride[plane];
+  ogg_uint32_t  BlockVStep = cpi->recon_stride[plane] * (VFRAGPIXELS - 1);
+  ogg_uint32_t  PlaneFragments = cpi->frag_n[plane];
+  ogg_uint32_t  LineFragments = cpi->frag_h[plane];
+  ogg_uint32_t  PlaneBorderWidth = (plane ? UMV_BORDER / 2 : UMV_BORDER );
 
   unsigned char   *SrcPtr1;
   unsigned char   *SrcPtr2;
   unsigned char   *DestPtr1;
   unsigned char   *DestPtr2;
-
-  /* Work out various plane specific values */
-  if ( PlaneFragOffset == 0 ) {
-    /* Y Plane */
-    BlockVStep = (pbi->YStride *
-                  (VFRAGPIXELS - 1));
-    PlaneStride = pbi->YStride;
-    PlaneBorderWidth = UMV_BORDER;
-    PlaneFragments = pbi->YPlaneFragments;
-    LineFragments = pbi->HFragments;
-  }else{
-    /* U or V plane. */
-    BlockVStep = (pbi->UVStride *
-                  (VFRAGPIXELS - 1));
-    PlaneStride = pbi->UVStride;
-    PlaneBorderWidth = UMV_BORDER / 2;
-    PlaneFragments = pbi->UVPlaneFragments;
-    LineFragments = pbi->HFragments / 2;
-  }
+  
+  fragment_t      *fp = cpi->frag[plane];
 
   /* Setup the source and destination pointers for the top and bottom
      borders */
-  PixelIndex = pbi->recon_pixel_index_table[PlaneFragOffset];
+  PixelIndex = fp[0].recon_index;
   SrcPtr1 = &DestReconPtr[ PixelIndex - PlaneBorderWidth ];
   DestPtr1 = SrcPtr1 - (PlaneBorderWidth * PlaneStride);
 
-  PixelIndex = pbi->recon_pixel_index_table[PlaneFragOffset +
-                                           PlaneFragments - LineFragments] +
-    BlockVStep;
+  PixelIndex = fp[PlaneFragments - LineFragments].recon_index + BlockVStep;
   SrcPtr2 = &DestReconPtr[ PixelIndex - PlaneBorderWidth];
   DestPtr2 = SrcPtr2 + PlaneStride;
 
@@ -169,45 +126,29 @@ static void UpdateUMV_HBorders( PB_INSTANCE *pbi,
 
 static void UpdateUMV_VBorders( CP_INSTANCE *cpi,
                                 unsigned char * DestReconPtr,
-                                ogg_uint32_t  PlaneFragOffset ){
-  PB_INSTANCE   *pbi = &cpi->pb;
+                                int plane){
   ogg_uint32_t   i;
   ogg_uint32_t   PixelIndex;
 
-  ogg_uint32_t   PlaneStride;
-  ogg_uint32_t   LineFragments;
-  ogg_uint32_t   PlaneBorderWidth;
-  ogg_uint32_t   PlaneHeight;
+  ogg_uint32_t   PlaneStride = cpi->recon_stride[plane];
+  ogg_uint32_t   LineFragments = cpi->frag_h[plane];
+  ogg_uint32_t   PlaneBorderWidth = (plane ? UMV_BORDER / 2 : UMV_BORDER );
+  ogg_uint32_t   PlaneHeight = (plane ? cpi->info.height/2 : cpi->info.height );
 
   unsigned char   *SrcPtr1;
   unsigned char   *SrcPtr2;
   unsigned char   *DestPtr1;
   unsigned char   *DestPtr2;
 
-  /* Work out various plane specific values */
-  if ( PlaneFragOffset == 0 ) {
-    /* Y Plane */
-    PlaneStride = pbi->YStride;
-    PlaneBorderWidth = UMV_BORDER;
-    LineFragments = pbi->HFragments;
-    PlaneHeight = cpi->info.height;
-  }else{
-    /* U or V plane. */
-    PlaneStride = pbi->UVStride;
-    PlaneBorderWidth = UMV_BORDER / 2;
-    LineFragments = pbi->HFragments / 2;
-    PlaneHeight = cpi->info.height / 2;
-  }
+  fragment_t      *fp = cpi->frag[plane];
 
   /* Setup the source data values and destination pointers for the
      left and right edge borders */
-  PixelIndex = pbi->recon_pixel_index_table[PlaneFragOffset];
+  PixelIndex = fp[0].recon_index;
   SrcPtr1 = &DestReconPtr[ PixelIndex ];
   DestPtr1 = &DestReconPtr[ PixelIndex - PlaneBorderWidth ];
 
-  PixelIndex = pbi->recon_pixel_index_table[PlaneFragOffset +
-                                           LineFragments - 1] +
-    (HFRAGPIXELS - 1);
+  PixelIndex = fp[LineFragments - 1].recon_index + (HFRAGPIXELS - 1);
   SrcPtr2 = &DestReconPtr[ PixelIndex ];
   DestPtr2 = &DestReconPtr[ PixelIndex + 1 ];
 
@@ -225,133 +166,59 @@ static void UpdateUMV_VBorders( CP_INSTANCE *cpi,
 
 void UpdateUMVBorder( CP_INSTANCE *cpi,
                       unsigned char * DestReconPtr ) {
-  ogg_uint32_t  PlaneFragOffset;
-  PB_INSTANCE   *pbi = &cpi->pb;
-
   /* Y plane */
-  PlaneFragOffset = 0;
-  UpdateUMV_VBorders( cpi, DestReconPtr, PlaneFragOffset );
-  UpdateUMV_HBorders( pbi, DestReconPtr, PlaneFragOffset );
+  UpdateUMV_VBorders( cpi, DestReconPtr, 0);
+  UpdateUMV_HBorders( cpi, DestReconPtr, 0);
 
   /* Then the U and V Planes */
-  PlaneFragOffset = pbi->YPlaneFragments;
-  UpdateUMV_VBorders( cpi, DestReconPtr, PlaneFragOffset );
-  UpdateUMV_HBorders( pbi, DestReconPtr, PlaneFragOffset );
+  UpdateUMV_VBorders( cpi, DestReconPtr, 1);
+  UpdateUMV_HBorders( cpi, DestReconPtr, 1);
 
-  PlaneFragOffset = pbi->YPlaneFragments + pbi->UVPlaneFragments;
-  UpdateUMV_VBorders( cpi, DestReconPtr, PlaneFragOffset );
-  UpdateUMV_HBorders( pbi, DestReconPtr, PlaneFragOffset );
+  UpdateUMV_VBorders( cpi, DestReconPtr, 2);
+  UpdateUMV_HBorders( cpi, DestReconPtr, 2);
 }
 
 static void CopyRecon( CP_INSTANCE *cpi, unsigned char * DestReconPtr,
-                unsigned char * SrcReconPtr ) {
-  PB_INSTANCE   *pbi = &cpi->pb;
-  ogg_uint32_t  i;
-  ogg_uint32_t  PlaneLineStep; /* Pixels per line */
-  ogg_uint32_t  PixelIndex;
-
-  unsigned char  *SrcPtr;      /* Pointer to line of source image data */
-  unsigned char  *DestPtr;     /* Pointer to line of destination image data */
-  fragment_t *fp;
-
+		       unsigned char * SrcReconPtr ) {
+  ogg_uint32_t  i,plane;
+  fragment_t *fp = cpi->frag[0];
+  
   /* Copy over only updated blocks.*/
-
-  /* First Y plane */
-  fp = cpi->frag[0];
-  PlaneLineStep = pbi->YStride;
-  for ( i = 0; i < cpi->frag_n[0]; i++,fp++ ) {
-    if ( fp->coded ) {
-      PixelIndex = pbi->recon_pixel_index_table[i];
-      SrcPtr = &SrcReconPtr[ PixelIndex ];
-      DestPtr = &DestReconPtr[ PixelIndex ];
-
-      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
-    }
-  }
-
-  /* Then U and V */
-  fp = cpi->frag[1];
-  PlaneLineStep = pbi->UVStride;
-  for ( ; i < cpi->frag_n[0]+cpi->frag_n[1]; i++,fp++ ) {
-    if ( fp->coded ) {
-      PixelIndex = pbi->recon_pixel_index_table[i];
-      SrcPtr = &SrcReconPtr[ PixelIndex ];
-      DestPtr = &DestReconPtr[ PixelIndex ];
-
-      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
-
-    }
-  }
-
-  fp = cpi->frag[2];
-  for ( ; i < cpi->frag_total; i++,fp++ ) {
-    if ( fp->coded ) {
-      PixelIndex = pbi->recon_pixel_index_table[i];
-      SrcPtr = &SrcReconPtr[ PixelIndex ];
-      DestPtr = &DestReconPtr[ PixelIndex ];
-
-      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
-
+  for(plane=0;plane<3;plane++){  
+    int PlaneLineStep = cpi->recon_stride[plane];
+    for ( i = 0; i < cpi->frag_n[plane]; i++,fp++ ) {
+      if ( fp->coded ) {
+	int pi= fp->recon_index;
+	unsigned char *src = &SrcReconPtr[ pi ];
+	unsigned char *dst = &DestReconPtr[ pi ];
+	dsp_copy8x8 (cpi->pb.dsp, src, dst, PlaneLineStep);
+      }
     }
   }
 }
 
 static void CopyNotRecon( CP_INSTANCE *cpi, unsigned char * DestReconPtr,
-                unsigned char * SrcReconPtr ) {
-  PB_INSTANCE   *pbi = &cpi->pb;
-  ogg_uint32_t  i;
-  ogg_uint32_t  PlaneLineStep; /* Pixels per line */
-  ogg_uint32_t  PixelIndex;
-
-  unsigned char  *SrcPtr;      /* Pointer to line of source image data */
-  unsigned char  *DestPtr;     /* Pointer to line of destination image data */
-  fragment_t *fp;
-
+			  unsigned char * SrcReconPtr ) {
+  ogg_uint32_t  i,plane;
+  fragment_t *fp = cpi->frag[0];
+  
   /* Copy over only updated blocks.*/
-
-  /* First Y plane */
-  fp = cpi->frag[0];
-  PlaneLineStep = pbi->YStride;
-  for ( i = 0; i < cpi->frag_n[0]; i++,fp++ ) {
-    if ( !fp->coded ) {
-      PixelIndex = pbi->recon_pixel_index_table[i];
-      SrcPtr = &SrcReconPtr[ PixelIndex ];
-      DestPtr = &DestReconPtr[ PixelIndex ];
-
-      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
-    }
-  }
-
-  /* Then U and V */
-  fp = cpi->frag[1];
-  PlaneLineStep = pbi->UVStride;
-  for ( ; i < cpi->frag_n[0]+cpi->frag_n[1]; i++,fp++ ) {
-    if ( !fp->coded ) {
-      PixelIndex = pbi->recon_pixel_index_table[i];
-      SrcPtr = &SrcReconPtr[ PixelIndex ];
-      DestPtr = &DestReconPtr[ PixelIndex ];
-
-      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
-
-    }
-  }
-
-  fp = cpi->frag[2];
-  for ( ; i < cpi->frag_total; i++,fp++ ) {
-    if ( !fp->coded ) {
-      PixelIndex = pbi->recon_pixel_index_table[i];
-      SrcPtr = &SrcReconPtr[ PixelIndex ];
-      DestPtr = &DestReconPtr[ PixelIndex ];
-
-      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
-
+  for(plane=0;plane<3;plane++){  
+    int PlaneLineStep = cpi->recon_stride[plane];
+    for ( i = 0; i < cpi->frag_n[plane]; i++,fp++ ) {
+      if ( !fp->coded ) {
+	int pi= fp->recon_index;
+	unsigned char *src = &SrcReconPtr[ pi ];
+	unsigned char *dst = &DestReconPtr[ pi ];
+	dsp_copy8x8 (cpi->pb.dsp, src, dst, PlaneLineStep);
+      }
     }
   }
 }
 
 static void FilterHoriz__c(unsigned char * PixelPtr,
-                        ogg_int32_t LineLength,
-                        ogg_int16_t *BoundingValuePtr){
+			   ogg_int32_t LineLength,
+			   ogg_int16_t *BoundingValuePtr){
   ogg_int32_t j;
   ogg_int32_t FiltVal;
 
@@ -398,55 +265,19 @@ static void FilterVert__c(unsigned char * PixelPtr,
 
 static void LoopFilter(CP_INSTANCE *cpi){
   PB_INSTANCE   *pbi = &cpi->pb;
-  ogg_int32_t i;
 
-  ogg_int16_t * BoundingValuePtr=pbi->FiltBoundingValue+127;
-  int FragsAcross=pbi->HFragments;
-  int FromFragment,ToFragment;
-  int FragsDown = pbi->VFragments;
-  ogg_int32_t LineFragments;
-  ogg_int32_t LineLength;
-  ogg_int32_t FLimit;
+  ogg_int16_t *BoundingValuePtr=pbi->FiltBoundingValue+127;
+  ogg_int32_t FLimit = cpi->pb.quant_info.loop_filter_limits[cpi->BaseQ]; // temp
   int j,m,n;
   fragment_t *fp;
 
-  FLimit = cpi->pb.quant_info.loop_filter_limits[cpi->BaseQ]; // temp
   if ( FLimit == 0 ) return;
   SetupBoundingValueArray_Generic(pbi, FLimit);
 
   for ( j = 0; j < 3 ; j++){
-    switch(j) {
-    case 0: /* y */
-      fp = cpi->frag[0];
-      FromFragment = 0;
-      ToFragment = pbi->YPlaneFragments;
-      FragsAcross = pbi->HFragments;
-      FragsDown = pbi->VFragments;
-      LineLength = pbi->YStride;
-      LineFragments = pbi->HFragments;
-      break;
-    case 1: /* u */
-      fp = cpi->frag[1];
-      FromFragment = pbi->YPlaneFragments;
-      ToFragment = pbi->YPlaneFragments + pbi->UVPlaneFragments ;
-      FragsAcross = pbi->HFragments >> 1;
-      FragsDown = pbi->VFragments >> 1;
-      LineLength = pbi->UVStride;
-      LineFragments = pbi->HFragments / 2;
-      break;
-    /*case 2:  v */
-    default:
-      fp = cpi->frag[2];
-      FromFragment = pbi->YPlaneFragments + pbi->UVPlaneFragments;
-      ToFragment = pbi->YPlaneFragments + (2 * pbi->UVPlaneFragments) ;
-      FragsAcross = pbi->HFragments >> 1;
-      FragsDown = pbi->VFragments >> 1;
-      LineLength = pbi->UVStride;
-      LineFragments = pbi->HFragments / 2;
-      break;
-    }
-
-    i=FromFragment;
+    ogg_int32_t LineFragments = cpi->frag_h[j];
+    ogg_int32_t LineLength = cpi->recon_stride[j];
+    fp = cpi->frag[j];
 
     /**************************************************************
      First Row
@@ -459,44 +290,43 @@ static void LoopFilter(CP_INSTANCE *cpi){
          not coded */
       if ( !fp[1].coded ){
         dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                    pbi->recon_pixel_index_table[i]+6,
-                    LineLength,BoundingValuePtr);
+			fp[0].recon_index+6,
+			LineLength,BoundingValuePtr);
       }
 
       /* Bottom done if next row set */
       if( !fp[LineFragments].coded ){
         dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                   pbi->recon_pixel_index_table[i+LineFragments],
-                   LineLength, BoundingValuePtr);
+		       fp[LineFragments].recon_index,
+		       LineLength, BoundingValuePtr);
       }
     }
-    i++;
     fp++;
 
     /***************************************************************/
     /* middle columns  */
-    for ( n = 1 ; n < FragsAcross - 1 ; n++, i++, fp++) {
+    for ( n = 1 ; n < cpi->frag_h[j] - 1 ; n++, fp++) {
       if( fp->coded){
         /* Filter Left edge always */
         dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                    pbi->recon_pixel_index_table[i]-2,
-                    LineLength, BoundingValuePtr);
+			fp[0].recon_index-2,
+			LineLength, BoundingValuePtr);
 
         /* Filter right hand border only if the block to the right is
            not coded */
         if ( !fp[1].coded ){
           dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                      pbi->recon_pixel_index_table[i]+6,
-                      LineLength, BoundingValuePtr);
+			  fp[0].recon_index+6,
+			  LineLength, BoundingValuePtr);
         }
 
         /* Bottom done if next row set */
         if( !fp[LineFragments].coded ){
           dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                     pbi->recon_pixel_index_table[i + LineFragments],
-                     LineLength, BoundingValuePtr);
+			 fp[LineFragments].recon_index,
+			 LineLength, BoundingValuePtr);
         }
-
+	
       }
     }
 
@@ -505,23 +335,22 @@ static void LoopFilter(CP_INSTANCE *cpi){
     if(fp->coded){
       /* Filter Left edge always */
       dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                  pbi->recon_pixel_index_table[i] - 2 ,
-                  LineLength, BoundingValuePtr);
-
+		      fp[0].recon_index - 2 ,
+		      LineLength, BoundingValuePtr);
+      
       /* Bottom done if next row set */
       if( !fp[LineFragments].coded ){
         dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                   pbi->recon_pixel_index_table[i + LineFragments],
-                   LineLength, BoundingValuePtr);
+		       fp[LineFragments].recon_index,
+		       LineLength, BoundingValuePtr);
       }
     }
-    i++;
     fp++;
 
     /***************************************************************/
     /* Middle Rows */
     /***************************************************************/
-    for ( m = 1 ; m < FragsDown-1 ; m++) {
+    for ( m = 1 ; m < cpi->frag_v[j]-1 ; m++) {
 
       /*****************************************************************/
       /* first column conditions */
@@ -530,54 +359,53 @@ static void LoopFilter(CP_INSTANCE *cpi){
       if( fp->coded){
         /* TopRow is always done */
         dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                   pbi->recon_pixel_index_table[i],
-                   LineLength, BoundingValuePtr);
+		       fp[0].recon_index,
+		       LineLength, BoundingValuePtr);
 
         /* Filter right hand border only if the block to the right is
            not coded */
         if ( !fp[1].coded ){
           dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                      pbi->recon_pixel_index_table[i] + 6,
-                      LineLength, BoundingValuePtr);
+			  fp[0].recon_index + 6,
+			  LineLength, BoundingValuePtr);
         }
-
+	
         /* Bottom done if next row set */
         if( !fp[LineFragments].coded ){
           dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                     pbi->recon_pixel_index_table[i + LineFragments],
-                     LineLength, BoundingValuePtr);
+			 fp[LineFragments].recon_index,
+			 LineLength, BoundingValuePtr);
         }
       }
-      i++;
       fp++;
 
       /*****************************************************************/
       /* middle columns  */
-      for ( n = 1 ; n < FragsAcross - 1 ; n++, i++, fp++){
+      for ( n = 1 ; n < cpi->frag_h[j] - 1 ; n++, fp++){
         if( fp->coded){
           /* Filter Left edge always */
           dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                      pbi->recon_pixel_index_table[i] - 2,
-                      LineLength, BoundingValuePtr);
+			  fp[0].recon_index - 2,
+			  LineLength, BoundingValuePtr);
 
           /* TopRow is always done */
           dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                     pbi->recon_pixel_index_table[i],
-                     LineLength, BoundingValuePtr);
-
+			 fp[0].recon_index,
+			 LineLength, BoundingValuePtr);
+	  
           /* Filter right hand border only if the block to the right
              is not coded */
           if ( !fp[1].coded ){
             dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                        pbi->recon_pixel_index_table[i] + 6,
-                        LineLength, BoundingValuePtr);
+			    fp[0].recon_index + 6,
+			    LineLength, BoundingValuePtr);
           }
 
           /* Bottom done if next row set */
           if( !fp[LineFragments].coded ){
             dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                       pbi->recon_pixel_index_table[i + LineFragments],
-                       LineLength, BoundingValuePtr);
+			   fp[LineFragments].recon_index,
+			   LineLength, BoundingValuePtr);
           }
         }
       }
@@ -587,22 +415,21 @@ static void LoopFilter(CP_INSTANCE *cpi){
       if(fp->coded){
         /* Filter Left edge always*/
         dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                    pbi->recon_pixel_index_table[i] - 2,
-                    LineLength, BoundingValuePtr);
+			fp[0].recon_index - 2,
+			LineLength, BoundingValuePtr);
 
         /* TopRow is always done */
         dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                   pbi->recon_pixel_index_table[i],
-                   LineLength, BoundingValuePtr);
-
+		       fp[0].recon_index,		       
+		       LineLength, BoundingValuePtr);
+	
         /* Bottom done if next row set */
         if( !fp[LineFragments].coded ){
           dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                     pbi->recon_pixel_index_table[i + LineFragments],
-                     LineLength, BoundingValuePtr);
+			 fp[LineFragments].recon_index,
+			 LineLength, BoundingValuePtr);
         }
       }
-      i++;
       fp++;
     }
 
@@ -616,40 +443,39 @@ static void LoopFilter(CP_INSTANCE *cpi){
 
       /* TopRow is always done */
       dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                 pbi->recon_pixel_index_table[i],
-                 LineLength, BoundingValuePtr);
+		     fp[0].recon_index,
+		     LineLength, BoundingValuePtr);
 
       /* Filter right hand border only if the block to the right is
          not coded */
       if ( !fp[1].coded ){
         dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                    pbi->recon_pixel_index_table[i] + 6,
-                    LineLength, BoundingValuePtr);
+			fp[0].recon_index + 6,
+			LineLength, BoundingValuePtr);
       }
     }
-    i++;
     fp++;
 
     /******************************************************************/
     /* middle columns  */
-    for ( n = 1 ; n < FragsAcross - 1 ; n++, i++, fp++){
+    for ( n = 1 ; n < cpi->frag_h[j] - 1 ; n++, fp++){
       if( fp->coded){
         /* Filter Left edge always */
         dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                    pbi->recon_pixel_index_table[i] - 2,
-                    LineLength, BoundingValuePtr);
-
+			fp[0].recon_index - 2,
+			LineLength, BoundingValuePtr);
+	
         /* TopRow is always done */
         dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                   pbi->recon_pixel_index_table[i],
-                   LineLength, BoundingValuePtr);
+		       fp[0].recon_index,
+		       LineLength, BoundingValuePtr);
 
         /* Filter right hand border only if the block to the right is
            not coded */
         if ( !fp[1].coded ){
           dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                      pbi->recon_pixel_index_table[i] + 6,
-                      LineLength, BoundingValuePtr);
+			  fp[0].recon_index + 6,
+			  LineLength, BoundingValuePtr);
         }
       }
     }
@@ -659,16 +485,15 @@ static void LoopFilter(CP_INSTANCE *cpi){
     if( fp->coded){
       /* Filter Left edge always */
       dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                  pbi->recon_pixel_index_table[i] - 2,
-                  LineLength, BoundingValuePtr);
+		      fp[0].recon_index - 2,
+		      LineLength, BoundingValuePtr);
 
       /* TopRow is always done */
       dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                 pbi->recon_pixel_index_table[i],
-                 LineLength, BoundingValuePtr);
-
+		     fp[0].recon_index,
+		     LineLength, BoundingValuePtr);
+      
     }
-    i++;
     fp++;
   }
 }
@@ -771,7 +596,7 @@ void ReconRefFrames (CP_INSTANCE *cpi){
 	  /* and the loop filter output, which is a flat struct */
 	  TH_DEBUG("recon %s [%d][%d] = {",plstr,x,y);
 	  for(j=0;j<8;j++){
-	    int l = pbi->recon_pixel_index_table[i] + j*stride;
+	    int l = cpi->frag[0][i].recon_index + j*stride;
 	    TH_DEBUG("\n   ");
 	    for(k=0;k<8;k++,l++)
 	      TH_DEBUG("%d ", pbi->LastFrameRecon[l]);

@@ -24,10 +24,9 @@ void InitMotionCompensation ( CP_INSTANCE *cpi ){
   int i;
   int SearchSite=0;
   int Len;
-  int LineStepY = (ogg_int32_t)cpi->pb.YStride;
+  int LineStepY = cpi->recon_stride[0];
 
   Len=((MAX_MV_EXTENT/2)+1)/2;
-
 
   /* How many search stages are there. */
   cpi->MVSearchSteps = 0;
@@ -146,50 +145,26 @@ static ogg_uint32_t GetHalfPixelSumAbsDiffs (CP_INSTANCE *cpi,
 
 ogg_uint32_t GetMBIntraError (CP_INSTANCE *cpi, 
 			      fragment_t *fp,
-			      ogg_uint32_t FragIndex,
                               ogg_uint32_t PixelsPerLine ) {
-  ogg_uint32_t  LocalFragIndex = FragIndex;
-  ogg_uint32_t  IntraError = 0;
 
+  ogg_uint32_t  IntraError = 0;
   dsp_save_fpu (cpi->dsp);
 
   /* Add together the intra errors for those blocks in the macro block
      that are coded (Y only) */
-  if ( fp->coded )
-    IntraError +=
-      dsp_intra8x8_err (cpi->dsp, &cpi->
-                    yuvptr[cpi->pb.pixel_index_table[LocalFragIndex]],
-                    PixelsPerLine);
+  if ( fp[0].coded )
+    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->yuvptr[fp[0].raw_index],PixelsPerLine);
+  if ( fp[1].coded )
+    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->yuvptr[fp[1].raw_index],PixelsPerLine);
+  
+  fp += cpi->pb.HFragments;
 
-  LocalFragIndex++;
-  fp++;
-
-  if ( fp->coded )
-    IntraError +=
-      dsp_intra8x8_err (cpi->dsp, &cpi->
-                    yuvptr[cpi->pb.pixel_index_table[LocalFragIndex]],
-                    PixelsPerLine);
-
-  LocalFragIndex = FragIndex + cpi->pb.HFragments;
-  fp += cpi->pb.HFragments-1;
-
-  if ( fp->coded )
-    IntraError +=
-      dsp_intra8x8_err (cpi->dsp, &cpi->
-                     yuvptr[cpi->pb.pixel_index_table[LocalFragIndex]],
-                    PixelsPerLine);
-
-  LocalFragIndex++;
-  fp++;
-
-  if ( fp->coded )
-    IntraError +=
-      dsp_intra8x8_err (cpi->dsp, &cpi->
-                    yuvptr[cpi->pb.pixel_index_table[LocalFragIndex]],
-                    PixelsPerLine);
+  if ( fp[0].coded )
+    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->yuvptr[fp[0].raw_index],PixelsPerLine);
+  if ( fp[1].coded )
+    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->yuvptr[fp[1].raw_index],PixelsPerLine);
 
   dsp_restore_fpu (cpi->dsp);
-
   return IntraError;
 }
 
@@ -197,34 +172,21 @@ ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
                               unsigned char * SrcPtr,
                               unsigned char * RefPtr,
 			      fragment_t *fp,
-			      ogg_uint32_t FragIndex,
                               ogg_int32_t LastXMV,
                               ogg_int32_t LastYMV,
                               ogg_uint32_t PixelsPerLine ) {
-  ogg_uint32_t  RefPixelsPerLine = cpi->pb.YStride;
-  ogg_uint32_t  LocalFragIndex = FragIndex;
-  ogg_int32_t   PixelIndex;
-  ogg_int32_t   RefPixelIndex;
-  ogg_int32_t   RefPixelOffset;
-  ogg_int32_t   RefPtr2Offset;
-
+  ogg_uint32_t  RefPixelsPerLine = cpi->recon_stride[0];
+  ogg_int32_t   RefPixelOffset = ((LastYMV/2) * RefPixelsPerLine) + (LastXMV/2);
+  ogg_int32_t   RefPtr2Offset = 0;
+  
   ogg_uint32_t  InterError = 0;
-
+  
   unsigned char * SrcPtr1;
   unsigned char * RefPtr1;
-
+  
   dsp_save_fpu (cpi->dsp);
-
-  /* Work out pixel offset into source buffer. */
-  PixelIndex = cpi->pb.pixel_index_table[LocalFragIndex];
-
-  /* Work out the pixel offset in reference buffer for the default
-     motion vector */
-  RefPixelIndex = cpi->pb.recon_pixel_index_table[LocalFragIndex];
-  RefPixelOffset = ((LastYMV/2) * RefPixelsPerLine) + (LastXMV/2);
-
+  
   /* Work out the second reference pointer offset. */
-  RefPtr2Offset = 0;
   if ( LastXMV % 2 ) {
     if ( LastXMV > 0 )
       RefPtr2Offset += 1;
@@ -240,59 +202,45 @@ ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
 
   /* Add together the errors for those blocks in the macro block that
      are coded (Y only) */
-  if ( fp->coded ) {
-    SrcPtr1 = &SrcPtr[PixelIndex];
-    RefPtr1 = &RefPtr[RefPixelIndex + RefPixelOffset];
+  if ( fp[0].coded ) {
+    SrcPtr1 = &SrcPtr[fp[0].raw_index];
+    RefPtr1 = &RefPtr[fp[0].recon_index + RefPixelOffset];
     InterError += GetInterErr(cpi, SrcPtr1, RefPtr1,
                                  &RefPtr1[RefPtr2Offset], PixelsPerLine );
   }
 
-  LocalFragIndex++;
-  fp++;
-
-  if ( fp->coded ) {
-    PixelIndex = cpi->pb.pixel_index_table[LocalFragIndex];
-    RefPixelIndex = cpi->pb.recon_pixel_index_table[LocalFragIndex];
-    SrcPtr1 = &SrcPtr[PixelIndex];
-    RefPtr1 = &RefPtr[RefPixelIndex + RefPixelOffset];
+  if ( fp[1].coded ) {
+    SrcPtr1 = &SrcPtr[fp[1].raw_index];
+    RefPtr1 = &RefPtr[fp[1].recon_index + RefPixelOffset];
     InterError += GetInterErr(cpi, SrcPtr1, RefPtr1,
-                                 &RefPtr1[RefPtr2Offset], PixelsPerLine );
-
+			      &RefPtr1[RefPtr2Offset], PixelsPerLine );
+    
   }
+  
+  fp += cpi->pb.HFragments;
 
-  LocalFragIndex = FragIndex + cpi->pb.HFragments;
-  fp += cpi->pb.HFragments-1;
-
-  if ( fp->coded ) {
-    PixelIndex = cpi->pb.pixel_index_table[LocalFragIndex];
-    RefPixelIndex = cpi->pb.recon_pixel_index_table[LocalFragIndex];
-    SrcPtr1 = &SrcPtr[PixelIndex];
-    RefPtr1 = &RefPtr[RefPixelIndex + RefPixelOffset];
+  if ( fp[0].coded ) {
+    SrcPtr1 = &SrcPtr[fp[0].raw_index];
+    RefPtr1 = &RefPtr[fp[0].recon_index + RefPixelOffset];
     InterError += GetInterErr(cpi, SrcPtr1, RefPtr1,
                                  &RefPtr1[RefPtr2Offset], PixelsPerLine );
   }
 
-  LocalFragIndex++;
-  fp++;
-
-  if ( fp->coded ) {
-    PixelIndex = cpi->pb.pixel_index_table[LocalFragIndex];
-    RefPixelIndex = cpi->pb.recon_pixel_index_table[LocalFragIndex];
-    SrcPtr1 = &SrcPtr[PixelIndex];
-    RefPtr1 = &RefPtr[RefPixelIndex + RefPixelOffset];
+  if ( fp[1].coded ) {
+    SrcPtr1 = &SrcPtr[fp[1].raw_index];
+    RefPtr1 = &RefPtr[fp[1].recon_index + RefPixelOffset];
     InterError += GetInterErr(cpi, SrcPtr1, RefPtr1,
-                                 &RefPtr1[RefPtr2Offset], PixelsPerLine );
+			      &RefPtr1[RefPtr2Offset], PixelsPerLine );
   }
-
+  
   dsp_restore_fpu (cpi->dsp);
-
+  
   return InterError;
 }
 
 ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
                                 unsigned char * RefFramePtr,
 				fragment_t *fp,
-                                ogg_uint32_t FragIndex,
                                 ogg_uint32_t PixelsPerLine,
                                 ogg_int32_t *MVPixelOffset,
                                 MOTION_VECTOR *MV ) {
@@ -310,7 +258,7 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
   unsigned char *CandidateBlockPtr=NULL;
   unsigned char *BestBlockPtr=NULL;
 
-  ogg_uint32_t  RefRow2Offset = cpi->pb.YStride * 8;
+  ogg_uint32_t  RefRow2Offset = cpi->recon_stride[0] * 8;
 
   int    MBlockDispFrags[4];
 
@@ -327,17 +275,17 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
      included in the search. */
   MBlockDispFrags[0] = fp[0].coded;
   MBlockDispFrags[1] = fp[1].coded;
-  MBlockDispFrags[2] = fp[cpi->pb.HFragments].coded;
-  MBlockDispFrags[3] = fp[cpi->pb.HFragments + 1].coded;
+  MBlockDispFrags[2] = fp[cpi->frag_h[0]].coded;
+  MBlockDispFrags[3] = fp[cpi->frag_h[0] + 1].coded;
 
   /* Set up the source pointers for the four source blocks.  */
-  SrcPtr[0] = &cpi->yuvptr[cpi->pb.pixel_index_table[FragIndex]];
+  SrcPtr[0] = &cpi->yuvptr[fp->raw_index];
   SrcPtr[1] = SrcPtr[0] + 8;
   SrcPtr[2] = SrcPtr[0] + (PixelsPerLine * 8);
   SrcPtr[3] = SrcPtr[2] + 8;
 
   /* Set starting reference point for search. */
-  RefPtr = &RefFramePtr[cpi->pb.recon_pixel_index_table[FragIndex]];
+  RefPtr = &RefFramePtr[fp->recon_index];
 
   /* Check the 0,0 candidate. */
   if ( MBlockDispFrags[0] ) {
@@ -472,18 +420,17 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
 
   /* Get the error score for the chosen 1/2 pixel offset as a variance. */
   InterMVError = GetMBInterError( cpi, cpi->yuvptr, RefFramePtr, fp,
-                                  FragIndex, MV->x, MV->y, PixelsPerLine );
-
+                                  MV->x, MV->y, PixelsPerLine );
+  
   dsp_restore_fpu (cpi->dsp);
-
+  
   /* Return score of best matching block. */
   return InterMVError;
 }
 
 ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
-                                      unsigned char * RefFramePtr,
+                                      unsigned char *RefFramePtr,
 				      fragment_t *fp,
-                                      ogg_uint32_t FragIndex,
                                       ogg_uint32_t PixelsPerLine,
                                       MOTION_VECTOR *MV ) {
   ogg_uint32_t  Error = 0;
@@ -498,7 +445,7 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
   unsigned char *CandidateBlockPtr=NULL;
   unsigned char *BestBlockPtr=NULL;
 
-  ogg_uint32_t  RefRow2Offset = cpi->pb.YStride * 8;
+  ogg_uint32_t  RefRow2Offset = cpi->recon_stride[0] * 8;
 
   int    MBlockDispFrags[4];
 
@@ -515,19 +462,17 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
      included in the search. */
   MBlockDispFrags[0] = fp[0].coded;
   MBlockDispFrags[1] = fp[1].coded;
-  MBlockDispFrags[2] = fp[cpi->pb.HFragments].coded;
-  MBlockDispFrags[3] = fp[cpi->pb.HFragments + 1].coded;
+  MBlockDispFrags[2] = fp[cpi->frag_h[0]].coded;
+  MBlockDispFrags[3] = fp[cpi->frag_h[0] + 1].coded;
 
   /* Set up the source pointers for the four source blocks. */
-  SrcPtr[0] = &cpi->
-    yuvptr[cpi->pb.pixel_index_table[FragIndex]];
+  SrcPtr[0] = &cpi->yuvptr[fp->raw_index];
   SrcPtr[1] = SrcPtr[0] + 8;
   SrcPtr[2] = SrcPtr[0] + (PixelsPerLine * 8);
   SrcPtr[3] = SrcPtr[2] + 8;
-
-  RefPtr = &RefFramePtr[cpi->pb.recon_pixel_index_table[FragIndex]];
-  RefPtr = RefPtr - ((MAX_MV_EXTENT/2) * cpi->
-                     pb.YStride) - (MAX_MV_EXTENT/2);
+  
+  RefPtr = &RefFramePtr[fp->recon_index];
+  RefPtr = RefPtr - ((MAX_MV_EXTENT/2) * cpi->recon_stride[0]) - (MAX_MV_EXTENT/2);
 
   /* Search each pixel alligned site */
   for ( i = 0; i < (ogg_int32_t)MAX_MV_EXTENT; i ++ ) {
@@ -569,7 +514,7 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
     }
 
     /* Move on to the next row. */
-    RefPtr += cpi->pb.YStride;
+    RefPtr += cpi->recon_stride[0];
 
   }
 
@@ -629,7 +574,7 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
 
   /* Get the error score for the chosen 1/2 pixel offset as a variance. */
   InterMVError = GetMBInterError( cpi, cpi->yuvptr, RefFramePtr, fp,
-                                  FragIndex, MV->x, MV->y, PixelsPerLine );
+                                  MV->x, MV->y, PixelsPerLine );
 
   dsp_restore_fpu (cpi->dsp);
 
@@ -639,7 +584,7 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
 
 static ogg_uint32_t GetBMVExhaustiveSearch (CP_INSTANCE *cpi,
                                             unsigned char * RefFramePtr,
-                                            ogg_uint32_t FragIndex,
+					    fragment_t *fp,
                                             ogg_uint32_t PixelsPerLine,
                                             MOTION_VECTOR *MV ) {
   ogg_uint32_t  Error = 0;
@@ -661,18 +606,15 @@ static ogg_uint32_t GetBMVExhaustiveSearch (CP_INSTANCE *cpi,
   unsigned char * RefDataPtr2;
 
   /* Set up the source pointer for the block. */
-  SrcPtr = &cpi->
-    yuvptr[cpi->pb.pixel_index_table[FragIndex]];
-
-  RefPtr = &RefFramePtr[cpi->pb.recon_pixel_index_table[FragIndex]];
-  RefPtr = RefPtr - ((MAX_MV_EXTENT/2) *
-                     cpi->pb.YStride) - (MAX_MV_EXTENT/2);
-
+  SrcPtr = &cpi->yuvptr[fp->raw_index];
+  RefPtr = &RefFramePtr[fp->recon_index];
+  RefPtr = RefPtr - ((MAX_MV_EXTENT/2) * cpi->recon_stride[0]) - (MAX_MV_EXTENT/2);
+  
   /* Search each pixel alligned site */
   for ( i = 0; i < (ogg_int32_t)MAX_MV_EXTENT; i ++ ) {
     /* Starting position in row */
     CandidateBlockPtr = RefPtr;
-
+    
     for ( j = 0; j < (ogg_int32_t)MAX_MV_EXTENT; j++ ){
       /* Get the block error score. */
       Error = dsp_sad8x8 (cpi->dsp, SrcPtr, PixelsPerLine, CandidateBlockPtr,
@@ -691,7 +633,7 @@ static ogg_uint32_t GetBMVExhaustiveSearch (CP_INSTANCE *cpi,
     }
 
     /* Move on to the next row. */
-    RefPtr += cpi->pb.YStride;
+    RefPtr += cpi->recon_stride[0];
   }
 
   /* Factor vectors to 1/2 pixel resoultion. */
@@ -707,8 +649,8 @@ static ogg_uint32_t GetBMVExhaustiveSearch (CP_INSTANCE *cpi,
     RefDataPtr2 = BestBlockPtr + cpi->HalfPixelRef2Offset[i];
     HalfPixelError =
       GetHalfPixelSumAbsDiffs(cpi, SrcPtr, BestBlockPtr, RefDataPtr2,
-                            PixelsPerLine, 0, BestHalfPixelError );
-
+			      PixelsPerLine, 0, BestHalfPixelError );
+    
     if ( HalfPixelError < BestHalfPixelError ){
       BestHalfOffset = (unsigned char)i;
       BestHalfPixelError = HalfPixelError;
@@ -732,11 +674,10 @@ static ogg_uint32_t GetBMVExhaustiveSearch (CP_INSTANCE *cpi,
 ogg_uint32_t GetFOURMVExhaustiveSearch (CP_INSTANCE *cpi,
                                         unsigned char * RefFramePtr,
 					fragment_t *fp,
-                                        ogg_uint32_t FragIndex,
                                         ogg_uint32_t PixelsPerLine,
                                         MOTION_VECTOR *MV ) {
   ogg_uint32_t  InterMVError;
-
+  
   dsp_save_fpu (cpi->dsp);
 
   /* For the moment the 4MV mode is only deemed to be valid 
@@ -744,31 +685,29 @@ ogg_uint32_t GetFOURMVExhaustiveSearch (CP_INSTANCE *cpi,
   /* This may be adapted later. */
   if ( fp[0].coded &&
        fp[1].coded &&
-       fp[cpi->pb.HFragments].coded &&
-       fp[cpi->pb.HFragments + 1].coded ) {
-
+       fp[cpi->frag_h[0]].coded &&
+       fp[cpi->frag_h[0]+1].coded ) {
+    
     /* Reset the error score. */
     InterMVError = 0;
-
+    
     /* Get the error component from each coded block */
     InterMVError +=
-      GetBMVExhaustiveSearch(cpi, RefFramePtr, FragIndex,
+      GetBMVExhaustiveSearch(cpi, RefFramePtr, fp,
                              PixelsPerLine, &(MV[0]) );
     InterMVError +=
-      GetBMVExhaustiveSearch(cpi, RefFramePtr, (FragIndex + 1),
+      GetBMVExhaustiveSearch(cpi, RefFramePtr, &fp[1],
                              PixelsPerLine, &(MV[1]) );
     InterMVError +=
-      GetBMVExhaustiveSearch(cpi, RefFramePtr,
-                             (FragIndex + cpi->pb.HFragments),
+      GetBMVExhaustiveSearch(cpi, RefFramePtr, &fp[cpi->frag_h[0]],
                              PixelsPerLine, &(MV[2]) );
     InterMVError +=
-      GetBMVExhaustiveSearch(cpi, RefFramePtr,
-                             (FragIndex + cpi->pb.HFragments + 1),
+      GetBMVExhaustiveSearch(cpi, RefFramePtr, &fp[cpi->frag_h[0]+1],
                              PixelsPerLine, &(MV[3]) );
   }else{
     InterMVError = HUGE_ERROR;
   }
-
+  
   dsp_restore_fpu (cpi->dsp);
 
   /* Return score of best matching block. */

@@ -1011,14 +1011,13 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         /* Look at the intra coding error. */
         MBIntraError = GetMBIntraError( cpi, 
 					&cpi->frag[0][YFragIndex],
-					YFragIndex, PixelsPerLine );
+					PixelsPerLine );
         BestError = (BestError > MBIntraError) ? MBIntraError : BestError;
 
         /* Get the golden frame error */
         MBGFError = GetMBInterError( cpi, cpi->yuvptr,
                                      cpi->pb.GoldenFrame, 
 				     &cpi->frag[0][YFragIndex],
-				     YFragIndex,
                                      0, 0, PixelsPerLine );
         BestError = (BestError > MBGFError) ? MBGFError : BestError;
 
@@ -1026,14 +1025,14 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         MBInterError = GetMBInterError( cpi, cpi->yuvptr,
                                         cpi->pb.LastFrameRecon,
 					&cpi->frag[0][YFragIndex],
-                                        YFragIndex, 0, 0, PixelsPerLine );
+                                        0, 0, PixelsPerLine );
         BestError = (BestError > MBInterError) ? MBInterError : BestError;
 
         /* Measure error for last MV */
         MBLastInterError =  GetMBInterError( cpi, cpi->yuvptr,
                                              cpi->pb.LastFrameRecon,
 					     &cpi->frag[0][YFragIndex],
-                                             YFragIndex, LastInterMVect.x,
+                                             LastInterMVect.x,
                                              LastInterMVect.y, PixelsPerLine );
         BestError = (BestError > MBLastInterError) ?
           MBLastInterError : BestError;
@@ -1042,7 +1041,6 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         MBPriorLastInterError =  GetMBInterError( cpi, cpi->yuvptr,
                                                   cpi->pb.LastFrameRecon,
 						  &cpi->frag[0][YFragIndex],
-                                                  YFragIndex,
                                                   PriorLastInterMVect.x,
                                                   PriorLastInterMVect.y,
                                                   PixelsPerLine );
@@ -1062,7 +1060,6 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
           if ( cpi->info.quick_p ) {
             MBInterMVError = GetMBMVInterError( cpi, cpi->pb.LastFrameRecon,
 						&cpi->frag[0][YFragIndex],
-                                                YFragIndex, 
 						PixelsPerLine,
                                                 cpi->MVPixelOffsetY,
                                                 &InterMVect );
@@ -1075,7 +1072,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
               MBInterMVExError =
                 GetMBMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
 					 &cpi->frag[0][YFragIndex],
-                                         YFragIndex, PixelsPerLine,
+                                         PixelsPerLine,
                                          &InterMVectEx );
 
               /* Is the Variance measure for the EX search
@@ -1091,7 +1088,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
             MBInterMVError =
               GetMBMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
 				       &cpi->frag[0][YFragIndex],
-                                       YFragIndex, PixelsPerLine,
+                                       PixelsPerLine,
                                        &InterMVect );
           }
 
@@ -1113,14 +1110,14 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
           /* Do an MV search in the golden reference frame */
           MBGF_MVError = GetMBMVInterError( cpi, cpi->pb.GoldenFrame,
 					    &cpi->frag[0][YFragIndex],
-                                            YFragIndex, PixelsPerLine,
+                                            PixelsPerLine,
                                             cpi->MVPixelOffsetY, &GFMVect );
 
           /* Measure error for last GFMV */
           LastMBGF_MVError =  GetMBInterError( cpi, cpi->yuvptr,
                                                cpi->pb.GoldenFrame,
 					       &cpi->frag[0][YFragIndex],
-                                               YFragIndex, LastGFMVect.x,
+                                               LastGFMVect.x,
                                                LastGFMVect.y, PixelsPerLine );
 
           /* Check against last GF motion vector and reset if the
@@ -1149,7 +1146,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
           MBInterFOURMVError =
             GetFOURMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
 				       &cpi->frag[0][YFragIndex],
-                                       YFragIndex, PixelsPerLine, FourMVect );
+                                       PixelsPerLine, FourMVect );
 
           /* If the improvement is great enough then use the four MV mode */
           if ( ((MBInterFOURMVError + cpi->MinImprovementForFourMV) <

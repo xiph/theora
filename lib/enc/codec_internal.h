@@ -160,23 +160,11 @@ typedef struct PB_INSTANCE {
 
   ogg_uint32_t  YPlaneSize;
   ogg_uint32_t  UVPlaneSize;
-  ogg_uint32_t  YStride;
-  ogg_uint32_t  UVStride;
   ogg_uint32_t  VFragments;
   ogg_uint32_t  HFragments;
   ogg_uint32_t  UnitFragments;
   ogg_uint32_t  YPlaneFragments;
   ogg_uint32_t  UVPlaneFragments;
-
-  ogg_uint32_t  ReconYPlaneSize;
-  ogg_uint32_t  ReconUVPlaneSize;
-
-  ogg_uint32_t  YDataOffset;
-  ogg_uint32_t  UDataOffset;
-  ogg_uint32_t  VDataOffset;
-  ogg_uint32_t  ReconYDataOffset;
-  ogg_uint32_t  ReconUDataOffset;
-  ogg_uint32_t  ReconVDataOffset;
 
   ogg_uint32_t  YSBRows;        /* Number of rows of SuperBlocks in a
                                    Y frame */
@@ -200,12 +188,6 @@ typedef struct PB_INSTANCE {
 
   /**********************************************************************/
   /* Fragment Information */
-  ogg_uint32_t  *pixel_index_table;        /* start address of first
-                                              pixel of fragment in
-                                              source */
-  ogg_uint32_t  *recon_pixel_index_table;  /* start address of first
-                                              pixel in recon buffer */
-
   int            CodedBlockIndex;
   fragment_t   **CodedBlockList;           
 
@@ -275,8 +257,6 @@ typedef struct CP_INSTANCE {
   /* how far do we shift the granulepos to seperate out P frame counts? */
   int             keyframe_granule_shift;
 
-
-
   /* Compressor Configuration */
   int              BaseQ;
   int              GoldenFrameEnabled;
@@ -341,6 +321,9 @@ typedef struct CP_INSTANCE {
   ogg_uint32_t      super_v[3];
   ogg_uint32_t      super_n[3];
   ogg_uint32_t      super_total;
+
+  ogg_uint32_t      recon_stride[3];
+  ogg_uint32_t      recon_offset[3];
 
   /* Coded flag arrays and counters for them */
   unsigned char    *PartiallyCodedFlags;
@@ -438,13 +421,11 @@ extern void PackAndWriteDFArray( CP_INSTANCE *cpi );
 extern void InitMotionCompensation ( CP_INSTANCE *cpi );
 extern ogg_uint32_t GetMBIntraError (CP_INSTANCE *cpi, 
 				     fragment_t *fp,
-				     ogg_uint32_t FragIndex,
                                      ogg_uint32_t PixelsPerLine ) ;
 extern ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
                                      unsigned char * SrcPtr,
                                      unsigned char * RefPtr,
 				     fragment_t *fp,
-                                     ogg_uint32_t FragIndex,
                                      ogg_int32_t LastXMV,
                                      ogg_int32_t LastYMV,
                                      ogg_uint32_t PixelsPerLine ) ;
@@ -452,20 +433,17 @@ extern void WriteFrameHeader( CP_INSTANCE *cpi) ;
 extern ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
                                        unsigned char * RefFramePtr,
 				       fragment_t *fp,
-                                       ogg_uint32_t FragIndex,
                                        ogg_uint32_t PixelsPerLine,
                                        ogg_int32_t *MVPixelOffset,
                                        MOTION_VECTOR *MV );
 extern ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
                                              unsigned char * RefFramePtr,
 					     fragment_t *fp,
-                                             ogg_uint32_t FragIndex,
                                              ogg_uint32_t PixelsPerLine,
                                              MOTION_VECTOR *MV );
 extern ogg_uint32_t GetFOURMVExhaustiveSearch (CP_INSTANCE *cpi,
                                                unsigned char * RefFramePtr,
 					       fragment_t *fp,
-                                               ogg_uint32_t FragIndex,
                                                ogg_uint32_t PixelsPerLine,
                                                MOTION_VECTOR *MV ) ;
 extern void EncodeData(CP_INSTANCE *cpi);
@@ -481,5 +459,8 @@ extern void CreateBlockMapping ( ogg_int32_t  (*BlockMap)[4][4],
                                  ogg_uint32_t YSuperBlocks,
                                  ogg_uint32_t UVSuperBlocks,
                                  ogg_uint32_t HFrags, ogg_uint32_t VFrags );
+
+extern void ClearFragmentInfo (CP_INSTANCE *cpi);
+extern void ClearFrameInfo (CP_INSTANCE *cpi);
 
 #endif /* ENCODER_INTERNAL_H */

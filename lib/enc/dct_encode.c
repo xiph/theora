@@ -253,6 +253,7 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
 				   ogg_int16_t *DctInputPtr, 
 				   unsigned char *thisrecon,
 				   ogg_int32_t MvDevisor,
+				   fragment_t *fp,
 				   ogg_uint32_t FragIndex,
 				   ogg_uint32_t PixelsPerLine,
 				   ogg_uint32_t ReconPixelsPerLine,
@@ -313,11 +314,9 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
     }
     
     if ( mode==CODE_GOLDEN_MV ) {
-      ReconPtr1 = &cpi->
-	pb.GoldenFrame[cpi->pb.recon_pixel_index_table[FragIndex]];
+      ReconPtr1 = &cpi->pb.GoldenFrame[fp->recon_index];
     } else {
-      ReconPtr1 = &cpi->
-	pb.LastFrameRecon[cpi->pb.recon_pixel_index_table[FragIndex]];
+      ReconPtr1 = &cpi->pb.LastFrameRecon[fp->recon_index];
     }
     
     ReconPtr1 += MVOffset;
@@ -342,11 +341,9 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
     if ( ( mode==CODE_INTER_NO_MV ) ||
 	 ( mode==CODE_USING_GOLDEN ) ) {
       if ( mode==CODE_INTER_NO_MV ) {
-	ReconPtr1 = &cpi->
-	  pb.LastFrameRecon[cpi->pb.recon_pixel_index_table[FragIndex]];
+	ReconPtr1 = &cpi->pb.LastFrameRecon[fp->recon_index];
       } else {
-	ReconPtr1 = &cpi->
-	  pb.GoldenFrame[cpi->pb.recon_pixel_index_table[FragIndex]];
+	ReconPtr1 = &cpi->pb.GoldenFrame[fp->recon_index];
       }
       
       dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
@@ -363,25 +360,22 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
 			     fragment_t *fp,
 			     ogg_int32_t FragIndex,
                              ogg_uint32_t PixelsPerLine) {
-  unsigned char *FiltPtr = &cpi->yuvptr[cpi->pb.pixel_index_table[FragIndex]];
+  unsigned char *FiltPtr = &cpi->yuvptr[fp->raw_index];
   int qi = cpi->BaseQ; // temporary
   int inter = (fp->mode != CODE_INTRA);
   int plane = (fp < cpi->frag[1] ? 0 : (fp < cpi->frag[2] ? 1 : 2)); 
   ogg_int32_t *q = cpi->pb.iquant_tables[inter][plane][qi];
   ogg_int16_t DCTInput[64];
   ogg_int16_t DCTOutput[64];
-  ogg_uint32_t  ReconPixelsPerLine; /* Line length for recon buffers. */
-
+  ogg_uint32_t ReconPixelsPerLine = cpi->recon_stride[plane];
   ogg_int32_t   MvDivisor;      /* Defines MV resolution (2 = 1/2
                                    pixel for Y or 4 = 1/4 for UV) */
-  unsigned char   *ReconPtr1 = &cpi->pb.ThisFrameRecon[cpi->pb.recon_pixel_index_table[FragIndex]];
+  unsigned char   *ReconPtr1 = &cpi->pb.ThisFrameRecon[fp->recon_index];
 
   /* Set plane specific values */
   if (plane == 0){
-    ReconPixelsPerLine = cpi->pb.YStride;
     MvDivisor = 2;                  /* 1/2 pixel accuracy in Y */
   }else{
-    ReconPixelsPerLine = cpi->pb.UVStride;
     MvDivisor = 4;                  /* UV planes at 1/2 resolution of Y */
   }
 
@@ -389,7 +383,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
      the reconstruction buffer, and proces a difference block for
      forward DCT */
   BlockUpdateDifference(cpi, FiltPtr, DCTInput, ReconPtr1,
-			MvDivisor, FragIndex, PixelsPerLine,
+			MvDivisor, fp, FragIndex, PixelsPerLine,
 			ReconPixelsPerLine, fp->mode);
   
   /* Proceed to encode the data into the encode buffer if the encoder
