@@ -89,12 +89,8 @@ static void ClearFragmentInfo(PB_INSTANCE * pbi){
   /* free prior allocs if present */
   if(pbi->pixel_index_table) _ogg_free(pbi->pixel_index_table);
   if(pbi->recon_pixel_index_table) _ogg_free(pbi->recon_pixel_index_table);
-  if(pbi->FragTokenCounts) _ogg_free(pbi->FragTokenCounts);
   if(pbi->CodedBlockList) _ogg_free(pbi->CodedBlockList);
   if(pbi->FragMVect) _ogg_free(pbi->FragMVect);
-  if(pbi->FragCoeffs) _ogg_free(pbi->FragCoeffs);
-  if(pbi->FragCoefEOB) _ogg_free(pbi->FragCoefEOB);
-  if(pbi->QFragData) _ogg_free(pbi->QFragData);
 #ifdef _TH_DEBUG_
   if(pbi->QFragTIME) _ogg_free(pbi->QFragTIME);
   if(pbi->QFragFREQ) _ogg_free(pbi->QFragFREQ);
@@ -103,9 +99,6 @@ static void ClearFragmentInfo(PB_INSTANCE * pbi){
   pbi->QFragFREQ = 0;
   pbi->QFragQUAN = 0;
 #endif
-  if(pbi->TokenList) _ogg_free(pbi->TokenList);
-  if(pbi->FragCodingMethod) _ogg_free(pbi->FragCodingMethod);
-
   if(pbi->BlockMap) _ogg_free(pbi->BlockMap);
 
   if(pbi->SBCodedFlags) _ogg_free(pbi->SBCodedFlags);
@@ -113,15 +106,9 @@ static void ClearFragmentInfo(PB_INSTANCE * pbi){
   if(pbi->MBFullyFlags) _ogg_free(pbi->MBFullyFlags);
   if(pbi->MBCodedFlags) _ogg_free(pbi->MBCodedFlags);
 
-  pbi->QFragData = 0;
-  pbi->TokenList = 0;
-  pbi->FragCoeffs = 0;
-  pbi->FragCoefEOB = 0;
   pbi->pixel_index_table = 0;
   pbi->recon_pixel_index_table = 0;
-  pbi->FragTokenCounts = 0;
   pbi->CodedBlockList = 0;
-  pbi->FragCodingMethod = 0;
   pbi->FragMVect = 0;
   pbi->MBCodedFlags = 0;
   pbi->MBFullyFlags = 0;
@@ -143,23 +130,11 @@ static void InitFragmentInfo(PB_INSTANCE * pbi){
   pbi->recon_pixel_index_table =
     _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->recon_pixel_index_table));
 
-  pbi->FragTokenCounts =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->FragTokenCounts));
-
   pbi->CodedBlockList =
     _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->CodedBlockList));
 
   pbi->FragMVect =
     _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->FragMVect));
-
-  pbi->FragCoeffs =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->FragCoeffs));
-
-  pbi->FragCoefEOB =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->FragCoefEOB));
-
-  pbi->QFragData =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->QFragData));
 
 #ifdef _TH_DEBUG_
 
@@ -173,12 +148,6 @@ static void InitFragmentInfo(PB_INSTANCE * pbi){
     _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->QFragQUAN));
 
 #endif
-
-  pbi->TokenList =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->TokenList));
-
-  pbi->FragCodingMethod =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->FragCodingMethod));
 
   /* Super Block Initialization */
   pbi->SBCodedFlags =

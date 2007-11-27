@@ -94,7 +94,7 @@ typedef enum{
     CODE_USING_GOLDEN     = 0x5, /* 'Golden frame' prediction (no MV). */
     CODE_GOLDEN_MV        = 0x6, /* 'Golden frame' prediction plus MV. */
     CODE_INTER_FOURMV     = 0x7  /* Inter prediction 4MV per macro block. */
-} CODING_MODE;
+} coding_mode_t;
 
 /** Huffman table entry */
 typedef struct HUFF_ENTRY {
@@ -113,9 +113,16 @@ typedef struct{
 
 typedef struct fragment {
   int coded;
+  coding_mode_t mode;
   mv_t mv;
   ogg_int16_t pred_dc;
   ogg_int16_t dct[64];
+
+  unsigned char nonzero;
+  ogg_uint32_t  token_list[128];
+  unsigned char tokens_coded;
+  unsigned char coeffs_packed;
+  unsigned char tokens_packed;
 
   ogg_uint32_t raw_index;
   ogg_uint32_t recon_index;
@@ -123,12 +130,15 @@ typedef struct fragment {
 
 typedef struct macroblock {
   int mode;
-  fragment_t *f[4]; // hilbert order
+  fragment_t *y[4]; // MV (raster) order
+  fragment_t *u;
+  fragment_t *v;
 } macroblock_t;
 
 #define SB_MB_BLFRAG(sb,mbnum) ((sb).f[ ((mbnum)<2? ((mbnum)==0?0:4) : ((mbnum)==2?8:14)) ])
 typedef struct superblock {
   fragment_t *f[16]; // hilbert order
+  macroblock_t *m[4]; // hilbert order
 } superblock_t;
 
 typedef ogg_int16_t    quant_table[64];
@@ -197,21 +207,9 @@ typedef struct PB_INSTANCE {
                                               pixel in recon buffer */
 
   int            CodedBlockIndex;
-  ogg_int32_t   *CodedBlockList;           /* A list of fragment indices for
-                                              coded blocks. */
+  fragment_t   **CodedBlockList;           
+
   MOTION_VECTOR *FragMVect;                /* Frag motion vectors */
-
-  ogg_uint32_t  *FragTokenCounts;          /* Number of tokens per fragment */
-  ogg_uint32_t  (*TokenList)[128];         /* Fragment Token Pointers */
-
-  unsigned char *FragCoeffs;                /* # of coeffs decoded so far for
-                                               fragment */
-  unsigned char *FragCoefEOB;               /* Position of last non 0 coef
-                                                within QFragData */
-  ogg_int16_t  (*QFragData)[64];            /* Fragment Coefficients
-                                               Array Pointers */
-  CODING_MODE   *FragCodingMethod;          /* coding method for the
-                                               fragment */
 
   /***********************************************************************/
   /* Macro Block and SuperBlock Information */
@@ -347,17 +345,10 @@ typedef struct CP_INSTANCE {
   /* Coded flag arrays and counters for them */
   unsigned char    *PartiallyCodedFlags;
   unsigned char    *PartiallyCodedMbPatterns;
-  unsigned char    *UncodedMbFlags;
-
-  ogg_int16_t      *PredictedDC;
-
   ogg_uint32_t     *FragmentLastQ;     /* Array used to keep track of
                                           quality at which each
                                           fragment was last
                                           updated. */
-  unsigned char    *FragTokens;
-  ogg_uint32_t     *FragTokenCounts;   /* Number of tokens per fragment */
-
   ogg_uint32_t     *RunHuffIndices;
   ogg_uint32_t     *ModeList;
   MOTION_VECTOR    *MVList;
@@ -372,7 +363,6 @@ typedef struct CP_INSTANCE {
   /*********************************************************************/
 
   ogg_uint32_t      RunLength;
-  unsigned char     MBCodingMode; 
 
   ogg_int32_t       MVPixelOffsetY[MAX_SEARCH_SITES];
   ogg_uint32_t      InterTripOutThresh;
@@ -388,10 +378,6 @@ typedef struct CP_INSTANCE {
   signed char       HalfPixelYOffset[9];    /* Half pixel MV offsets for Y */
 
   MOTION_VECTOR     MVector;
-  ogg_int16_t      *DCT_codes; /* Buffer that stores the result of
-                                  Forward DCT */
-  ogg_int16_t      *DCTDataBuffer; /* Input data buffer for Forward DCT */
-
   /* instances (used for reconstructing buffers and to hold tokens etc.) */
   PB_INSTANCE       pb;   /* playback */
 
@@ -438,7 +424,7 @@ extern void quantize( PB_INSTANCE *pbi,
                       ogg_int16_t * quantized_list);
 extern void fdct_short ( ogg_int16_t * InputData, ogg_int16_t * OutputData );
 extern ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi,
-                                       ogg_int32_t FragIndex);
+				       fragment_t *fp);
 extern void TransformQuantizeBlock (CP_INSTANCE *cpi, fragment_t *fp, ogg_int32_t FragIndex,
                                     ogg_uint32_t PixelsPerLine ) ;
 extern void InitFrameDetails(CP_INSTANCE *cpi);
@@ -483,9 +469,7 @@ extern ogg_uint32_t GetFOURMVExhaustiveSearch (CP_INSTANCE *cpi,
                                                ogg_uint32_t PixelsPerLine,
                                                MOTION_VECTOR *MV ) ;
 extern void EncodeData(CP_INSTANCE *cpi);
-extern ogg_uint32_t PickIntra( CP_INSTANCE *cpi,
-                               ogg_uint32_t SBRows,
-                               ogg_uint32_t SBCols);
+extern ogg_uint32_t PickIntra( CP_INSTANCE *cpi );
 extern ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                               ogg_uint32_t SBRows,
                               ogg_uint32_t SBCols,

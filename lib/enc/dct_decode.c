@@ -36,16 +36,16 @@ static void SetupBoundingValueArray_Generic(PB_INSTANCE *pbi,
   }
 }
 
-static void ExpandBlock ( CP_INSTANCE *cpi, ogg_int32_t FragmentNumber){
+static void ExpandBlock ( CP_INSTANCE *cpi, fragment_t *fp, ogg_int32_t FragmentNumber){
   PB_INSTANCE   *pbi = &cpi->pb;
   ogg_uint32_t   ReconPixelsPerLine; /* Pixels per line */
   ogg_int32_t    ReconPixelIndex;    /* Offset for block into a
                                         reconstruction buffer */
   ogg_int16_t    reconstruct[64];
   ogg_int16_t  *quantizers;
-  ogg_int16_t   *data = &pbi->QFragData[FragmentNumber][0];
+  ogg_int16_t   *data = fp->dct;
 
-  int            mode = pbi->FragCodingMethod[FragmentNumber];
+  int            mode = fp->mode;
   int            qi = cpi->BaseQ; // temporary 
 
   /* Select the appropriate inverse Q matrix and line stride */
@@ -80,7 +80,7 @@ static void ExpandBlock ( CP_INSTANCE *cpi, ogg_int32_t FragmentNumber){
 #endif
 
   /* Invert quantisation and DCT to get pixel data. */
-  switch(pbi->FragCoefEOB[FragmentNumber]){
+  switch(fp->nonzero){
   case 0:case 1:
     IDct1( data, quantizers, reconstruct );
     break;
@@ -680,7 +680,7 @@ void ReconRefFrames (CP_INSTANCE *cpi){
 
   /* Inverse DCT and reconstitute buffer in thisframe */
   for(i=0;i<pbi->UnitFragments;i++)
-    ExpandBlock( cpi, i );
+    ExpandBlock( cpi, cpi->frag[0]+i, i );
 
   /* Copy the current reconstruction back to the last frame recon buffer. */
   if(pbi->CodedBlockIndex > (ogg_int32_t) (pbi->UnitFragments >> 1)){

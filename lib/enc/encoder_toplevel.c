@@ -32,40 +32,24 @@ long dframe=0;
 #endif
 
 static void EClearFragmentInfo(CP_INSTANCE * cpi){
-  if(cpi->FragTokens)
-    _ogg_free(cpi->FragTokens);
-  if(cpi->FragTokenCounts)
-    _ogg_free(cpi->FragTokenCounts);
   if(cpi->RunHuffIndices)
     _ogg_free(cpi->RunHuffIndices);
   if(cpi->ModeList)
     _ogg_free(cpi->ModeList);
   if(cpi->MVList)
     _ogg_free(cpi->MVList);
-  if(cpi->DCT_codes )
-    _ogg_free( cpi->DCT_codes );
-  if(cpi->DCTDataBuffer )
-    _ogg_free( cpi->DCTDataBuffer);
-  if(cpi->PredictedDC)
-    _ogg_free( cpi->PredictedDC);
   if(cpi->PartiallyCodedFlags)
     _ogg_free(cpi->PartiallyCodedFlags);
   if(cpi->PartiallyCodedMbPatterns)
     _ogg_free(cpi->PartiallyCodedMbPatterns);
-  if(cpi->UncodedMbFlags)
-    _ogg_free(cpi->UncodedMbFlags);
-
   if(cpi->BlockCodedFlags)
     _ogg_free(cpi->BlockCodedFlags);
 
-  cpi->FragTokens = 0;
-  cpi->FragTokenCounts = 0;
   cpi->RunHuffIndices = 0;
   cpi->ModeList = 0;
   cpi->MVList = 0;
-  cpi->DCT_codes = 0;
-  cpi->DCTDataBuffer = 0;
-  cpi->PredictedDC = 0;
+  cpi->PartiallyCodedFlags = 0;
+  cpi->PartiallyCodedMbPatterns = 0;
   cpi->BlockCodedFlags = 0;
 }
 
@@ -95,15 +79,6 @@ static void EInitFragmentInfo(CP_INSTANCE * cpi){
      SEGV handler, there's no reason to to check malloc return; it is
      a waste of code. */
 
-  cpi->FragTokens =
-    _ogg_malloc(cpi->pb.UnitFragments*
-                sizeof(*cpi->FragTokens));
-  cpi->PredictedDC =
-    _ogg_malloc(cpi->pb.UnitFragments*
-                sizeof(*cpi->PredictedDC));
-  cpi->FragTokenCounts =
-    _ogg_malloc(cpi->pb.UnitFragments*
-                sizeof(*cpi->FragTokenCounts));
   cpi->RunHuffIndices =
     _ogg_malloc(cpi->pb.UnitFragments*
                 sizeof(*cpi->RunHuffIndices));
@@ -116,21 +91,12 @@ static void EInitFragmentInfo(CP_INSTANCE * cpi){
   cpi->MVList =
     _ogg_malloc(cpi->pb.UnitFragments*
                 sizeof(*cpi->MVList));
-  cpi->DCT_codes =
-    _ogg_malloc(64*
-                sizeof(*cpi->DCT_codes));
-  cpi->DCTDataBuffer =
-    _ogg_malloc(64*
-                sizeof(*cpi->DCTDataBuffer));
   cpi->PartiallyCodedFlags =
     _ogg_malloc(cpi->pb.MacroBlocks*
                 sizeof(*cpi->PartiallyCodedFlags));
   cpi->PartiallyCodedMbPatterns =
     _ogg_malloc(cpi->pb.MacroBlocks*
                 sizeof(*cpi->PartiallyCodedMbPatterns));
-  cpi->UncodedMbFlags =
-    _ogg_malloc(cpi->pb.MacroBlocks*
-                sizeof(*cpi->UncodedMbFlags));
 
 }
 
@@ -229,36 +195,75 @@ static void EInitFrameInfo(CP_INSTANCE * cpi){
   cpi->super[1] = cpi->super[0] + cpi->super_n[0];
   cpi->super[2] = cpi->super[1] + cpi->super_n[1];
 
-  /* fill in superblock fragment pointers */
-
-  /* complicated for one bad reason; superblock (and fragment) zero is
-     the bottom-left-most, but any uncoded 'extra' space needed to pad
-     out to multiples of 32 pixels hangs off the bottom of the image,
-     not the top. What exactly was VP3 thinking? */
-
+  /* fill in superblock fragment pointers; hilbert order */
   {
-    int row,col,frag;
-    int hilbertx[16] = {0,1,1,0,0,0,1,1,2,2,3,3,3,2,2,3};
-    int hilberty[16] = {0,0,1,1,2,3,3,2,2,3,3,2,1,1,0,0};
+    int row,col,frag,mb;
+    int fhilbertx[16] = {0,1,1,0,0,0,1,1,2,2,3,3,3,2,2,3};
+    int fhilberty[16] = {0,0,1,1,2,3,3,2,2,3,3,2,1,1,0,0};
+    int mhilbertx[4] = {0,0,1,1};
+    int mhilberty[4] = {0,1,1,0};
     int plane;
 
     for(plane=0;plane<3;plane++){
 
       for(row=0;row<cpi->super_v[plane];row++){
-	int baserow = row*4;
 	for(col=0;col<cpi->super_h[plane];col++){
-	  int basecol = col*4;
 	  int superindex = row*cpi->super_h[plane] + col;
 	  for(frag=0;frag<16;frag++){
 	    /* translate to fragment index */
-	    int frow = baserow + hilberty[frag];
-	    int fcol = basecol + hilbertx[frag];
+	    int frow = row*4 + fhilberty[frag];
+	    int fcol = col*4 + fhilbertx[frag];
 	    if(frow<cpi->frag_v[plane] && fcol<cpi->frag_h[plane]){
 	      int fragindex = frow*cpi->frag_h[plane] + fcol;
 	      cpi->super[plane][superindex].f[frag] = &cpi->frag[plane][fragindex];
 	    }
 	  }
 	}
+      }
+    }
+
+    for(row=0;row<cpi->super_v[0];row++){
+      for(col=0;col<cpi->super_h[0];col++){
+	int superindex = row*cpi->super_h[0] + col;
+	for(mb=0;mb<4;mb++){
+	  /* translate to macroblock index */
+	  int mrow = row*2 + mhilberty[mb];
+	  int mcol = col*2 + mhilbertx[mb];
+	  if(mrow<cpi->macro_v && mcol<cpi->macro_h){
+	    int macroindex = mrow*cpi->macro_h + mcol;
+	    cpi->super[0][superindex].m[mb] = &cpi->macro[macroindex];
+	  }
+	}
+      }
+    }
+  }
+
+  /* fill in macroblock fragment pointers; raster (MV coding) order */
+  {
+    int row,col,frag;
+    int scanx[4] = {0,1,0,1};
+    int scany[4] = {0,1,1,0};
+
+    for(row=0;row<cpi->macro_v;row++){
+      int baserow = row*2;
+      for(col=0;col<cpi->macro_h;col++){
+	int basecol = col*2;
+	int macroindex = row*cpi->macro_h + col;
+	for(frag=0;frag<4;frag++){
+	  /* translate to fragment index */
+	  int frow = baserow + scany[frag];
+	  int fcol = basecol + scanx[frag];
+	  if(frow<cpi->frag_v[0] && fcol<cpi->frag_h[0]){
+	    int fragindex = frow*cpi->frag_h[0] + fcol;
+	    cpi->macro[macroindex].y[frag] = &cpi->frag[0][fragindex];
+	  }
+	}
+
+	if(row<cpi->frag_v[1] && col<cpi->frag_h[1])
+	  cpi->macro[macroindex].u = &cpi->frag[1][macroindex];
+	if(row<cpi->frag_v[2] && col<cpi->frag_h[2])
+	  cpi->macro[macroindex].v = &cpi->frag[2][macroindex];
+
       }
     }
   }
@@ -317,7 +322,7 @@ static void CompressFirstFrame(CP_INSTANCE *cpi) {
   SetupKeyFrame(cpi);
 
   /* Compress and output the frist frame. */
-  PickIntra( cpi, cpi->pb.YSBRows, cpi->pb.YSBCols);
+  PickIntra(cpi);
   UpdateFrame(cpi);
 
 }
@@ -330,7 +335,7 @@ static void CompressKeyFrame(CP_INSTANCE *cpi){
   SetupKeyFrame(cpi);
 
   /* Compress and output the frist frame. */
-  PickIntra( cpi, cpi->pb.YSBRows, cpi->pb.YSBCols);
+  PickIntra(cpi);
   UpdateFrame(cpi);
 
 }
@@ -341,7 +346,7 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
 
   /* Clear down the macro block level mode and MV arrays. */
   for ( i = 0; i < cpi->pb.UnitFragments; i++ ) {
-    cpi->pb.FragCodingMethod[i] = CODE_INTER_NO_MV;  /* Default coding mode */
+    cpi->frag[0][i].mode = CODE_INTER_NO_MV;  /* Default coding mode */
     cpi->pb.FragMVect[i].x = 0;
     cpi->pb.FragMVect[i].y = 0;
   }

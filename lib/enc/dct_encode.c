@@ -24,7 +24,7 @@
 static int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };
 
 static unsigned char TokenizeDctValue (ogg_int16_t DataValue,
-                                       ogg_uint32_t * TokenListPtr ){
+                                       ogg_uint32_t *TokenListPtr ){
   int AbsDataVal = abs(DataValue);
   int neg = (DataValue<0);
   /* Values are tokenised as category value and a number of additional
@@ -95,7 +95,7 @@ static unsigned char TokenizeDctValue (ogg_int16_t DataValue,
 
 static unsigned char TokenizeDctRunValue (unsigned char RunLength,
                                           ogg_int16_t DataValue,
-                                          ogg_uint32_t * TokenListPtr ){
+                                          ogg_uint32_t *TokenListPtr ){
   unsigned char tokens_added = 0;
   ogg_uint32_t AbsDataVal = abs( (ogg_int32_t)DataValue );
 
@@ -157,15 +157,15 @@ static unsigned char TokenizeDctRunValue (unsigned char RunLength,
   return tokens_added;
 }
 
-static unsigned char TokenizeDctBlock (ogg_int16_t DC,
-				       ogg_int16_t * RawData,
-                                       ogg_uint32_t * TokenListPtr ) {
+static unsigned char TokenizeDctBlock (fragment_t *fp){
+  ogg_int16_t DC = fp->pred_dc;
+  ogg_int16_t *RawData = fp->dct;
+  ogg_uint32_t *TokenListPtr = fp->token_list;
   ogg_uint32_t i;
   unsigned char  run_count;
   unsigned char  token_count = 0;     /* Number of tokens crated. */
   ogg_uint32_t AbsData;
-
-
+  
   /* Tokenize the block */
   for( i = 0; i < BLOCK_SIZE; i++ ){
     ogg_int16_t val = (i ? RawData[i] : DC);
@@ -227,15 +227,11 @@ static unsigned char TokenizeDctBlock (ogg_int16_t DC,
 }
 
 ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi,
-                                ogg_int32_t FragIndex){
-  int token_count;
-
+				fragment_t *fp){
   /* Tokenise the dct data. */
-  token_count = TokenizeDctBlock( cpi->PredictedDC[FragIndex],
-				  cpi->pb.QFragData[FragIndex],
-                                  cpi->pb.TokenList[FragIndex] );
 
-  cpi->FragTokenCounts[FragIndex] = token_count;
+  int token_count = TokenizeDctBlock(fp);  
+  fp->tokens_coded = token_count;
   cpi->TotTokenCount += token_count;
 
   /* Return number of pixels coded (i.e. 8x8). */
@@ -364,27 +360,24 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
 }
 
 void TransformQuantizeBlock (CP_INSTANCE *cpi, 
-			     fragment_t *frag,
+			     fragment_t *fp,
 			     ogg_int32_t FragIndex,
                              ogg_uint32_t PixelsPerLine) {
-  unsigned char *FiltPtr;     /* Pointers to srf filtered pixels */
-  ogg_int16_t   *DctInputPtr; /* Pointer into buffer containing input to DCT */
-  int LeftEdge;               /* Flag if block at left edge of component */
+  unsigned char *FiltPtr = &cpi->yuvptr[cpi->pb.pixel_index_table[FragIndex]];
+  int qi = cpi->BaseQ; // temporary
+  int inter = (fp->mode != CODE_INTRA);
+  int plane = (fp < cpi->frag[1] ? 0 : (fp < cpi->frag[2] ? 1 : 2)); 
+  ogg_int32_t *q = cpi->pb.iquant_tables[inter][plane][qi];
+  ogg_int16_t DCTInput[64];
+  ogg_int16_t DCTOutput[64];
   ogg_uint32_t  ReconPixelsPerLine; /* Line length for recon buffers. */
 
-  unsigned char   *ReconPtr1;   /* DCT reconstructed image pointers */
   ogg_int32_t   MvDivisor;      /* Defines MV resolution (2 = 1/2
                                    pixel for Y or 4 = 1/4 for UV) */
-  int qi = cpi->BaseQ;
-  ogg_int32_t     *q;
-  int mode;
-
-  DctInputPtr   = cpi->DCTDataBuffer;
-
-  ReconPtr1 = &cpi->pb.ThisFrameRecon[cpi->pb.recon_pixel_index_table[FragIndex]];
+  unsigned char   *ReconPtr1 = &cpi->pb.ThisFrameRecon[cpi->pb.recon_pixel_index_table[FragIndex]];
 
   /* Set plane specific values */
-  if (FragIndex < (ogg_int32_t)cpi->pb.YPlaneFragments){
+  if (plane == 0){
     ReconPixelsPerLine = cpi->pb.YStride;
     MvDivisor = 2;                  /* 1/2 pixel accuracy in Y */
   }else{
@@ -392,62 +385,24 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
     MvDivisor = 4;                  /* UV planes at 1/2 resolution of Y */
   }
 
-  /* adjusted / filtered pointers */
-  FiltPtr = &cpi->yuvptr[cpi->pb.pixel_index_table[FragIndex]];
-
-  if ( cpi->pb.FrameType == KEY_FRAME ) {
-    /* Key frame so code block in INTRA mode. */
-    mode = CODE_INTRA;
-  }else{
-    /* Get Motion vector and mode for this block. */
-    mode = cpi->pb.FragCodingMethod[FragIndex];
-  }
-
-  /* Selection of Quantiser matrix and set other plane related values. */
-  if ( FragIndex < (ogg_int32_t)cpi->pb.YPlaneFragments ){
-    LeftEdge = !(FragIndex%cpi->pb.HFragments);
-
-    /* Select the appropriate Y quantiser matrix */
-    if ( mode == CODE_INTRA )
-      q=cpi->pb.iquant_tables[0][0][qi];
-    else
-      q=cpi->pb.iquant_tables[1][0][qi];
-  } else {
-    LeftEdge = !((FragIndex-cpi->pb.YPlaneFragments)%(cpi->pb.HFragments>>1));
-	
-    if(FragIndex < (ogg_int32_t)cpi->pb.YPlaneFragments + (ogg_int32_t)cpi->pb.UVPlaneFragments) {
-      /* U plane */
-      if ( mode == CODE_INTRA )
-	q=cpi->pb.iquant_tables[0][1][qi];
-      else
-	q=cpi->pb.iquant_tables[1][1][qi];
-    } else {
-      /* V plane */
-      if ( mode == CODE_INTRA )
-	q=cpi->pb.iquant_tables[0][2][qi];
-      else
-	q=cpi->pb.iquant_tables[1][2][qi];
-    }
-  }
-
   /* produces the appropriate motion compensation block, applies it to
      the reconstruction buffer, and proces a difference block for
      forward DCT */
-  BlockUpdateDifference(cpi, FiltPtr, DctInputPtr, ReconPtr1,
+  BlockUpdateDifference(cpi, FiltPtr, DCTInput, ReconPtr1,
 			MvDivisor, FragIndex, PixelsPerLine,
-			ReconPixelsPerLine, mode);
+			ReconPixelsPerLine, fp->mode);
   
   /* Proceed to encode the data into the encode buffer if the encoder
      is enabled. */
   /* Perform a 2D DCT transform on the data. */
-  dsp_fdct_short(cpi->dsp, cpi->DCTDataBuffer, cpi->DCT_codes );
+  dsp_fdct_short(cpi->dsp, DCTInput, DCTOutput);
 
   /* Quantize that transform data. */
-  quantize ( &cpi->pb, q, cpi->DCT_codes, cpi->pb.QFragData[FragIndex] );
+  quantize ( &cpi->pb, q, DCTOutput, fp->dct );
 
-  if ( (mode == CODE_INTER_NO_MV) &&
-       ( AllZeroDctData(cpi->pb.QFragData[FragIndex]) ) ) {
-    frag->coded = 0;
+  if ( (fp->mode == CODE_INTER_NO_MV) &&
+       ( AllZeroDctData(fp->dct) ) ) {
+    fp->coded = 0;
   }
 
 }
