@@ -156,20 +156,16 @@ static void EClearFrameInfo(CP_INSTANCE * cpi) {
     _ogg_free(cpi->OptimisedTokenListPl);
   cpi->OptimisedTokenListPl = 0;
 
-  if(cpi->yfrag)_ogg_free(cpi->yfrag);
-  if(cpi->ufrag)_ogg_free(cpi->ufrag);
-  if(cpi->vfrag)_ogg_free(cpi->vfrag);
-  if(cpi->macrob)_ogg_free(cpi->macrob);
-  if(cpi->ysuper)_ogg_free(cpi->ysuper);
-  if(cpi->usuper)_ogg_free(cpi->usuper);
-  if(cpi->vsuper)_ogg_free(cpi->vsuper);
-  cpi->yfrag = 0;
-  cpi->ufrag = 0;
-  cpi->vfrag = 0;
-  cpi->macrob = 0;
-  cpi->ysuper = 0;
-  cpi->usuper = 0;
-  cpi->vsuper = 0;
+  if(cpi->frag[0])_ogg_free(cpi->frag[0]);
+  if(cpi->macro)_ogg_free(cpi->macro);
+  if(cpi->super[0])_ogg_free(cpi->super[0]);
+  cpi->frag[0] = 0;
+  cpi->frag[1] = 0;
+  cpi->frag[2] = 0;
+  cpi->macro = 0;
+  cpi->super[0] = 0;
+  cpi->super[1] = 0;
+  cpi->super[2] = 0;
 
 }
 
@@ -197,35 +193,41 @@ static void EInitFrameInfo(CP_INSTANCE * cpi){
                 sizeof(*cpi->OptimisedTokenListPl));
 
   /* new block abstraction setup... babysteps... */
-  cpi->yfrag_h = (cpi->info.width >> 3);
-  cpi->yfrag_v = (cpi->info.height >> 3);
-  cpi->yfrag_n = cpi->yfrag_h * cpi->yfrag_v;
-  cpi->uvfrag_h = (cpi->yfrag_h >> 1);
-  cpi->uvfrag_v = (cpi->yfrag_v >> 1);
-  cpi->uvfrag_n = cpi->uvfrag_h * cpi->uvfrag_v;
-  cpi->frag_n = cpi->yfrag_n + cpi->uvfrag_n*2;
+  cpi->frag_h[0] = (cpi->info.width >> 3);
+  cpi->frag_v[0] = (cpi->info.height >> 3);
+  cpi->frag_n[0] = cpi->frag_h[0] * cpi->frag_v[0];
+  cpi->frag_h[1] = (cpi->info.width >> 4);
+  cpi->frag_v[1] = (cpi->info.height >> 4);
+  cpi->frag_n[1] = cpi->frag_h[1] * cpi->frag_v[1];
+  cpi->frag_h[2] = (cpi->info.width >> 4);
+  cpi->frag_v[2] = (cpi->info.height >> 4);
+  cpi->frag_n[2] = cpi->frag_h[2] * cpi->frag_v[2];
+  cpi->frag_total = cpi->frag_n[0] + cpi->frag_n[1] + cpi->frag_n[2];
 
-  cpi->macrob_h = (cpi->yfrag_h >> 1);
-  cpi->macrob_v = (cpi->yfrag_v >> 1);
-  cpi->macrob_n = cpi->macrob_h * cpi->macrob_v;
+  cpi->macro_h = (cpi->frag_h[0] >> 1);
+  cpi->macro_v = (cpi->frag_v[0] >> 1);
+  cpi->macro_total = cpi->macro_h * cpi->macro_v;
 
-  cpi->ysuper_h = (cpi->info.width >> 5) + ((cpi->info.width & 0x1f) ? 1 : 0);
-  cpi->ysuper_v = (cpi->info.height >> 5) + ((cpi->info.height & 0x1f) ? 1 : 0);
-  cpi->ysuper_n = cpi->ysuper_h * cpi->ysuper_v;
-  cpi->uvsuper_h = (cpi->info.width >> 6) + ((cpi->info.width & 0x3f) ? 1 : 0);
-  cpi->uvsuper_v = (cpi->info.height >> 6) + ((cpi->info.height & 0x3f) ? 1 : 0);
-  cpi->uvsuper_n = cpi->uvsuper_h * cpi->uvsuper_v;
-  cpi->super_n = cpi->ysuper_n + cpi->uvsuper_n*2;
+  cpi->super_h[0] = (cpi->info.width >> 5) + ((cpi->info.width & 0x1f) ? 1 : 0);
+  cpi->super_v[0] = (cpi->info.height >> 5) + ((cpi->info.height & 0x1f) ? 1 : 0);
+  cpi->super_n[0] = cpi->super_h[0] * cpi->super_v[0];
+  cpi->super_h[1] = (cpi->info.width >> 6) + ((cpi->info.width & 0x3f) ? 1 : 0);
+  cpi->super_v[1] = (cpi->info.height >> 6) + ((cpi->info.height & 0x3f) ? 1 : 0);
+  cpi->super_n[1] = cpi->super_h[1] * cpi->super_v[1];
+  cpi->super_h[2] = (cpi->info.width >> 6) + ((cpi->info.width & 0x3f) ? 1 : 0);
+  cpi->super_v[2] = (cpi->info.height >> 6) + ((cpi->info.height & 0x3f) ? 1 : 0);
+  cpi->super_n[2] = cpi->super_h[2] * cpi->super_v[2];
+  cpi->super_total = cpi->super_n[0] + cpi->super_n[1] + cpi->super_n[2];
 
-  cpi->yfrag = calloc(cpi->yfrag_n, sizeof(*cpi->yfrag));
-  cpi->ufrag = calloc(cpi->uvfrag_n, sizeof(*cpi->ufrag));
-  cpi->vfrag = calloc(cpi->uvfrag_n, sizeof(*cpi->vfrag));
+  cpi->frag[0] = calloc(cpi->frag_total, sizeof(**cpi->frag));
+  cpi->frag[1] = cpi->frag[0] + cpi->frag_n[0];
+  cpi->frag[2] = cpi->frag[1] + cpi->frag_n[1];
 
-  cpi->macrob = calloc(cpi->macrob_n, sizeof(*cpi->macrob));
+  cpi->macro = calloc(cpi->macro_total, sizeof(*cpi->macro));
 
-  cpi->ysuper = calloc(cpi->ysuper_n, sizeof(*cpi->ysuper));
-  cpi->usuper = calloc(cpi->uvsuper_n, sizeof(*cpi->usuper));
-  cpi->vsuper = calloc(cpi->uvsuper_n, sizeof(*cpi->vsuper));
+  cpi->super[0] = calloc(cpi->super_total, sizeof(**cpi->super));
+  cpi->super[1] = cpi->super[0] + cpi->super_n[0];
+  cpi->super[2] = cpi->super[1] + cpi->super_n[1];
 
   /* fill in superblock fragment pointers */
 
@@ -238,13 +240,24 @@ static void EInitFrameInfo(CP_INSTANCE * cpi){
     int row,col,frag;
     int hilbertx[16] = {0,1,1,0,0,0,1,1,2,2,3,3,3,2,2,3};
     int hilberty[16] = {0,0,1,1,2,3,3,2,2,3,3,2,1,1,0,0};
+    int plane;
 
-    /* Y */
-    for(row=0;row<cpi->ysuper_v;row++){
-      for(col=0;row<cpi->ysuper_h;col++){
-	for(frag=0;frag<16;frag++){
-	  /* translate to fragment index */
-	  
+    for(plane=0;plane<3;plane++){
+
+      for(row=0;row<cpi->super_v[plane];row++){
+	int baserow = row*4;
+	for(col=0;col<cpi->super_h[plane];col++){
+	  int basecol = col*4;
+	  int superindex = row*cpi->super_h[plane] + col;
+	  for(frag=0;frag<16;frag++){
+	    /* translate to fragment index */
+	    int frow = baserow + hilberty[frag];
+	    int fcol = basecol + hilbertx[frag];
+	    if(frow<cpi->frag_v[plane] && fcol<cpi->frag_h[plane]){
+	      int fragindex = frow*cpi->frag_h[plane] + fcol;
+	      cpi->super[plane][superindex].f[frag] = &cpi->frag[plane][fragindex];
+	    }
+	  }
 	}
       }
     }
@@ -252,10 +265,13 @@ static void EInitFrameInfo(CP_INSTANCE * cpi){
 }
 
 static void SetupKeyFrame(CP_INSTANCE *cpi) {
-  /* Initialise the cpi->pb.display_fragments and other fragment
-     structures for the first frame. */
-  memset( cpi->pb.display_fragments, 1, cpi->pb.UnitFragments );
+  int i,j;
 
+  /* code all blocks */
+  for(i=0;i<3;i++)
+    for(j=0;j<cpi->frag_n[i];j++)
+      cpi->frag[i][j].coded=1;
+  
   /* Set up for a KEY FRAME */
   cpi->pb.FrameType = KEY_FRAME;
 }
@@ -320,7 +336,7 @@ static void CompressKeyFrame(CP_INSTANCE *cpi){
 }
 
 static int CompressFrame( CP_INSTANCE *cpi ) {
-  ogg_uint32_t  i;
+  ogg_uint32_t  i,j;
   ogg_uint32_t  KFIndicator = 0;
 
   /* Clear down the macro block level mode and MV arrays. */
@@ -334,7 +350,9 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
   cpi->pb.FrameType = DELTA_FRAME;
 
   /* Clear down the difference arrays for the current frame. */
-  memset( cpi->pb.display_fragments, 0, cpi->pb.UnitFragments );
+  for(i=0;i<3;i++)
+    for(j=0;j<cpi->frag_n[i];j++)
+      cpi->frag[i][j].coded=0;
 
   {
     /*  pick all the macroblock modes and motion vectors */
@@ -342,8 +360,10 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
     ogg_uint32_t IntraError;
     
     /* for now, mark all blocks to be coded... */
-    for(i=0;i<cpi->pb.UnitFragments;i++)
-      cpi->pb.display_fragments[i]=1;
+    /* TEMPORARY */
+    for(i=0;i<3;i++)
+      for(j=0;j<cpi->frag_n[i];j++)
+	cpi->frag[i][j].coded=1;
     
     /* Select modes and motion vectors for each of the blocks : return
        an error score for inter and intra */

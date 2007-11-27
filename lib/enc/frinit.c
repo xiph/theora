@@ -87,7 +87,6 @@ static void CalcPixelIndexTable( CP_INSTANCE *cpi){
 static void ClearFragmentInfo(PB_INSTANCE * pbi){
 
   /* free prior allocs if present */
-  if(pbi->display_fragments) _ogg_free(pbi->display_fragments);
   if(pbi->pixel_index_table) _ogg_free(pbi->pixel_index_table);
   if(pbi->recon_pixel_index_table) _ogg_free(pbi->recon_pixel_index_table);
   if(pbi->FragTokenCounts) _ogg_free(pbi->FragTokenCounts);
@@ -118,7 +117,6 @@ static void ClearFragmentInfo(PB_INSTANCE * pbi){
   pbi->TokenList = 0;
   pbi->FragCoeffs = 0;
   pbi->FragCoefEOB = 0;
-  pbi->display_fragments = 0;
   pbi->pixel_index_table = 0;
   pbi->recon_pixel_index_table = 0;
   pbi->FragTokenCounts = 0;
@@ -131,17 +129,6 @@ static void ClearFragmentInfo(PB_INSTANCE * pbi){
 
   pbi->SBCodedFlags = 0;
   pbi->SBFullyFlags = 0;
-  pbi->QFragData = 0;
-  pbi->TokenList = 0;
-  pbi->FragCoeffs = 0;
-  pbi->FragCoefEOB = 0;
-  pbi->display_fragments = 0;
-  pbi->pixel_index_table = 0;
-  pbi->recon_pixel_index_table = 0;
-  pbi->FragTokenCounts = 0;
-  pbi->CodedBlockList = 0;
-  pbi->FragCodingMethod = 0;
-  pbi->FragMVect = 0;
 }
 
 static void InitFragmentInfo(PB_INSTANCE * pbi){
@@ -150,9 +137,6 @@ static void InitFragmentInfo(PB_INSTANCE * pbi){
   ClearFragmentInfo(pbi);
 
   /* Perform Fragment Allocations */
-  pbi->display_fragments =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->display_fragments));
-
   pbi->pixel_index_table =
     _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->pixel_index_table));
 

@@ -112,10 +112,9 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
   unsigned char val;
   ogg_uint32_t  run_count;
 
-  ogg_uint32_t  SB, MB, B;   /* Block, MB and SB loop variables */
+  ogg_uint32_t  SB, B;
   ogg_uint32_t  BListIndex = 0;
   ogg_uint32_t  LastSbBIndex = 0;
-  ogg_int32_t   DfBlockIndex;  /* Block index in display_fragments */
 
   /* Initialise workspaces */
   memset( cpi->pb.SBFullyFlags, 1, cpi->pb.SuperBlocks);
@@ -129,36 +128,33 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
 #endif
 
   for( SB = 0; SB < cpi->pb.SuperBlocks; SB++ ) {
-    /* Check for coded blocks and macro-blocks */
-    for ( MB=0; MB<4; MB++ ) {
-      /* If MB in frame */
-      if ( QuadMapToMBTopLeft(cpi->pb.BlockMap,SB,MB) >= 0 ) {
-        for ( B=0; B<4; B++ ) {
-          DfBlockIndex = QuadMapToIndex1( cpi->pb.BlockMap,SB, MB, B );
+    superblock_t *sp = &cpi->super[0][SB];
 
-          /* Does Block lie in frame: */
-          if ( DfBlockIndex >= 0 ) {
-            /* In Frame: If it is not coded then this SB is only
-               partly coded.: */
-            if ( cpi->pb.display_fragments[DfBlockIndex] ) {
-              cpi->pb.SBCodedFlags[SB] = 1; /* SB at least partly coded */
-              cpi->BlockCodedFlags[BListIndex] = 1; /* Block is coded */
-
+    /* Check for blocks and macro-blocks */
+    for ( B=0; B<16; B++ ) {
+      fragment_t *fp = sp->f[B];
+      
+      if ( fp ) {
+	/* In Frame: If it is not coded then this SB is only
+	   partly coded.: */
+	if ( fp->coded ) {
+	  cpi->pb.SBCodedFlags[SB] = 1; /* SB at least partly coded */
+	  cpi->BlockCodedFlags[BListIndex] = 1; /* Block is coded */
+	  
 #ifdef _TH_DEBUG_
-	      blockraster[DfBlockIndex]=1;
+	  blockraster[fp - cpi->frag[0]]=1;
 #endif	      
-
-            }else{
-              cpi->pb.SBFullyFlags[SB] = 0; /* SB not fully coded */
-              cpi->BlockCodedFlags[BListIndex] = 0; /* Block is not coded */
-            }
-
-            BListIndex++;
-          }
-        }
+	  
+	}else{
+	  cpi->pb.SBFullyFlags[SB] = 0; /* SB not fully coded */
+	  cpi->BlockCodedFlags[BListIndex] = 0; /* Block is not coded */
+	}
+	
+	BListIndex++;
+	
       }
     }
-
+    
     /* Is the SB fully coded or uncoded.
        If so then backup BListIndex and MBListIndex */
     if ( cpi->pb.SBFullyFlags[SB] || !cpi->pb.SBCodedFlags[SB] ) {

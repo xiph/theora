@@ -126,7 +126,7 @@ typedef struct macroblock {
   fragment_t *f[4]; // hilbert order
 } macroblock_t;
 
-#define SB_MB_ULFRAG(sb,mbnum) (sb->f[ ((mbnum)<2? ((mbnum)==0?3:5) : ((mbnum)==2?9:13)) ])
+#define SB_MB_BLFRAG(sb,mbnum) ((sb).f[ ((mbnum)<2? ((mbnum)==0?0:4) : ((mbnum)==2?8:14)) ])
 typedef struct superblock {
   fragment_t *f[16]; // hilbert order
 } superblock_t;
@@ -176,7 +176,12 @@ typedef struct PB_INSTANCE {
                                    U or V frame */
   ogg_uint32_t  UVSBCols;       /* Number of cols of SuperBlocks in a
                                    U or V frame */
+  ogg_uint32_t SuperBlocks;
+  ogg_uint32_t YSuperBlocks;
+  ogg_uint32_t UVSuperBlocks;
+  ogg_uint32_t MacroBlocks;
 
+  
   /**********************************************************************/
   /* Frames  */
   unsigned char *ThisFrameRecon;
@@ -191,7 +196,6 @@ typedef struct PB_INSTANCE {
   ogg_uint32_t  *recon_pixel_index_table;  /* start address of first
                                               pixel in recon buffer */
 
-  unsigned char *display_fragments;        /* Fragment update map */
   int            CodedBlockIndex;
   ogg_int32_t   *CodedBlockList;           /* A list of fragment indices for
                                               coded blocks. */
@@ -322,33 +326,23 @@ typedef struct CP_INSTANCE {
   ogg_int32_t       TokensCoded;
   /********************************************************************/
   /* SuperBlock, MacroBLock and Fragment Information */
-  fragment_t       *yfrag;
-  fragment_t       *ufrag;
-  fragment_t       *vfrag;
-  macroblock_t     *macrob;
-  superblock_t     *ysuper;
-  superblock_t     *usuper;
-  superblock_t     *vsuper;
+  fragment_t       *frag[3];
+  macroblock_t     *macro;
+  superblock_t     *super[3];
 
-  ogg_uint32_t      yfrag_h;
-  ogg_uint32_t      yfrag_v;
-  ogg_uint32_t      yfrag_n;
-  ogg_uint32_t      uvfrag_h;
-  ogg_uint32_t      uvfrag_v;
-  ogg_uint32_t      uvfrag_n;
-  ogg_uint32_t      frag_n;
+  ogg_uint32_t      frag_h[3];
+  ogg_uint32_t      frag_v[3];
+  ogg_uint32_t      frag_n[3];
+  ogg_uint32_t      frag_total;
 
-  ogg_uint32_t      macrob_h;
-  ogg_uint32_t      macrob_v;
-  ogg_uint32_t      macrob_n;
+  ogg_uint32_t      macro_h;
+  ogg_uint32_t      macro_v;
+  ogg_uint32_t      macro_total;
   
-  ogg_uint32_t      ysuper_h;
-  ogg_uint32_t      ysuper_v;
-  ogg_uint32_t      ysuper_n;
-  ogg_uint32_t      uvsuper_h;
-  ogg_uint32_t      uvsuper_v;
-  ogg_uint32_t      uvsuper_n;
-  ogg_uint32_t      super_n;
+  ogg_uint32_t      super_h[3];
+  ogg_uint32_t      super_v[3];
+  ogg_uint32_t      super_n[3];
+  ogg_uint32_t      super_total;
 
   /* Coded flag arrays and counters for them */
   unsigned char    *PartiallyCodedFlags;
@@ -445,7 +439,7 @@ extern void quantize( PB_INSTANCE *pbi,
 extern void fdct_short ( ogg_int16_t * InputData, ogg_int16_t * OutputData );
 extern ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi,
                                        ogg_int32_t FragIndex);
-extern void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
+extern void TransformQuantizeBlock (CP_INSTANCE *cpi, fragment_t *fp, ogg_int32_t FragIndex,
                                     ogg_uint32_t PixelsPerLine ) ;
 extern void InitFrameDetails(CP_INSTANCE *cpi);
 extern void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer *opb);
@@ -457,11 +451,13 @@ extern void WriteHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES],
 extern void PackAndWriteDFArray( CP_INSTANCE *cpi );
 extern void InitMotionCompensation ( CP_INSTANCE *cpi );
 extern ogg_uint32_t GetMBIntraError (CP_INSTANCE *cpi, 
+				     fragment_t *fp,
 				     ogg_uint32_t FragIndex,
                                      ogg_uint32_t PixelsPerLine ) ;
 extern ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
                                      unsigned char * SrcPtr,
                                      unsigned char * RefPtr,
+				     fragment_t *fp,
                                      ogg_uint32_t FragIndex,
                                      ogg_int32_t LastXMV,
                                      ogg_int32_t LastYMV,
@@ -469,21 +465,24 @@ extern ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
 extern void WriteFrameHeader( CP_INSTANCE *cpi) ;
 extern ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
                                        unsigned char * RefFramePtr,
+				       fragment_t *fp,
                                        ogg_uint32_t FragIndex,
                                        ogg_uint32_t PixelsPerLine,
                                        ogg_int32_t *MVPixelOffset,
                                        MOTION_VECTOR *MV );
 extern ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
                                              unsigned char * RefFramePtr,
+					     fragment_t *fp,
                                              ogg_uint32_t FragIndex,
                                              ogg_uint32_t PixelsPerLine,
                                              MOTION_VECTOR *MV );
 extern ogg_uint32_t GetFOURMVExhaustiveSearch (CP_INSTANCE *cpi,
                                                unsigned char * RefFramePtr,
+					       fragment_t *fp,
                                                ogg_uint32_t FragIndex,
                                                ogg_uint32_t PixelsPerLine,
                                                MOTION_VECTOR *MV ) ;
-extern ogg_uint32_t EncodeData(CP_INSTANCE *cpi);
+extern void EncodeData(CP_INSTANCE *cpi);
 extern ogg_uint32_t PickIntra( CP_INSTANCE *cpi,
                                ogg_uint32_t SBRows,
                                ogg_uint32_t SBCols);

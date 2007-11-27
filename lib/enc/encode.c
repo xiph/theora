@@ -49,15 +49,19 @@ static void PredictDC(CP_INSTANCE *cpi, ogg_int16_t *predicted){
 
   /* for y,u,v */
   for ( j = 0; j < 3 ; j++) {
+    fragment_t *fp;
+
     /* pick which fragments based on Y, U, V */
     switch(j){
     case 0: /* y */
+      fp = cpi->frag[0];
       FromFragment = 0;
       ToFragment = cpi->pb.YPlaneFragments;
       FragsAcross = cpi->pb.HFragments;
       FragsDown = cpi->pb.VFragments;
       break;
     case 1: /* u */
+      fp = cpi->frag[1];
       FromFragment = cpi->pb.YPlaneFragments;
       ToFragment = cpi->pb.YPlaneFragments + cpi->pb.UVPlaneFragments ;
       FragsAcross = cpi->pb.HFragments >> 1;
@@ -65,6 +69,7 @@ static void PredictDC(CP_INSTANCE *cpi, ogg_int16_t *predicted){
       break;
     /*case 2:  v */
     default:
+      fp = cpi->frag[2];
       FromFragment = cpi->pb.YPlaneFragments + cpi->pb.UVPlaneFragments;
       ToFragment = cpi->pb.YPlaneFragments + (2 * cpi->pb.UVPlaneFragments) ;
       FragsAcross = cpi->pb.HFragments >> 1;
@@ -74,17 +79,22 @@ static void PredictDC(CP_INSTANCE *cpi, ogg_int16_t *predicted){
 
     /* initialize our array of last used DC Components */
     for(k=0;k<3;k++)Last[k]=0;
+
     i=FromFragment;
+    fn[0]=1;
+    fn[1]=FragsAcross+1;
+    fn[2]=FragsAcross;
+    fn[3]=FragsAcross-1;
+    
 
     /* do prediction on all of Y, U or V */
     for ( m = 0 ; m < FragsDown ; m++) {
-      for ( n = 0 ; n < FragsAcross ; n++, i++) {
+      for ( n = 0 ; n < FragsAcross ; n++, i++, fp++) {
         predicted[i] = cpi->pb.QFragData[i][0];
 
         /* only do 2 prediction if fragment coded and on non intra or
            if all fragments are intra */
-        if( cpi->pb.display_fragments[i] ||
-            (cpi->pb.FrameType == KEY_FRAME) ) {
+        if( fp->coded || cpi->pb.FrameType == KEY_FRAME ) {
           /* Type of Fragment */
 
           WhichFrame = Mode2Frame[cpi->pb.FragCodingMethod[i]];
@@ -92,23 +102,21 @@ static void PredictDC(CP_INSTANCE *cpi, ogg_int16_t *predicted){
           /* Check Borderline Cases */
           WhichCase = (n==0) + ((m==0) << 1) + ((n+1 == FragsAcross) << 2);
 
-          fn[0]=i-1;
-          fn[1]=i-FragsAcross-1;
-          fn[2]=i-FragsAcross;
-          fn[3]=i-FragsAcross+1;
-
           /* fragment valid for prediction use if coded and it comes
              from same frame as the one we are predicting */
           for(k=pcount=wpc=0; k<4; k++) {
             int pflag;
             pflag=1<<k;
-            if((bc_mask[WhichCase]&pflag) &&
-               cpi->pb.display_fragments[fn[k]] &&
-               (Mode2Frame[cpi->pb.FragCodingMethod[fn[k]]] == WhichFrame)){
-              v[pcount]=cpi->pb.QFragData[fn[k]][0];
-              wpc|=pflag;
-              pcount++;
-            }
+            if((bc_mask[WhichCase]&pflag)){
+	      fragment_t *fnp=fp - fn[k];
+	      
+	      if(fnp->coded &&
+		 (Mode2Frame[cpi->pb.FragCodingMethod[i-fn[k]]] == WhichFrame)){
+		v[pcount]=cpi->pb.QFragData[i-fn[k]][0];
+		wpc|=pflag;
+		pcount++;
+	      }
+	    }
           }
 
           if(wpc==0) {
@@ -159,81 +167,63 @@ static void PredictDC(CP_INSTANCE *cpi, ogg_int16_t *predicted){
 }
 
 
-static ogg_uint32_t QuadCodeComponent ( CP_INSTANCE *cpi,
-					ogg_uint32_t FirstSB,
-					ogg_uint32_t SBRows,
-					ogg_uint32_t SBCols,
-					ogg_uint32_t PixelsPerLine){
+static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi,
+				int plane,
+				ogg_uint32_t PixelsPerLine){
 
-  ogg_int32_t   FragIndex;      /* Fragment number */
-  ogg_uint32_t  MB, B;          /* Macro-Block, Block indices */
-  ogg_uint32_t  SBrow;          /* Super-Block row number */
-  ogg_uint32_t  SBcol;          /* Super-Block row number */
-  ogg_uint32_t  SB=FirstSB;     /* Super-Block index, initialised to first
-                                   of this component */
-  ogg_uint32_t  coded_pixels=0; /* Number of pixels coded */
-  int           MBCodedFlag;
-
+  ogg_uint32_t SBs = cpi->super_n[plane];
+  ogg_uint32_t SB, MB, B;
+  
   /* actually transform and quantize the image now that we've decided
      on the modes Parse in quad-tree ordering */
 
-  for ( SBrow=0; SBrow<SBRows; SBrow++ ) {
-    for ( SBcol=0; SBcol<SBCols; SBcol++ ) {
-      /* Check its four Macro-Blocks  */
-      /* 'Macro-Block' is a misnomer in the chroma planes; this is
-	 really just a Hilbert curve iterator */
-      for ( MB=0; MB<4; MB++ ) {
+  for ( SB=0; SB<SBs; SB++ ){
+    superblock_t *sp = &cpi->super[plane][SB];
+    int frag=0;
 
-        if ( QuadMapToMBTopLeft(cpi->pb.BlockMap,SB,MB) >= 0 ) {
+    int SBi = SB;
+    if(plane>0)SBi+=cpi->super_n[0];
+    if(plane>1)SBi+=cpi->super_n[1];
 
-          MBCodedFlag = 0;
+    for ( MB=0; MB<4; MB++ ) {
+      int MBCodedFlag = 0;
 
-          /*  Now actually code the blocks */
-          for ( B=0; B<4; B++ ) {
-            FragIndex = QuadMapToIndex1( cpi->pb.BlockMap, SB, MB, B );
+      for ( B=0; B<4; B++, frag++ ) {
+	fragment_t *fp = sp->f[frag];
 
-            /* Does Block lie in frame: */
-            if ( FragIndex >= 0 ) {
-
-              /* In Frame: Is it coded: */
-              if ( cpi->pb.display_fragments[FragIndex] ) {
-
-                /* transform and quantize block */
-                TransformQuantizeBlock( cpi, FragIndex, PixelsPerLine );
-
-                /* Has the block got struck off (no MV and no data
-                   generated after DCT) If not then mark it and the
-                   assosciated MB as coded. */
-                if ( cpi->pb.display_fragments[FragIndex] ) {
-                  /* Create linear list of coded block indices */
-                  cpi->pb.CodedBlockList[cpi->pb.CodedBlockIndex] = FragIndex;
-                  cpi->pb.CodedBlockIndex++;
-
-                  /* MB is still coded */
-                  MBCodedFlag = 1;
-                  cpi->MBCodingMode = cpi->pb.FragCodingMethod[FragIndex];
-
-                }
-              }
-            }
-          }
-          /* If the MB is marked as coded and we are in the Y plane then */
-          /* the mode list needs to be updated. */
-          if ( MBCodedFlag && (FirstSB == 0) ){
-            /* Make a note of the selected mode in the mode list */
-            cpi->ModeList[cpi->ModeListCount] = cpi->MBCodingMode;
-            cpi->ModeListCount++;
-          }
-        }
+	/* Does Block lie in frame: */
+	if ( fp && fp->coded ) {
+	  int FragIndex = QuadMapToIndex1( cpi->pb.BlockMap, SBi, MB, B );
+	  
+	  /* transform and quantize block */
+	  TransformQuantizeBlock( cpi, fp, FragIndex, PixelsPerLine );
+	  
+	  /* Has the block got struck off (no MV and no data
+	     generated after DCT) If not then mark it and the
+	     assosciated MB as coded. */
+	  if ( fp->coded ) {
+	    /* Create linear list of coded block indices */
+	    cpi->pb.CodedBlockList[cpi->pb.CodedBlockIndex] = FragIndex;
+	    cpi->pb.CodedBlockIndex++;
+	    
+	    /* MB is still coded */
+	    MBCodedFlag = 1;
+	    cpi->MBCodingMode = cpi->pb.FragCodingMethod[FragIndex];
+	    
+	  }
+	}
       }
-
-      SB++;
-
-    }
+     
+      /* If the MB is marked as coded and we are in the Y plane then */
+      /* the mode list needs to be updated. */
+      if ( MBCodedFlag && (plane == 0) ){
+	/* Make a note of the selected mode in the mode list */
+	cpi->ModeList[cpi->ModeListCount] = cpi->MBCodingMode;
+	cpi->ModeListCount++;
+      }
+    }  
   }
-
-  /* Return number of pixels coded */
-  return coded_pixels;
+  return 0;
 }
 
 static void EncodeDcTokenList (CP_INSTANCE *cpi) {
@@ -814,9 +804,8 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
 
 }
 
-ogg_uint32_t EncodeData(CP_INSTANCE *cpi){
+void EncodeData(CP_INSTANCE *cpi){
   ogg_int32_t   i;
-  ogg_uint32_t  coded_pixels=0;
 
   /* Zero the count of tokens so far this frame. */
   cpi->TotTokenCount = 0;
@@ -835,17 +824,10 @@ ogg_uint32_t EncodeData(CP_INSTANCE *cpi){
   dsp_save_fpu (cpi->dsp);
 
   /* Encode and tokenise the Y, U and V components */
-  coded_pixels = QuadCodeComponent(cpi, 0, cpi->pb.YSBRows, cpi->pb.YSBCols,
-                                   cpi->info.width );
-  coded_pixels += QuadCodeComponent(cpi, cpi->pb.YSuperBlocks,
-                                    cpi->pb.UVSBRows,
-                                    cpi->pb.UVSBCols,
-                                    cpi->info.width>>1 );
-  coded_pixels += QuadCodeComponent(cpi,
-                                    cpi->pb.YSuperBlocks+cpi->pb.UVSuperBlocks,
-                                    cpi->pb.UVSBRows, cpi->pb.UVSBCols,
-                                    cpi->info.width>>1 );
-
+  CodePlane(cpi, 0, cpi->info.width );
+  CodePlane(cpi, 1, cpi->info.width>>1 );
+  CodePlane(cpi, 2, cpi->info.width>>1 );
+  
   PredictDC(cpi, cpi->PredictedDC);
 
 #ifdef _TH_DEBUG_
@@ -861,7 +843,7 @@ ogg_uint32_t EncodeData(CP_INSTANCE *cpi){
 
   /* Pack DCT tokens */
   for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) 
-    coded_pixels += DPCMTokenizeBlock ( cpi, cpi->pb.CodedBlockList[i] );
+    DPCMTokenizeBlock ( cpi, cpi->pb.CodedBlockList[i] );
 
   /* Bit pack the video data data */
   PackCodedVideo(cpi);
@@ -870,9 +852,6 @@ ogg_uint32_t EncodeData(CP_INSTANCE *cpi){
   ReconRefFrames(cpi);
 
   dsp_restore_fpu (cpi->dsp);
-
-  /* Return total number of coded pixels */
-  return coded_pixels;
 }
 
 ogg_uint32_t PickIntra( CP_INSTANCE *cpi,
@@ -1065,29 +1044,21 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
   /* decide what block type and motion vectors to use on all of the frames */
   for ( SBrow=0; SBrow<SBRows; SBrow++ ) {
     for ( SBcol=0; SBcol<SBCols; SBcol++ ) {
+      superblock_t *sp = &cpi->super[0][SBrow*SBCols+SBcol];
+      int fragi = 0;
       /* Check its four Macro-Blocks */
-      for ( MB=0; MB<4; MB++ ) {
-        /* There may be MB's lying out of frame which must be
-           ignored. For these MB's Top left block will have a negative
-           Fragment Index. */
-        if ( QuadMapToMBTopLeft(cpi->pb.BlockMap,SB,MB) < 0 ) continue;
-
+      for ( MB=0; MB<4; MB++, fragi+=4 ) {
+	
         /* Is the current macro block coded (in part or in whole) */
         MBCodedFlag = 0;
         for ( B=0; B<4; B++ ) {
-          YFragIndex = QuadMapToIndex1( cpi->pb.BlockMap, SB, MB, B );
-
-          /* Does Block lie in frame: */
-          if ( YFragIndex >= 0 ) {
-            /* In Frame: Is it coded: */
-            if ( cpi->pb.display_fragments[YFragIndex] ) {
-              MBCodedFlag = 1;
-              break;
-            }
-          } else
-            MBCodedFlag = 0;
-        }
-
+	  fragment_t *fp = sp->f[fragi+B];
+          if ( fp && fp->coded ){
+	    MBCodedFlag = 1;
+	    break;
+	  }
+	}
+	
         /* This one isn't coded go to the next one */
         if(!MBCodedFlag) continue;
 
@@ -1113,24 +1084,30 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
 
         /* Look at the intra coding error. */
-        MBIntraError = GetMBIntraError( cpi, YFragIndex, PixelsPerLine );
+        MBIntraError = GetMBIntraError( cpi, 
+					&cpi->frag[0][YFragIndex],
+					YFragIndex, PixelsPerLine );
         BestError = (BestError > MBIntraError) ? MBIntraError : BestError;
 
         /* Get the golden frame error */
         MBGFError = GetMBInterError( cpi, cpi->yuvptr,
-                                     cpi->pb.GoldenFrame, YFragIndex,
+                                     cpi->pb.GoldenFrame, 
+				     &cpi->frag[0][YFragIndex],
+				     YFragIndex,
                                      0, 0, PixelsPerLine );
         BestError = (BestError > MBGFError) ? MBGFError : BestError;
 
         /* Calculate the 0,0 case. */
         MBInterError = GetMBInterError( cpi, cpi->yuvptr,
                                         cpi->pb.LastFrameRecon,
+					&cpi->frag[0][YFragIndex],
                                         YFragIndex, 0, 0, PixelsPerLine );
         BestError = (BestError > MBInterError) ? MBInterError : BestError;
 
         /* Measure error for last MV */
         MBLastInterError =  GetMBInterError( cpi, cpi->yuvptr,
                                              cpi->pb.LastFrameRecon,
+					     &cpi->frag[0][YFragIndex],
                                              YFragIndex, LastInterMVect.x,
                                              LastInterMVect.y, PixelsPerLine );
         BestError = (BestError > MBLastInterError) ?
@@ -1139,6 +1116,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         /* Measure error for prior last MV */
         MBPriorLastInterError =  GetMBInterError( cpi, cpi->yuvptr,
                                                   cpi->pb.LastFrameRecon,
+						  &cpi->frag[0][YFragIndex],
                                                   YFragIndex,
                                                   PriorLastInterMVect.x,
                                                   PriorLastInterMVect.y,
@@ -1158,7 +1136,9 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
              quick mode. */
           if ( cpi->info.quick_p ) {
             MBInterMVError = GetMBMVInterError( cpi, cpi->pb.LastFrameRecon,
-                                                YFragIndex, PixelsPerLine,
+						&cpi->frag[0][YFragIndex],
+                                                YFragIndex, 
+						PixelsPerLine,
                                                 cpi->MVPixelOffsetY,
                                                 &InterMVect );
 
@@ -1169,6 +1149,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
               MBInterMVExError =
                 GetMBMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
+					 &cpi->frag[0][YFragIndex],
                                          YFragIndex, PixelsPerLine,
                                          &InterMVectEx );
 
@@ -1184,6 +1165,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
             /* Use an exhaustive search */
             MBInterMVError =
               GetMBMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
+				       &cpi->frag[0][YFragIndex],
                                        YFragIndex, PixelsPerLine,
                                        &InterMVect );
           }
@@ -1205,12 +1187,14 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         if ( BestError > cpi->MinImprovementForNewMV && cpi->MotionCompensation) {
           /* Do an MV search in the golden reference frame */
           MBGF_MVError = GetMBMVInterError( cpi, cpi->pb.GoldenFrame,
+					    &cpi->frag[0][YFragIndex],
                                             YFragIndex, PixelsPerLine,
                                             cpi->MVPixelOffsetY, &GFMVect );
 
           /* Measure error for last GFMV */
           LastMBGF_MVError =  GetMBInterError( cpi, cpi->yuvptr,
                                                cpi->pb.GoldenFrame,
+					       &cpi->frag[0][YFragIndex],
                                                YFragIndex, LastGFMVect.x,
                                                LastGFMVect.y, PixelsPerLine );
 
@@ -1239,6 +1223,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
           /* Get the 4MV error. */
           MBInterFOURMVError =
             GetFOURMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
+				       &cpi->frag[0][YFragIndex],
                                        YFragIndex, PixelsPerLine, FourMVect );
 
           /* If the improvement is great enough then use the four MV mode */

@@ -364,6 +364,7 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
 }
 
 void TransformQuantizeBlock (CP_INSTANCE *cpi, 
+			     fragment_t *frag,
 			     ogg_int32_t FragIndex,
                              ogg_uint32_t PixelsPerLine) {
   unsigned char *FiltPtr;     /* Pointers to srf filtered pixels */
@@ -446,7 +447,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
 
   if ( (mode == CODE_INTER_NO_MV) &&
        ( AllZeroDctData(cpi->pb.QFragData[FragIndex]) ) ) {
-    cpi->pb.display_fragments[FragIndex] = 0;
+    frag->coded = 0;
   }
 
 }

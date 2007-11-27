@@ -243,21 +243,24 @@ void UpdateUMVBorder( CP_INSTANCE *cpi,
   UpdateUMV_HBorders( pbi, DestReconPtr, PlaneFragOffset );
 }
 
-static void CopyRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
+static void CopyRecon( CP_INSTANCE *cpi, unsigned char * DestReconPtr,
                 unsigned char * SrcReconPtr ) {
+  PB_INSTANCE   *pbi = &cpi->pb;
   ogg_uint32_t  i;
   ogg_uint32_t  PlaneLineStep; /* Pixels per line */
   ogg_uint32_t  PixelIndex;
 
   unsigned char  *SrcPtr;      /* Pointer to line of source image data */
   unsigned char  *DestPtr;     /* Pointer to line of destination image data */
+  fragment_t *fp;
 
   /* Copy over only updated blocks.*/
 
   /* First Y plane */
+  fp = cpi->frag[0];
   PlaneLineStep = pbi->YStride;
-  for ( i = 0; i < pbi->YPlaneFragments; i++ ) {
-    if ( pbi->display_fragments[i] ) {
+  for ( i = 0; i < cpi->frag_n[0]; i++,fp++ ) {
+    if ( fp->coded ) {
       PixelIndex = pbi->recon_pixel_index_table[i];
       SrcPtr = &SrcReconPtr[ PixelIndex ];
       DestPtr = &DestReconPtr[ PixelIndex ];
@@ -267,9 +270,22 @@ static void CopyRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
   }
 
   /* Then U and V */
+  fp = cpi->frag[1];
   PlaneLineStep = pbi->UVStride;
-  for ( i = pbi->YPlaneFragments; i < pbi->UnitFragments; i++ ) {
-    if ( pbi->display_fragments[i] ) {
+  for ( ; i < cpi->frag_n[0]+cpi->frag_n[1]; i++,fp++ ) {
+    if ( fp->coded ) {
+      PixelIndex = pbi->recon_pixel_index_table[i];
+      SrcPtr = &SrcReconPtr[ PixelIndex ];
+      DestPtr = &DestReconPtr[ PixelIndex ];
+
+      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
+
+    }
+  }
+
+  fp = cpi->frag[2];
+  for ( ; i < cpi->frag_total; i++,fp++ ) {
+    if ( fp->coded ) {
       PixelIndex = pbi->recon_pixel_index_table[i];
       SrcPtr = &SrcReconPtr[ PixelIndex ];
       DestPtr = &DestReconPtr[ PixelIndex ];
@@ -280,21 +296,24 @@ static void CopyRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
   }
 }
 
-static void CopyNotRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
-                   unsigned char * SrcReconPtr ) {
+static void CopyNotRecon( CP_INSTANCE *cpi, unsigned char * DestReconPtr,
+                unsigned char * SrcReconPtr ) {
+  PB_INSTANCE   *pbi = &cpi->pb;
   ogg_uint32_t  i;
   ogg_uint32_t  PlaneLineStep; /* Pixels per line */
   ogg_uint32_t  PixelIndex;
 
   unsigned char  *SrcPtr;      /* Pointer to line of source image data */
-  unsigned char  *DestPtr;     /* Pointer to line of destination image data*/
+  unsigned char  *DestPtr;     /* Pointer to line of destination image data */
+  fragment_t *fp;
 
-  /* Copy over only updated blocks. */
+  /* Copy over only updated blocks.*/
 
   /* First Y plane */
+  fp = cpi->frag[0];
   PlaneLineStep = pbi->YStride;
-  for ( i = 0; i < pbi->YPlaneFragments; i++ ) {
-    if ( !pbi->display_fragments[i] ) {
+  for ( i = 0; i < cpi->frag_n[0]; i++,fp++ ) {
+    if ( !fp->coded ) {
       PixelIndex = pbi->recon_pixel_index_table[i];
       SrcPtr = &SrcReconPtr[ PixelIndex ];
       DestPtr = &DestReconPtr[ PixelIndex ];
@@ -304,9 +323,22 @@ static void CopyNotRecon( PB_INSTANCE *pbi, unsigned char * DestReconPtr,
   }
 
   /* Then U and V */
+  fp = cpi->frag[1];
   PlaneLineStep = pbi->UVStride;
-  for ( i = pbi->YPlaneFragments; i < pbi->UnitFragments; i++ ) {
-    if ( !pbi->display_fragments[i] ) {
+  for ( ; i < cpi->frag_n[0]+cpi->frag_n[1]; i++,fp++ ) {
+    if ( !fp->coded ) {
+      PixelIndex = pbi->recon_pixel_index_table[i];
+      SrcPtr = &SrcReconPtr[ PixelIndex ];
+      DestPtr = &DestReconPtr[ PixelIndex ];
+
+      dsp_copy8x8 (pbi->dsp, SrcPtr, DestPtr, PlaneLineStep);
+
+    }
+  }
+
+  fp = cpi->frag[2];
+  for ( ; i < cpi->frag_total; i++,fp++ ) {
+    if ( !fp->coded ) {
       PixelIndex = pbi->recon_pixel_index_table[i];
       SrcPtr = &SrcReconPtr[ PixelIndex ];
       DestPtr = &DestReconPtr[ PixelIndex ];
@@ -376,6 +408,7 @@ static void LoopFilter(CP_INSTANCE *cpi){
   ogg_int32_t LineLength;
   ogg_int32_t FLimit;
   int j,m,n;
+  fragment_t *fp;
 
   FLimit = cpi->pb.quant_info.loop_filter_limits[cpi->BaseQ]; // temp
   if ( FLimit == 0 ) return;
@@ -384,6 +417,7 @@ static void LoopFilter(CP_INSTANCE *cpi){
   for ( j = 0; j < 3 ; j++){
     switch(j) {
     case 0: /* y */
+      fp = cpi->frag[0];
       FromFragment = 0;
       ToFragment = pbi->YPlaneFragments;
       FragsAcross = pbi->HFragments;
@@ -392,6 +426,7 @@ static void LoopFilter(CP_INSTANCE *cpi){
       LineFragments = pbi->HFragments;
       break;
     case 1: /* u */
+      fp = cpi->frag[1];
       FromFragment = pbi->YPlaneFragments;
       ToFragment = pbi->YPlaneFragments + pbi->UVPlaneFragments ;
       FragsAcross = pbi->HFragments >> 1;
@@ -401,6 +436,7 @@ static void LoopFilter(CP_INSTANCE *cpi){
       break;
     /*case 2:  v */
     default:
+      fp = cpi->frag[2];
       FromFragment = pbi->YPlaneFragments + pbi->UVPlaneFragments;
       ToFragment = pbi->YPlaneFragments + (2 * pbi->UVPlaneFragments) ;
       FragsAcross = pbi->HFragments >> 1;
@@ -418,28 +454,29 @@ static void LoopFilter(CP_INSTANCE *cpi){
     /* first column conditions */
     /* only do 2 prediction if fragment coded and on non intra or if
        all fragments are intra */
-    if( pbi->display_fragments[i]){
+    if( fp->coded){
       /* Filter right hand border only if the block to the right is
          not coded */
-      if ( !pbi->display_fragments[ i + 1 ] ){
+      if ( !fp[1].coded ){
         dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
                     pbi->recon_pixel_index_table[i]+6,
                     LineLength,BoundingValuePtr);
       }
 
       /* Bottom done if next row set */
-      if( !pbi->display_fragments[ i + LineFragments] ){
+      if( !fp[LineFragments].coded ){
         dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
                    pbi->recon_pixel_index_table[i+LineFragments],
                    LineLength, BoundingValuePtr);
       }
     }
     i++;
+    fp++;
 
     /***************************************************************/
     /* middle columns  */
-    for ( n = 1 ; n < FragsAcross - 1 ; n++, i++) {
-      if( pbi->display_fragments[i]){
+    for ( n = 1 ; n < FragsAcross - 1 ; n++, i++, fp++) {
+      if( fp->coded){
         /* Filter Left edge always */
         dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
                     pbi->recon_pixel_index_table[i]-2,
@@ -447,14 +484,14 @@ static void LoopFilter(CP_INSTANCE *cpi){
 
         /* Filter right hand border only if the block to the right is
            not coded */
-        if ( !pbi->display_fragments[ i + 1 ] ){
+        if ( !fp[1].coded ){
           dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
                       pbi->recon_pixel_index_table[i]+6,
                       LineLength, BoundingValuePtr);
         }
 
         /* Bottom done if next row set */
-        if( !pbi->display_fragments[ i + LineFragments] ){
+        if( !fp[LineFragments].coded ){
           dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
                      pbi->recon_pixel_index_table[i + LineFragments],
                      LineLength, BoundingValuePtr);
@@ -465,20 +502,21 @@ static void LoopFilter(CP_INSTANCE *cpi){
 
     /***************************************************************/
     /* Last Column */
-    if( pbi->display_fragments[i]){
+    if(fp->coded){
       /* Filter Left edge always */
       dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
                   pbi->recon_pixel_index_table[i] - 2 ,
                   LineLength, BoundingValuePtr);
 
       /* Bottom done if next row set */
-      if( !pbi->display_fragments[ i + LineFragments] ){
+      if( !fp[LineFragments].coded ){
         dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
                    pbi->recon_pixel_index_table[i + LineFragments],
                    LineLength, BoundingValuePtr);
       }
     }
     i++;
+    fp++;
 
     /***************************************************************/
     /* Middle Rows */
@@ -489,7 +527,7 @@ static void LoopFilter(CP_INSTANCE *cpi){
       /* first column conditions */
       /* only do 2 prediction if fragment coded and on non intra or if
          all fragments are intra */
-      if( pbi->display_fragments[i]){
+      if( fp->coded){
         /* TopRow is always done */
         dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
                    pbi->recon_pixel_index_table[i],
@@ -497,25 +535,26 @@ static void LoopFilter(CP_INSTANCE *cpi){
 
         /* Filter right hand border only if the block to the right is
            not coded */
-        if ( !pbi->display_fragments[ i + 1 ] ){
+        if ( !fp[1].coded ){
           dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
                       pbi->recon_pixel_index_table[i] + 6,
                       LineLength, BoundingValuePtr);
         }
 
         /* Bottom done if next row set */
-        if( !pbi->display_fragments[ i + LineFragments] ){
+        if( !fp[LineFragments].coded ){
           dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
                      pbi->recon_pixel_index_table[i + LineFragments],
                      LineLength, BoundingValuePtr);
         }
       }
       i++;
+      fp++;
 
       /*****************************************************************/
       /* middle columns  */
-      for ( n = 1 ; n < FragsAcross - 1 ; n++, i++){
-        if( pbi->display_fragments[i]){
+      for ( n = 1 ; n < FragsAcross - 1 ; n++, i++, fp++){
+        if( fp->coded){
           /* Filter Left edge always */
           dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
                       pbi->recon_pixel_index_table[i] - 2,
@@ -528,14 +567,14 @@ static void LoopFilter(CP_INSTANCE *cpi){
 
           /* Filter right hand border only if the block to the right
              is not coded */
-          if ( !pbi->display_fragments[ i + 1 ] ){
+          if ( !fp[1].coded ){
             dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
                         pbi->recon_pixel_index_table[i] + 6,
                         LineLength, BoundingValuePtr);
           }
 
           /* Bottom done if next row set */
-          if( !pbi->display_fragments[ i + LineFragments] ){
+          if( !fp[LineFragments].coded ){
             dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
                        pbi->recon_pixel_index_table[i + LineFragments],
                        LineLength, BoundingValuePtr);
@@ -545,7 +584,7 @@ static void LoopFilter(CP_INSTANCE *cpi){
 
       /******************************************************************/
       /* Last Column */
-      if( pbi->display_fragments[i]){
+      if(fp->coded){
         /* Filter Left edge always*/
         dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
                     pbi->recon_pixel_index_table[i] - 2,
@@ -557,14 +596,14 @@ static void LoopFilter(CP_INSTANCE *cpi){
                    LineLength, BoundingValuePtr);
 
         /* Bottom done if next row set */
-        if( !pbi->display_fragments[ i + LineFragments] ){
+        if( !fp[LineFragments].coded ){
           dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
                      pbi->recon_pixel_index_table[i + LineFragments],
                      LineLength, BoundingValuePtr);
         }
       }
       i++;
-
+      fp++;
     }
 
     /*******************************************************************/
@@ -573,7 +612,7 @@ static void LoopFilter(CP_INSTANCE *cpi){
     /* first column conditions */
     /* only do 2 prediction if fragment coded and on non intra or if
        all fragments are intra */
-    if( pbi->display_fragments[i]){
+    if(fp->coded){
 
       /* TopRow is always done */
       dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
@@ -582,18 +621,19 @@ static void LoopFilter(CP_INSTANCE *cpi){
 
       /* Filter right hand border only if the block to the right is
          not coded */
-      if ( !pbi->display_fragments[ i + 1 ] ){
+      if ( !fp[1].coded ){
         dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
                     pbi->recon_pixel_index_table[i] + 6,
                     LineLength, BoundingValuePtr);
       }
     }
     i++;
+    fp++;
 
     /******************************************************************/
     /* middle columns  */
-    for ( n = 1 ; n < FragsAcross - 1 ; n++, i++){
-      if( pbi->display_fragments[i]){
+    for ( n = 1 ; n < FragsAcross - 1 ; n++, i++, fp++){
+      if( fp->coded){
         /* Filter Left edge always */
         dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
                     pbi->recon_pixel_index_table[i] - 2,
@@ -606,7 +646,7 @@ static void LoopFilter(CP_INSTANCE *cpi){
 
         /* Filter right hand border only if the block to the right is
            not coded */
-        if ( !pbi->display_fragments[ i + 1 ] ){
+        if ( !fp[1].coded ){
           dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
                       pbi->recon_pixel_index_table[i] + 6,
                       LineLength, BoundingValuePtr);
@@ -616,7 +656,7 @@ static void LoopFilter(CP_INSTANCE *cpi){
 
     /******************************************************************/
     /* Last Column */
-    if( pbi->display_fragments[i]){
+    if( fp->coded){
       /* Filter Left edge always */
       dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
                   pbi->recon_pixel_index_table[i] - 2,
@@ -629,6 +669,7 @@ static void LoopFilter(CP_INSTANCE *cpi){
 
     }
     i++;
+    fp++;
   }
 }
 
@@ -646,9 +687,9 @@ void ReconRefFrames (CP_INSTANCE *cpi){
     SwapReconBuffersTemp = pbi->ThisFrameRecon;
     pbi->ThisFrameRecon = pbi->LastFrameRecon;
     pbi->LastFrameRecon = SwapReconBuffersTemp;
-    CopyNotRecon( pbi, pbi->LastFrameRecon, pbi->ThisFrameRecon );
+    CopyNotRecon( cpi, pbi->LastFrameRecon, pbi->ThisFrameRecon );
   }else{
-    CopyRecon( pbi, pbi->LastFrameRecon, pbi->ThisFrameRecon );
+    CopyRecon( cpi, pbi->LastFrameRecon, pbi->ThisFrameRecon );
   }
 
   /* Apply a loop filter to edge pixels of updated blocks */
@@ -748,7 +789,7 @@ void ReconRefFrames (CP_INSTANCE *cpi){
   /* Reconstruct the golden frame if necessary.
      For VFW codec only on key frames */
   if ( pbi->FrameType == KEY_FRAME ){
-    CopyRecon( pbi, pbi->GoldenFrame, pbi->LastFrameRecon );
+    CopyRecon( cpi, pbi->GoldenFrame, pbi->LastFrameRecon );
     /* We may need to update the UMV border */
     UpdateUMVBorder(cpi, pbi->GoldenFrame);
   }
