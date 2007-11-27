@@ -42,7 +42,6 @@ void ClearFragmentInfo(CP_INSTANCE *cpi){
 
   /* free prior allocs if present */
   if(pbi->CodedBlockList) _ogg_free(pbi->CodedBlockList);
-  if(pbi->FragMVect) _ogg_free(pbi->FragMVect);
 #ifdef _TH_DEBUG_
   if(pbi->QFragTIME) _ogg_free(pbi->QFragTIME);
   if(pbi->QFragFREQ) _ogg_free(pbi->QFragFREQ);
@@ -59,7 +58,6 @@ void ClearFragmentInfo(CP_INSTANCE *cpi){
   if(pbi->MBCodedFlags) _ogg_free(pbi->MBCodedFlags);
 
   pbi->CodedBlockList = 0;
-  pbi->FragMVect = 0;
   pbi->MBCodedFlags = 0;
   pbi->MBFullyFlags = 0;
   pbi->BlockMap = 0;
@@ -137,9 +135,6 @@ static void InitFragmentInfo(CP_INSTANCE * cpi){
 
   pbi->CodedBlockList =
     _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->CodedBlockList));
-
-  pbi->FragMVect =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->FragMVect));
 
 #ifdef _TH_DEBUG_
 
@@ -336,7 +331,7 @@ static void InitFrameInfo(CP_INSTANCE *cpi, unsigned int FrameSize){
   {
     int row,col,frag;
     int scanx[4] = {0,1,0,1};
-    int scany[4] = {0,1,1,0};
+    int scany[4] = {0,0,1,1};
 
     for(row=0;row<cpi->macro_v;row++){
       int baserow = row*2;

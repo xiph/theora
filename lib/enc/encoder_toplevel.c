@@ -105,12 +105,13 @@ static void CompressKeyFrame(CP_INSTANCE *cpi){
 static int CompressFrame( CP_INSTANCE *cpi ) {
   ogg_uint32_t  i,j;
   ogg_uint32_t  KFIndicator = 0;
+  fragment_t *fp = cpi->frag[0];
 
   /* Clear down the macro block level mode and MV arrays. */
-  for ( i = 0; i < cpi->pb.UnitFragments; i++ ) {
-    cpi->frag[0][i].mode = CODE_INTER_NO_MV;  /* Default coding mode */
-    cpi->pb.FragMVect[i].x = 0;
-    cpi->pb.FragMVect[i].y = 0;
+  for ( i = 0; i < cpi->pb.UnitFragments; i++, fp++ ) {
+    fp->mode = CODE_INTER_NO_MV;  /* Default coding mode */
+    fp->mv.x=0;
+    fp->mv.y=0;
   }
 
   /* Default to delta frames. */

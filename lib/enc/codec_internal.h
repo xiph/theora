@@ -77,11 +77,6 @@ enum BlockMode {
 
 #define MAX_MV_EXTENT 31  /* Max search distance in half pixel increments */
 
-typedef struct{
-  ogg_int32_t   x;
-  ogg_int32_t   y;
-} MOTION_VECTOR;
-
 /** block coding modes */
 typedef enum{
   CODE_INTER_NO_MV        = 0x0, /* INTER prediction, (0,0) motion
@@ -191,8 +186,6 @@ typedef struct PB_INSTANCE {
   int            CodedBlockIndex;
   fragment_t   **CodedBlockList;           
 
-  MOTION_VECTOR *FragMVect;                /* Frag motion vectors */
-
   /***********************************************************************/
   /* Macro Block and SuperBlock Information */
   ogg_int32_t  (*BlockMap)[4][4];               /* super block + sub macro
@@ -208,7 +201,6 @@ typedef struct PB_INSTANCE {
   /**********************************************************************/
   ogg_uint32_t   EOB_Run;
 
-  MOTION_VECTOR  MVector;
   ogg_int32_t    ReconPtr2Offset;       /* Offset for second reconstruction
                                            in half pixel MC */
   ogg_uint32_t   DcHuffChoice;          /* Huffman table selection variables */
@@ -297,8 +289,6 @@ typedef struct CP_INSTANCE {
   ogg_uint32_t      RunPlaneIndex;        /* The plane (Y=0 UV=1) to
                                              which the first token in
                                              an EOB run belonged. */
-
-
   ogg_uint32_t      TotTokenCount;
   ogg_int32_t       TokensToBeCoded;
   ogg_int32_t       TokensCoded;
@@ -334,7 +324,6 @@ typedef struct CP_INSTANCE {
                                           updated. */
   ogg_uint32_t     *RunHuffIndices;
   ogg_uint32_t     *ModeList;
-  MOTION_VECTOR    *MVList;
 
   unsigned char    *BlockCodedFlags;
 
@@ -344,6 +333,8 @@ typedef struct CP_INSTANCE {
 
   unsigned char    *DataOutputBuffer;
   /*********************************************************************/
+  mv_t             *MVList;
+  ogg_uint32_t      MVListCount;
 
   ogg_uint32_t      RunLength;
 
@@ -360,7 +351,6 @@ typedef struct CP_INSTANCE {
   signed char       HalfPixelXOffset[9];    /* Half pixel MV offsets for X */
   signed char       HalfPixelYOffset[9];    /* Half pixel MV offsets for Y */
 
-  MOTION_VECTOR     MVector;
   /* instances (used for reconstructing buffers and to hold tokens etc.) */
   PB_INSTANCE       pb;   /* playback */
 
@@ -408,7 +398,7 @@ extern void quantize( PB_INSTANCE *pbi,
 extern void fdct_short ( ogg_int16_t * InputData, ogg_int16_t * OutputData );
 extern ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi,
 				       fragment_t *fp);
-extern void TransformQuantizeBlock (CP_INSTANCE *cpi, fragment_t *fp, ogg_int32_t FragIndex,
+extern void TransformQuantizeBlock (CP_INSTANCE *cpi, fragment_t *fp, 
                                     ogg_uint32_t PixelsPerLine ) ;
 extern void InitFrameDetails(CP_INSTANCE *cpi);
 extern void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer *opb);
@@ -420,32 +410,32 @@ extern void WriteHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES],
 extern void PackAndWriteDFArray( CP_INSTANCE *cpi );
 extern void InitMotionCompensation ( CP_INSTANCE *cpi );
 extern ogg_uint32_t GetMBIntraError (CP_INSTANCE *cpi, 
-				     fragment_t *fp,
+				     macroblock_t *mp,
                                      ogg_uint32_t PixelsPerLine ) ;
 extern ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
                                      unsigned char * SrcPtr,
                                      unsigned char * RefPtr,
-				     fragment_t *fp,
+				     macroblock_t *mp,
                                      ogg_int32_t LastXMV,
                                      ogg_int32_t LastYMV,
                                      ogg_uint32_t PixelsPerLine ) ;
 extern void WriteFrameHeader( CP_INSTANCE *cpi) ;
 extern ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
                                        unsigned char * RefFramePtr,
-				       fragment_t *fp,
+				       macroblock_t *mp,
                                        ogg_uint32_t PixelsPerLine,
                                        ogg_int32_t *MVPixelOffset,
-                                       MOTION_VECTOR *MV );
+                                       mv_t *MV );
 extern ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
                                              unsigned char * RefFramePtr,
-					     fragment_t *fp,
+					     macroblock_t *mp,
                                              ogg_uint32_t PixelsPerLine,
-                                             MOTION_VECTOR *MV );
+                                             mv_t *MV );
 extern ogg_uint32_t GetFOURMVExhaustiveSearch (CP_INSTANCE *cpi,
                                                unsigned char * RefFramePtr,
-					       fragment_t *fp,
+					       macroblock_t *mp,
                                                ogg_uint32_t PixelsPerLine,
-                                               MOTION_VECTOR *MV ) ;
+                                               mv_t *MV ) ;
 extern void EncodeData(CP_INSTANCE *cpi);
 extern ogg_uint32_t PickIntra( CP_INSTANCE *cpi );
 extern ogg_uint32_t PickModes(CP_INSTANCE *cpi,

@@ -254,7 +254,6 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
 				   unsigned char *thisrecon,
 				   ogg_int32_t MvDevisor,
 				   fragment_t *fp,
-				   ogg_uint32_t FragIndex,
 				   ogg_uint32_t PixelsPerLine,
 				   ogg_uint32_t ReconPixelsPerLine,
 				   int mode) {
@@ -269,7 +268,8 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
                                    half pixel MC */
   unsigned char  *ReconPtr1;    /* DCT reconstructed image pointers */
   unsigned char  *ReconPtr2;    /* Pointer used in half pixel MC */
-   
+  mv_t mv;
+
   if ( ModeUsesMC[mode] ){
     switch(MvDevisor) {
     case 2:
@@ -284,30 +284,28 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
       break;
     }
     
-    cpi->MVector.x = cpi->pb.FragMVect[FragIndex].x;
-    cpi->MVector.y = cpi->pb.FragMVect[FragIndex].y;
+    mv = fp->mv;
     
     /* Set up the baseline offset for the motion vector. */
-    MVOffset = ((cpi->MVector.y / MvDevisor) * ReconPixelsPerLine) +
-      (cpi->MVector.x / MvDevisor);
+    MVOffset = ((mv.y / MvDevisor) * ReconPixelsPerLine) + (mv.x / MvDevisor);
     
     /* Work out the offset of the second reference position for 1/2
        pixel interpolation.  For the U and V planes the MV specifies 1/4
        pixel accuracy. This is adjusted to 1/2 pixel as follows ( 0->0,
        1/4->1/2, 1/2->1/2, 3/4->1/2 ). */
     ReconPtr2Offset = 0;
-    AbsXOffset = cpi->MVector.x % MvDevisor;
-    AbsYOffset = cpi->MVector.y % MvDevisor;
+    AbsXOffset = mv.x % MvDevisor;
+    AbsYOffset = mv.y % MvDevisor;
     
     if ( AbsXOffset ) {
-      if ( cpi->MVector.x > 0 )
+      if ( mv.x > 0 )
 	ReconPtr2Offset += 1;
       else
 	ReconPtr2Offset -= 1;
     }
     
     if ( AbsYOffset ) {
-      if ( cpi->MVector.y > 0 )
+      if ( mv.y > 0 )
 	ReconPtr2Offset += ReconPixelsPerLine;
       else
 	ReconPtr2Offset -= ReconPixelsPerLine;
@@ -358,7 +356,6 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
 
 void TransformQuantizeBlock (CP_INSTANCE *cpi, 
 			     fragment_t *fp,
-			     ogg_int32_t FragIndex,
                              ogg_uint32_t PixelsPerLine) {
   unsigned char *FiltPtr = &cpi->yuvptr[fp->raw_index];
   int qi = cpi->BaseQ; // temporary
@@ -383,7 +380,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
      the reconstruction buffer, and proces a difference block for
      forward DCT */
   BlockUpdateDifference(cpi, FiltPtr, DCTInput, ReconPtr1,
-			MvDivisor, fp, FragIndex, PixelsPerLine,
+			MvDivisor, fp, PixelsPerLine,
 			ReconPixelsPerLine, fp->mode);
   
   /* Proceed to encode the data into the encode buffer if the encoder

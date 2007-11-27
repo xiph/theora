@@ -163,10 +163,9 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi,
 
 	/* Does Block lie in frame: */
 	if ( fp && fp->coded ) {
-	  int FragIndex = QuadMapToIndex1( cpi->pb.BlockMap, SBi, MB, B );
 	  
 	  /* transform and quantize block */
-	  TransformQuantizeBlock( cpi, fp, FragIndex, PixelsPerLine );
+	  TransformQuantizeBlock( cpi, fp, PixelsPerLine );
 	  
 	  /* Has the block got struck off (no MV and no data
 	     generated after DCT) If not then mark it and the
@@ -799,9 +798,9 @@ void EncodeData(CP_INSTANCE *cpi){
  {
    int j;
    for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) {
-     FragIndex = cpi->pb.CodedBlockList[i];
+     fragment_t *fp = cpi->frag[0][i];
      for(j=0;j<64;j++)
-       cpi->pb.QFragQUAN[FragIndex][j] = cpi->pb.QFragData[FragIndex][j];
+       fp->QUAN[j] = fp->dct[j];
    }
  }
 #endif
@@ -829,35 +828,26 @@ ogg_uint32_t PickIntra( CP_INSTANCE *cpi ){
   return 0;
 }
 
-static void AddMotionVector(CP_INSTANCE *cpi,
-                     MOTION_VECTOR *ThisMotionVector) {
-  cpi->MVList[cpi->MvListCount].x = ThisMotionVector->x;
-  cpi->MVList[cpi->MvListCount].y = ThisMotionVector->y;
-  cpi->MvListCount++;
+static void AddMotionVector(CP_INSTANCE *cpi, mv_t *mv) {
+  cpi->MVList[cpi->MvListCount++] = *mv;
 }
 
-static void SetFragMotionVectorAndMode(CP_INSTANCE *cpi,
-				       fragment_t *fp,
-				       MOTION_VECTOR *ThisMotionVector,
+static void SetFragMotionVectorAndMode(fragment_t *fp,
+				       mv_t *mv,
 				       int mode){
-  int FragIndex = fp - cpi->frag[0];
-
-  /* Note the coding mode and vector for each block */
-  cpi->pb.FragMVect[FragIndex].x = ThisMotionVector->x;
-  cpi->pb.FragMVect[FragIndex].y = ThisMotionVector->y;
+  fp->mv = *mv;
   fp->mode = mode;
 }
 
-static void SetMBMotionVectorsAndMode(CP_INSTANCE *cpi,
-				      macroblock_t *mp,
-				      MOTION_VECTOR *ThisMotionVector,
+static void SetMBMotionVectorsAndMode(macroblock_t *mp,
+				      mv_t *mv,
 				      int mode){
-  SetFragMotionVectorAndMode(cpi, mp->y[0], ThisMotionVector,mode);
-  SetFragMotionVectorAndMode(cpi, mp->y[1], ThisMotionVector,mode);
-  SetFragMotionVectorAndMode(cpi, mp->y[2], ThisMotionVector,mode);
-  SetFragMotionVectorAndMode(cpi, mp->y[3], ThisMotionVector,mode);
-  SetFragMotionVectorAndMode(cpi, mp->u, ThisMotionVector,mode);
-  SetFragMotionVectorAndMode(cpi, mp->v, ThisMotionVector,mode);
+  SetFragMotionVectorAndMode(mp->y[0], mv, mode);
+  SetFragMotionVectorAndMode(mp->y[1], mv, mode);
+  SetFragMotionVectorAndMode(mp->y[2], mv, mode);
+  SetFragMotionVectorAndMode(mp->y[3], mv, mode);
+  SetFragMotionVectorAndMode(mp->u, mv, mode);
+  SetFragMotionVectorAndMode(mp->v, mv, mode);
 }
 
 ogg_uint32_t PickModes(CP_INSTANCE *cpi,
@@ -890,20 +880,20 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                                            block */
   ogg_uint32_t  BestError;              /* Best error so far. */
 
-  MOTION_VECTOR FourMVect[6];     /* storage for last used vectors (one
+  mv_t          FourMVect[6];     /* storage for last used vectors (one
                                      entry for each block in MB) */
-  MOTION_VECTOR LastInterMVect;   /* storage for last used Inter frame
+  mv_t          LastInterMVect;   /* storage for last used Inter frame
                                      MB motion vector */
-  MOTION_VECTOR PriorLastInterMVect;  /* storage for prior last used
+  mv_t          PriorLastInterMVect;  /* storage for prior last used
                                          Inter frame MB motion vector */
-  MOTION_VECTOR TmpMVect;         /* Temporary MV storage */
-  MOTION_VECTOR LastGFMVect;      /* storage for last used Golden
+  mv_t          TmpMVect;         /* Temporary MV storage */
+  mv_t          LastGFMVect;      /* storage for last used Golden
                                      Frame MB motion vector */
-  MOTION_VECTOR InterMVect;       /* storage for motion vector */
-  MOTION_VECTOR InterMVectEx;     /* storage for motion vector result
+  mv_t          InterMVect;       /* storage for motion vector */
+  mv_t          InterMVectEx;     /* storage for motion vector result
                                      from exhaustive search */
-  MOTION_VECTOR GFMVect;          /* storage for motion vector */
-  MOTION_VECTOR ZeroVect;
+  mv_t          GFMVect;          /* storage for motion vector */
+  mv_t          ZeroVect;
 
   ogg_uint32_t UVRow;
   ogg_uint32_t UVColumn;
@@ -1010,28 +1000,28 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
         /* Look at the intra coding error. */
         MBIntraError = GetMBIntraError( cpi, 
-					&cpi->frag[0][YFragIndex],
+					mp,
 					PixelsPerLine );
         BestError = (BestError > MBIntraError) ? MBIntraError : BestError;
 
         /* Get the golden frame error */
         MBGFError = GetMBInterError( cpi, cpi->yuvptr,
                                      cpi->pb.GoldenFrame, 
-				     &cpi->frag[0][YFragIndex],
+				     mp,
                                      0, 0, PixelsPerLine );
         BestError = (BestError > MBGFError) ? MBGFError : BestError;
 
         /* Calculate the 0,0 case. */
         MBInterError = GetMBInterError( cpi, cpi->yuvptr,
                                         cpi->pb.LastFrameRecon,
-					&cpi->frag[0][YFragIndex],
+					mp,
                                         0, 0, PixelsPerLine );
         BestError = (BestError > MBInterError) ? MBInterError : BestError;
 
         /* Measure error for last MV */
         MBLastInterError =  GetMBInterError( cpi, cpi->yuvptr,
                                              cpi->pb.LastFrameRecon,
-					     &cpi->frag[0][YFragIndex],
+					     mp,
                                              LastInterMVect.x,
                                              LastInterMVect.y, PixelsPerLine );
         BestError = (BestError > MBLastInterError) ?
@@ -1040,7 +1030,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         /* Measure error for prior last MV */
         MBPriorLastInterError =  GetMBInterError( cpi, cpi->yuvptr,
                                                   cpi->pb.LastFrameRecon,
-						  &cpi->frag[0][YFragIndex],
+						  mp,
                                                   PriorLastInterMVect.x,
                                                   PriorLastInterMVect.y,
                                                   PixelsPerLine );
@@ -1059,7 +1049,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
              quick mode. */
           if ( cpi->info.quick_p ) {
             MBInterMVError = GetMBMVInterError( cpi, cpi->pb.LastFrameRecon,
-						&cpi->frag[0][YFragIndex],
+						mp,
 						PixelsPerLine,
                                                 cpi->MVPixelOffsetY,
                                                 &InterMVect );
@@ -1071,7 +1061,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
               MBInterMVExError =
                 GetMBMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
-					 &cpi->frag[0][YFragIndex],
+					 mp,
                                          PixelsPerLine,
                                          &InterMVectEx );
 
@@ -1087,7 +1077,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
             /* Use an exhaustive search */
             MBInterMVError =
               GetMBMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
-				       &cpi->frag[0][YFragIndex],
+				       mp,
                                        PixelsPerLine,
                                        &InterMVect );
           }
@@ -1109,14 +1099,14 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         if ( BestError > cpi->MinImprovementForNewMV && cpi->MotionCompensation) {
           /* Do an MV search in the golden reference frame */
           MBGF_MVError = GetMBMVInterError( cpi, cpi->pb.GoldenFrame,
-					    &cpi->frag[0][YFragIndex],
+					    mp,
                                             PixelsPerLine,
                                             cpi->MVPixelOffsetY, &GFMVect );
 
           /* Measure error for last GFMV */
           LastMBGF_MVError =  GetMBInterError( cpi, cpi->yuvptr,
                                                cpi->pb.GoldenFrame,
-					       &cpi->frag[0][YFragIndex],
+					       mp,
                                                LastGFMVect.x,
                                                LastGFMVect.y, PixelsPerLine );
 
@@ -1145,7 +1135,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
           /* Get the 4MV error. */
           MBInterFOURMVError =
             GetFOURMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
-				       &cpi->frag[0][YFragIndex],
+				       mp,
                                        PixelsPerLine, FourMVect );
 
           /* If the improvement is great enough then use the four MV mode */
@@ -1167,27 +1157,24 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
         if ( (BestError > cpi->InterTripOutThresh) &&
              (10 * BestError > MBIntraError * 7 ) ) {
-          SetMBMotionVectorsAndMode(cpi,mp,&ZeroVect,CODE_INTRA);
+          SetMBMotionVectorsAndMode(mp,&ZeroVect,CODE_INTRA);
         } else if ( BestError == MBInterError ) {
-          SetMBMotionVectorsAndMode(cpi,mp,&ZeroVect,CODE_INTER_NO_MV);
+          SetMBMotionVectorsAndMode(mp,&ZeroVect,CODE_INTER_NO_MV);
         } else if ( BestError == MBGFError ) {
-          SetMBMotionVectorsAndMode(cpi,mp,&ZeroVect,CODE_USING_GOLDEN);
+          SetMBMotionVectorsAndMode(mp,&ZeroVect,CODE_USING_GOLDEN);
         } else if ( BestError == MBLastInterError ) {
-          SetMBMotionVectorsAndMode(cpi,mp,&LastInterMVect,CODE_INTER_LAST_MV);
+          SetMBMotionVectorsAndMode(mp,&LastInterMVect,CODE_INTER_LAST_MV);
         } else if ( BestError == MBPriorLastInterError ) {
-          SetMBMotionVectorsAndMode(cpi,mp,&PriorLastInterMVect,CODE_INTER_PRIOR_LAST);
+          SetMBMotionVectorsAndMode(mp,&PriorLastInterMVect,CODE_INTER_PRIOR_LAST);
 
           /* Swap the prior and last MV cases over */
-          TmpMVect.x = PriorLastInterMVect.x;
-          TmpMVect.y = PriorLastInterMVect.y;
-          PriorLastInterMVect.x = LastInterMVect.x;
-          PriorLastInterMVect.y = LastInterMVect.y;
-          LastInterMVect.x = TmpMVect.x;
-          LastInterMVect.y = TmpMVect.y;
+          TmpMVect = PriorLastInterMVect;
+          PriorLastInterMVect = LastInterMVect;
+          LastInterMVect = TmpMVect;
 
         } else if ( BestError == MBInterMVError ) {
 
-          SetMBMotionVectorsAndMode(cpi,mp,&InterMVect,CODE_INTER_PLUS_MV);
+          SetMBMotionVectorsAndMode(mp,&InterMVect,CODE_INTER_PLUS_MV);
 
           /* Update Prior last mv with last mv */
           PriorLastInterMVect.x = LastInterMVect.x;
@@ -1201,7 +1188,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
         } else if ( BestError == MBGF_MVError ) {
 
-          SetMBMotionVectorsAndMode(cpi,mp,&GFMVect,CODE_GOLDEN_MV);
+          SetMBMotionVectorsAndMode(mp,&GFMVect,CODE_GOLDEN_MV);
 
           /* Note last inter GF MV for future use */
           LastGFMVect.x = GFMVect.x;
@@ -1229,12 +1216,12 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
             FourMVect[4].y = (FourMVect[4].y - 2) / 4;
           FourMVect[5].y = FourMVect[4].y;
 
-          SetFragMotionVectorAndMode(cpi, mp->y[0], &FourMVect[0],CODE_INTER_FOURMV);
-          SetFragMotionVectorAndMode(cpi, mp->y[1], &FourMVect[1],CODE_INTER_FOURMV);
-          SetFragMotionVectorAndMode(cpi, mp->y[2], &FourMVect[2],CODE_INTER_FOURMV);
-          SetFragMotionVectorAndMode(cpi, mp->y[3], &FourMVect[3],CODE_INTER_FOURMV);
-          SetFragMotionVectorAndMode(cpi, mp->u, &FourMVect[4],CODE_INTER_FOURMV);
-          SetFragMotionVectorAndMode(cpi, mp->v, &FourMVect[5],CODE_INTER_FOURMV);
+          SetFragMotionVectorAndMode(mp->y[0], &FourMVect[0],CODE_INTER_FOURMV);
+          SetFragMotionVectorAndMode(mp->y[1], &FourMVect[1],CODE_INTER_FOURMV);
+          SetFragMotionVectorAndMode(mp->y[2], &FourMVect[2],CODE_INTER_FOURMV);
+          SetFragMotionVectorAndMode(mp->y[3], &FourMVect[3],CODE_INTER_FOURMV);
+          SetFragMotionVectorAndMode(mp->u, &FourMVect[4],CODE_INTER_FOURMV);
+          SetFragMotionVectorAndMode(mp->v, &FourMVect[5],CODE_INTER_FOURMV);
 
           /* Note the four MVs values for current macro-block. */
           AddMotionVector( cpi, &FourMVect[0]);
@@ -1243,16 +1230,14 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
           AddMotionVector( cpi, &FourMVect[3]);
 
           /* Update Prior last mv with last mv */
-          PriorLastInterMVect.x = LastInterMVect.x;
-          PriorLastInterMVect.y = LastInterMVect.y;
+          PriorLastInterMVect = LastInterMVect;
 
           /* Note last inter MV for future use */
-          LastInterMVect.x = FourMVect[3].x;
-          LastInterMVect.y = FourMVect[3].y;
+          LastInterMVect = FourMVect[3];
 
         } else {
 
-          SetMBMotionVectorsAndMode(cpi,mp,&ZeroVect,CODE_INTRA);
+          SetMBMotionVectorsAndMode(mp,&ZeroVect,CODE_INTRA);
         }
 
 
