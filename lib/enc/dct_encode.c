@@ -312,9 +312,9 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
     }
     
     if ( mode==CODE_GOLDEN_MV ) {
-      ReconPtr1 = &cpi->pb.GoldenFrame[fp->recon_index];
+      ReconPtr1 = &cpi->GoldenFrame[fp->recon_index];
     } else {
-      ReconPtr1 = &cpi->pb.LastFrameRecon[fp->recon_index];
+      ReconPtr1 = &cpi->LastFrameRecon[fp->recon_index];
     }
     
     ReconPtr1 += MVOffset;
@@ -339,9 +339,9 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
     if ( ( mode==CODE_INTER_NO_MV ) ||
 	 ( mode==CODE_USING_GOLDEN ) ) {
       if ( mode==CODE_INTER_NO_MV ) {
-	ReconPtr1 = &cpi->pb.LastFrameRecon[fp->recon_index];
+	ReconPtr1 = &cpi->LastFrameRecon[fp->recon_index];
       } else {
-	ReconPtr1 = &cpi->pb.GoldenFrame[fp->recon_index];
+	ReconPtr1 = &cpi->GoldenFrame[fp->recon_index];
       }
       
       dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
@@ -367,7 +367,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
   ogg_uint32_t ReconPixelsPerLine = cpi->recon_stride[plane];
   ogg_int32_t   MvDivisor;      /* Defines MV resolution (2 = 1/2
                                    pixel for Y or 4 = 1/4 for UV) */
-  unsigned char   *ReconPtr1 = &cpi->pb.ThisFrameRecon[fp->recon_index];
+  unsigned char   *ReconPtr1 = &cpi->ThisFrameRecon[fp->recon_index];
 
   /* Set plane specific values */
   if (plane == 0){

@@ -40,7 +40,7 @@ static void SetupKeyFrame(CP_INSTANCE *cpi) {
       cpi->frag[i][j].coded=1;
   
   /* Set up for a KEY FRAME */
-  cpi->pb.FrameType = KEY_FRAME;
+  cpi->FrameType = KEY_FRAME;
 }
 
 static void AdjustKeyFrameContext(CP_INSTANCE *cpi) {
@@ -69,7 +69,7 @@ static void UpdateFrame(CP_INSTANCE *cpi){
   /* Encode the data.  */
   EncodeData(cpi);
 
-  if ( cpi->pb.FrameType == KEY_FRAME ) 
+  if ( cpi->FrameType == KEY_FRAME ) 
     AdjustKeyFrameContext(cpi);
 
 }
@@ -108,14 +108,14 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
   fragment_t *fp = cpi->frag[0];
 
   /* Clear down the macro block level mode and MV arrays. */
-  for ( i = 0; i < cpi->pb.UnitFragments; i++, fp++ ) {
+  for ( i = 0; i < cpi->frag_total; i++, fp++ ) {
     fp->mode = CODE_INTER_NO_MV;  /* Default coding mode */
     fp->mv.x=0;
     fp->mv.y=0;
   }
 
   /* Default to delta frames. */
-  cpi->pb.FrameType = DELTA_FRAME;
+  cpi->FrameType = DELTA_FRAME;
 
   /* Clear down the difference arrays for the current frame. */
   for(i=0;i<3;i++)
@@ -135,7 +135,7 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
     
     /* Select modes and motion vectors for each of the blocks : return
        an error score for inter and intra */
-    PickModes( cpi, cpi->pb.YSBRows, cpi->pb.YSBCols,
+    PickModes( cpi, cpi->super_v[0], cpi->super_h[0],
                cpi->info.width,
                &InterError, &IntraError );
 

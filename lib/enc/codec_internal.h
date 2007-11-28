@@ -121,6 +121,16 @@ typedef struct fragment {
 
   ogg_uint32_t raw_index;
   ogg_uint32_t recon_index;
+
+#ifdef _TH_DEBUG_
+  ogg_int16_t QUAN[64];           /* Fragment Coefficients
+				     Array Pointers */
+  ogg_int16_t FREQ[64];            /* Fragment Coefficients
+				      Array Pointers */
+  ogg_int16_t TIME[64];            /* Fragment Coefficients
+				      Array Pointers */
+#endif
+
 } fragment_t;
 
 typedef struct macroblock {
@@ -145,55 +155,6 @@ typedef iquant_table   iquant_tables[64];
 /** Decoder (Playback) instance -- installed in a theora_state */
 typedef struct PB_INSTANCE {
 
-
-  /***********************************************************************/
-  /* Frame Info */
-  unsigned char FrameType;
-
-  /**********************************************************************/
-  /* Frame Size & Index Information */
-
-  ogg_uint32_t  YPlaneSize;
-  ogg_uint32_t  UVPlaneSize;
-  ogg_uint32_t  VFragments;
-  ogg_uint32_t  HFragments;
-  ogg_uint32_t  UnitFragments;
-  ogg_uint32_t  YPlaneFragments;
-  ogg_uint32_t  UVPlaneFragments;
-
-  ogg_uint32_t  YSBRows;        /* Number of rows of SuperBlocks in a
-                                   Y frame */
-  ogg_uint32_t  YSBCols;        /* Number of cols of SuperBlocks in a
-                                   Y frame */
-  ogg_uint32_t  UVSBRows;       /* Number of rows of SuperBlocks in a
-                                   U or V frame */
-  ogg_uint32_t  UVSBCols;       /* Number of cols of SuperBlocks in a
-                                   U or V frame */
-  ogg_uint32_t SuperBlocks;
-  ogg_uint32_t YSuperBlocks;
-  ogg_uint32_t UVSuperBlocks;
-  ogg_uint32_t MacroBlocks;
-
-  
-  /**********************************************************************/
-  /* Frames  */
-  unsigned char *ThisFrameRecon;
-  unsigned char *GoldenFrame;
-  unsigned char *LastFrameRecon;
-
-  /**********************************************************************/
-  /* Fragment Information */
-  int            CodedBlockIndex;
-  fragment_t   **CodedBlockList;           
-
-  /***********************************************************************/
-  /* Coded flag arrays and counters for them */
-  unsigned char *SBCodedFlags;
-  unsigned char *SBFullyFlags;
-  unsigned char *MBCodedFlags;
-  unsigned char *MBFullyFlags;
-
-  /**********************************************************************/
   ogg_uint32_t   EOB_Run;
 
   ogg_int32_t    ReconPtr2Offset;       /* Offset for second reconstruction
@@ -218,15 +179,6 @@ typedef struct PB_INSTANCE {
 
   DspFunctions   dsp;  /* Selected functions for this platform */
 
-#ifdef _TH_DEBUG_
-  ogg_int16_t (*QFragQUAN)[64];           /* Fragment Coefficients
-                                               Array Pointers */
-  ogg_int16_t (*QFragFREQ)[64];            /* Fragment Coefficients
-                                               Array Pointers */
-  ogg_int16_t (*QFragTIME)[64];            /* Fragment Coefficients
-                                               Array Pointers */
-#endif
-
 } PB_INSTANCE;
 
 /* Encoder (Compressor) instance -- installed in a theora_state */
@@ -236,13 +188,13 @@ typedef struct CP_INSTANCE {
      is the only assumption that library makes about our internal format.*/
   oc_state_dispatch_vtbl dispatch_vtbl;
 
-  theora_info     info;
+  theora_info      info;
   unsigned char   *yuvptr;
   
   /* flag to indicate if the headers already have been written */
-  int             HeadersWritten;
+  int              HeadersWritten;
   /* how far do we shift the granulepos to seperate out P frame counts? */
-  int             keyframe_granule_shift;
+  int              keyframe_granule_shift;
 
   /* Compressor Configuration */
   int              BaseQ;
@@ -311,25 +263,26 @@ typedef struct CP_INSTANCE {
   ogg_uint32_t      recon_offset[3];
 
   /* Coded flag arrays and counters for them */
-  unsigned char    *PartiallyCodedFlags;
-  unsigned char    *PartiallyCodedMbPatterns;
-  ogg_uint32_t     *FragmentLastQ;     /* Array used to keep track of
-                                          quality at which each
-                                          fragment was last
-                                          updated. */
+
   ogg_uint32_t     *RunHuffIndices;
-  ogg_uint32_t     *ModeList;
 
   unsigned char    *BlockCodedFlags;
 
+  mv_t             *MVList;
   ogg_uint32_t      MvListCount;
+  ogg_uint32_t     *ModeList;
   ogg_uint32_t      ModeListCount;
 
-
   unsigned char    *DataOutputBuffer;
+
+  unsigned char     FrameType;
+  unsigned char    *ThisFrameRecon;
+  unsigned char    *GoldenFrame;
+  unsigned char    *LastFrameRecon;
+  int               CodedBlockIndex;
+  fragment_t      **CodedBlockList;           
+
   /*********************************************************************/
-  mv_t             *MVList;
-  ogg_uint32_t      MVListCount;
 
   ogg_uint32_t      RunLength;
 

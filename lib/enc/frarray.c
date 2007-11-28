@@ -17,6 +17,7 @@
 
 #include <string.h>
 #include "codec_internal.h"
+#include <stdio.h>
 
 /* Long run bit string coding */
 static ogg_uint32_t FrArrayCodeSBRun( CP_INSTANCE *cpi, ogg_uint32_t value){
@@ -107,205 +108,140 @@ static ogg_uint32_t FrArrayCodeBlockRun( CP_INSTANCE *cpi,
 }
 
 void PackAndWriteDFArray( CP_INSTANCE *cpi ){
-  ogg_uint32_t  i;
-  unsigned char val;
-  ogg_uint32_t  run_count;
-
   ogg_uint32_t  SB, B;
-  ogg_uint32_t  BListIndex = 0;
-  ogg_uint32_t  LastSbBIndex = 0;
+  int run_last = -1;
+  int run_count = 0;
+  int run_break = 0;
+  int partial=0;
+  int fully = 1;
 
-  /* Initialise workspaces */
-  memset( cpi->pb.SBFullyFlags, 1, cpi->pb.SuperBlocks);
-  memset( cpi->pb.SBCodedFlags, 0, cpi->pb.SuperBlocks );
-  memset( cpi->PartiallyCodedFlags, 0, cpi->pb.SuperBlocks );
-  memset( cpi->BlockCodedFlags, 0, cpi->pb.UnitFragments);
-
-#ifdef _TH_DEBUG_
-  unsigned char blockraster[cpi->pb.UnitFragments];
-  memset(blockraster,0,sizeof(blockraster));
-#endif
-
-  for( SB = 0; SB < cpi->pb.SuperBlocks; SB++ ) {
+  /* code the partially coded SB flags */
+  for( SB = 0; SB < cpi->super_total; SB++ ) {
     superblock_t *sp = &cpi->super[0][SB];
+    int coded = 0;
+    fully = 1;
 
-    /* Check for blocks and macro-blocks */
     for ( B=0; B<16; B++ ) {
       fragment_t *fp = sp->f[B];
-      
       if ( fp ) {
-	/* In Frame: If it is not coded then this SB is only
-	   partly coded.: */
 	if ( fp->coded ) {
-	  cpi->pb.SBCodedFlags[SB] = 1; /* SB at least partly coded */
-	  cpi->BlockCodedFlags[BListIndex] = 1; /* Block is coded */
-	  
-#ifdef _TH_DEBUG_
-	  blockraster[fp - cpi->frag[0]]=1;
-#endif	      
-	  
+	  coded = 1; /* SB at least partly coded */
 	}else{
-	  cpi->pb.SBFullyFlags[SB] = 0; /* SB not fully coded */
-	  cpi->BlockCodedFlags[BListIndex] = 0; /* Block is not coded */
+	  fully = 0;
 	}
-	
-	BListIndex++;
-	
       }
     }
     
-    /* Is the SB fully coded or uncoded.
-       If so then backup BListIndex and MBListIndex */
-    if ( cpi->pb.SBFullyFlags[SB] || !cpi->pb.SBCodedFlags[SB] ) {
-      BListIndex = LastSbBIndex; /* Reset to values from previous SB */
-    }else{
-      cpi->PartiallyCodedFlags[SB] = 1; /* Set up list of partially
-                                           coded SBs */
-      LastSbBIndex = BListIndex;
+    partial = (!fully && coded);
+    
+    if(run_last == -1){
+      oggpackB_write( cpi->oggbuffer, partial, 1);      
+      run_last = partial;
     }
-  }
 
-#ifdef _TH_DEBUG_
-  // assuming 4:2:0 right now
-  TH_DEBUG("predicted (partially coded frame)\n");
-  TH_DEBUG("superblock coded flags = {");
-  int x,y;
-  i=0;
-
-  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+31)/32;y++){
-    TH_DEBUG("\n   ");
-    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+31)/32;x++,i++)
-      TH_DEBUG("%x", ((cpi->pb.SBFullyFlags[i]!=0)|
-		      (cpi->PartiallyCodedFlags[i]!=0)));
-  }
-  TH_DEBUG("\n   ");
-  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+63)/64;y++){
-    TH_DEBUG("\n   ");
-    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+63)/64;x++,i++)
-      TH_DEBUG("%x", ((cpi->pb.SBFullyFlags[i]!=0)|
-		      (cpi->PartiallyCodedFlags[i]!=0)));
-  }
-  TH_DEBUG("\n   ");
-  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+63)/64;y++){
-    TH_DEBUG("\n   ");
-    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+63)/64;x++,i++)
-      TH_DEBUG("%x", ((cpi->pb.SBFullyFlags[i]!=0)|
-		      (cpi->PartiallyCodedFlags[i]!=0)));
-  }
-  TH_DEBUG("\n}\n");
-
-  if(i!=cpi->pb.SuperBlocks)
-    TH_DEBUG("WARNING!  superblock count, raster %d != flat %d\n",
-	     i,cpi->pb.SuperBlocks);
-
-  TH_DEBUG("block coded flags = {");
-
-  i=0;
-
-  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+7)/8;y++){
-    TH_DEBUG("\n   ");
-    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+7)/8;x++,i++)
-      TH_DEBUG("%x", blockraster[i]);
-  }
-  TH_DEBUG("\n   ");
-  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+15)/16;y++){
-    TH_DEBUG("\n   ");
-    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+15)/16;x++,i++)
-      TH_DEBUG("%x", blockraster[i]);
-  }
-  TH_DEBUG("\n   ");
-  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+15)/16;y++){
-    TH_DEBUG("\n   ");
-    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+15)/16;x++,i++)
-      TH_DEBUG("%x", blockraster[i]);
-  }
-  TH_DEBUG("\n}\n");
-
-  if(i!=cpi->pb.UnitFragments)
-    TH_DEBUG("WARNING!  block count, raster %d != flat %d\n",
-	     i,cpi->pb.UnitFragments);
-#endif	      
-
-  /* Code list of partially coded Super-Block.  */
-  val = cpi->PartiallyCodedFlags[0];
-  oggpackB_write( cpi->oggbuffer, (ogg_uint32_t)val, 1);
-
-  i = 0; 
-  while ( i < cpi->pb.SuperBlocks ) {
-    run_count = 0;
-    while ( (i<cpi->pb.SuperBlocks) && 
-	    (cpi->PartiallyCodedFlags[i]==val) &&
-	    run_count<4129 ) {
-      i++;
+    if(run_last == partial && run_count < 4129){
       run_count++;
+    }else{
+      if(run_break)
+	oggpackB_write( cpi->oggbuffer, partial, 1);
+  
+      run_break=0;
+      FrArrayCodeSBRun( cpi, run_count );      
+      if(run_count >= 4129) run_break = 1;
+      run_count=1;
     }
-
-    /* Code the run */
-    FrArrayCodeSBRun( cpi, run_count);
-
-    if(run_count >= 4129 && i < cpi->pb.SuperBlocks ){
-      val = cpi->PartiallyCodedFlags[i];
-      oggpackB_write( cpi->oggbuffer, (ogg_uint32_t)val, 1);
-      
-    }else
-      val = ( val == 0 ) ? 1 : 0;
+    run_last=partial;
   }
+  if(run_break)
+    oggpackB_write( cpi->oggbuffer, partial, 1);
+  if(run_count)
+    FrArrayCodeSBRun(cpi, run_count);      
 
-  /* RLC Super-Block fully/not coded. */
-  i = 0; 
-
-  /* Skip partially coded blocks */
-  while( (i < cpi->pb.SuperBlocks) && cpi->PartiallyCodedFlags[i] )
-    i++;
-
-  if ( i < cpi->pb.SuperBlocks ) {
-    val = cpi->pb.SBFullyFlags[i];
-    oggpackB_write( cpi->oggbuffer, (ogg_uint32_t)val, 1);
-
-    while ( i < cpi->pb.SuperBlocks ) {
-      run_count = 0;
-      while ( (i < cpi->pb.SuperBlocks) && 
-	      (cpi->pb.SBFullyFlags[i] == val) &&
-	      run_count < 4129) {
-        i++;
-        /* Skip partially coded blocks */
-        while( (i < cpi->pb.SuperBlocks) && cpi->PartiallyCodedFlags[i] )
-          i++;
-        run_count++;
+  /* code the fully coded/uncoded SB flags */
+  run_last = -1;
+  run_count = 0;
+  run_break = 0;
+  for( SB = 0; SB < cpi->super_total; SB++ ) {
+    superblock_t *sp = &cpi->super[0][SB];
+    int coded = 0;
+    fully = 1;
+    
+    for ( B=0; B<16; B++ ) {
+      fragment_t *fp = sp->f[B];
+      if ( fp ) {
+	if ( fp->coded ) {
+	  coded = 1;
+	}else{
+	  fully = 0;
+	}
       }
-
-      /* Code the run */
-      FrArrayCodeSBRun( cpi, run_count );
-
-    if(run_count >= 4129 && i < cpi->pb.SuperBlocks ){
-      val = cpi->PartiallyCodedFlags[i];
-      oggpackB_write( cpi->oggbuffer, (ogg_uint32_t)val, 1);
-    }else
-      val = ( val == 0 ) ? 1 : 0;
     }
+    
+    if(!fully && coded) continue;
+    
+    if(run_last == -1){
+      oggpackB_write( cpi->oggbuffer, fully, 1);      
+      run_last = fully;
+    }
+    
+    if(run_last == fully && run_count < 4129){
+      run_count++;
+    }else{
+      if(run_break)
+	oggpackB_write( cpi->oggbuffer, fully, 1);
+      run_break=0;
+      FrArrayCodeSBRun( cpi, run_count );      
+      if(run_count >= 4129) run_break = 1;
+      run_count=1;
+    }
+    run_last=fully;
   }
+  if(run_break)
+    oggpackB_write( cpi->oggbuffer, fully, 1);
 
+  if(run_count)
+    FrArrayCodeSBRun(cpi, run_count);      
 
-  /*  Now code the block flags */
-  if ( BListIndex > 0 ) {
-    /* Code the block flags start value */
-    val = cpi->BlockCodedFlags[0];
-    oggpackB_write( cpi->oggbuffer, (ogg_uint32_t)val, 1);
+  /* code the block flags */
+  run_last = -1;
+  run_count = 0;
+  for( SB = 0; SB < cpi->super_total; SB++ ) {
+    superblock_t *sp = &cpi->super[0][SB];
+    int coded = 0;
+    fully = 1;
 
-    /* Now code the block flags. */
-    for ( i = 0; i < BListIndex; ) {
-      run_count = 0;
-      while ( (cpi->BlockCodedFlags[i] == val) && (i < BListIndex) ) {
-        i++;
-        run_count++;
+    for ( B=0; B<16; B++ ) {
+      fragment_t *fp = sp->f[B];      
+      if ( fp ) {
+	if ( fp->coded ) {
+	  coded = 1;
+	}else{
+	  fully = 0; /* SB not fully coded */
+	}
       }
+    }
 
-      FrArrayCodeBlockRun( cpi, run_count );
+    if(fully || !coded) continue;
 
-      val = ( val == 0 ) ? 1 : 0;
+    for ( B=0; B<16; B++ ) {
+      fragment_t *fp = sp->f[B];      
+      if(fp){
+	if(run_last == -1){
+	  oggpackB_write( cpi->oggbuffer, fp->coded, 1);      
+	  run_last = fp->coded;
+	}
+	
+	if(run_last == fp->coded){
+	  run_count++;
+	}else{
+	  FrArrayCodeBlockRun( cpi, run_count );
+	  run_count=1;
+	}
+	run_last=fp->coded;
+      }
     }
   }
+  if(run_count)
+    FrArrayCodeBlockRun( cpi, run_count );
+
 }
-
-
-

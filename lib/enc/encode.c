@@ -171,7 +171,7 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi,
 	     assosciated MB as coded. */
 	  if ( fp->coded ) {
 	    /* Create linear list of coded block indices */
-	    cpi->pb.CodedBlockList[cpi->pb.CodedBlockIndex++] = fp;
+	    cpi->CodedBlockList[cpi->CodedBlockIndex++] = fp;
 	    
 	    /* MB is still coded */
 	    coded = 1;
@@ -692,20 +692,20 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
   cpi->TokensCoded = 0;
 
   /* Blank the various fragment data structures before we start. */
-  for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) {
-    fragment_t *fp = cpi->pb.CodedBlockList[i];
+  for ( i = 0; i < cpi->CodedBlockIndex; i++ ) {
+    fragment_t *fp = cpi->CodedBlockList[i];
     fp->coeffs_packed = 0;
     fp->tokens_packed = 0;
   }
 
   /* The tree is not needed (implicit) for key frames */
-  if ( cpi->pb.FrameType != KEY_FRAME ){
+  if ( cpi->FrameType != KEY_FRAME ){
     /* Pack the quad tree fragment mapping. */
     PackAndWriteDFArray( cpi );
   }
 
   /* Mode and MV data not needed for key frames. */
-  if ( cpi->pb.FrameType != KEY_FRAME ){
+  if ( cpi->FrameType != KEY_FRAME ){
     /* Pack and code the mode list. */
     PackModes(cpi);
     /* Pack the motion vectors */
@@ -713,9 +713,9 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
   }
 
   /* Optimise the DC tokens */
-  for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) {
+  for ( i = 0; i < cpi->CodedBlockIndex; i++ ) {
     /* Get the linear index for the current fragment. */
-    fragment_t *fp = cpi->pb.CodedBlockList[i];
+    fragment_t *fp = cpi->CodedBlockList[i];
     fp->nonzero = EncodedCoeffs;
     PackToken(cpi, fp, DC_HUFF_OFFSET );
   }
@@ -742,9 +742,9 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
       HuffIndex = AC_HUFF_OFFSET + (AC_HUFF_CHOICES * 3);
 
     /* Repeatedly scan through the list of blocks. */
-    for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) {
+    for ( i = 0; i < cpi->CodedBlockIndex; i++ ) {
       /* Get the linear index for the current fragment. */
-      fragment_t *fp = cpi->pb.CodedBlockList[i];
+      fragment_t *fp = cpi->CodedBlockList[i];
 
       /* Should we code a token for this block on this pass. */
       if ( fp->tokens_packed < fp->tokens_coded &&
@@ -782,7 +782,7 @@ void EncodeData(CP_INSTANCE *cpi){
   /* Initialise the coded block indices variables. These allow
      subsequent linear access to the quad tree ordered list of coded
      blocks */
-  cpi->pb.CodedBlockIndex = 0;
+  cpi->CodedBlockIndex = 0;
 
   dsp_save_fpu (cpi->dsp);
 
@@ -796,7 +796,7 @@ void EncodeData(CP_INSTANCE *cpi){
 #ifdef _TH_DEBUG_
  {
    int j;
-   for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) {
+   for ( i = 0; i < cpi->CodedBlockIndex; i++ ) {
      fragment_t *fp = cpi->frag[0][i];
      for(j=0;j<64;j++)
        fp->QUAN[j] = fp->dct[j];
@@ -805,8 +805,8 @@ void EncodeData(CP_INSTANCE *cpi){
 #endif
 
   /* Pack DCT tokens */
-  for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) 
-    DPCMTokenizeBlock ( cpi, cpi->pb.CodedBlockList[i] );
+  for ( i = 0; i < cpi->CodedBlockIndex; i++ ) 
+    DPCMTokenizeBlock ( cpi, cpi->CodedBlockList[i] );
 
   /* Bit pack the video data data */
   PackCodedVideo(cpi);
@@ -949,39 +949,32 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
 
         /* Look at the intra coding error. */
-        MBIntraError = GetMBIntraError( cpi, 
-					mp,
-					PixelsPerLine );
+        MBIntraError = GetMBIntraError( cpi, mp, PixelsPerLine );
         BestError = (BestError > MBIntraError) ? MBIntraError : BestError;
 
         /* Get the golden frame error */
-        MBGFError = GetMBInterError( cpi, cpi->yuvptr,
-                                     cpi->pb.GoldenFrame, 
-				     mp,
-                                     0, 0, PixelsPerLine );
+        MBGFError = GetMBInterError( cpi, cpi->yuvptr, cpi->GoldenFrame, 
+				     mp, 0, 0, PixelsPerLine );
         BestError = (BestError > MBGFError) ? MBGFError : BestError;
 
         /* Calculate the 0,0 case. */
         MBInterError = GetMBInterError( cpi, cpi->yuvptr,
-                                        cpi->pb.LastFrameRecon,
-					mp,
-                                        0, 0, PixelsPerLine );
+                                        cpi->LastFrameRecon,
+					mp, 0, 0, PixelsPerLine );
         BestError = (BestError > MBInterError) ? MBInterError : BestError;
 
         /* Measure error for last MV */
         MBLastInterError =  GetMBInterError( cpi, cpi->yuvptr,
-                                             cpi->pb.LastFrameRecon,
-					     mp,
-                                             LastInterMVect.x,
+                                             cpi->LastFrameRecon,
+					     mp, LastInterMVect.x,
                                              LastInterMVect.y, PixelsPerLine );
         BestError = (BestError > MBLastInterError) ?
           MBLastInterError : BestError;
 
         /* Measure error for prior last MV */
         MBPriorLastInterError =  GetMBInterError( cpi, cpi->yuvptr,
-                                                  cpi->pb.LastFrameRecon,
-						  mp,
-                                                  PriorLastInterMVect.x,
+                                                  cpi->LastFrameRecon,
+						  mp, PriorLastInterMVect.x,
                                                   PriorLastInterMVect.y,
                                                   PixelsPerLine );
         BestError = (BestError > MBPriorLastInterError) ?
@@ -998,9 +991,8 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
           /* Use a mix of heirachical and exhaustive searches for
              quick mode. */
           if ( cpi->info.quick_p ) {
-            MBInterMVError = GetMBMVInterError( cpi, cpi->pb.LastFrameRecon,
-						mp,
-						PixelsPerLine,
+            MBInterMVError = GetMBMVInterError( cpi, cpi->LastFrameRecon,
+						mp, PixelsPerLine,
                                                 cpi->MVPixelOffsetY,
                                                 &InterMVect );
 
@@ -1010,7 +1002,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                  (BestError > cpi->ExhaustiveSearchThresh) ) {
 
               MBInterMVExError =
-                GetMBMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
+                GetMBMVExhaustiveSearch( cpi, cpi->LastFrameRecon,
 					 mp,
                                          PixelsPerLine,
                                          &InterMVectEx );
@@ -1026,7 +1018,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
           }else{
             /* Use an exhaustive search */
             MBInterMVError =
-              GetMBMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
+              GetMBMVExhaustiveSearch( cpi, cpi->LastFrameRecon,
 				       mp,
                                        PixelsPerLine,
                                        &InterMVect );
@@ -1048,14 +1040,14 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         GFMVect.y = 0;
         if ( BestError > cpi->MinImprovementForNewMV && cpi->MotionCompensation) {
           /* Do an MV search in the golden reference frame */
-          MBGF_MVError = GetMBMVInterError( cpi, cpi->pb.GoldenFrame,
+          MBGF_MVError = GetMBMVInterError( cpi, cpi->GoldenFrame,
 					    mp,
                                             PixelsPerLine,
                                             cpi->MVPixelOffsetY, &GFMVect );
 
           /* Measure error for last GFMV */
           LastMBGF_MVError =  GetMBInterError( cpi, cpi->yuvptr,
-                                               cpi->pb.GoldenFrame,
+                                               cpi->GoldenFrame,
 					       mp,
                                                LastGFMVect.x,
                                                LastGFMVect.y, PixelsPerLine );
@@ -1084,7 +1076,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         if ( BestError > cpi->FourMVThreshold && cpi->MotionCompensation) {
           /* Get the 4MV error. */
           MBInterFOURMVError =
-            GetFOURMVExhaustiveSearch( cpi, cpi->pb.LastFrameRecon,
+            GetFOURMVExhaustiveSearch( cpi, cpi->LastFrameRecon,
 				       mp,
                                        PixelsPerLine, FourMVect );
 
@@ -1214,7 +1206,7 @@ void WriteFrameHeader( CP_INSTANCE *cpi) {
   TH_DEBUG("\n>>>> beginning frame %ld\n\n",dframe);
 
   /* Output the frame type (base/key frame or inter frame) */
-  oggpackB_write( opb, cpi->pb.FrameType, 1 );
+  oggpackB_write( opb, cpi->FrameType, 1 );
   TH_DEBUG("frame type = video, %s\n",cpi->pb.FrameType?"predicted":"key");
   
   /* Write out details of the current value of Q... variable resolution. */
@@ -1224,7 +1216,7 @@ void WriteFrameHeader( CP_INSTANCE *cpi) {
   oggpackB_write( opb, 0, 1 );
 
   /* If the frame was a base frame then write out the frame dimensions. */
-  if ( cpi->pb.FrameType == KEY_FRAME ) {
+  if ( cpi->FrameType == KEY_FRAME ) {
     /* all bits reserved! */
     oggpackB_write( opb, 0, 3 );
   }

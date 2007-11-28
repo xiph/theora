@@ -41,27 +41,8 @@ void ClearFragmentInfo(CP_INSTANCE *cpi){
   PB_INSTANCE *pbi = &cpi->pb;
 
   /* free prior allocs if present */
-  if(pbi->CodedBlockList) _ogg_free(pbi->CodedBlockList);
-#ifdef _TH_DEBUG_
-  if(pbi->QFragTIME) _ogg_free(pbi->QFragTIME);
-  if(pbi->QFragFREQ) _ogg_free(pbi->QFragFREQ);
-  if(pbi->QFragQUAN) _ogg_free(pbi->QFragQUAN);
-  pbi->QFragTIME = 0;
-  pbi->QFragFREQ = 0;
-  pbi->QFragQUAN = 0;
-#endif
-
-  if(pbi->SBCodedFlags) _ogg_free(pbi->SBCodedFlags);
-  if(pbi->SBFullyFlags) _ogg_free(pbi->SBFullyFlags);
-  if(pbi->MBFullyFlags) _ogg_free(pbi->MBFullyFlags);
-  if(pbi->MBCodedFlags) _ogg_free(pbi->MBCodedFlags);
-
-  pbi->CodedBlockList = 0;
-  pbi->MBCodedFlags = 0;
-  pbi->MBFullyFlags = 0;
-
-  pbi->SBCodedFlags = 0;
-  pbi->SBFullyFlags = 0;
+  if(cpi->CodedBlockList) _ogg_free(cpi->CodedBlockList);
+  cpi->CodedBlockList = 0;
 
   if(cpi->RunHuffIndices)
     _ogg_free(cpi->RunHuffIndices);
@@ -69,18 +50,12 @@ void ClearFragmentInfo(CP_INSTANCE *cpi){
     _ogg_free(cpi->ModeList);
   if(cpi->MVList)
     _ogg_free(cpi->MVList);
-  if(cpi->PartiallyCodedFlags)
-    _ogg_free(cpi->PartiallyCodedFlags);
-  if(cpi->PartiallyCodedMbPatterns)
-    _ogg_free(cpi->PartiallyCodedMbPatterns);
   if(cpi->BlockCodedFlags)
     _ogg_free(cpi->BlockCodedFlags);
 
   cpi->RunHuffIndices = 0;
   cpi->ModeList = 0;
   cpi->MVList = 0;
-  cpi->PartiallyCodedFlags = 0;
-  cpi->PartiallyCodedMbPatterns = 0;
   cpi->BlockCodedFlags = 0;
 
 }
@@ -113,59 +88,24 @@ static void InitFragmentInfo(CP_INSTANCE * cpi){
      a waste of code. */
 
   cpi->RunHuffIndices =
-    _ogg_malloc(cpi->pb.UnitFragments*
+    _ogg_malloc(cpi->frag_total*
                 sizeof(*cpi->RunHuffIndices));
   cpi->BlockCodedFlags =
-    _ogg_malloc(cpi->pb.UnitFragments*
+    _ogg_malloc(cpi->frag_total*
                 sizeof(*cpi->BlockCodedFlags));
   cpi->ModeList =
-    _ogg_malloc(cpi->pb.UnitFragments*
+    _ogg_malloc(cpi->frag_total*
                 sizeof(*cpi->ModeList));
   cpi->MVList =
-    _ogg_malloc(cpi->pb.UnitFragments*
+    _ogg_malloc(cpi->frag_total*
                 sizeof(*cpi->MVList));
-  cpi->PartiallyCodedFlags =
-    _ogg_malloc(cpi->pb.MacroBlocks*
-                sizeof(*cpi->PartiallyCodedFlags));
-  cpi->PartiallyCodedMbPatterns =
-    _ogg_malloc(cpi->pb.MacroBlocks*
-                sizeof(*cpi->PartiallyCodedMbPatterns));
 
-  pbi->CodedBlockList =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->CodedBlockList));
-
-#ifdef _TH_DEBUG_
-
-  pbi->QFragTIME =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->QFragTIME));
-
-  pbi->QFragFREQ =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->QFragFREQ));
-
-  pbi->QFragQUAN =
-    _ogg_malloc(pbi->UnitFragments * sizeof(*pbi->QFragQUAN));
-
-#endif
-
-  /* Super Block Initialization */
-  pbi->SBCodedFlags =
-    _ogg_malloc(pbi->SuperBlocks * sizeof(*pbi->SBCodedFlags));
-
-  pbi->SBFullyFlags =
-    _ogg_malloc(pbi->SuperBlocks * sizeof(*pbi->SBFullyFlags));
-
-  /* Macro Block Initialization */
-  pbi->MBCodedFlags =
-    _ogg_malloc(pbi->MacroBlocks * sizeof(*pbi->MBCodedFlags));
-
-  pbi->MBFullyFlags =
-    _ogg_malloc(pbi->MacroBlocks * sizeof(*pbi->MBFullyFlags));
+  cpi->CodedBlockList =
+    _ogg_malloc(cpi->frag_total * sizeof(*cpi->CodedBlockList));
 
 }
 
 void ClearFrameInfo(CP_INSTANCE *cpi){
-  PB_INSTANCE *pbi = &cpi->pb;
-
   if(cpi->yuvptr)
     _ogg_free(cpi->yuvptr);
   cpi->yuvptr = 0;
@@ -197,33 +137,31 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
   cpi->super[1] = 0;
   cpi->super[2] = 0;
 
-  if(pbi->ThisFrameRecon )
-    _ogg_free(pbi->ThisFrameRecon );
-  if(pbi->GoldenFrame)
-    _ogg_free(pbi->GoldenFrame);
-  if(pbi->LastFrameRecon)
-    _ogg_free(pbi->LastFrameRecon);
+  if(cpi->LastFrameRecon )
+    _ogg_free(cpi->LastFrameRecon );
+  if(cpi->GoldenFrame)
+    _ogg_free(cpi->GoldenFrame);
+  if(cpi->ThisFrameRecon)
+    _ogg_free(cpi->ThisFrameRecon);
 
-  pbi->ThisFrameRecon = 0;
-  pbi->GoldenFrame = 0;
-  pbi->LastFrameRecon = 0;
+  cpi->LastFrameRecon = 0;
+  cpi->GoldenFrame = 0;
+  cpi->ThisFrameRecon = 0;
 }
 
 static void InitFrameInfo(CP_INSTANCE *cpi, unsigned int FrameSize){
-  PB_INSTANCE *pbi = &cpi->pb;
-
   /* clear any existing info */
   ClearFrameInfo(cpi);
 
   /* allocate frames */
-  pbi->ThisFrameRecon =
-    _ogg_malloc(FrameSize*sizeof(*pbi->ThisFrameRecon));
+  cpi->LastFrameRecon =
+    _ogg_malloc(FrameSize*sizeof(*cpi->LastFrameRecon));
 
-  pbi->GoldenFrame =
-    _ogg_malloc(FrameSize*sizeof(*pbi->GoldenFrame));
+  cpi->GoldenFrame =
+    _ogg_malloc(FrameSize*sizeof(*cpi->GoldenFrame));
 
-  pbi->LastFrameRecon =
-    _ogg_malloc(FrameSize*sizeof(*pbi->LastFrameRecon));
+  cpi->ThisFrameRecon =
+    _ogg_malloc(FrameSize*sizeof(*cpi->ThisFrameRecon));
 
   /* allocate frames */
   cpi->yuvptr =
@@ -356,18 +294,6 @@ static void InitFrameInfo(CP_INSTANCE *cpi, unsigned int FrameSize){
 
 void InitFrameDetails(CP_INSTANCE *cpi){
   int FrameSize;
-  PB_INSTANCE *pbi = &cpi->pb;
-
-    /* Set the frame size etc. */
-
-  pbi->YPlaneSize = cpi->info.width *
-    cpi->info.height;
-  pbi->UVPlaneSize = pbi->YPlaneSize / 4;
-  pbi->HFragments = cpi->info.width / HFRAGPIXELS;
-  pbi->VFragments = cpi->info.height / VFRAGPIXELS;
-  pbi->UnitFragments = ((pbi->VFragments * pbi->HFragments)*3)/2;
-  pbi->YPlaneFragments = pbi->HFragments * pbi->VFragments;
-  pbi->UVPlaneFragments = pbi->YPlaneFragments / 4;
 
   cpi->recon_stride[0] = (cpi->info.width + STRIDE_EXTRA);
   cpi->recon_stride[1] = (cpi->info.width + STRIDE_EXTRA) / 2;
@@ -383,26 +309,8 @@ void InitFrameDetails(CP_INSTANCE *cpi){
     cpi->recon_offset[2] = ry_size + ruv_size + cpi->recon_stride[2] * (UMV_BORDER/2) + (UMV_BORDER/2);
   }
 
-  /* Image dimensions in Super-Blocks */
-  pbi->YSBRows = (cpi->info.height/32)  +
-    ( cpi->info.height%32 ? 1 : 0 );
-  pbi->YSBCols = (cpi->info.width/32)  +
-    ( cpi->info.width%32 ? 1 : 0 );
-  pbi->UVSBRows = ((cpi->info.height/2)/32)  +
-    ( (cpi->info.height/2)%32 ? 1 : 0 );
-  pbi->UVSBCols = ((cpi->info.width/2)/32)  +
-    ( (cpi->info.width/2)%32 ? 1 : 0 );
-
-  /* Super-Blocks per component */
-  pbi->YSuperBlocks = pbi->YSBRows * pbi->YSBCols;
-  pbi->UVSuperBlocks = pbi->UVSBRows * pbi->UVSBCols;
-  pbi->SuperBlocks = pbi->YSuperBlocks+2*pbi->UVSuperBlocks;
-
-  /* Useful externals */
-  pbi->MacroBlocks = ((pbi->VFragments+1)/2)*((pbi->HFragments+1)/2);
-
-  InitFragmentInfo(cpi);
   InitFrameInfo(cpi, FrameSize);
+  InitFragmentInfo(cpi);
 
   /* Re-initialise the pixel index table. */
   CalcPixelIndexTable( cpi );
