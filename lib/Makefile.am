@@ -34,7 +34,6 @@ encoder_sources = \
 	enc/encoder_idct.c \
 	enc/encoder_toplevel.c \
 	enc/encoder_quant.c \
-	enc/blockmap.c \
 	enc/dct.c \
 	enc/dct_decode.c \
 	enc/frarray.c \
@@ -99,7 +98,6 @@ endif
 noinst_HEADERS = \
 	cpu.h \
 	internal.h \
-	enc/block_inline.h \
 	enc/codec_internal.h \
 	enc/encoder_lookup.h \
 	enc/encoder_huffman.h \
