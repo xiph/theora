@@ -19,7 +19,6 @@
 #include <string.h>
 #include "codec_internal.h"
 #include "encoder_lookup.h"
-#include "block_inline.h"
 
 static void PredictDC(CP_INSTANCE *cpi){
   ogg_int32_t plane;
@@ -854,9 +853,6 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                        ogg_uint32_t SBRows, ogg_uint32_t SBCols,
                        ogg_uint32_t PixelsPerLine,
                        ogg_uint32_t *InterError, ogg_uint32_t *IntraError) {
-  ogg_int32_t   YFragIndex;
-  ogg_int32_t   UFragIndex;
-  ogg_int32_t   VFragIndex;
   ogg_uint32_t  MB, B;      /* Macro-Block, Block indices */
   ogg_uint32_t  SBrow;      /* Super-Block row number */
   ogg_uint32_t  SBcol;      /* Super-Block row number */
@@ -880,60 +876,24 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                                            block */
   ogg_uint32_t  BestError;              /* Best error so far. */
 
-  mv_t          FourMVect[6];     /* storage for last used vectors (one
-                                     entry for each block in MB) */
-  mv_t          LastInterMVect;   /* storage for last used Inter frame
-                                     MB motion vector */
-  mv_t          PriorLastInterMVect;  /* storage for prior last used
-                                         Inter frame MB motion vector */
-  mv_t          TmpMVect;         /* Temporary MV storage */
-  mv_t          LastGFMVect;      /* storage for last used Golden
-                                     Frame MB motion vector */
-  mv_t          InterMVect;       /* storage for motion vector */
-  mv_t          InterMVectEx;     /* storage for motion vector result
-                                     from exhaustive search */
-  mv_t          GFMVect;          /* storage for motion vector */
-  mv_t          ZeroVect;
+  mv_t          FourMVect[6] = {{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}};
+  mv_t          LastInterMVect = {0,0};
+  mv_t          PriorLastInterMVect = {0,0};
+  mv_t          TmpMVect = {0,0};  
+  mv_t          LastGFMVect = {0,0};
+  mv_t          InterMVect = {0,0};
+  mv_t          InterMVectEx = {0,0};
+  mv_t          GFMVect = {0,0};
+  mv_t          ZeroVect = {0,0};
 
-  ogg_uint32_t UVRow;
-  ogg_uint32_t UVColumn;
-  ogg_uint32_t UVFragOffset;
-
-  int          MBCodedFlag;
+  int           MBCodedFlag;
   unsigned char QIndex = cpi->BaseQ; // temporary
 
   /* initialize error scores */
   *InterError = 0;
   *IntraError = 0;
-
-  /* clear down the default motion vector. */
   cpi->MvListCount = 0;
-  FourMVect[0].x = 0;
-  FourMVect[0].y = 0;
-  FourMVect[1].x = 0;
-  FourMVect[1].y = 0;
-  FourMVect[2].x = 0;
-  FourMVect[2].y = 0;
-  FourMVect[3].x = 0;
-  FourMVect[3].y = 0;
-  FourMVect[4].x = 0;
-  FourMVect[4].y = 0;
-  FourMVect[5].x = 0;
-  FourMVect[5].y = 0;
-  LastInterMVect.x = 0;
-  LastInterMVect.y = 0;
-  PriorLastInterMVect.x = 0;
-  PriorLastInterMVect.y = 0;
-  LastGFMVect.x = 0;
-  LastGFMVect.y = 0;
-  InterMVect.x = 0;
-  InterMVect.y = 0;
-  GFMVect.x = 0;
-  GFMVect.y = 0;
-
-  ZeroVect.x = 0;
-  ZeroVect.y = 0;
-
+  
   /* change the quatization matrix to the one at best Q to compute the
      new error score */
   cpi->MinImprovementForNewMV = (MvThreshTable[QIndex] << 12);
@@ -976,16 +936,6 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 	
         /* This one isn't coded go to the next one */
         if(!MBCodedFlag) continue;
-
-        /* Calculate U and V FragIndex from YFragIndex */
-        YFragIndex = QuadMapToMBTopLeft(cpi->pb.BlockMap, SB,MB);
-        UVRow = (YFragIndex / (cpi->pb.HFragments * 2));
-        UVColumn = (YFragIndex % cpi->pb.HFragments) / 2;
-        UVFragOffset = (UVRow * (cpi->pb.HFragments / 2)) + UVColumn;
-        UFragIndex = cpi->pb.YPlaneFragments + UVFragOffset;
-        VFragIndex = cpi->pb.YPlaneFragments + cpi->pb.UVPlaneFragments +
-          UVFragOffset;
-
 
         /**************************************************************
          Find the block choice with the lowest error

@@ -187,11 +187,6 @@ typedef struct PB_INSTANCE {
   fragment_t   **CodedBlockList;           
 
   /***********************************************************************/
-  /* Macro Block and SuperBlock Information */
-  ogg_int32_t  (*BlockMap)[4][4];               /* super block + sub macro
-                                                   block + sub frag ->
-                                                   FragIndex */
-
   /* Coded flag arrays and counters for them */
   unsigned char *SBCodedFlags;
   unsigned char *SBFullyFlags;
@@ -444,11 +439,6 @@ extern ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                               ogg_uint32_t PixelsPerLine,
                               ogg_uint32_t *InterError,
                               ogg_uint32_t *IntraError);
-
-extern void CreateBlockMapping ( ogg_int32_t  (*BlockMap)[4][4],
-                                 ogg_uint32_t YSuperBlocks,
-                                 ogg_uint32_t UVSuperBlocks,
-                                 ogg_uint32_t HFrags, ogg_uint32_t VFrags );
 
 extern void ClearFragmentInfo (CP_INSTANCE *cpi);
 extern void ClearFrameInfo (CP_INSTANCE *cpi);

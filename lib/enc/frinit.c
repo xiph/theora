@@ -50,7 +50,6 @@ void ClearFragmentInfo(CP_INSTANCE *cpi){
   pbi->QFragFREQ = 0;
   pbi->QFragQUAN = 0;
 #endif
-  if(pbi->BlockMap) _ogg_free(pbi->BlockMap);
 
   if(pbi->SBCodedFlags) _ogg_free(pbi->SBCodedFlags);
   if(pbi->SBFullyFlags) _ogg_free(pbi->SBFullyFlags);
@@ -60,7 +59,6 @@ void ClearFragmentInfo(CP_INSTANCE *cpi){
   pbi->CodedBlockList = 0;
   pbi->MBCodedFlags = 0;
   pbi->MBFullyFlags = 0;
-  pbi->BlockMap = 0;
 
   pbi->SBCodedFlags = 0;
   pbi->SBFullyFlags = 0;
@@ -162,9 +160,6 @@ static void InitFragmentInfo(CP_INSTANCE * cpi){
 
   pbi->MBFullyFlags =
     _ogg_malloc(pbi->MacroBlocks * sizeof(*pbi->MBFullyFlags));
-
-  pbi->BlockMap =
-    _ogg_malloc(pbi->SuperBlocks * sizeof(*pbi->BlockMap));
 
 }
 
@@ -409,12 +404,7 @@ void InitFrameDetails(CP_INSTANCE *cpi){
   InitFragmentInfo(cpi);
   InitFrameInfo(cpi, FrameSize);
 
-  /* Configure mapping between quad-tree and fragments */
-  CreateBlockMapping ( pbi->BlockMap, pbi->YSuperBlocks,
-                       pbi->UVSuperBlocks, pbi->HFragments, pbi->VFragments);
-
   /* Re-initialise the pixel index table. */
-
   CalcPixelIndexTable( cpi );
 
 }

@@ -252,9 +252,6 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
   unsigned char *SrcPtr[4] = {NULL, NULL, NULL, NULL};
   unsigned char *RefPtr[4] = {NULL, NULL, NULL, NULL};
   int            BestBlockOffset=0;
-
-  ogg_uint32_t  RefRow2Offset = cpi->recon_stride[0] * 8;
-
   int           disp[4];
   int           off = 0;
 

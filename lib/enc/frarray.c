@@ -17,7 +17,6 @@
 
 #include <string.h>
 #include "codec_internal.h"
-#include "block_inline.h"
 
 /* Long run bit string coding */
 static ogg_uint32_t FrArrayCodeSBRun( CP_INSTANCE *cpi, ogg_uint32_t value){
