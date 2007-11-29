@@ -213,7 +213,7 @@ static void EncodeDcTokenList (CP_INSTANCE *cpi) {
     Token = (ogg_uint32_t)cpi->OptimisedTokenList[i];
     for ( j = 0; j < DC_HUFF_CHOICES; j++ ){
       EntropyTableBits[cpi->OptimisedTokenListPl[i]][j] +=
-        cpi->pb.HuffCodeLengthArray_VP3x[DC_HUFF_OFFSET + j][Token];
+        cpi->HuffCodeLengthArray_VP3x[DC_HUFF_OFFSET + j][Token];
     }
   }
 
@@ -257,15 +257,15 @@ static void EncodeDcTokenList (CP_INSTANCE *cpi) {
       HuffIndex = (ogg_uint32_t)DC_HUFF_OFFSET + (ogg_uint32_t)DcHuffChoice[1];
 
     /* Add the bits to the encode holding buffer. */
-    oggpackB_write( opb, cpi->pb.HuffCodeArray_VP3x[HuffIndex][Token],
+    oggpackB_write( opb, cpi->HuffCodeArray_VP3x[HuffIndex][Token],
                      (ogg_uint32_t)cpi->
-                     pb.HuffCodeLengthArray_VP3x[HuffIndex][Token] );
+                     HuffCodeLengthArray_VP3x[HuffIndex][Token] );
 
     /* If the token is followed by an extra bits token then code it */
-    if ( cpi->pb.ExtraBitLengths_VP3x[Token] > 0 ) {
+    if ( cpi->ExtraBitLengths_VP3x[Token] > 0 ) {
       /* Add the bits to the encode holding buffer.  */
       oggpackB_write( opb, ExtraBitsToken,
-                       (ogg_uint32_t)cpi->pb.ExtraBitLengths_VP3x[Token] );
+                       (ogg_uint32_t)cpi->ExtraBitLengths_VP3x[Token] );
     }
 
   }
@@ -295,7 +295,7 @@ static void EncodeAcTokenList (CP_INSTANCE *cpi) {
     HuffIndex = cpi->OptimisedTokenListHi[i];
     for ( j = 0; j < AC_HUFF_CHOICES; j++ ) {
       EntropyTableBits[cpi->OptimisedTokenListPl[i]][j] +=
-        cpi->pb.HuffCodeLengthArray_VP3x[HuffIndex + j][Token];
+        cpi->HuffCodeLengthArray_VP3x[HuffIndex + j][Token];
     }
   }
 
@@ -336,15 +336,15 @@ static void EncodeAcTokenList (CP_INSTANCE *cpi) {
       AcHuffChoice[cpi->OptimisedTokenListPl[i]];
 
     /* Add the bits to the encode holding buffer. */
-    oggpackB_write( opb, cpi->pb.HuffCodeArray_VP3x[HuffIndex][Token],
-                     (ogg_uint32_t)cpi->
-                     pb.HuffCodeLengthArray_VP3x[HuffIndex][Token] );
+    oggpackB_write( opb, cpi->HuffCodeArray_VP3x[HuffIndex][Token],
+		    (ogg_uint32_t)cpi->
+		    HuffCodeLengthArray_VP3x[HuffIndex][Token] );
 
     /* If the token is followed by an extra bits token then code it */
-    if ( cpi->pb.ExtraBitLengths_VP3x[Token] > 0 ) {
+    if ( cpi->ExtraBitLengths_VP3x[Token] > 0 ) {
       /* Add the bits to the encode holding buffer. */
       oggpackB_write( opb, ExtraBitsToken,
-                       (ogg_uint32_t)cpi->pb.ExtraBitLengths_VP3x[Token] );
+		      (ogg_uint32_t)cpi->ExtraBitLengths_VP3x[Token] );
     }
   }
 
@@ -637,7 +637,7 @@ static void PackToken ( CP_INSTANCE *cpi,
 
   /* Update record of tokens coded and where we are in this fragment. */
   /* Is there an extra bits token */
-  OneOrTwo = 1 + ( cpi->pb.ExtraBitLengths_VP3x[Token] > 0 );
+  OneOrTwo = 1 + ( cpi->ExtraBitLengths_VP3x[Token] > 0 );
 
   /* Advance to the next real token. */
   fp->tokens_packed += (unsigned char)OneOrTwo;
@@ -775,9 +775,6 @@ void EncodeData(CP_INSTANCE *cpi){
   
   /* Zero the mode and MV list indices. */
   cpi->ModeListCount = 0;
-  
-  /* Zero Decoder EOB run count */
-  cpi->pb.EOB_Run = 0;
   
   /* Initialise the coded block indices variables. These allow
      subsequent linear access to the quad tree ordered list of coded

@@ -152,35 +152,6 @@ typedef quant_table    quant_tables[64];
 typedef ogg_int32_t    iquant_table[64];
 typedef iquant_table   iquant_tables[64];
 
-/** Decoder (Playback) instance -- installed in a theora_state */
-typedef struct PB_INSTANCE {
-
-  ogg_uint32_t   EOB_Run;
-
-  ogg_int32_t    ReconPtr2Offset;       /* Offset for second reconstruction
-                                           in half pixel MC */
-  ogg_uint32_t   DcHuffChoice;          /* Huffman table selection variables */
-  unsigned char  ACHuffChoice;
-
-  /* Loop filter bounding values */
-  ogg_int16_t    FiltBoundingValue[256];
-
-  HUFF_ENTRY    *HuffRoot_VP3x[NUM_HUFF_TABLES];
-  ogg_uint32_t  *HuffCodeArray_VP3x[NUM_HUFF_TABLES];
-  unsigned char *HuffCodeLengthArray_VP3x[NUM_HUFF_TABLES];
-  const unsigned char *ExtraBitLengths_VP3x;
-
-  th_quant_info  quant_info;
-  quant_tables   quant_tables[2][3];
-  iquant_tables  iquant_tables[2][3];
-
-  /* Predictor used in choosing entropy table for decoding block patterns. */
-  unsigned char  BlockPatternPredictor;
-
-  DspFunctions   dsp;  /* Selected functions for this platform */
-
-} PB_INSTANCE;
-
 /* Encoder (Compressor) instance -- installed in a theora_state */
 typedef struct CP_INSTANCE {
   /*This structure must be first.
@@ -299,8 +270,16 @@ typedef struct CP_INSTANCE {
   signed char       HalfPixelXOffset[9];    /* Half pixel MV offsets for X */
   signed char       HalfPixelYOffset[9];    /* Half pixel MV offsets for Y */
 
-  /* instances (used for reconstructing buffers and to hold tokens etc.) */
-  PB_INSTANCE       pb;   /* playback */
+  /* hufftables and quant setup ****************************************/
+
+  HUFF_ENTRY    *HuffRoot_VP3x[NUM_HUFF_TABLES];
+  ogg_uint32_t  *HuffCodeArray_VP3x[NUM_HUFF_TABLES];
+  unsigned char *HuffCodeLengthArray_VP3x[NUM_HUFF_TABLES];
+  const unsigned char *ExtraBitLengths_VP3x;
+
+  th_quant_info  quant_info;
+  quant_tables   quant_tables[2][3];
+  iquant_tables  iquant_tables[2][3];
 
   /* ogg bitpacker for use in packet coding, other API state */
   oggpack_buffer   *oggbuffer;
@@ -321,25 +300,8 @@ extern void IDct1( ogg_int16_t * InputData,
                    ogg_int16_t *QuantMatrix,
                    ogg_int16_t * OutputData );
 
-extern void ReconIntra( PB_INSTANCE *pbi, unsigned char * ReconPtr,
-                        ogg_int16_t * ChangePtr, ogg_uint32_t LineStep );
-
-extern void ReconInter( PB_INSTANCE *pbi, unsigned char * ReconPtr,
-                        unsigned char * RefPtr, ogg_int16_t * ChangePtr,
-                        ogg_uint32_t LineStep ) ;
-
-extern void ReconInterHalfPixel2( PB_INSTANCE *pbi, unsigned char * ReconPtr,
-                                  unsigned char * RefPtr1,
-                                  unsigned char * RefPtr2,
-                                  ogg_int16_t * ChangePtr,
-                                  ogg_uint32_t LineStep ) ;
-
 extern void ReconRefFrames (CP_INSTANCE *cpi);
-extern void ExpandToken( ogg_int16_t * ExpandedBlock,
-                         unsigned char * CoeffIndex, ogg_uint32_t Token,
-                         ogg_int32_t ExtraBits );
-
-extern void quantize( PB_INSTANCE *pbi,
+extern void quantize( CP_INSTANCE *cpi,
 		      ogg_int32_t *iquant_table,
                       ogg_int16_t * DCT_block,
                       ogg_int16_t * quantized_list);
@@ -349,10 +311,10 @@ extern ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi,
 extern void TransformQuantizeBlock (CP_INSTANCE *cpi, fragment_t *fp, 
                                     ogg_uint32_t PixelsPerLine ) ;
 extern void InitFrameDetails(CP_INSTANCE *cpi);
-extern void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer *opb);
-extern void InitQTables( PB_INSTANCE *pbi );
-extern void InitHuffmanSet( PB_INSTANCE *pbi );
-extern void ClearHuffmanSet( PB_INSTANCE *pbi );
+extern void WriteQTables(CP_INSTANCE *cpi,oggpack_buffer *opb);
+extern void InitQTables( CP_INSTANCE *cpi );
+extern void InitHuffmanSet( CP_INSTANCE *cpi );
+extern void ClearHuffmanSet( CP_INSTANCE *cpi );
 extern void WriteHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES],
                               oggpack_buffer *opb);
 extern void PackAndWriteDFArray( CP_INSTANCE *cpi );

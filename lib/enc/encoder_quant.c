@@ -34,9 +34,9 @@ extern long dframe;
 #define OC_CLAMPI(_a,_b,_c) (OC_MAXI(_a,OC_MINI(_b,_c)))
 
 
-void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer* _opb) {
+void WriteQTables(CP_INSTANCE *cpi,oggpack_buffer* _opb) {
   
-  th_quant_info *_qinfo = &pbi->quant_info; 
+  th_quant_info *_qinfo = &cpi->quant_info; 
   
   const th_quant_ranges *qranges;
   const th_quant_base   *base_mats[2*3*64];
@@ -137,10 +137,10 @@ void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer* _opb) {
 
 /* a copied/reconciled version of derf's theora-exp code; redundancy
    should be eliminated at some point */
-void InitQTables( PB_INSTANCE *pbi ){
+void InitQTables( CP_INSTANCE *cpi ){
   int            qti; /* coding mode: intra or inter */
   int            pli; /* Y U V */
-  th_quant_info *qinfo = &pbi->quant_info;
+  th_quant_info *qinfo = &cpi->quant_info;
 
   for(qti=0;qti<2;qti++){
     for(pli=0;pli<3;pli++){
@@ -169,15 +169,15 @@ void InitQTables( PB_INSTANCE *pbi ){
 	  /*Scale DC the coefficient from the proper table.*/
 	  q=((ogg_uint32_t)qinfo->dc_scale[qi]*base[0]/100)<<2;
 	  q=OC_CLAMPI(OC_DC_QUANT_MIN[qti],q,OC_QUANT_MAX);
-	  pbi->quant_tables[qti][pli][qi][0]=(ogg_uint16_t)q;
-	  pbi->iquant_tables[qti][pli][qi][0]=(ogg_int32_t)(0.5 + (double)SHIFT16/q);
+	  cpi->quant_tables[qti][pli][qi][0]=(ogg_uint16_t)q;
+	  cpi->iquant_tables[qti][pli][qi][0]=(ogg_int32_t)(0.5 + (double)SHIFT16/q);
 
 	  /*Now scale AC coefficients from the proper table.*/
 	  for(ci=1;ci<64;ci++){
 	    q=((ogg_uint32_t)qinfo->ac_scale[qi]*base[ci]/100)<<2;
 	    q=OC_CLAMPI(OC_AC_QUANT_MIN[qti],q,OC_QUANT_MAX);
-	    pbi->quant_tables[qti][pli][qi][zigzag_index[ci]]=(ogg_uint16_t)q;
-	    pbi->iquant_tables[qti][pli][qi][ci]=(ogg_int32_t)(0.5 + (double)SHIFT16/q);
+	    cpi->quant_tables[qti][pli][qi][zigzag_index[ci]]=(ogg_uint16_t)q;
+	    cpi->iquant_tables[qti][pli][qi][ci]=(ogg_int32_t)(0.5 + (double)SHIFT16/q);
 	  }
 	  
 	  if(++qi>=qi_end)break;
@@ -272,7 +272,7 @@ void InitQTables( PB_INSTANCE *pbi ){
 
 }
 
-void quantize( PB_INSTANCE *pbi,
+void quantize( CP_INSTANCE *cpi,
 	       ogg_int32_t *q,
                ogg_int16_t *in,
                ogg_int16_t *out){

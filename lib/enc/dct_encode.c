@@ -361,7 +361,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
   int qi = cpi->BaseQ; // temporary
   int inter = (fp->mode != CODE_INTRA);
   int plane = (fp < cpi->frag[1] ? 0 : (fp < cpi->frag[2] ? 1 : 2)); 
-  ogg_int32_t *q = cpi->pb.iquant_tables[inter][plane][qi];
+  ogg_int32_t *q = cpi->iquant_tables[inter][plane][qi];
   ogg_int16_t DCTInput[64];
   ogg_int16_t DCTOutput[64];
   ogg_uint32_t ReconPixelsPerLine = cpi->recon_stride[plane];
@@ -389,7 +389,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
   dsp_fdct_short(cpi->dsp, DCTInput, DCTOutput);
 
   /* Quantize that transform data. */
-  quantize ( &cpi->pb, q, DCTOutput, fp->dct );
+  quantize (cpi, q, DCTOutput, fp->dct);
 
   if ( (fp->mode == CODE_INTER_NO_MV) &&
        ( AllZeroDctData(fp->dct) ) ) {

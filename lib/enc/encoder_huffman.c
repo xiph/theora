@@ -196,37 +196,37 @@ static void  ClearHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES]){
   }
 }
 
-void ClearHuffmanSet( PB_INSTANCE *pbi ){
+void ClearHuffmanSet( CP_INSTANCE *cpi ){
   int i;
 
-  ClearHuffmanTrees(pbi->HuffRoot_VP3x);
+  ClearHuffmanTrees(cpi->HuffRoot_VP3x);
 
   for ( i = 0; i < NUM_HUFF_TABLES; i++ )
-    if (pbi->HuffCodeArray_VP3x[i])
-      _ogg_free (pbi->HuffCodeArray_VP3x[i]);
+    if (cpi->HuffCodeArray_VP3x[i])
+      _ogg_free (cpi->HuffCodeArray_VP3x[i]);
 
   for ( i = 0; i < NUM_HUFF_TABLES; i++ )
-    if (pbi->HuffCodeLengthArray_VP3x[i])
-      _ogg_free (pbi->HuffCodeLengthArray_VP3x[i]);
+    if (cpi->HuffCodeLengthArray_VP3x[i])
+      _ogg_free (cpi->HuffCodeLengthArray_VP3x[i]);
 }
 
-void InitHuffmanSet( PB_INSTANCE *pbi ){
+void InitHuffmanSet( CP_INSTANCE *cpi ){
   int i;
 
-  ClearHuffmanSet(pbi);
+  ClearHuffmanSet(cpi);
 
-  pbi->ExtraBitLengths_VP3x = ExtraBitLengths_VP31;
+  cpi->ExtraBitLengths_VP3x = ExtraBitLengths_VP31;
 
   for ( i = 0; i < NUM_HUFF_TABLES; i++ ){
-    pbi->HuffCodeArray_VP3x[i] =
+    cpi->HuffCodeArray_VP3x[i] =
       _ogg_calloc(MAX_ENTROPY_TOKENS,
-                  sizeof(*pbi->HuffCodeArray_VP3x[i]));
-    pbi->HuffCodeLengthArray_VP3x[i] =
+                  sizeof(*cpi->HuffCodeArray_VP3x[i]));
+    cpi->HuffCodeLengthArray_VP3x[i] =
       _ogg_calloc(MAX_ENTROPY_TOKENS,
-                  sizeof(*pbi->HuffCodeLengthArray_VP3x[i]));
-    BuildHuffmanTree( pbi->HuffRoot_VP3x,
-                      pbi->HuffCodeArray_VP3x[i],
-                      pbi->HuffCodeLengthArray_VP3x[i],
+                  sizeof(*cpi->HuffCodeLengthArray_VP3x[i]));
+    BuildHuffmanTree( cpi->HuffRoot_VP3x,
+                      cpi->HuffCodeArray_VP3x[i],
+                      cpi->HuffCodeLengthArray_VP3x[i],
                       i, FrequencyCounts_VP3[i]);
   }
 }

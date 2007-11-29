@@ -191,7 +191,6 @@ int theora_encode_init(theora_state *th, theora_info *c){
   theora_encode_dispatch_init(cpi);
 
   dsp_static_init (&cpi->dsp);
-  memcpy (&cpi->pb.dsp, &cpi->dsp, sizeof(DspFunctions));
 
   c->version_major=TH_VERSION_MAJOR;
   c->version_minor=TH_VERSION_MINOR;
@@ -261,11 +260,11 @@ int theora_encode_init(theora_state *th, theora_info *c){
   /* We always start at frame 1 */
   cpi->CurrentFrame = 1;
 
-  InitHuffmanSet(&cpi->pb);
+  InitHuffmanSet(cpi);
 
   /* This makes sure encoder version specific tables are initialised */
-  memcpy(&cpi->pb.quant_info, &TH_VP31_QUANT_INFO, sizeof(th_quant_info));
-  InitQTables(&cpi->pb);
+  memcpy(&cpi->quant_info, &TH_VP31_QUANT_INFO, sizeof(th_quant_info));
+  InitQTables(cpi);
 
   /* Indicate that the next frame to be compressed is the first in the
      current clip. */
@@ -536,8 +535,8 @@ int theora_encode_tables(theora_state *t, ogg_packet *op){
   oggpackB_write(cpi->oggbuffer,0x82,8);
   _tp_writebuffer(cpi->oggbuffer,"theora",6);
 
-  WriteQTables(&cpi->pb,cpi->oggbuffer);
-  WriteHuffmanTrees(cpi->pb.HuffRoot_VP3x,cpi->oggbuffer);
+  WriteQTables(cpi,cpi->oggbuffer);
+  WriteHuffmanTrees(cpi->HuffRoot_VP3x,cpi->oggbuffer);
 
 #ifndef LIBOGG2
   op->packet=oggpackB_get_buffer(cpi->oggbuffer);
@@ -564,7 +563,7 @@ static void theora_encode_clear (theora_state  *th){
   cpi=(CP_INSTANCE *)th->internal_encode;
   if(cpi){
 
-    ClearHuffmanSet(&cpi->pb);
+    ClearHuffmanSet(cpi);
     ClearFragmentInfo(cpi);
     ClearFrameInfo(cpi);
 
@@ -588,9 +587,6 @@ static double theora_encode_granule_time(theora_state *th,
  ogg_int64_t granulepos){
 #ifndef THEORA_DISABLE_FLOAT
   CP_INSTANCE *cpi=(CP_INSTANCE *)(th->internal_encode);
-  PB_INSTANCE *pbi=(PB_INSTANCE *)(th->internal_decode);
-
-  if(cpi)pbi=&cpi->pb;
 
   if(granulepos>=0){
     ogg_int64_t iframe=granulepos>>cpi->keyframe_granule_shift;
@@ -609,9 +605,6 @@ static double theora_encode_granule_time(theora_state *th,
 static ogg_int64_t theora_encode_granule_frame(theora_state *th,
  ogg_int64_t granulepos){
   CP_INSTANCE *cpi=(CP_INSTANCE *)(th->internal_encode);
-  PB_INSTANCE *pbi=(PB_INSTANCE *)(th->internal_decode);
-
-  if(cpi)pbi=&cpi->pb;
 
   if(granulepos>=0){
     ogg_int64_t iframe=granulepos>>cpi->keyframe_granule_shift;
@@ -627,14 +620,12 @@ static ogg_int64_t theora_encode_granule_frame(theora_state *th,
 static int theora_encode_control(theora_state *th,int req,
  void *buf,size_t buf_sz) {
   CP_INSTANCE *cpi;
-  PB_INSTANCE *pbi;
   int value;
   
   if(th == NULL)
     return TH_EFAULT;
 
   cpi = th->internal_encode;
-  pbi = &cpi->pb;
   
   switch(req) {
     case TH_ENCCTL_SET_QUANT_PARAMS:
@@ -644,16 +635,16 @@ static int theora_encode_control(theora_state *th,int req,
         return TH_EINVAL;
       }
       
-      memcpy(&pbi->quant_info, buf, sizeof(th_quant_info));
-      InitQTables(pbi);
+      memcpy(&cpi->quant_info, buf, sizeof(th_quant_info));
+      InitQTables(cpi);
       
       return 0;
     case TH_ENCCTL_SET_VP3_COMPATIBLE:
       if(cpi->HeadersWritten)
         return TH_EINVAL;
       
-      memcpy(&pbi->quant_info, &TH_VP31_QUANT_INFO, sizeof(th_quant_info));
-      InitQTables(pbi);
+      memcpy(&cpi->quant_info, &TH_VP31_QUANT_INFO, sizeof(th_quant_info));
+      InitQTables(cpi);
       
       return 0;
     case TH_ENCCTL_SET_SPLEVEL:

@@ -38,7 +38,6 @@ static void CalcPixelIndexTable(CP_INSTANCE *cpi){
 }
 
 void ClearFragmentInfo(CP_INSTANCE *cpi){
-  PB_INSTANCE *pbi = &cpi->pb;
 
   /* free prior allocs if present */
   if(cpi->CodedBlockList) _ogg_free(cpi->CodedBlockList);
@@ -61,7 +60,6 @@ void ClearFragmentInfo(CP_INSTANCE *cpi){
 }
 
 static void InitFragmentInfo(CP_INSTANCE * cpi){
-  PB_INSTANCE *pbi = &cpi->pb;
 
   /* clear any existing info */
   ClearFragmentInfo(cpi);
