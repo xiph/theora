@@ -136,7 +136,6 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
     /* Select modes and motion vectors for each of the blocks : return
        an error score for inter and intra */
     PickModes( cpi, cpi->super_v[0], cpi->super_h[0],
-               cpi->info.width,
                &InterError, &IntraError );
 
     /* decide whether we really should have made this frame a key frame */
@@ -251,7 +250,7 @@ int theora_encode_init(theora_state *th, theora_info *c){
   oggpackB_writeinit(cpi->oggbuffer, cpi->oggbufferstate);
 #endif 
 
-  InitFrameDetails(cpi);
+  InitFrameInfo(cpi);
 
   /* Initialise Motion compensation */
   InitMotionCompensation(cpi);
@@ -295,32 +294,29 @@ int theora_encode_YUVin(theora_state *t,
   /* Copy over input YUV to internal YUV buffers. */
   /* we invert the image for backward compatibility with VP3 */
   /* First copy over the Y data */
-  LocalDataPtr = cpi->yuvptr + yuv->y_width*(yuv->y_height - 1);
+  LocalDataPtr = cpi->frame + cpi->offset[0] + cpi->stride[0]*(yuv->y_height - 1);
   InputDataPtr = yuv->y;
   for ( i = 0; i < yuv->y_height; i++ ){
     memcpy( LocalDataPtr, InputDataPtr, yuv->y_width );
-    LocalDataPtr -= yuv->y_width;
+    LocalDataPtr -= cpi->stride[0];
     InputDataPtr += yuv->y_stride;
   }
 
   /* Now copy over the U data */
-  LocalDataPtr = &cpi->yuvptr[(yuv->y_height * yuv->y_width)];
-  LocalDataPtr += yuv->uv_width*(yuv->uv_height - 1);
+  LocalDataPtr = cpi->frame + cpi->offset[1] + cpi->stride[1]*(yuv->uv_height - 1);
   InputDataPtr = yuv->u;
   for ( i = 0; i < yuv->uv_height; i++ ){
     memcpy( LocalDataPtr, InputDataPtr, yuv->uv_width );
-    LocalDataPtr -= yuv->uv_width;
+    LocalDataPtr -= cpi->stride[1];
     InputDataPtr += yuv->uv_stride;
   }
 
   /* Now copy over the V data */
-  LocalDataPtr =
-    &cpi->yuvptr[((yuv->y_height*yuv->y_width)*5)/4];
-  LocalDataPtr += yuv->uv_width*(yuv->uv_height - 1);
+  LocalDataPtr = cpi->frame + cpi->offset[2] + cpi->stride[2]*(yuv->uv_height - 1);
   InputDataPtr = yuv->v;
   for ( i = 0; i < yuv->uv_height; i++ ){
     memcpy( LocalDataPtr, InputDataPtr, yuv->uv_width );
-    LocalDataPtr -= yuv->uv_width;
+    LocalDataPtr -= cpi->stride[2];
     InputDataPtr += yuv->uv_stride;
   }
 
@@ -564,7 +560,6 @@ static void theora_encode_clear (theora_state  *th){
   if(cpi){
 
     ClearHuffmanSet(cpi);
-    ClearFragmentInfo(cpi);
     ClearFrameInfo(cpi);
 
     oggpackB_writeclear(cpi->oggbuffer);

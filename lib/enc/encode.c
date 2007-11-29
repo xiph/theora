@@ -136,8 +136,7 @@ static void PredictDC(CP_INSTANCE *cpi){
 
 
 static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi,
-				int plane,
-				ogg_uint32_t PixelsPerLine){
+				int plane ){
 
   ogg_uint32_t SBs = cpi->super_n[plane];
   ogg_uint32_t SB, MB, B;
@@ -164,7 +163,7 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi,
 	if ( fp && fp->coded ) {
 	  
 	  /* transform and quantize block */
-	  TransformQuantizeBlock( cpi, fp, PixelsPerLine );
+	  TransformQuantizeBlock( cpi, fp );
 	  
 	  /* Has the block got struck off (no MV and no data
 	     generated after DCT) If not then mark it and the
@@ -784,9 +783,9 @@ void EncodeData(CP_INSTANCE *cpi){
   dsp_save_fpu (cpi->dsp);
 
   /* Encode and tokenise the Y, U and V components */
-  CodePlane(cpi, 0, cpi->info.width );
-  CodePlane(cpi, 1, cpi->info.width>>1 );
-  CodePlane(cpi, 2, cpi->info.width>>1 );
+  CodePlane(cpi, 0);
+  CodePlane(cpi, 1);
+  CodePlane(cpi, 2);
   
   PredictDC(cpi);
 
@@ -848,7 +847,6 @@ static void SetMBMotionVectorsAndMode(macroblock_t *mp,
 
 ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                        ogg_uint32_t SBRows, ogg_uint32_t SBCols,
-                       ogg_uint32_t PixelsPerLine,
                        ogg_uint32_t *InterError, ogg_uint32_t *IntraError) {
   ogg_uint32_t  MB, B;      /* Macro-Block, Block indices */
   ogg_uint32_t  SBrow;      /* Super-Block row number */
@@ -946,34 +944,33 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
 
         /* Look at the intra coding error. */
-        MBIntraError = GetMBIntraError( cpi, mp, PixelsPerLine );
+        MBIntraError = GetMBIntraError( cpi, mp );
         BestError = (BestError > MBIntraError) ? MBIntraError : BestError;
 
         /* Get the golden frame error */
-        MBGFError = GetMBInterError( cpi, cpi->yuvptr, cpi->GoldenFrame, 
-				     mp, 0, 0, PixelsPerLine );
+        MBGFError = GetMBInterError( cpi, cpi->frame, cpi->golden, 
+				     mp, 0, 0 );
         BestError = (BestError > MBGFError) ? MBGFError : BestError;
 
         /* Calculate the 0,0 case. */
-        MBInterError = GetMBInterError( cpi, cpi->yuvptr,
-                                        cpi->LastFrameRecon,
-					mp, 0, 0, PixelsPerLine );
+        MBInterError = GetMBInterError( cpi, cpi->frame,
+                                        cpi->lastrecon,
+					mp, 0, 0 );
         BestError = (BestError > MBInterError) ? MBInterError : BestError;
 
         /* Measure error for last MV */
-        MBLastInterError =  GetMBInterError( cpi, cpi->yuvptr,
-                                             cpi->LastFrameRecon,
+        MBLastInterError =  GetMBInterError( cpi, cpi->frame,
+                                             cpi->lastrecon,
 					     mp, LastInterMVect.x,
-                                             LastInterMVect.y, PixelsPerLine );
+                                             LastInterMVect.y );
         BestError = (BestError > MBLastInterError) ?
           MBLastInterError : BestError;
 
         /* Measure error for prior last MV */
-        MBPriorLastInterError =  GetMBInterError( cpi, cpi->yuvptr,
-                                                  cpi->LastFrameRecon,
+        MBPriorLastInterError =  GetMBInterError( cpi, cpi->frame,
+                                                  cpi->lastrecon,
 						  mp, PriorLastInterMVect.x,
-                                                  PriorLastInterMVect.y,
-                                                  PixelsPerLine );
+                                                  PriorLastInterMVect.y );
         BestError = (BestError > MBPriorLastInterError) ?
           MBPriorLastInterError : BestError;
 
@@ -988,8 +985,8 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
           /* Use a mix of heirachical and exhaustive searches for
              quick mode. */
           if ( cpi->info.quick_p ) {
-            MBInterMVError = GetMBMVInterError( cpi, cpi->LastFrameRecon,
-						mp, PixelsPerLine,
+            MBInterMVError = GetMBMVInterError( cpi, cpi->lastrecon,
+						mp,
                                                 cpi->MVPixelOffsetY,
                                                 &InterMVect );
 
@@ -999,9 +996,8 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                  (BestError > cpi->ExhaustiveSearchThresh) ) {
 
               MBInterMVExError =
-                GetMBMVExhaustiveSearch( cpi, cpi->LastFrameRecon,
+                GetMBMVExhaustiveSearch( cpi, cpi->lastrecon,
 					 mp,
-                                         PixelsPerLine,
                                          &InterMVectEx );
 
               /* Is the Variance measure for the EX search
@@ -1015,9 +1011,8 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
           }else{
             /* Use an exhaustive search */
             MBInterMVError =
-              GetMBMVExhaustiveSearch( cpi, cpi->LastFrameRecon,
+              GetMBMVExhaustiveSearch( cpi, cpi->lastrecon,
 				       mp,
-                                       PixelsPerLine,
                                        &InterMVect );
           }
 
@@ -1037,17 +1032,16 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         GFMVect.y = 0;
         if ( BestError > cpi->MinImprovementForNewMV && cpi->MotionCompensation) {
           /* Do an MV search in the golden reference frame */
-          MBGF_MVError = GetMBMVInterError( cpi, cpi->GoldenFrame,
+          MBGF_MVError = GetMBMVInterError( cpi, cpi->golden,
 					    mp,
-                                            PixelsPerLine,
                                             cpi->MVPixelOffsetY, &GFMVect );
 
           /* Measure error for last GFMV */
-          LastMBGF_MVError =  GetMBInterError( cpi, cpi->yuvptr,
-                                               cpi->GoldenFrame,
+          LastMBGF_MVError =  GetMBInterError( cpi, cpi->frame,
+                                               cpi->golden,
 					       mp,
                                                LastGFMVect.x,
-                                               LastGFMVect.y, PixelsPerLine );
+                                               LastGFMVect.y );
 
           /* Check against last GF motion vector and reset if the
              search has thrown a worse result. */
@@ -1073,9 +1067,9 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
         if ( BestError > cpi->FourMVThreshold && cpi->MotionCompensation) {
           /* Get the 4MV error. */
           MBInterFOURMVError =
-            GetFOURMVExhaustiveSearch( cpi, cpi->LastFrameRecon,
+            GetFOURMVExhaustiveSearch( cpi, cpi->lastrecon,
 				       mp,
-                                       PixelsPerLine, FourMVect );
+                                       FourMVect );
 
           /* If the improvement is great enough then use the four MV mode */
           if ( ((MBInterFOURMVError + cpi->MinImprovementForFourMV) <

@@ -22,163 +22,112 @@
 static void CalcPixelIndexTable(CP_INSTANCE *cpi){
   ogg_uint32_t plane,row,col;
   fragment_t *fp = cpi->frag[0];
-  ogg_uint32_t raw=0;
 
   for(plane=0;plane<3;plane++){
-    ogg_uint32_t recon = cpi->recon_offset[plane];
+    ogg_uint32_t offset = cpi->offset[plane];
     for(row=0;row<cpi->frag_v[plane];row++){
       for(col=0;col<cpi->frag_h[plane];col++,fp++){
-	fp->raw_index = raw+col*8;
-	fp->recon_index = recon+col*8;
+	fp->buffer_index = offset+col*8;
       }
-      raw += col*8*8;
-      recon += cpi->recon_stride[plane]*8;
+      offset += cpi->stride[plane]*8;
     }
   }
 }
 
-void ClearFragmentInfo(CP_INSTANCE *cpi){
+void ClearFrameInfo(CP_INSTANCE *cpi){
 
-  /* free prior allocs if present */
+  if(cpi->frame) _ogg_free(cpi->frame);
+  cpi->frame = 0;
+
+  if(cpi->lastrecon ) _ogg_free(cpi->lastrecon );
+  cpi->lastrecon = 0;
+
+  if(cpi->golden) _ogg_free(cpi->golden);
+  cpi->golden = 0;
+
+  if(cpi->recon) _ogg_free(cpi->recon);
+  cpi->recon = 0;
+
   if(cpi->CodedBlockList) _ogg_free(cpi->CodedBlockList);
   cpi->CodedBlockList = 0;
 
-  if(cpi->RunHuffIndices)
-    _ogg_free(cpi->RunHuffIndices);
-  if(cpi->ModeList)
-    _ogg_free(cpi->ModeList);
-  if(cpi->MVList)
-    _ogg_free(cpi->MVList);
-  if(cpi->BlockCodedFlags)
-    _ogg_free(cpi->BlockCodedFlags);
-
+  if(cpi->RunHuffIndices) _ogg_free(cpi->RunHuffIndices);
   cpi->RunHuffIndices = 0;
+
+  if(cpi->ModeList) _ogg_free(cpi->ModeList);
   cpi->ModeList = 0;
+
+  if(cpi->MVList) _ogg_free(cpi->MVList);
   cpi->MVList = 0;
+
+  if(cpi->BlockCodedFlags) _ogg_free(cpi->BlockCodedFlags);
   cpi->BlockCodedFlags = 0;
 
-}
-
-static void InitFragmentInfo(CP_INSTANCE * cpi){
-
-  /* clear any existing info */
-  ClearFragmentInfo(cpi);
-
-  /* A note to people reading and wondering why malloc returns aren't
-     checked:
-
-     lines like the following that implement a general strategy of
-     'check the return of malloc; a zero pointer means we're out of
-     memory!'...:
-
-     if(!cpi->extra_fragments) { EDeleteFragmentInfo(cpi); return FALSE; }
-     
-     ...are not useful.  It's true that many platforms follow this
-     malloc behavior, but many do not.  The more modern malloc
-     strategy is only to allocate virtual pages, which are not mapped
-     until the memory on that page is touched.  At *that* point, if
-     the machine is out of heap, the page fails to be mapped and a
-     SEGV is generated.
-
-     That means that if we want to deal with out of memory conditions,
-     we *must* be prepared to process a SEGV.  If we implement the
-     SEGV handler, there's no reason to to check malloc return; it is
-     a waste of code. */
-
-  cpi->RunHuffIndices =
-    _ogg_malloc(cpi->frag_total*
-                sizeof(*cpi->RunHuffIndices));
-  cpi->BlockCodedFlags =
-    _ogg_malloc(cpi->frag_total*
-                sizeof(*cpi->BlockCodedFlags));
-  cpi->ModeList =
-    _ogg_malloc(cpi->frag_total*
-                sizeof(*cpi->ModeList));
-  cpi->MVList =
-    _ogg_malloc(cpi->frag_total*
-                sizeof(*cpi->MVList));
-
-  cpi->CodedBlockList =
-    _ogg_malloc(cpi->frag_total * sizeof(*cpi->CodedBlockList));
-
-}
-
-void ClearFrameInfo(CP_INSTANCE *cpi){
-  if(cpi->yuvptr)
-    _ogg_free(cpi->yuvptr);
-  cpi->yuvptr = 0;
-
-  if(cpi->OptimisedTokenListEb )
-    _ogg_free(cpi->OptimisedTokenListEb);
+  if(cpi->OptimisedTokenListEb ) _ogg_free(cpi->OptimisedTokenListEb);
   cpi->OptimisedTokenListEb = 0;
 
-  if(cpi->OptimisedTokenList )
-    _ogg_free(cpi->OptimisedTokenList);
+  if(cpi->OptimisedTokenList ) _ogg_free(cpi->OptimisedTokenList);
   cpi->OptimisedTokenList = 0;
 
-  if(cpi->OptimisedTokenListHi )
-    _ogg_free(cpi->OptimisedTokenListHi);
+  if(cpi->OptimisedTokenListHi ) _ogg_free(cpi->OptimisedTokenListHi);
   cpi->OptimisedTokenListHi = 0;
 
-  if(cpi->OptimisedTokenListPl )
-    _ogg_free(cpi->OptimisedTokenListPl);
+  if(cpi->OptimisedTokenListPl ) _ogg_free(cpi->OptimisedTokenListPl);
   cpi->OptimisedTokenListPl = 0;
 
-  if(cpi->frag[0])_ogg_free(cpi->frag[0]);
-  if(cpi->macro)_ogg_free(cpi->macro);
-  if(cpi->super[0])_ogg_free(cpi->super[0]);
+  if(cpi->frag[0]) _ogg_free(cpi->frag[0]);
   cpi->frag[0] = 0;
   cpi->frag[1] = 0;
   cpi->frag[2] = 0;
+
+  if(cpi->macro) _ogg_free(cpi->macro);
   cpi->macro = 0;
+
+  if(cpi->super[0]) _ogg_free(cpi->super[0]);
   cpi->super[0] = 0;
   cpi->super[1] = 0;
   cpi->super[2] = 0;
 
-  if(cpi->LastFrameRecon )
-    _ogg_free(cpi->LastFrameRecon );
-  if(cpi->GoldenFrame)
-    _ogg_free(cpi->GoldenFrame);
-  if(cpi->ThisFrameRecon)
-    _ogg_free(cpi->ThisFrameRecon);
-
-  cpi->LastFrameRecon = 0;
-  cpi->GoldenFrame = 0;
-  cpi->ThisFrameRecon = 0;
 }
 
-static void InitFrameInfo(CP_INSTANCE *cpi, unsigned int FrameSize){
-  /* clear any existing info */
-  ClearFrameInfo(cpi);
+/* A note to people reading and wondering why malloc returns aren't
+   checked:
+   
+   lines like the following that implement a general strategy of
+   'check the return of malloc; a zero pointer means we're out of
+   memory!'...:
+   
+   if(!cpi->extra_fragments) { EDeleteFragmentInfo(cpi); return FALSE; }
+   
+   ...are not useful.  It's true that many platforms follow this
+   malloc behavior, but many do not.  The more modern malloc
+   strategy is only to allocate virtual pages, which are not mapped
+   until the memory on that page is touched.  At *that* point, if
+   the machine is out of heap, the page fails to be mapped and a
+   SEGV is generated.
+   
+   That means that if we want to deal with out of memory conditions,
+   we *must* be prepared to process a SEGV.  If we implement the
+   SEGV handler, there's no reason to to check malloc return; it is
+   a waste of code. */
 
-  /* allocate frames */
-  cpi->LastFrameRecon =
-    _ogg_malloc(FrameSize*sizeof(*cpi->LastFrameRecon));
+void InitFrameInfo(CP_INSTANCE *cpi){
+  int FrameSize;
 
-  cpi->GoldenFrame =
-    _ogg_malloc(FrameSize*sizeof(*cpi->GoldenFrame));
+  cpi->stride[0] = (cpi->info.width + STRIDE_EXTRA);
+  cpi->stride[1] = (cpi->info.width + STRIDE_EXTRA) / 2;
+  cpi->stride[2] = (cpi->info.width + STRIDE_EXTRA) / 2;
 
-  cpi->ThisFrameRecon =
-    _ogg_malloc(FrameSize*sizeof(*cpi->ThisFrameRecon));
+  {
+    ogg_uint32_t ry_size = cpi->stride[0] * (cpi->info.height + STRIDE_EXTRA);
+    ogg_uint32_t ruv_size = ry_size / 4;
+    FrameSize = ry_size + 2 * ruv_size;
 
-  /* allocate frames */
-  cpi->yuvptr =
-    _ogg_malloc(FrameSize*
-                sizeof(*cpi->yuvptr));
-  cpi->OptimisedTokenListEb =
-    _ogg_malloc(FrameSize*
-                sizeof(*cpi->OptimisedTokenListEb));
-  cpi->OptimisedTokenList =
-    _ogg_malloc(FrameSize*
-                sizeof(*cpi->OptimisedTokenList));
-  cpi->OptimisedTokenListHi =
-    _ogg_malloc(FrameSize*
-                sizeof(*cpi->OptimisedTokenListHi));
-  cpi->OptimisedTokenListPl =
-    _ogg_malloc(FrameSize*
-                sizeof(*cpi->OptimisedTokenListPl));
+    cpi->offset[0] = (cpi->stride[0] * UMV_BORDER) + UMV_BORDER;
+    cpi->offset[1] = ry_size + cpi->stride[1] * (UMV_BORDER/2) + (UMV_BORDER/2);
+    cpi->offset[2] = ry_size + ruv_size + cpi->stride[2] * (UMV_BORDER/2) + (UMV_BORDER/2);
+  }
 
-  /* new block abstraction setup... babysteps... */
   cpi->frag_h[0] = (cpi->info.width >> 3);
   cpi->frag_v[0] = (cpi->info.height >> 3);
   cpi->frag_n[0] = cpi->frag_h[0] * cpi->frag_v[0];
@@ -288,27 +237,41 @@ static void InitFrameInfo(CP_INSTANCE *cpi, unsigned int FrameSize){
     }
   }
 
-}
+  /* allocate frames */
+  cpi->frame = _ogg_malloc(FrameSize*sizeof(*cpi->frame));
+  cpi->lastrecon = _ogg_malloc(FrameSize*sizeof(*cpi->lastrecon));
+  cpi->golden = _ogg_malloc(FrameSize*sizeof(*cpi->golden));
+  cpi->recon = _ogg_malloc(FrameSize*sizeof(*cpi->recon));
 
-void InitFrameDetails(CP_INSTANCE *cpi){
-  int FrameSize;
+  cpi->OptimisedTokenListEb =
+    _ogg_malloc(FrameSize*
+                sizeof(*cpi->OptimisedTokenListEb));
+  cpi->OptimisedTokenList =
+    _ogg_malloc(FrameSize*
+                sizeof(*cpi->OptimisedTokenList));
+  cpi->OptimisedTokenListHi =
+    _ogg_malloc(FrameSize*
+                sizeof(*cpi->OptimisedTokenListHi));
+  cpi->OptimisedTokenListPl =
+    _ogg_malloc(FrameSize*
+                sizeof(*cpi->OptimisedTokenListPl));
 
-  cpi->recon_stride[0] = (cpi->info.width + STRIDE_EXTRA);
-  cpi->recon_stride[1] = (cpi->info.width + STRIDE_EXTRA) / 2;
-  cpi->recon_stride[2] = (cpi->info.width + STRIDE_EXTRA) / 2;
+  /* misc */
+  cpi->RunHuffIndices =
+    _ogg_malloc(cpi->frag_total*
+                sizeof(*cpi->RunHuffIndices));
+  cpi->BlockCodedFlags =
+    _ogg_malloc(cpi->frag_total*
+                sizeof(*cpi->BlockCodedFlags));
+  cpi->ModeList =
+    _ogg_malloc(cpi->frag_total*
+                sizeof(*cpi->ModeList));
+  cpi->MVList =
+    _ogg_malloc(cpi->frag_total*
+                sizeof(*cpi->MVList));
 
-  {
-    ogg_uint32_t ry_size = cpi->recon_stride[0] * (cpi->info.height + STRIDE_EXTRA);
-    ogg_uint32_t ruv_size = ry_size / 4;
-    FrameSize = ry_size + 2 * ruv_size;
-
-    cpi->recon_offset[0] = (cpi->recon_stride[0] * UMV_BORDER) + UMV_BORDER;
-    cpi->recon_offset[1] = ry_size + cpi->recon_stride[1] * (UMV_BORDER/2) + (UMV_BORDER/2);
-    cpi->recon_offset[2] = ry_size + ruv_size + cpi->recon_stride[2] * (UMV_BORDER/2) + (UMV_BORDER/2);
-  }
-
-  InitFrameInfo(cpi, FrameSize);
-  InitFragmentInfo(cpi);
+  cpi->CodedBlockList =
+    _ogg_malloc(cpi->frag_total * sizeof(*cpi->CodedBlockList));
 
   /* Re-initialise the pixel index table. */
   CalcPixelIndexTable( cpi );

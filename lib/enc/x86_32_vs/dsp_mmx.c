@@ -31,8 +31,7 @@
 static const ogg_int64_t V128 = 0x0080008000800080;
 
 static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
-                  ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine,
-                  ogg_uint32_t ReconPixelsPerLine) 
+			 ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine)
 {
 
     //Make non-zero to use the C-version
@@ -52,7 +51,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
 
     /* Start next row */
     FiltPtr += PixelsPerLine;
-    ReconPtr += ReconPixelsPerLine;
+    ReconPtr += PixelsPerLine;
     DctInputPtr += 8;
   }
 #else
@@ -85,7 +84,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
         /* Increment pointers */
         add		edx, 16		
         add		eax, PixelsPerLine		
-        add		ebx, ReconPixelsPerLine
+        add		ebx, PixelsPerLine
 
 
      /* ITERATION 2 */
@@ -106,7 +105,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
         /* Increment pointers */
         add		edx, 16		
         add		eax, PixelsPerLine		
-        add		ebx, ReconPixelsPerLine
+        add		ebx, PixelsPerLine
 
 
      /* ITERATION 3 */
@@ -127,7 +126,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
         /* Increment pointers */
         add		edx, 16		
         add		eax, PixelsPerLine		
-        add		ebx, ReconPixelsPerLine
+        add		ebx, PixelsPerLine
 
 
      /* ITERATION 4 */
@@ -148,7 +147,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
         /* Increment pointers */
         add		edx, 16		
         add		eax, PixelsPerLine		
-        add		ebx, ReconPixelsPerLine
+        add		ebx, PixelsPerLine
 
 
      /* ITERATION 5 */
@@ -169,7 +168,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
         /* Increment pointers */
         add		edx, 16		
         add		eax, PixelsPerLine		
-        add		ebx, ReconPixelsPerLine
+        add		ebx, PixelsPerLine
 
 
      /* ITERATION 6 */
@@ -190,7 +189,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
         /* Increment pointers */
         add		edx, 16		
         add		eax, PixelsPerLine		
-        add		ebx, ReconPixelsPerLine
+        add		ebx, PixelsPerLine
 
 
      /* ITERATION 7 */
@@ -211,7 +210,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
         /* Increment pointers */
         add		edx, 16		
         add		eax, PixelsPerLine		
-        add		ebx, ReconPixelsPerLine
+        add		ebx, PixelsPerLine
 
 
      /* ITERATION 8 */
@@ -232,7 +231,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
         /* Increment pointers */
         add		edx, 16		
         add		eax, PixelsPerLine		
-        add		ebx, ReconPixelsPerLine
+        add		ebx, PixelsPerLine
 
 
 
@@ -244,7 +243,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
 }
 
 static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
-                      ogg_uint32_t PixelsPerLine) 
+			     ogg_uint32_t PixelsPerLine) 
 {
 
 #if 0
@@ -416,9 +415,8 @@ static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
 
 
 static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
-                     unsigned char *ReconPtr2, ogg_int16_t *DctInputPtr,
-                     ogg_uint32_t PixelsPerLine,
-                     ogg_uint32_t ReconPixelsPerLine) 
+			     unsigned char *ReconPtr2, ogg_int16_t *DctInputPtr,
+			     ogg_uint32_t PixelsPerLine)
 {
 
 #if 0
@@ -437,8 +435,8 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
 
     /* Start next row */
     FiltPtr += PixelsPerLine;
-    ReconPtr1 += ReconPixelsPerLine;
-    ReconPtr2 += ReconPixelsPerLine;
+    ReconPtr1 += PixelsPerLine;
+    ReconPtr2 += PixelsPerLine;
     DctInputPtr += 8;
   }
 #else
@@ -479,8 +477,8 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
 	        ;	/* Increment pointers */
         add		edx, 16		;	
         add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
+        add		ebx, PixelsPerLine		;	
+        add		ecx, PixelsPerLine		;	
 	
 
         /*  ITERATION 2 */	
@@ -509,8 +507,8 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
 	        ;	/* Increment pointers */
         add		edx, 16		;	
         add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
+        add		ebx, PixelsPerLine		;	
+        add		ecx, PixelsPerLine		;	
 
 
         /*  ITERATION 3 */	
@@ -539,8 +537,8 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
 	        ;	/* Increment pointers */
         add		edx, 16		;	
         add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
+        add		ebx, PixelsPerLine		;	
+        add		ecx, PixelsPerLine		;	
 
 
         /*  ITERATION 4 */	
@@ -569,8 +567,8 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
 	        ;	/* Increment pointers */
         add		edx, 16		;	
         add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
+        add		ebx, PixelsPerLine		;	
+        add		ecx, PixelsPerLine		;	
 
 
         /*  ITERATION 5 */	
@@ -599,8 +597,8 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
 	        ;	/* Increment pointers */
         add		edx, 16		;	
         add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
+        add		ebx, PixelsPerLine		;	
+        add		ecx, PixelsPerLine		;	
 
 
         /*  ITERATION 6 */	
@@ -629,8 +627,8 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
 	        ;	/* Increment pointers */
         add		edx, 16		;	
         add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
+        add		ebx, PixelsPerLine		;	
+        add		ecx, PixelsPerLine		;	
 
 
         /*  ITERATION 7 */	
@@ -659,8 +657,8 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
 	        ;	/* Increment pointers */
         add		edx, 16		;	
         add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
+        add		ebx, PixelsPerLine		;	
+        add		ecx, PixelsPerLine		;	
 
 
         /*  ITERATION 8 */	
@@ -689,8 +687,8 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
 	        ;	/* Increment pointers */
         add		edx, 16		;	
         add		eax, PixelsPerLine		;	
-        add		ebx, ReconPixelsPerLine		;	
-        add		ecx, ReconPixelsPerLine		;	
+        add		ebx, PixelsPerLine		;	
+        add		ecx, PixelsPerLine		;	
 
     };
 

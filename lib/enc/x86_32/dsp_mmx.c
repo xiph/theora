@@ -46,11 +46,10 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t V128 = 0x008000800080
   /* Increment pointers */                                                    \
   "  add         $16, %2           \n\t"                                      \
   "  add         %3, %0           \n\t"                                       \
-  "  add         %4, %1           \n\t"
+  "  add         %3, %1           \n\t"
 
 static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
-                  ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine,
-                  ogg_uint32_t ReconPixelsPerLine) 
+			 ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine)
 {
   __asm__ __volatile__ (
     "  .p2align 4                   \n\t"
@@ -67,8 +66,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
      : "+r" (FiltPtr),
        "+r" (ReconPtr),
        "+r" (DctInputPtr)
-     : "m" (PixelsPerLine),
-       "m" (ReconPixelsPerLine) 
+     : "m" (PixelsPerLine)
      : "memory"
   );
 }
@@ -90,7 +88,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
 
 
 static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
-                      ogg_uint32_t PixelsPerLine) 
+			     ogg_uint32_t PixelsPerLine) 
 {
   __asm__ __volatile__ (
     "  .p2align 4                   \n\t"
@@ -139,14 +137,13 @@ static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
   /* Increment pointers */                                                    \
   "  add         $16, %3           \n\t"                                      \
   "  add         %4, %0           \n\t"                                       \
-  "  add         %5, %1           \n\t"                                       \
-  "  add         %5, %2           \n\t"  
+  "  add         %4, %1           \n\t"                                       \
+  "  add         %4, %2           \n\t"  
 
 
 static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
-                     unsigned char *ReconPtr2, ogg_int16_t *DctInputPtr,
-                     ogg_uint32_t PixelsPerLine,
-                     ogg_uint32_t ReconPixelsPerLine) 
+			     unsigned char *ReconPtr2, ogg_int16_t *DctInputPtr,
+			     ogg_uint32_t PixelsPerLine)
 {
   __asm__ __volatile__ (
     "  .p2align 4                   \n\t"
@@ -165,7 +162,6 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
        "+r" (ReconPtr2),
        "+r" (DctInputPtr)
      : "m" (PixelsPerLine),
-       "m" (ReconPixelsPerLine) 
      : "memory"
   );
 }
@@ -314,10 +310,10 @@ static ogg_uint32_t col_sad8x8__mmx (unsigned char *Src1, unsigned char *Src2,
   "  punpckhbw   %%mm6, %%mm1     \n\t"	/* unpack high four bytes to higher precision */ \
   "  add         %3, %1           \n\t"	/* Inc pointer into the new data */   \
   "  paddw       %%mm1, %%mm7     \n\t"	/* accumulate difference... */        \
-  "  add         %4, %2           \n\t"	/* Inc pointer into ref data */  
+  "  add         %3, %2           \n\t"	/* Inc pointer into ref data */  
 
-static ogg_uint32_t sad8x8__mmx (unsigned char *ptr1, ogg_uint32_t stride1,
-		       	    unsigned char *ptr2, ogg_uint32_t stride2)
+static ogg_uint32_t sad8x8__mmx (unsigned char *ptr1, unsigned char *ptr2, 
+				 ogg_uint32_t stride)
 {
   ogg_uint32_t  DiffVal;
 
@@ -345,25 +341,22 @@ static ogg_uint32_t sad8x8__mmx (unsigned char *ptr1, ogg_uint32_t stride1,
      : "=m" (DiffVal),
        "+r" (ptr1), 
        "+r" (ptr2) 
-     : "r" (stride1),
-       "r" (stride2)
+     : "r" (stride1)
      : "memory"
   );
 
   return DiffVal;
 }
 
-static ogg_uint32_t sad8x8_thres__mmx (unsigned char *ptr1, ogg_uint32_t stride1,
-		       		  unsigned char *ptr2, ogg_uint32_t stride2, 
-			   	  ogg_uint32_t thres)
+static ogg_uint32_t sad8x8_thres__mmx (unsigned char *ptr1, unsigned char *ptr2, ogg_uint32_t stride, 
+				       ogg_uint32_t thres)
 {
-  return sad8x8__mmx (ptr1, stride1, ptr2, stride2);
+  return sad8x8__mmx (ptr1, ptr2, stride);
 }
 
-static ogg_uint32_t sad8x8_xy2_thres__mmx (unsigned char *SrcData, ogg_uint32_t SrcStride,
-		                      unsigned char *RefDataPtr1,
-			              unsigned char *RefDataPtr2, ogg_uint32_t RefStride,
-			              ogg_uint32_t thres)
+static ogg_uint32_t sad8x8_xy2_thres__mmx (unsigned char *SrcData, unsigned char *RefDataPtr1,
+					   unsigned char *RefDataPtr2, ogg_uint32_t Stride,
+					   ogg_uint32_t thres)
 {
   ogg_uint32_t  DiffVal;
 
@@ -400,8 +393,8 @@ static ogg_uint32_t sad8x8_xy2_thres__mmx (unsigned char *SrcData, ogg_uint32_t 
     "  punpckhbw   %%mm6, %%mm1     \n\t"	/* unpack high four bytes to higher precision */
     "  add         %4, %1           \n\t"	/* Inc pointer into the new data */
     "  paddw       %%mm1, %%mm7     \n\t"	/* accumulate difference... */
-    "  add         %5, %2           \n\t"	/* Inc pointer into ref data */
-    "  add         %5, %3           \n\t"	/* Inc pointer into ref data */
+    "  add         %4, %2           \n\t"	/* Inc pointer into ref data */
+    "  add         %4, %3           \n\t"	/* Inc pointer into ref data */
 
     "  dec         %%edi            \n\t"
     "  jnz 1b                       \n\t"
@@ -419,8 +412,7 @@ static ogg_uint32_t sad8x8_xy2_thres__mmx (unsigned char *SrcData, ogg_uint32_t 
        "+r" (SrcData), 
        "+r" (RefDataPtr1), 
        "+r" (RefDataPtr2) 
-     : "m" (SrcStride),
-       "m" (RefStride)
+     : "m" (SrcStride)
      : "edi", "memory"
   );
 
@@ -486,8 +478,8 @@ static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint32_t Stri
   return (( (XXSum<<6) - XSum*XSum ) );
 }
 
-static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcStride,
-		                 unsigned char *RefDataPtr, ogg_uint32_t RefStride)
+static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, unsigned char *RefDataPtr, 
+				       ogg_uint32_t Stride)
 {
   ogg_uint32_t  XSum;
   ogg_uint32_t  XXSum;
@@ -523,7 +515,7 @@ static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcS
     "  paddd       %%mm2, %%mm7     \n\t"
 
     "  add         %4, %2           \n\t"	/* Inc pointer into src data */
-    "  add         %5, %3           \n\t"	/* Inc pointer into ref data */
+    "  add         %4, %3           \n\t"	/* Inc pointer into ref data */
 
     "  dec         %%edi            \n\t"
     "  jnz 1b                       \n\t"
@@ -547,8 +539,7 @@ static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcS
        "=m" (XXSum),
        "+r" (SrcData), 
        "+r" (RefDataPtr) 
-     : "m" (SrcStride),
-       "m" (RefStride)
+     : "m" (Stride)
      : "edi", "memory"
   );
 
@@ -556,9 +547,8 @@ static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcS
   return (( (XXSum<<6) - XSum*XSum ));
 }
 
-static ogg_uint32_t inter8x8_err_xy2__mmx (unsigned char *SrcData, ogg_uint32_t SrcStride,
-		                     unsigned char *RefDataPtr1,
-				     unsigned char *RefDataPtr2, ogg_uint32_t RefStride)
+static ogg_uint32_t inter8x8_err_xy2__mmx (unsigned char *SrcData, unsigned char *RefDataPtr1,
+					   unsigned char *RefDataPtr2, ogg_uint32_t Stride)
 {
   ogg_uint32_t XSum;
   ogg_uint32_t XXSum;
@@ -605,8 +595,8 @@ static ogg_uint32_t inter8x8_err_xy2__mmx (unsigned char *SrcData, ogg_uint32_t 
     "  paddd       %%mm2, %%mm7     \n\t"
 
     "  add         %5, %2           \n\t"	/* Inc pointer into src data */
-    "  add         %6, %3           \n\t"	/* Inc pointer into ref data */
-    "  add         %6, %4           \n\t"	/* Inc pointer into ref data */
+    "  add         %5, %3           \n\t"	/* Inc pointer into ref data */
+    "  add         %5, %4           \n\t"	/* Inc pointer into ref data */
 
     "  dec         %%edi            \n\t"
     "  jnz 1b                       \n\t"
@@ -631,8 +621,7 @@ static ogg_uint32_t inter8x8_err_xy2__mmx (unsigned char *SrcData, ogg_uint32_t 
        "+r" (SrcData), 
        "+r" (RefDataPtr1),
        "+r" (RefDataPtr2) 
-     : "m" (SrcStride),
-       "m" (RefStride)
+     : "m" (Stride)
      : "edi", "memory"
   );
 

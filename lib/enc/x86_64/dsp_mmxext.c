@@ -24,8 +24,8 @@
 
 typedef unsigned long long ogg_uint64_t;
 
-static ogg_uint32_t sad8x8__mmxext (unsigned char *ptr1, ogg_uint32_t stride1,
-                                    unsigned char *ptr2, ogg_uint32_t stride2)
+static ogg_uint32_t sad8x8__mmxext (unsigned char *ptr1, unsigned char *ptr2, 
+				    ogg_uint32_t stride)
 {
   ogg_uint32_t  DiffVal;
 
@@ -39,7 +39,7 @@ static ogg_uint32_t sad8x8__mmxext (unsigned char *ptr1, ogg_uint32_t stride1,
     "  psadbw %%mm1, %%mm0          \n\t"
     "  add %3, %1                   \n\t"	/* Inc pointer into the new data */
     "  paddw %%mm0, %%mm7           \n\t"	/* accumulate difference... */
-    "  add %4, %2                   \n\t"	/* Inc pointer into ref data */
+    "  add %3, %2                   \n\t"	/* Inc pointer into ref data */
     ".endr                          \n\t"
 
     "  movq (%1), %%mm0             \n\t"	/* take 8 bytes */
@@ -51,17 +51,15 @@ static ogg_uint32_t sad8x8__mmxext (unsigned char *ptr1, ogg_uint32_t stride1,
      : "=r" (DiffVal),
        "+r" (ptr1), 
        "+r" (ptr2) 
-     : "r" ((ogg_uint64_t)stride1),
-       "r" ((ogg_uint64_t)stride2)
+     : "r" ((ogg_uint64_t)stride)
      : "memory"
   );
 
   return DiffVal;
 }
 
-static ogg_uint32_t sad8x8_thres__mmxext (unsigned char *ptr1, ogg_uint32_t stride1,
-                                          unsigned char *ptr2, ogg_uint32_t stride2, 
-			   	  ogg_uint32_t thres)
+static ogg_uint32_t sad8x8_thres__mmxext (unsigned char *ptr1, unsigned char *ptr2, 
+					  ogg_uint32_t stride, ogg_uint32_t thres)
 {
   ogg_uint32_t  DiffVal;
 
@@ -75,7 +73,7 @@ static ogg_uint32_t sad8x8_thres__mmxext (unsigned char *ptr1, ogg_uint32_t stri
     "  psadbw %%mm1, %%mm0          \n\t"
     "  add %3, %1                   \n\t"	/* Inc pointer into the new data */
     "  paddw %%mm0, %%mm7           \n\t"	/* accumulate difference... */
-    "  add %4, %2                   \n\t"	/* Inc pointer into ref data */
+    "  add %3, %2                   \n\t"	/* Inc pointer into ref data */
     ".endr                          \n\t"
 
     "  movd %%mm7, %0               \n\t"
@@ -83,17 +81,15 @@ static ogg_uint32_t sad8x8_thres__mmxext (unsigned char *ptr1, ogg_uint32_t stri
      : "=r" (DiffVal),
        "+r" (ptr1), 
        "+r" (ptr2) 
-     : "r" ((ogg_uint64_t)stride1),
-       "r" ((ogg_uint64_t)stride2)
+     : "r" ((ogg_uint64_t)stride)
      : "memory"
   );
 
   return DiffVal;
 }
 
-static ogg_uint32_t sad8x8_xy2_thres__mmxext (unsigned char *SrcData, ogg_uint32_t SrcStride,
-                                              unsigned char *RefDataPtr1,
-                                              unsigned char *RefDataPtr2, ogg_uint32_t RefStride,
+static ogg_uint32_t sad8x8_xy2_thres__mmxext (unsigned char *SrcData, unsigned char *RefDataPtr1,
+                                              unsigned char *RefDataPtr2, ogg_uint32_t Stride,
                                               ogg_uint32_t thres)
 {
   ogg_uint32_t  DiffVal;
@@ -110,8 +106,8 @@ static ogg_uint32_t sad8x8_xy2_thres__mmxext (unsigned char *SrcData, ogg_uint32
 
     "  add %4, %1                   \n\t"	/* Inc pointer into the new data */
     "  paddw %%mm0, %%mm7           \n\t"	/* accumulate difference... */
-    "  add %5, %2                   \n\t"	/* Inc pointer into ref data */
-    "  add %5, %3                   \n\t"	/* Inc pointer into ref data */
+    "  add %4, %2                   \n\t"	/* Inc pointer into ref data */
+    "  add %4, %3                   \n\t"	/* Inc pointer into ref data */
     ".endr                          \n\t"
 
     "  movd %%mm7, %0               \n\t"
@@ -119,8 +115,7 @@ static ogg_uint32_t sad8x8_xy2_thres__mmxext (unsigned char *SrcData, ogg_uint32
        "+r" (SrcData), 
        "+r" (RefDataPtr1), 
        "+r" (RefDataPtr2) 
-     : "r" ((ogg_uint64_t)SrcStride),
-       "r" ((ogg_uint64_t)RefStride)
+     : "r" ((ogg_uint64_t)Stride)
      : "memory"
   );
 
@@ -156,7 +151,7 @@ static ogg_uint32_t row_sad8__mmxext (unsigned char *Src1, unsigned char *Src2)
 }
 
 static ogg_uint32_t col_sad8x8__mmxext (unsigned char *Src1, unsigned char *Src2,
-		                    ogg_uint32_t stride)
+					ogg_uint32_t stride)
 {
   ogg_uint32_t MaxSad;
 
@@ -232,9 +227,8 @@ static ogg_uint32_t col_sad8x8__mmxext (unsigned char *Src1, unsigned char *Src2
   return MaxSad;
 }
 
-static ogg_uint32_t inter8x8_err_xy2__mmxext (unsigned char *SrcData, ogg_uint32_t SrcStride,
-                                              unsigned char *RefDataPtr1,
-                                              unsigned char *RefDataPtr2, ogg_uint32_t RefStride)
+static ogg_uint32_t inter8x8_err_xy2__mmxext (unsigned char *SrcData, unsigned char *RefDataPtr1,
+                                              unsigned char *RefDataPtr2, ogg_uint32_t Stride)
 {
   ogg_uint64_t XSum;
   ogg_uint64_t XXSum;
@@ -275,8 +269,8 @@ static ogg_uint32_t inter8x8_err_xy2__mmxext (unsigned char *SrcData, ogg_uint32
     "  paddd       %%mm2, %%mm7     \n\t"
 
     "  add         %5, %2           \n\t"	/* Inc pointer into src data */
-    "  add         %6, %3           \n\t"	/* Inc pointer into ref data */
-    "  add         %6, %4           \n\t"	/* Inc pointer into ref data */
+    "  add         %5, %3           \n\t"	/* Inc pointer into ref data */
+    "  add         %5, %4           \n\t"	/* Inc pointer into ref data */
 
     "  dec         %%rdi            \n\t"
     "  jnz 1b                       \n\t"
@@ -301,8 +295,7 @@ static ogg_uint32_t inter8x8_err_xy2__mmxext (unsigned char *SrcData, ogg_uint32
        "+r" (SrcData), 
        "+r" (RefDataPtr1),
        "+r" (RefDataPtr2) 
-     : "r" ((ogg_uint64_t)SrcStride),
-       "r" ((ogg_uint64_t)RefStride)
+     : "r" ((ogg_uint64_t)Stride)
      : "rdi", "memory"
   );
 

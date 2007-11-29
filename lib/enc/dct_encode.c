@@ -255,7 +255,6 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
 				   ogg_int32_t MvDevisor,
 				   fragment_t *fp,
 				   ogg_uint32_t PixelsPerLine,
-				   ogg_uint32_t ReconPixelsPerLine,
 				   int mode) {
 
   ogg_int32_t MvShift;
@@ -287,7 +286,7 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
     mv = fp->mv;
     
     /* Set up the baseline offset for the motion vector. */
-    MVOffset = ((mv.y / MvDevisor) * ReconPixelsPerLine) + (mv.x / MvDevisor);
+    MVOffset = ((mv.y / MvDevisor) * PixelsPerLine) + (mv.x / MvDevisor);
     
     /* Work out the offset of the second reference position for 1/2
        pixel interpolation.  For the U and V planes the MV specifies 1/4
@@ -306,15 +305,15 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
     
     if ( AbsYOffset ) {
       if ( mv.y > 0 )
-	ReconPtr2Offset += ReconPixelsPerLine;
+	ReconPtr2Offset += PixelsPerLine;
       else
-	ReconPtr2Offset -= ReconPixelsPerLine;
+	ReconPtr2Offset -= PixelsPerLine;
     }
     
     if ( mode==CODE_GOLDEN_MV ) {
-      ReconPtr1 = &cpi->GoldenFrame[fp->recon_index];
+      ReconPtr1 = &cpi->golden[fp->buffer_index];
     } else {
-      ReconPtr1 = &cpi->LastFrameRecon[fp->recon_index];
+      ReconPtr1 = &cpi->lastrecon[fp->buffer_index];
     }
     
     ReconPtr1 += MVOffset;
@@ -324,50 +323,46 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
     
     /* Is the MV offset exactly pixel alligned */
     if ( AbsRefOffset == 0 ){
-      dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
-		 PixelsPerLine, ReconPixelsPerLine);
-      dsp_copy8x8 (cpi->dsp, ReconPtr1, thisrecon, ReconPixelsPerLine);
+      dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr, PixelsPerLine);
+      dsp_copy8x8 (cpi->dsp, ReconPtr1, thisrecon, PixelsPerLine);
     } else {
       /* Fractional pixel MVs. */
       /* Note that we only use two pixel values even for the diagonal */
-      dsp_sub8x8avg2(cpi->dsp, FiltPtr, ReconPtr1,ReconPtr2,DctInputPtr,
-		     PixelsPerLine, ReconPixelsPerLine);
-      dsp_copy8x8_half (cpi->dsp, ReconPtr1, ReconPtr2, thisrecon, ReconPixelsPerLine);
+      dsp_sub8x8avg2(cpi->dsp, FiltPtr, ReconPtr1, ReconPtr2, DctInputPtr, PixelsPerLine);
+      dsp_copy8x8_half (cpi->dsp, ReconPtr1, ReconPtr2, thisrecon, PixelsPerLine);
     }
 
   } else { 
     if ( ( mode==CODE_INTER_NO_MV ) ||
 	 ( mode==CODE_USING_GOLDEN ) ) {
       if ( mode==CODE_INTER_NO_MV ) {
-	ReconPtr1 = &cpi->LastFrameRecon[fp->recon_index];
+	ReconPtr1 = &cpi->lastrecon[fp->buffer_index];
       } else {
-	ReconPtr1 = &cpi->GoldenFrame[fp->recon_index];
+	ReconPtr1 = &cpi->golden[fp->buffer_index];
       }
       
-      dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,
-		 PixelsPerLine, ReconPixelsPerLine);
-      dsp_copy8x8 (cpi->dsp, ReconPtr1, thisrecon, ReconPixelsPerLine);
+      dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,PixelsPerLine);
+      dsp_copy8x8 (cpi->dsp, ReconPtr1, thisrecon, PixelsPerLine);
     } else if ( mode==CODE_INTRA ) {
       dsp_sub8x8_128(cpi->dsp, FiltPtr, DctInputPtr, PixelsPerLine);
-      dsp_set8x8(cpi->dsp, 128, thisrecon, ReconPixelsPerLine);
+      dsp_set8x8(cpi->dsp, 128, thisrecon, PixelsPerLine);
     }
   }
 }
 
 void TransformQuantizeBlock (CP_INSTANCE *cpi, 
-			     fragment_t *fp,
-                             ogg_uint32_t PixelsPerLine) {
-  unsigned char *FiltPtr = &cpi->yuvptr[fp->raw_index];
+			     fragment_t *fp){
+
+  unsigned char *FiltPtr = &cpi->frame[fp->buffer_index];
   int qi = cpi->BaseQ; // temporary
   int inter = (fp->mode != CODE_INTRA);
   int plane = (fp < cpi->frag[1] ? 0 : (fp < cpi->frag[2] ? 1 : 2)); 
   ogg_int32_t *q = cpi->iquant_tables[inter][plane][qi];
   ogg_int16_t DCTInput[64];
   ogg_int16_t DCTOutput[64];
-  ogg_uint32_t ReconPixelsPerLine = cpi->recon_stride[plane];
   ogg_int32_t   MvDivisor;      /* Defines MV resolution (2 = 1/2
                                    pixel for Y or 4 = 1/4 for UV) */
-  unsigned char   *ReconPtr1 = &cpi->ThisFrameRecon[fp->recon_index];
+  unsigned char   *ReconPtr1 = &cpi->recon[fp->buffer_index];
 
   /* Set plane specific values */
   if (plane == 0){
@@ -380,8 +375,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
      the reconstruction buffer, and proces a difference block for
      forward DCT */
   BlockUpdateDifference(cpi, FiltPtr, DCTInput, ReconPtr1,
-			MvDivisor, fp, PixelsPerLine,
-			ReconPixelsPerLine, fp->mode);
+			MvDivisor, fp, cpi->stride[plane], fp->mode);
   
   /* Proceed to encode the data into the encode buffer if the encoder
      is enabled. */

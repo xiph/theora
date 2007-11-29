@@ -44,8 +44,7 @@ static void set8x8__c (unsigned char val, unsigned char *ptr,
 }
 
 static void sub8x8__c (unsigned char *FiltPtr, unsigned char *ReconPtr,
-                  ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine,
-                  ogg_uint32_t ReconPixelsPerLine) {
+		       ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine){
   int i;
 
   /* For each block row */
@@ -61,13 +60,13 @@ static void sub8x8__c (unsigned char *FiltPtr, unsigned char *ReconPtr,
 
     /* Start next row */
     FiltPtr += PixelsPerLine;
-    ReconPtr += ReconPixelsPerLine;
+    ReconPtr += PixelsPerLine;
     DctInputPtr += 8;
   }
 }
 
 static void sub8x8_128__c (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
-                      ogg_uint32_t PixelsPerLine) {
+			   ogg_uint32_t PixelsPerLine) {
   int i;
   /* For each block row */
   for (i=8; i; i--) {
@@ -91,10 +90,9 @@ static void sub8x8_128__c (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
 }
 
 static void sub8x8avg2__c (unsigned char *FiltPtr, unsigned char *ReconPtr1,
-                     unsigned char *ReconPtr2, ogg_int16_t *DctInputPtr,
-                     ogg_uint32_t PixelsPerLine,
-                     ogg_uint32_t ReconPixelsPerLine) 
-{
+			   unsigned char *ReconPtr2, ogg_int16_t *DctInputPtr,
+			   ogg_uint32_t PixelsPerLine) {
+
   int i;
 
   /* For each block row */
@@ -110,8 +108,8 @@ static void sub8x8avg2__c (unsigned char *FiltPtr, unsigned char *ReconPtr1,
 
     /* Start next row */
     FiltPtr += PixelsPerLine;
-    ReconPtr1 += ReconPixelsPerLine;
-    ReconPtr2 += ReconPixelsPerLine;
+    ReconPtr1 += PixelsPerLine;
+    ReconPtr2 += PixelsPerLine;
     DctInputPtr += 8;
   }
 }
@@ -137,7 +135,7 @@ static ogg_uint32_t row_sad8__c (unsigned char *Src1, unsigned char *Src2)
 }
 
 static ogg_uint32_t col_sad8x8__c (unsigned char *Src1, unsigned char *Src2,
-                        ogg_uint32_t stride)
+				   ogg_uint32_t stride)
 {
   ogg_uint32_t SadValue[8] = {0,0,0,0,0,0,0,0};
   ogg_uint32_t SadValue2[8] = {0,0,0,0,0,0,0,0};
@@ -182,8 +180,9 @@ static ogg_uint32_t col_sad8x8__c (unsigned char *Src1, unsigned char *Src2,
   return MaxSad;
 }
 
-static ogg_uint32_t sad8x8__c (unsigned char *ptr1, ogg_uint32_t stride1,
-                 unsigned char *ptr2, ogg_uint32_t stride2)
+static ogg_uint32_t sad8x8__c (unsigned char *ptr1, 
+			       unsigned char *ptr2, 
+			       ogg_uint32_t stride)
 {
   ogg_uint32_t  i;
   ogg_uint32_t  sad = 0;
@@ -199,16 +198,17 @@ static ogg_uint32_t sad8x8__c (unsigned char *ptr1, ogg_uint32_t stride1,
     sad += DSP_OP_ABS_DIFF(ptr1[7], ptr2[7]);
 
     /* Step to next row of block. */
-    ptr1 += stride1;
-    ptr2 += stride2;
+    ptr1 += stride;
+    ptr2 += stride;
   }
 
   return sad;
 }
 
-static ogg_uint32_t sad8x8_thres__c (unsigned char *ptr1, ogg_uint32_t stride1,
-                 unsigned char *ptr2, ogg_uint32_t stride2, 
-             ogg_uint32_t thres)
+static ogg_uint32_t sad8x8_thres__c (unsigned char *ptr1, 
+				     unsigned char *ptr2, 
+				     ogg_uint32_t stride, 
+				     ogg_uint32_t thres)
 {
   ogg_uint32_t  i;
   ogg_uint32_t  sad = 0;
@@ -227,17 +227,18 @@ static ogg_uint32_t sad8x8_thres__c (unsigned char *ptr1, ogg_uint32_t stride1,
       break;
 
     /* Step to next row of block. */
-    ptr1 += stride1;
-    ptr2 += stride2;
+    ptr1 += stride;
+    ptr2 += stride;
   }
 
   return sad;
 }
 
-static ogg_uint32_t sad8x8_xy2_thres__c (unsigned char *SrcData, ogg_uint32_t SrcStride,
-                          unsigned char *RefDataPtr1,
-                    unsigned char *RefDataPtr2, ogg_uint32_t RefStride,
-                    ogg_uint32_t thres)
+static ogg_uint32_t sad8x8_xy2_thres__c (unsigned char *SrcData, 
+					 unsigned char *RefDataPtr1,
+					 unsigned char *RefDataPtr2, 
+					 ogg_uint32_t Stride,
+					 ogg_uint32_t thres)
 {
   ogg_uint32_t  i;
   ogg_uint32_t  sad = 0;
@@ -256,9 +257,9 @@ static ogg_uint32_t sad8x8_xy2_thres__c (unsigned char *SrcData, ogg_uint32_t Sr
       break;
 
     /* Step to next row of block. */
-    SrcData += SrcStride;
-    RefDataPtr1 += RefStride;
-    RefDataPtr2 += RefStride;
+    SrcData += Stride;
+    RefDataPtr1 += Stride;
+    RefDataPtr2 += Stride;
   }
 
   return sad;
@@ -297,8 +298,9 @@ static ogg_uint32_t intra8x8_err__c (unsigned char *DataPtr, ogg_uint32_t Stride
    return (( (XXSum<<6) - XSum*XSum ) );
 }
 
-static ogg_uint32_t inter8x8_err__c (unsigned char *SrcData, ogg_uint32_t SrcStride,
-                     unsigned char *RefDataPtr, ogg_uint32_t RefStride)
+static ogg_uint32_t inter8x8_err__c (unsigned char *SrcData, 
+				     unsigned char *RefDataPtr, 
+				     ogg_uint32_t Stride)
 {
   ogg_uint32_t  i;
   ogg_uint32_t  XSum=0;
@@ -339,17 +341,18 @@ static ogg_uint32_t inter8x8_err__c (unsigned char *SrcData, ogg_uint32_t SrcStr
     XXSum += DiffVal*DiffVal;
         
     /* Step to next row of block. */
-    SrcData += SrcStride;
-    RefDataPtr += RefStride;
+    SrcData += Stride;
+    RefDataPtr += Stride;
   }
 
   /* Compute and return population variance as mis-match metric. */
   return (( (XXSum<<6) - XSum*XSum ));
 }
 
-static ogg_uint32_t inter8x8_err_xy2__c (unsigned char *SrcData, ogg_uint32_t SrcStride,
-                         unsigned char *RefDataPtr1,
-             unsigned char *RefDataPtr2, ogg_uint32_t RefStride)
+static ogg_uint32_t inter8x8_err_xy2__c (unsigned char *SrcData, 
+					 unsigned char *RefDataPtr1,
+					 unsigned char *RefDataPtr2, 
+					 ogg_uint32_t Stride)
 {
   ogg_uint32_t  i;
   ogg_uint32_t  XSum=0;
@@ -390,9 +393,9 @@ static ogg_uint32_t inter8x8_err_xy2__c (unsigned char *SrcData, ogg_uint32_t Sr
     XXSum += DiffVal*DiffVal;
 
     /* Step to next row of block. */
-    SrcData += SrcStride;
-    RefDataPtr1 += RefStride;
-    RefDataPtr2 += RefStride;
+    SrcData += Stride;
+    RefDataPtr1 += Stride;
+    RefDataPtr2 += Stride;
   }
 
   /* Compute and return population variance as mis-match metric. */
