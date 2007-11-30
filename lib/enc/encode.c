@@ -451,43 +451,18 @@ static void PackModes (CP_INSTANCE *cpi) {
       oggpackB_write( opb, cpi->ModeList[i], MODE_BITS  );  
   }
   
-#ifdef _TH_DEBUG_
-  TH_DEBUG("mode encode scheme = %d\n",(int)BestScheme);
-  if ( BestScheme == 0 ) {
-    TH_DEBUG("mode scheme list = { ");
-    for ( j = 0; j < MAX_MODES; j++ )
-      TH_DEBUG("%d ",(int)BestModeSchemes[j]);
-    TH_DEBUG("}\n");
-  }
-  TH_DEBUG("mode list = { ");
-  for ( i = 0; i < cpi->ModeListCount; i++) {
-    if((i&0x1f)==0)
-      TH_DEBUG("\n   ");
-    TH_DEBUG("%d ",cpi->ModeList[i]);
-  }
-  TH_DEBUG("\n}\n");
-#endif
 }
 
 static void PackMotionVectors (CP_INSTANCE *cpi) {
-  ogg_int32_t  i;
-  ogg_uint32_t MethodBits[2] = {0,0};
-  const ogg_uint32_t * MvBitsPtr;
   const ogg_uint32_t * MvPatternPtr;
+  const ogg_uint32_t * MvBitsPtr;
+
+  ogg_uint32_t SB, MB, B;
 
   oggpack_buffer *opb=cpi->oggbuffer;
 
   /* Choose the coding method */
-  MvBitsPtr = &MvBits[MAX_MV_EXTENT];
-  for ( i = 0; i < (ogg_int32_t)cpi->MvListCount; i++ ) {
-    MethodBits[0] += MvBitsPtr[cpi->MVList[i].x];
-    MethodBits[0] += MvBitsPtr[cpi->MVList[i].y];
-    MethodBits[1] += 12; /* Simple six bits per mv component fallback
-                             mechanism */
-  }
-
-  /* Select entropy table */
-  if ( MethodBits[0] < MethodBits[1] ) {
+  if ( cpi->MVBits_0 < cpi->MVBits_1 ) {
     oggpackB_write( opb, 0, 1 );
     MvBitsPtr = &MvBits[MAX_MV_EXTENT];
     MvPatternPtr = &MvPattern[MAX_MV_EXTENT];
@@ -498,22 +473,32 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
   }
 
   /* Pack and encode the motion vectors */
-  for ( i = 0; i < (ogg_int32_t)cpi->MvListCount; i++ ) {
-    oggpackB_write( opb, MvPatternPtr[cpi->MVList[i].x],
-                     (ogg_uint32_t)MvBitsPtr[cpi->MVList[i].x] );
-    oggpackB_write( opb, MvPatternPtr[cpi->MVList[i].y],
-                     (ogg_uint32_t)MvBitsPtr[cpi->MVList[i].y] );
+  /* iterate through MB list */
+  for ( SB=0 ; SB < cpi->super_n[0]; SB++ ){
+    superblock_t *sp = &cpi->super[0][SB];
+    for ( MB=0; MB<4; MB++ ) {
+      macroblock_t *mp = sp->m[MB];
+      fragment_t *fp;
+      if(!mp) continue;
+      fp = mp->y[0];
+      for(B=1; !fp && B<4; B++ ) fp = mp->y[B];
+      if(!fp) continue;
+      if(fp->mode==CODE_INTER_PLUS_MV || fp->mode==CODE_GOLDEN_MV){
+	/* One MV for the macroblock */
+	oggpackB_write( opb, MvPatternPtr[fp->mv.x], MvBitsPtr[fp->mv.x] );
+	oggpackB_write( opb, MvPatternPtr[fp->mv.y], MvBitsPtr[fp->mv.y] );
+      }else if (fp->mode == CODE_INTER_FOURMV){
+	/* MV for each codedblock */
+	for(B=0; B<4; B++ ){
+	  fp = mp->y[B];
+	  if(fp){
+	    oggpackB_write( opb, MvPatternPtr[fp->mv.x], MvBitsPtr[fp->mv.x] );
+	    oggpackB_write( opb, MvPatternPtr[fp->mv.y], MvBitsPtr[fp->mv.y] );
+	  }
+	}
+      }
+    }
   }
-
-#ifdef _TH_DEBUG_
-  TH_DEBUG("motion vectors = {");
-  for ( i = 0; i < (ogg_int32_t)cpi->MvListCount; i++ ) {
-    if((i&0x7)==0)
-      TH_DEBUG("\n   ");
-    TH_DEBUG("%+03d,%+03d ",cpi->MVList[i].x,cpi->MVList[i].y);
-  }
-  TH_DEBUG("\n}\n");
-#endif
 }
 
 static void PackEOBRun( CP_INSTANCE *cpi) {
@@ -641,10 +626,6 @@ static void PackToken ( CP_INSTANCE *cpi,
   /* Advance to the next real token. */
   fp->tokens_packed += (unsigned char)OneOrTwo;
 
-  /* Update the counts of tokens coded */
-  cpi->TokensCoded += OneOrTwo;
-  cpi->TokensToBeCoded -= OneOrTwo;
-
   OneOrZero = ( fp < cpi->frag[1] );
 
   if ( Token == DCT_EOB_TOKEN ) {
@@ -686,9 +667,6 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
 
   /* Reset the count of second order optimised tokens */
   cpi->OptimisedTokenCount = 0;
-
-  cpi->TokensToBeCoded = cpi->TotTokenCount;
-  cpi->TokensCoded = 0;
 
   /* Blank the various fragment data structures before we start. */
   for ( i = 0; i < cpi->CodedBlockIndex; i++ ) {
@@ -769,9 +747,6 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
 void EncodeData(CP_INSTANCE *cpi){
   ogg_int32_t   i;
 
-  /* Zero the count of tokens so far this frame. */
-  cpi->TotTokenCount = 0;
-  
   /* Zero the mode and MV list indices. */
   cpi->ModeListCount = 0;
   
@@ -788,17 +763,6 @@ void EncodeData(CP_INSTANCE *cpi){
   CodePlane(cpi, 2);
   
   PredictDC(cpi);
-
-#ifdef _TH_DEBUG_
- {
-   int j;
-   for ( i = 0; i < cpi->CodedBlockIndex; i++ ) {
-     fragment_t *fp = cpi->frag[0][i];
-     for(j=0;j<64;j++)
-       fp->QUAN[j] = fp->dct[j];
-   }
- }
-#endif
 
   /* Pack DCT tokens */
   for ( i = 0; i < cpi->CodedBlockIndex; i++ ) 
@@ -823,8 +787,10 @@ ogg_uint32_t PickIntra( CP_INSTANCE *cpi ){
   return 0;
 }
 
-static void AddMotionVector(CP_INSTANCE *cpi, mv_t *mv) {
-  cpi->MVList[cpi->MvListCount++] = *mv;
+static void CountMotionVector(CP_INSTANCE *cpi, mv_t *mv) {
+  cpi->MVBits_0 += MvBits[mv->x];
+  cpi->MVBits_0 += MvBits[mv->y];
+  cpi->MVBits_1 += 12; /* Simple six bits per mv component fallback */
 }
 
 static void SetFragMotionVectorAndMode(fragment_t *fp,
@@ -846,14 +812,9 @@ static void SetMBMotionVectorsAndMode(macroblock_t *mp,
 }
 
 ogg_uint32_t PickModes(CP_INSTANCE *cpi,
-                       ogg_uint32_t SBRows, ogg_uint32_t SBCols,
                        ogg_uint32_t *InterError, ogg_uint32_t *IntraError) {
-  ogg_uint32_t  MB, B;      /* Macro-Block, Block indices */
-  ogg_uint32_t  SBrow;      /* Super-Block row number */
-  ogg_uint32_t  SBcol;      /* Super-Block row number */
-  ogg_uint32_t  SB=0;       /* Super-Block index, initialised to first
-                               of this component */
 
+  ogg_uint32_t  SB, MB, B; 
   ogg_uint32_t  MBIntraError;           /* Intra error for macro block */
   ogg_uint32_t  MBGFError;              /* Golden frame macro block error */
   ogg_uint32_t  MBGF_MVError;           /* Golden frame plus MV error */
@@ -887,7 +848,8 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
   /* initialize error scores */
   *InterError = 0;
   *IntraError = 0;
-  cpi->MvListCount = 0;
+  cpi->MVBits_0 = 0;
+  cpi->MVBits_1 = 0;
   
   /* change the quatization matrix to the one at best Q to compute the
      new error score */
@@ -910,176 +872,175 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
   cpi->FourMvChangeFactor = 8; /* cpi->MVChangeFactor - 0.05;  */
 
   /* decide what block type and motion vectors to use on all of the frames */
-  for ( SBrow=0; SBrow<SBRows; SBrow++ ) {
-    for ( SBcol=0; SBcol<SBCols; SBcol++ ) {
-      superblock_t *sp = &cpi->super[0][SBrow*SBCols+SBcol];
-      /* Check its four Macro-Blocks */
-      for ( MB=0; MB<4; MB++ ) {
-	macroblock_t *mp = sp->m[MB];
-
-	if(!mp) continue;
-
-        /* Is the current macro block coded (in part or in whole) */
-        MBCodedFlag = 0;
-        for ( B=0; B<4; B++ ) {
-	  fragment_t *fp = mp->y[B];
-          if ( fp && fp->coded ){
-	    MBCodedFlag = 1;
-	    break;
-	  }
+  for ( SB=0 ; SB < cpi->super_n[0]; SB++ ){
+    superblock_t *sp = &cpi->super[0][SB];
+    /* Check its four Macro-Blocks */
+    for ( MB=0; MB<4; MB++ ) {
+      macroblock_t *mp = sp->m[MB];
+      
+      if(!mp) continue;
+      
+      /* Is the current macro block coded (in part or in whole) */
+      MBCodedFlag = 0;
+      for ( B=0; B<4; B++ ) {
+	fragment_t *fp = mp->y[B];
+	if ( fp && fp->coded ){
+	  MBCodedFlag = 1;
+	  break;
 	}
-	
-        /* This one isn't coded go to the next one */
-        if(!MBCodedFlag) continue;
+      }
+      
+      /* This one isn't coded go to the next one */
+      if(!MBCodedFlag) continue;
+      
+      /**************************************************************
+       Find the block choice with the lowest error
 
-        /**************************************************************
-         Find the block choice with the lowest error
+       NOTE THAT if U or V is coded but no Y from a macro block then
+       the mode will be CODE_INTER_NO_MV as this is the default
+       state to which the mode data structure is initialised in
+       encoder and decoder at the start of each frame. */
 
-         NOTE THAT if U or V is coded but no Y from a macro block then
-         the mode will be CODE_INTER_NO_MV as this is the default
-         state to which the mode data structure is initialised in
-         encoder and decoder at the start of each frame. */
+      BestError = HUGE_ERROR;
+      
+      
+      /* Look at the intra coding error. */
+      MBIntraError = GetMBIntraError( cpi, mp );
+      BestError = (BestError > MBIntraError) ? MBIntraError : BestError;
+      
+      /* Get the golden frame error */
+      MBGFError = GetMBInterError( cpi, cpi->frame, cpi->golden, 
+				   mp, 0, 0 );
+      BestError = (BestError > MBGFError) ? MBGFError : BestError;
+      
+      /* Calculate the 0,0 case. */
+      MBInterError = GetMBInterError( cpi, cpi->frame,
+				      cpi->lastrecon,
+				      mp, 0, 0 );
+      BestError = (BestError > MBInterError) ? MBInterError : BestError;
+      
+      /* Measure error for last MV */
+      MBLastInterError =  GetMBInterError( cpi, cpi->frame,
+					   cpi->lastrecon,
+					   mp, LastInterMVect.x,
+					   LastInterMVect.y );
+      BestError = (BestError > MBLastInterError) ?
+	MBLastInterError : BestError;
+      
+      /* Measure error for prior last MV */
+      MBPriorLastInterError =  GetMBInterError( cpi, cpi->frame,
+						cpi->lastrecon,
+						mp, PriorLastInterMVect.x,
+						PriorLastInterMVect.y );
+      BestError = (BestError > MBPriorLastInterError) ?
+	MBPriorLastInterError : BestError;
 
-        BestError = HUGE_ERROR;
+      /* Temporarily force usage of no motionvector blocks */
+      MBInterMVError = HUGE_ERROR;
+      InterMVect.x = 0;  /* Set 0,0 motion vector */
+      InterMVect.y = 0;
 
+      /* If the best error is above the required threshold search
+	 for a new inter MV */
+      if ( BestError > cpi->MinImprovementForNewMV && cpi->MotionCompensation) {
+	/* Use a mix of heirachical and exhaustive searches for
+	   quick mode. */
+	if ( cpi->info.quick_p ) {
+	  MBInterMVError = GetMBMVInterError( cpi, cpi->lastrecon,
+					      mp,
+					      cpi->MVPixelOffsetY,
+					      &InterMVect );
 
-        /* Look at the intra coding error. */
-        MBIntraError = GetMBIntraError( cpi, mp );
-        BestError = (BestError > MBIntraError) ? MBIntraError : BestError;
+	  /* If we still do not have a good match try an exhaustive
+	     MBMV search */
+	  if ( (MBInterMVError > cpi->ExhaustiveSearchThresh) &&
+	       (BestError > cpi->ExhaustiveSearchThresh) ) {
 
-        /* Get the golden frame error */
-        MBGFError = GetMBInterError( cpi, cpi->frame, cpi->golden, 
-				     mp, 0, 0 );
-        BestError = (BestError > MBGFError) ? MBGFError : BestError;
-
-        /* Calculate the 0,0 case. */
-        MBInterError = GetMBInterError( cpi, cpi->frame,
-                                        cpi->lastrecon,
-					mp, 0, 0 );
-        BestError = (BestError > MBInterError) ? MBInterError : BestError;
-
-        /* Measure error for last MV */
-        MBLastInterError =  GetMBInterError( cpi, cpi->frame,
-                                             cpi->lastrecon,
-					     mp, LastInterMVect.x,
-                                             LastInterMVect.y );
-        BestError = (BestError > MBLastInterError) ?
-          MBLastInterError : BestError;
-
-        /* Measure error for prior last MV */
-        MBPriorLastInterError =  GetMBInterError( cpi, cpi->frame,
-                                                  cpi->lastrecon,
-						  mp, PriorLastInterMVect.x,
-                                                  PriorLastInterMVect.y );
-        BestError = (BestError > MBPriorLastInterError) ?
-          MBPriorLastInterError : BestError;
-
-        /* Temporarily force usage of no motionvector blocks */
-        MBInterMVError = HUGE_ERROR;
-        InterMVect.x = 0;  /* Set 0,0 motion vector */
-        InterMVect.y = 0;
-
-        /* If the best error is above the required threshold search
-           for a new inter MV */
-        if ( BestError > cpi->MinImprovementForNewMV && cpi->MotionCompensation) {
-          /* Use a mix of heirachical and exhaustive searches for
-             quick mode. */
-          if ( cpi->info.quick_p ) {
-            MBInterMVError = GetMBMVInterError( cpi, cpi->lastrecon,
-						mp,
-                                                cpi->MVPixelOffsetY,
-                                                &InterMVect );
-
-            /* If we still do not have a good match try an exhaustive
-               MBMV search */
-            if ( (MBInterMVError > cpi->ExhaustiveSearchThresh) &&
-                 (BestError > cpi->ExhaustiveSearchThresh) ) {
-
-              MBInterMVExError =
-                GetMBMVExhaustiveSearch( cpi, cpi->lastrecon,
-					 mp,
-                                         &InterMVectEx );
-
-              /* Is the Variance measure for the EX search
-                 better... If so then use it. */
-              if ( MBInterMVExError < MBInterMVError ) {
-                MBInterMVError = MBInterMVExError;
-                InterMVect.x = InterMVectEx.x;
-                InterMVect.y = InterMVectEx.y;
-              }
-            }
-          }else{
-            /* Use an exhaustive search */
-            MBInterMVError =
-              GetMBMVExhaustiveSearch( cpi, cpi->lastrecon,
+	    MBInterMVExError =
+	      GetMBMVExhaustiveSearch( cpi, cpi->lastrecon,
 				       mp,
-                                       &InterMVect );
-          }
+				       &InterMVectEx );
+
+	    /* Is the Variance measure for the EX search
+	       better... If so then use it. */
+	    if ( MBInterMVExError < MBInterMVError ) {
+	      MBInterMVError = MBInterMVExError;
+	      InterMVect.x = InterMVectEx.x;
+	      InterMVect.y = InterMVectEx.y;
+	    }
+	  }
+	}else{
+	  /* Use an exhaustive search */
+	  MBInterMVError =
+	    GetMBMVExhaustiveSearch( cpi, cpi->lastrecon,
+				     mp,
+				     &InterMVect );
+	}
 
 
-          /* Is the improvement, if any, good enough to justify a new MV */
-          if ( (16 * MBInterMVError < (BestError * cpi->MVChangeFactor)) &&
-               ((MBInterMVError + cpi->MinImprovementForNewMV) < BestError) ){
-            BestError = MBInterMVError;
-          }
+	/* Is the improvement, if any, good enough to justify a new MV */
+	if ( (16 * MBInterMVError < (BestError * cpi->MVChangeFactor)) &&
+	     ((MBInterMVError + cpi->MinImprovementForNewMV) < BestError) ){
+	  BestError = MBInterMVError;
+	}
 
-        }
+      }
 
-        /* If the best error is still above the required threshold
-           search for a golden frame MV */
-        MBGF_MVError = HUGE_ERROR;
-        GFMVect.x = 0; /* Set 0,0 motion vector */
-        GFMVect.y = 0;
-        if ( BestError > cpi->MinImprovementForNewMV && cpi->MotionCompensation) {
-          /* Do an MV search in the golden reference frame */
-          MBGF_MVError = GetMBMVInterError( cpi, cpi->golden,
-					    mp,
-                                            cpi->MVPixelOffsetY, &GFMVect );
+      /* If the best error is still above the required threshold
+	 search for a golden frame MV */
+      MBGF_MVError = HUGE_ERROR;
+      GFMVect.x = 0; /* Set 0,0 motion vector */
+      GFMVect.y = 0;
+      if ( BestError > cpi->MinImprovementForNewMV && cpi->MotionCompensation) {
+	/* Do an MV search in the golden reference frame */
+	MBGF_MVError = GetMBMVInterError( cpi, cpi->golden,
+					  mp,
+					  cpi->MVPixelOffsetY, &GFMVect );
 
-          /* Measure error for last GFMV */
-          LastMBGF_MVError =  GetMBInterError( cpi, cpi->frame,
-                                               cpi->golden,
-					       mp,
-                                               LastGFMVect.x,
-                                               LastGFMVect.y );
+	/* Measure error for last GFMV */
+	LastMBGF_MVError =  GetMBInterError( cpi, cpi->frame,
+					     cpi->golden,
+					     mp,
+					     LastGFMVect.x,
+					     LastGFMVect.y );
 
-          /* Check against last GF motion vector and reset if the
-             search has thrown a worse result. */
-          if ( LastMBGF_MVError < MBGF_MVError ) {
-            GFMVect.x = LastGFMVect.x;
-            GFMVect.y = LastGFMVect.y;
-            MBGF_MVError = LastMBGF_MVError;
-          }else{
-            LastGFMVect.x = GFMVect.x;
-            LastGFMVect.y = GFMVect.y;
-          }
+	/* Check against last GF motion vector and reset if the
+	   search has thrown a worse result. */
+	if ( LastMBGF_MVError < MBGF_MVError ) {
+	  GFMVect.x = LastGFMVect.x;
+	  GFMVect.y = LastGFMVect.y;
+	  MBGF_MVError = LastMBGF_MVError;
+	}else{
+	  LastGFMVect.x = GFMVect.x;
+	  LastGFMVect.y = GFMVect.y;
+	}
 
-          /* Is the improvement, if any, good enough to justify a new MV */
-          if ( (16 * MBGF_MVError < (BestError * cpi->MVChangeFactor)) &&
-               ((MBGF_MVError + cpi->MinImprovementForNewMV) < BestError) ) {
-            BestError = MBGF_MVError;
-          }
-        }
+	/* Is the improvement, if any, good enough to justify a new MV */
+	if ( (16 * MBGF_MVError < (BestError * cpi->MVChangeFactor)) &&
+	     ((MBGF_MVError + cpi->MinImprovementForNewMV) < BestError) ) {
+	  BestError = MBGF_MVError;
+	}
+      }
 
-        /* Finally... If the best error is still to high then consider
-           the 4MV mode */
-        MBInterFOURMVError = HUGE_ERROR;
-        if ( BestError > cpi->FourMVThreshold && cpi->MotionCompensation) {
-          /* Get the 4MV error. */
-          MBInterFOURMVError =
-            GetFOURMVExhaustiveSearch( cpi, cpi->lastrecon,
-				       mp,
-                                       FourMVect );
+      /* Finally... If the best error is still to high then consider
+	 the 4MV mode */
+      MBInterFOURMVError = HUGE_ERROR;
+      if ( BestError > cpi->FourMVThreshold && cpi->MotionCompensation) {
+	/* Get the 4MV error. */
+	MBInterFOURMVError =
+	  GetFOURMVExhaustiveSearch( cpi, cpi->lastrecon,
+				     mp,
+				     FourMVect );
 
-          /* If the improvement is great enough then use the four MV mode */
-          if ( ((MBInterFOURMVError + cpi->MinImprovementForFourMV) <
-                BestError) && (16 * MBInterFOURMVError <
-                               (BestError * cpi->FourMvChangeFactor))) {
-            BestError = MBInterFOURMVError;
-          }
-        }
+	/* If the improvement is great enough then use the four MV mode */
+	if ( ((MBInterFOURMVError + cpi->MinImprovementForFourMV) <
+	      BestError) && (16 * MBInterFOURMVError <
+			     (BestError * cpi->FourMvChangeFactor))) {
+	  BestError = MBInterFOURMVError;
+	}
+      }
 
-        /********************************************************
+      /********************************************************
          end finding the best error
          *******************************************************
 
@@ -1088,101 +1049,97 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
          Over-ride and force intra if error high and Intra error similar
          Now choose a mode based on lowest error (with bias towards no MV) */
 
-        if ( (BestError > cpi->InterTripOutThresh) &&
-             (10 * BestError > MBIntraError * 7 ) ) {
-          SetMBMotionVectorsAndMode(mp,&ZeroVect,CODE_INTRA);
-        } else if ( BestError == MBInterError ) {
-          SetMBMotionVectorsAndMode(mp,&ZeroVect,CODE_INTER_NO_MV);
-        } else if ( BestError == MBGFError ) {
-          SetMBMotionVectorsAndMode(mp,&ZeroVect,CODE_USING_GOLDEN);
-        } else if ( BestError == MBLastInterError ) {
-          SetMBMotionVectorsAndMode(mp,&LastInterMVect,CODE_INTER_LAST_MV);
-        } else if ( BestError == MBPriorLastInterError ) {
-          SetMBMotionVectorsAndMode(mp,&PriorLastInterMVect,CODE_INTER_PRIOR_LAST);
+      if ( (BestError > cpi->InterTripOutThresh) &&
+	   (10 * BestError > MBIntraError * 7 ) ) {
+	SetMBMotionVectorsAndMode(mp,&ZeroVect,CODE_INTRA);
+      } else if ( BestError == MBInterError ) {
+	SetMBMotionVectorsAndMode(mp,&ZeroVect,CODE_INTER_NO_MV);
+      } else if ( BestError == MBGFError ) {
+	SetMBMotionVectorsAndMode(mp,&ZeroVect,CODE_USING_GOLDEN);
+      } else if ( BestError == MBLastInterError ) {
+	SetMBMotionVectorsAndMode(mp,&LastInterMVect,CODE_INTER_LAST_MV);
+      } else if ( BestError == MBPriorLastInterError ) {
+	SetMBMotionVectorsAndMode(mp,&PriorLastInterMVect,CODE_INTER_PRIOR_LAST);
 
-          /* Swap the prior and last MV cases over */
-          TmpMVect = PriorLastInterMVect;
-          PriorLastInterMVect = LastInterMVect;
-          LastInterMVect = TmpMVect;
+	/* Swap the prior and last MV cases over */
+	TmpMVect = PriorLastInterMVect;
+	PriorLastInterMVect = LastInterMVect;
+	LastInterMVect = TmpMVect;
 
-        } else if ( BestError == MBInterMVError ) {
+      } else if ( BestError == MBInterMVError ) {
 
-          SetMBMotionVectorsAndMode(mp,&InterMVect,CODE_INTER_PLUS_MV);
+	SetMBMotionVectorsAndMode(mp,&InterMVect,CODE_INTER_PLUS_MV);
 
-          /* Update Prior last mv with last mv */
-          PriorLastInterMVect.x = LastInterMVect.x;
-          PriorLastInterMVect.y = LastInterMVect.y;
+	/* Update Prior last mv with last mv */
+	PriorLastInterMVect.x = LastInterMVect.x;
+	PriorLastInterMVect.y = LastInterMVect.y;
 
-          /* Note last inter MV for future use */
-          LastInterMVect.x = InterMVect.x;
-          LastInterMVect.y = InterMVect.y;
+	/* Note last inter MV for future use */
+	LastInterMVect.x = InterMVect.x;
+	LastInterMVect.y = InterMVect.y;
 
-          AddMotionVector( cpi, &InterMVect);
+	CountMotionVector( cpi, &InterMVect);
 
-        } else if ( BestError == MBGF_MVError ) {
+      } else if ( BestError == MBGF_MVError ) {
 
-          SetMBMotionVectorsAndMode(mp,&GFMVect,CODE_GOLDEN_MV);
+	SetMBMotionVectorsAndMode(mp,&GFMVect,CODE_GOLDEN_MV);
 
-          /* Note last inter GF MV for future use */
-          LastGFMVect.x = GFMVect.x;
-          LastGFMVect.y = GFMVect.y;
+	/* Note last inter GF MV for future use */
+	LastGFMVect.x = GFMVect.x;
+	LastGFMVect.y = GFMVect.y;
 
-          AddMotionVector( cpi, &GFMVect);
-        } else if ( BestError == MBInterFOURMVError ) {
+	CountMotionVector( cpi, &GFMVect);
+      } else if ( BestError == MBInterFOURMVError ) {
 
-          /* Calculate the UV vectors as the average of the Y plane ones. */
-          /* First .x component */
-          FourMVect[4].x = FourMVect[0].x + FourMVect[1].x +
-            FourMVect[2].x + FourMVect[3].x;
-          if ( FourMVect[4].x >= 0 )
-            FourMVect[4].x = (FourMVect[4].x + 2) / 4;
-          else
-            FourMVect[4].x = (FourMVect[4].x - 2) / 4;
-          FourMVect[5].x = FourMVect[4].x;
+	/* Calculate the UV vectors as the average of the Y plane ones. */
+	/* First .x component */
+	FourMVect[4].x = FourMVect[0].x + FourMVect[1].x +
+	  FourMVect[2].x + FourMVect[3].x;
+	if ( FourMVect[4].x >= 0 )
+	  FourMVect[4].x = (FourMVect[4].x + 2) / 4;
+	else
+	  FourMVect[4].x = (FourMVect[4].x - 2) / 4;
+	FourMVect[5].x = FourMVect[4].x;
 
-          /* Then .y component */
-          FourMVect[4].y = FourMVect[0].y + FourMVect[1].y +
-            FourMVect[2].y + FourMVect[3].y;
-          if ( FourMVect[4].y >= 0 )
-            FourMVect[4].y = (FourMVect[4].y + 2) / 4;
-          else
-            FourMVect[4].y = (FourMVect[4].y - 2) / 4;
-          FourMVect[5].y = FourMVect[4].y;
+	/* Then .y component */
+	FourMVect[4].y = FourMVect[0].y + FourMVect[1].y +
+	  FourMVect[2].y + FourMVect[3].y;
+	if ( FourMVect[4].y >= 0 )
+	  FourMVect[4].y = (FourMVect[4].y + 2) / 4;
+	else
+	  FourMVect[4].y = (FourMVect[4].y - 2) / 4;
+	FourMVect[5].y = FourMVect[4].y;
 
-          SetFragMotionVectorAndMode(mp->y[0], &FourMVect[0],CODE_INTER_FOURMV);
-          SetFragMotionVectorAndMode(mp->y[1], &FourMVect[1],CODE_INTER_FOURMV);
-          SetFragMotionVectorAndMode(mp->y[2], &FourMVect[2],CODE_INTER_FOURMV);
-          SetFragMotionVectorAndMode(mp->y[3], &FourMVect[3],CODE_INTER_FOURMV);
-          SetFragMotionVectorAndMode(mp->u, &FourMVect[4],CODE_INTER_FOURMV);
-          SetFragMotionVectorAndMode(mp->v, &FourMVect[5],CODE_INTER_FOURMV);
+	SetFragMotionVectorAndMode(mp->y[0], &FourMVect[0],CODE_INTER_FOURMV);
+	SetFragMotionVectorAndMode(mp->y[1], &FourMVect[1],CODE_INTER_FOURMV);
+	SetFragMotionVectorAndMode(mp->y[2], &FourMVect[2],CODE_INTER_FOURMV);
+	SetFragMotionVectorAndMode(mp->y[3], &FourMVect[3],CODE_INTER_FOURMV);
+	SetFragMotionVectorAndMode(mp->u, &FourMVect[4],CODE_INTER_FOURMV);
+	SetFragMotionVectorAndMode(mp->v, &FourMVect[5],CODE_INTER_FOURMV);
 
-          /* Note the four MVs values for current macro-block. */
-          AddMotionVector( cpi, &FourMVect[0]);
-          AddMotionVector( cpi, &FourMVect[1]);
-          AddMotionVector( cpi, &FourMVect[2]);
-          AddMotionVector( cpi, &FourMVect[3]);
+	/* Note the four MVs values for current macro-block. */
+	CountMotionVector( cpi, &FourMVect[0]);
+	CountMotionVector( cpi, &FourMVect[1]);
+	CountMotionVector( cpi, &FourMVect[2]);
+	CountMotionVector( cpi, &FourMVect[3]);
 
-          /* Update Prior last mv with last mv */
-          PriorLastInterMVect = LastInterMVect;
+	/* Update Prior last mv with last mv */
+	PriorLastInterMVect = LastInterMVect;
 
-          /* Note last inter MV for future use */
-          LastInterMVect = FourMVect[3];
+	/* Note last inter MV for future use */
+	LastInterMVect = FourMVect[3];
 
-        } else {
+      } else {
 
-          SetMBMotionVectorsAndMode(mp,&ZeroVect,CODE_INTRA);
-        }
-
-
-        /* setting up mode specific block types
-           *******************************************************/
-
-        *InterError += (BestError>>8);
-        *IntraError += (MBIntraError>>8);
-
+	SetMBMotionVectorsAndMode(mp,&ZeroVect,CODE_INTRA);
 
       }
-      SB++;
+
+      /* setting up mode specific block types
+         *******************************************************/
+
+      *InterError += (BestError>>8);
+      *IntraError += (MBIntraError>>8);
 
     }
   }

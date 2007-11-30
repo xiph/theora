@@ -232,7 +232,6 @@ ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi,
 
   int token_count = TokenizeDctBlock(fp);  
   fp->tokens_coded = token_count;
-  cpi->TotTokenCount += token_count;
 
   /* Return number of pixels coded (i.e. 8x8). */
   return BLOCK_SIZE;

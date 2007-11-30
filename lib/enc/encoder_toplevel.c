@@ -26,11 +26,6 @@
 #include "dsp.h"
 #include "codec_internal.h"
 
-#ifdef _TH_DEBUG_
-FILE *debugout=NULL;
-long dframe=0;
-#endif
-
 static void SetupKeyFrame(CP_INSTANCE *cpi) {
   int i,j;
 
@@ -41,14 +36,6 @@ static void SetupKeyFrame(CP_INSTANCE *cpi) {
   
   /* Set up for a KEY FRAME */
   cpi->FrameType = KEY_FRAME;
-}
-
-static void AdjustKeyFrameContext(CP_INSTANCE *cpi) {
-
-  /* Update the frame carry over. */
-  cpi->TotKeyFrameBytes += oggpackB_bytes(cpi->oggbuffer);
-
-  cpi->LastKeyFrame = 1;
 }
 
 static void UpdateFrame(CP_INSTANCE *cpi){
@@ -70,16 +57,11 @@ static void UpdateFrame(CP_INSTANCE *cpi){
   EncodeData(cpi);
 
   if ( cpi->FrameType == KEY_FRAME ) 
-    AdjustKeyFrameContext(cpi);
+    cpi->LastKeyFrame = 1;
 
 }
 
 static void CompressFirstFrame(CP_INSTANCE *cpi) {
-
-  /* Keep track of the total number of Key Frames Coded. */
-  cpi->KeyFrameCount = 1;
-  cpi->LastKeyFrame = 1;
-  cpi->TotKeyFrameBytes = 0;
 
   SetupKeyFrame(cpi);
 
@@ -90,9 +72,6 @@ static void CompressFirstFrame(CP_INSTANCE *cpi) {
 }
 
 static void CompressKeyFrame(CP_INSTANCE *cpi){
-
-  /* Keep track of the total number of Key Frames Coded */
-  cpi->KeyFrameCount += 1;
 
   SetupKeyFrame(cpi);
 
@@ -135,8 +114,7 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
     
     /* Select modes and motion vectors for each of the blocks : return
        an error score for inter and intra */
-    PickModes( cpi, cpi->super_v[0], cpi->super_h[0],
-               &InterError, &IntraError );
+    PickModes( cpi, &InterError, &IntraError );
 
     /* decide whether we really should have made this frame a key frame */
     /* forcing out a keyframe if the max interval is up is done at a higher level */
@@ -178,10 +156,6 @@ static void theora_encode_dispatch_init(CP_INSTANCE *cpi);
 
 int theora_encode_init(theora_state *th, theora_info *c){
   CP_INSTANCE *cpi;
-
-#ifdef _TH_DEBUG_
-  debugout=fopen("theoraenc-debugout.txt","w");
-#endif
 
   memset(th, 0, sizeof(*th));
   /*Currently only the 4:2:0 format is supported.*/
@@ -267,7 +241,7 @@ int theora_encode_init(theora_state *th, theora_info *c){
 
   /* Indicate that the next frame to be compressed is the first in the
      current clip. */
-  cpi->ThisIsFirstFrame = 1;
+  cpi->LastKeyFrame = -1;
   cpi->readyflag = 1;
   
   cpi->HeadersWritten = 0;
@@ -320,29 +294,16 @@ int theora_encode_YUVin(theora_state *t,
     InputDataPtr += yuv->uv_stride;
   }
 
-  /* Special case for first frame */
-  if ( cpi->ThisIsFirstFrame ){
-    CompressFirstFrame(cpi);
-    cpi->ThisIsFirstFrame = 0;
-    cpi->ThisIsKeyFrame = 0;
-  } else {
-
-    /* don't allow generating invalid files that overflow the p-frame
-       shift, even if keyframe_auto_p is turned off */
-    if(cpi->LastKeyFrame >= (ogg_uint32_t)
-       cpi->info.keyframe_frequency_force)
-      cpi->ThisIsKeyFrame = 1;
-    
-    if ( cpi->ThisIsKeyFrame ) {
-      CompressKeyFrame(cpi);
-      cpi->ThisIsKeyFrame = 0;
-    } else  {
-      /* Compress the frame. */
-      dropped = CompressFrame(cpi);
-    }
-
+  /* don't allow generating invalid files that overflow the p-frame
+     shift, even if keyframe_auto_p is turned off */
+  if(cpi->LastKeyFrame==-1 || cpi->LastKeyFrame >= (ogg_uint32_t)
+     cpi->info.keyframe_frequency_force){
+    CompressKeyFrame(cpi);
+  } else  {
+    /* Compress the frame. */
+    dropped = CompressFrame(cpi);
   }
-
+  
   /* Update stats variables. */
   cpi->CurrentFrame++;
   cpi->packetflag=1;
@@ -350,10 +311,6 @@ int theora_encode_YUVin(theora_state *t,
   t->granulepos=
     ((cpi->CurrentFrame - cpi->LastKeyFrame)<<cpi->keyframe_granule_shift)+
     cpi->LastKeyFrame - 1;
-
-#ifdef _TH_DEBUG_
-  dframe++;
-#endif  
 
   return 0;
 }
@@ -566,11 +523,6 @@ static void theora_encode_clear (theora_state  *th){
     _ogg_free(cpi->oggbuffer);
     _ogg_free(cpi);
   }
-
-#ifdef _TH_DEBUG_
-  fclose(debugout);
-  debugout=NULL;
-#endif
 
   memset(th,0,sizeof(*th));
 }

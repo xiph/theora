@@ -51,17 +51,8 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
   if(cpi->CodedBlockList) _ogg_free(cpi->CodedBlockList);
   cpi->CodedBlockList = 0;
 
-  if(cpi->RunHuffIndices) _ogg_free(cpi->RunHuffIndices);
-  cpi->RunHuffIndices = 0;
-
   if(cpi->ModeList) _ogg_free(cpi->ModeList);
   cpi->ModeList = 0;
-
-  if(cpi->MVList) _ogg_free(cpi->MVList);
-  cpi->MVList = 0;
-
-  if(cpi->BlockCodedFlags) _ogg_free(cpi->BlockCodedFlags);
-  cpi->BlockCodedFlags = 0;
 
   if(cpi->OptimisedTokenListEb ) _ogg_free(cpi->OptimisedTokenListEb);
   cpi->OptimisedTokenListEb = 0;
@@ -257,19 +248,9 @@ void InitFrameInfo(CP_INSTANCE *cpi){
                 sizeof(*cpi->OptimisedTokenListPl));
 
   /* misc */
-  cpi->RunHuffIndices =
-    _ogg_malloc(cpi->frag_total*
-                sizeof(*cpi->RunHuffIndices));
-  cpi->BlockCodedFlags =
-    _ogg_malloc(cpi->frag_total*
-                sizeof(*cpi->BlockCodedFlags));
   cpi->ModeList =
     _ogg_malloc(cpi->frag_total*
                 sizeof(*cpi->ModeList));
-  cpi->MVList =
-    _ogg_malloc(cpi->frag_total*
-                sizeof(*cpi->MVList));
-
   cpi->CodedBlockList =
     _ogg_malloc(cpi->frag_total * sizeof(*cpi->CodedBlockList));
 

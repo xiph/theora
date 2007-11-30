@@ -151,60 +151,17 @@ typedef struct CP_INSTANCE {
 
   theora_info      info;
 
+  /* ogg bitpacker for use in packet coding, other API state */
+  oggpack_buffer   *oggbuffer;
+#ifdef LIBOGG2  /* Remember, this is just until we drop libogg1 */
+  ogg_buffer_state *oggbufferstate;
+#endif
+
   unsigned char   *frame;
   unsigned char   *recon;
   unsigned char   *golden;
   unsigned char   *lastrecon;
-  
-  /* flag to indicate if he headers already have been written */
-  int              HeadersWritten;
-  /* how far do we shift the granulepos to seperate out P frame counts? */
-  int              keyframe_granule_shift;
 
-  /* Compressor Configuration */
-  int              BaseQ;
-  int              GoldenFrameEnabled;
-  int              InterPrediction;
-  int              MotionCompensation;
-
-  ogg_uint32_t     LastKeyFrame;
-
-  /* Compressor Statistics */
-  ogg_int64_t      KeyFrameCount; /* Count of key frames. */
-  ogg_int64_t      TotKeyFrameBytes;
-
-  /* Frame Statistics  */
-  ogg_int64_t      CurrentFrame;
-  int              ThisIsFirstFrame;
-  int              ThisIsKeyFrame;
-
-  /* Controlling Block Selection */
-  ogg_uint32_t     MVChangeFactor;
-  ogg_uint32_t     FourMvChangeFactor;
-  ogg_uint32_t     MinImprovementForNewMV;
-  ogg_uint32_t     ExhaustiveSearchThresh;
-  ogg_uint32_t     MinImprovementForFourMV;
-  ogg_uint32_t     FourMVThreshold;
-
-  /*********************************************************************/
-  /* Token Buffers */
-  ogg_uint32_t    *OptimisedTokenListEb; /* Optimised token list extra bits */
-  unsigned char   *OptimisedTokenList;   /* Optimised token list. */
-  unsigned char   *OptimisedTokenListHi; /* Optimised token list huffman
-                                             table index */
-
-  unsigned char    *OptimisedTokenListPl; /* Plane to which the token
-                                             belongs Y = 0 or UV = 1 */
-  ogg_int32_t      OptimisedTokenCount;           /* Count of Optimized tokens */
-  ogg_uint32_t     RunHuffIndex;         /* Huffman table in force at
-                                             the start of a run */
-  ogg_uint32_t     RunPlaneIndex;        /* The plane (Y=0 UV=1) to
-                                             which the first token in
-                                             an EOB run belonged. */
-  ogg_uint32_t     TotTokenCount;
-  ogg_int32_t      TokensToBeCoded;
-  ogg_int32_t      TokensCoded;
-  /********************************************************************/
   /* SuperBlock, MacroBLock and Fragment Information */
   fragment_t      *frag[3];
   macroblock_t    *macro;
@@ -227,22 +184,59 @@ typedef struct CP_INSTANCE {
   ogg_uint32_t     stride[3]; // stride of image and recon planes, accounting for borders
   ogg_uint32_t     offset[3]; // data offset of first coded pixel in plane
 
-  /* Coded flag arrays and counters for them */
+  /*********************************************************************/
+  /* state and stats */
+  
+  int              HeadersWritten;
+  ogg_uint32_t     LastKeyFrame;
+  ogg_int64_t      CurrentFrame;
+  unsigned char    FrameType;
+  int              readyflag;
+  int              packetflag;
+  int              doneflag;
+  
+  /*********************************************************************/
+  /* Token Buffers */
 
-  ogg_uint32_t    *RunHuffIndices;
+  ogg_uint32_t    *OptimisedTokenListEb; /* Optimised token list extra bits */
+  unsigned char   *OptimisedTokenList;   /* Optimised token list. */
+  unsigned char   *OptimisedTokenListHi; /* Optimised token list huffman
+                                             table index */
 
-  unsigned char   *BlockCodedFlags;
+  unsigned char   *OptimisedTokenListPl; /* Plane to which the token
+                                             belongs Y = 0 or UV = 1 */
+  ogg_int32_t      OptimisedTokenCount;           /* Count of Optimized tokens */
+  ogg_uint32_t     RunHuffIndex;         /* Huffman table in force at
+                                             the start of a run */
+  ogg_uint32_t     RunPlaneIndex;        /* The plane (Y=0 UV=1) to
+                                             which the first token in
+                                             an EOB run belonged. */
 
-  mv_t            *MVList;
-  ogg_uint32_t     MvListCount;
+  ogg_uint32_t     MVBits_0; /* count of bits used by MV coding mode 0 */
+  ogg_uint32_t     MVBits_1; /* count of bits used by MV coding mode 1 */
+
   ogg_uint32_t    *ModeList;
   ogg_uint32_t     ModeListCount;
-
   unsigned char   *DataOutputBuffer;
 
-  unsigned char    FrameType;
   int              CodedBlockIndex;
   fragment_t     **CodedBlockList;           
+
+  /********************************************************************/
+  /* Setup */
+  int              keyframe_granule_shift;
+  int              BaseQ;
+  int              GoldenFrameEnabled;
+  int              InterPrediction;
+  int              MotionCompensation;
+
+  /* Controlling Block Selection */
+  ogg_uint32_t     MVChangeFactor;
+  ogg_uint32_t     FourMvChangeFactor;
+  ogg_uint32_t     MinImprovementForNewMV;
+  ogg_uint32_t     ExhaustiveSearchThresh;
+  ogg_uint32_t     MinImprovementForFourMV;
+  ogg_uint32_t     FourMVThreshold;
 
   /*********************************************************************/
 
@@ -272,14 +266,6 @@ typedef struct CP_INSTANCE {
   quant_tables     quant_tables[2][3];
   iquant_tables    iquant_tables[2][3];
 
-  /* ogg bitpacker for use in packet coding, other API state */
-  oggpack_buffer   *oggbuffer;
-#ifdef LIBOGG2  /* Remember, this is just until we drop libogg1 */
-  ogg_buffer_state *oggbufferstate;
-#endif
-  int              readyflag;
-  int              packetflag;
-  int              doneflag;
 
   DspFunctions     dsp;  /* Selected functions for this platform */
 
@@ -323,8 +309,8 @@ extern ogg_uint32_t GetMBIntraError (CP_INSTANCE *cpi,
 				     macroblock_t *mp );
 
 extern ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
-                                     unsigned char * SrcPtr,
-                                     unsigned char * RefPtr,
+                                     unsigned char *SrcPtr,
+                                     unsigned char *RefPtr,
 				     macroblock_t *mp,
                                      ogg_int32_t LastXMV,
                                      ogg_int32_t LastYMV );
@@ -332,18 +318,18 @@ extern ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
 extern void WriteFrameHeader( CP_INSTANCE *cpi) ;
 
 extern ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
-                                       unsigned char * RefFramePtr,
+                                       unsigned char *RefFramePtr,
 				       macroblock_t *mp,
                                        ogg_int32_t *MVPixelOffset,
                                        mv_t *MV );
 
 extern ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
-                                             unsigned char * RefFramePtr,
+                                             unsigned char *RefFramePtr,
 					     macroblock_t *mp,
                                              mv_t *MV );
 
 extern ogg_uint32_t GetFOURMVExhaustiveSearch (CP_INSTANCE *cpi,
-                                               unsigned char * RefFramePtr,
+                                               unsigned char *RefFramePtr,
 					       macroblock_t *mp,
                                                mv_t *MV ) ;
 
@@ -352,8 +338,6 @@ extern void EncodeData(CP_INSTANCE *cpi);
 extern ogg_uint32_t PickIntra( CP_INSTANCE *cpi );
 
 extern ogg_uint32_t PickModes(CP_INSTANCE *cpi,
-                              ogg_uint32_t SBRows,
-                              ogg_uint32_t SBCols,
                               ogg_uint32_t *InterError,
                               ogg_uint32_t *IntraError);
 
