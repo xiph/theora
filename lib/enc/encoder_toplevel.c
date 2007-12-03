@@ -61,16 +61,6 @@ static void UpdateFrame(CP_INSTANCE *cpi){
 
 }
 
-static void CompressFirstFrame(CP_INSTANCE *cpi) {
-
-  SetupKeyFrame(cpi);
-
-  /* Compress and output the frist frame. */
-  PickIntra(cpi);
-  UpdateFrame(cpi);
-
-}
-
 static void CompressKeyFrame(CP_INSTANCE *cpi){
 
   SetupKeyFrame(cpi);

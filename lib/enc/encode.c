@@ -180,11 +180,11 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi,
 	}
       }
      
-      /* If the MB is marked as coded and we are in the Y plane then */
-      /* the mode list needs to be updated. */
+      /* If the MB is marked as coded and we are in the Y plane */
+      /* collect coding metric */
       if ( coded && plane == 0 ){
-	/* Make a note of the selected mode in the mode list */
-	cpi->ModeList[cpi->ModeListCount++] = mode;
+	cpi->ModeCount[mode] ++;
+
       }
     }  
   }
@@ -351,66 +351,42 @@ static void EncodeAcTokenList (CP_INSTANCE *cpi) {
   cpi->OptimisedTokenCount = 0;
 }
 
+static const ogg_uint32_t NoOpModeWords[8] = {0,1,2,3,4,5,6,7};
+static const ogg_int32_t NoOpModeBits[8] = {3,3,3,3,3,3,3,3};
+static const unsigned char NoOpScheme[8] = {0,1,2,3,4,5,6,7};
+
 static void PackModes (CP_INSTANCE *cpi) {
   ogg_uint32_t    i,j;
-  unsigned char   ModeIndex;
-  const unsigned char  *SchemeList;
 
-  unsigned char   BestModeSchemes[MAX_MODES];
-  ogg_int32_t     ModeCount[MAX_MODES];
+  unsigned char   Mode0[MAX_MODES];
   ogg_int32_t     TmpFreq = -1;
   ogg_int32_t     TmpIndex = -1;
 
   ogg_uint32_t    BestScheme;
   ogg_uint32_t    BestSchemeScore;
-  ogg_uint32_t    SchemeScore;
+  ogg_uint32_t    modes=0;
+
+  const ogg_uint32_t *ModeWords;
+  const ogg_int32_t *ModeBits;
+  const unsigned char  *ModeScheme;
+
+  int SB,MB,B;
 
   oggpack_buffer *opb=cpi->oggbuffer;
-
-  /* Build a frequency map for the modes in this frame */
-  memset( ModeCount, 0, MAX_MODES*sizeof(ogg_int32_t) );
-  for ( i = 0; i < cpi->ModeListCount; i++ )
-    ModeCount[cpi->ModeList[i]] ++;
-
-  /* Order the modes from most to least frequent.  Store result as
-     scheme 0 */
-  for ( j = 0; j < MAX_MODES; j++ ) {
-    TmpFreq = -1;  /* need to re-initialize for each loop */
-    /* Find the most frequent */
-    for ( i = 0; i < MAX_MODES; i++ ) {
-      /* Is this the best scheme so far ??? */
-      if ( ModeCount[i] > TmpFreq ) {
-        TmpFreq = ModeCount[i];
-        TmpIndex = i;
-      }
-    }
-    /* I don't know if the above loop ever fails to match, but it's
-       better safe than sorry.  Plus this takes care of gcc warning */
-    if ( TmpIndex != -1 ) {
-      ModeCount[TmpIndex] = -1;
-      BestModeSchemes[TmpIndex] = (unsigned char)j;
-    }
-  }
+  for(i=0;i<MAX_MODES;i++)
+    modes+=cpi->ModeCount[i];
 
   /* Default/ fallback scheme uses MODE_BITS bits per mode entry */
   BestScheme = (MODE_METHODS - 1);
-  BestSchemeScore = cpi->ModeListCount * 3;
-  /* Get a bit score for the available schemes. */
-  for (  j = 0; j < (MODE_METHODS - 1); j++ ) {
-
-    /* Reset the scheme score */
-    if ( j == 0 ){
-      /* Scheme 0 additional cost of sending frequency order */
-      SchemeScore = 24;
-      SchemeList = BestModeSchemes;
-    } else {
-      SchemeScore = 0;
-      SchemeList = ModeSchemes[j-1];
-    }
+  BestSchemeScore = modes * 3;
+  /* Get a bit score for the available predefined schemes. */
+  for (  j = 1; j < (MODE_METHODS - 1); j++ ) {
+    int SchemeScore = 0;
+    const unsigned char *SchemeList = ModeSchemes[j-1];
 
     /* Find the total bits to code using each avaialable scheme */
-    for ( i = 0; i < cpi->ModeListCount; i++ )
-      SchemeScore += ModeBitLengths[SchemeList[cpi->ModeList[i]]];
+    for ( i = 0; i < MAX_MODES; i++ )
+      SchemeScore += ModeBitLengths[SchemeList[i]] * cpi->ModeCount[i];
 
     /* Is this the best scheme so far ??? */
     if ( SchemeScore < BestSchemeScore ) {
@@ -419,38 +395,72 @@ static void PackModes (CP_INSTANCE *cpi) {
     }
   }
 
+  /* Order the modes from most to least frequent.  Store result as
+     scheme 0 */
+  {
+    int SchemeScore = 24;
+    
+    for ( j = 0; j < MAX_MODES; j++ ) {
+      TmpFreq = -1;  /* need to re-initialize for each loop */
+      /* Find the most frequent */
+      for ( i = 0; i < MAX_MODES; i++ ) {
+	/* Is this the best scheme so far ??? */
+	if ( cpi->ModeCount[i] > TmpFreq ) {
+	  TmpFreq = cpi->ModeCount[i];
+	  TmpIndex = i;
+	}
+      }
+      SchemeScore += ModeBitLengths[j] * cpi->ModeCount[TmpIndex];
+      cpi->ModeCount[TmpIndex] = -1;
+      Mode0[TmpIndex] = j;
+    }
+
+    if ( SchemeScore < BestSchemeScore ) {
+      BestSchemeScore = SchemeScore;
+      BestScheme = 0;
+    }
+  }
+
   /* Encode the best scheme. */
   oggpackB_write( opb, BestScheme, (ogg_uint32_t)MODE_METHOD_BITS );
 
-  /* If the chosen schems is scheme 0 send details of the mode
+  /* If the chosen scheme is scheme 0 send details of the mode
      frequency order */
   if ( BestScheme == 0 ) {
     for ( j = 0; j < MAX_MODES; j++ ){
       /* Note that the last two entries are implicit */
-      oggpackB_write( opb, BestModeSchemes[j], (ogg_uint32_t)MODE_BITS );
+      oggpackB_write( opb, Mode0[j], (ogg_uint32_t)MODE_BITS );
     }
-    SchemeList = BestModeSchemes;
+    ModeScheme = Mode0;
+    ModeWords = ModeBitPatterns;
+    ModeBits = ModeBitLengths;
   }
-  else {
-    SchemeList = ModeSchemes[BestScheme-1];
+  else if ( BestScheme < (MODE_METHODS - 1)) {
+    ModeScheme = ModeSchemes[BestScheme-1];
+    ModeWords = ModeBitPatterns;
+    ModeBits = ModeBitLengths;
+  }else{
+    ModeScheme = NoOpScheme;
+    ModeWords = NoOpModeWords;
+    ModeBits = NoOpModeBits;
   }
 
-  /* Are we using one of the alphabet based schemes or the fallback scheme */
-  if ( BestScheme < (MODE_METHODS - 1)) {
-    /* Pack and encode the Mode list */
-    for ( i = 0; i < cpi->ModeListCount; i++) {
-      /* Add the appropriate mode entropy token. */
-      ModeIndex = SchemeList[cpi->ModeList[i]];
-      oggpackB_write( opb, ModeBitPatterns[ModeIndex],
-		      (ogg_uint32_t)ModeBitLengths[ModeIndex] );
+  for ( SB=0 ; SB < cpi->super_n[0]; SB++ ){
+    superblock_t *sp = &cpi->super[0][SB];
+    for ( MB=0; MB<4; MB++ ) {
+      macroblock_t *mp = sp->m[MB];
+      fragment_t *fp;
+      if(!mp) continue;
+      fp = mp->y[0];
+      for(B=1; (!fp || !fp->coded) && B<4; B++ ) fp = mp->y[B];
+      if(fp && fp->coded){
+	/* Add the appropriate mode entropy token. */
+	int index = ModeScheme[fp->mode];
+	oggpackB_write( opb, ModeWords[index],
+			(ogg_uint32_t)ModeBits[index] );
+      }
     }
-  }else{
-    /* Fall back to MODE_BITS per entry */
-    for ( i = 0; i < cpi->ModeListCount; i++)
-      /* Add the appropriate mode entropy token. */
-      oggpackB_write( opb, cpi->ModeList[i], MODE_BITS  );  
   }
-  
 }
 
 static void PackMotionVectors (CP_INSTANCE *cpi) {
@@ -747,8 +757,7 @@ static void PackCodedVideo (CP_INSTANCE *cpi) {
 void EncodeData(CP_INSTANCE *cpi){
   ogg_int32_t   i;
 
-  /* Zero the mode and MV list indices. */
-  cpi->ModeListCount = 0;
+  memset(cpi->ModeCount, 0, MAX_MODES*sizeof(*cpi->ModeCount));
   
   /* Initialise the coded block indices variables. These allow
      subsequent linear access to the quad tree ordered list of coded
@@ -1151,11 +1160,8 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 void WriteFrameHeader( CP_INSTANCE *cpi) {
   oggpack_buffer *opb=cpi->oggbuffer;
 
-  TH_DEBUG("\n>>>> beginning frame %ld\n\n",dframe);
-
   /* Output the frame type (base/key frame or inter frame) */
   oggpackB_write( opb, cpi->FrameType, 1 );
-  TH_DEBUG("frame type = video, %s\n",cpi->pb.FrameType?"predicted":"key");
   
   /* Write out details of the current value of Q... variable resolution. */
   oggpackB_write( opb, cpi->BaseQ, 6 ); // temporary

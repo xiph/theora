@@ -124,7 +124,6 @@ typedef struct fragment {
 } fragment_t;
 
 typedef struct macroblock {
-  int mode;
   fragment_t *y[4]; // MV (raster) order
   fragment_t *u;
   fragment_t *v;
@@ -214,10 +213,7 @@ typedef struct CP_INSTANCE {
 
   ogg_uint32_t     MVBits_0; /* count of bits used by MV coding mode 0 */
   ogg_uint32_t     MVBits_1; /* count of bits used by MV coding mode 1 */
-
-  ogg_uint32_t    *ModeList;
-  ogg_uint32_t     ModeListCount;
-  unsigned char   *DataOutputBuffer;
+  ogg_int32_t      ModeCount[MAX_MODES]; /* Frequency count of modes */
 
   int              CodedBlockIndex;
   fragment_t     **CodedBlockList;           

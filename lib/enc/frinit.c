@@ -51,9 +51,6 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
   if(cpi->CodedBlockList) _ogg_free(cpi->CodedBlockList);
   cpi->CodedBlockList = 0;
 
-  if(cpi->ModeList) _ogg_free(cpi->ModeList);
-  cpi->ModeList = 0;
-
   if(cpi->OptimisedTokenListEb ) _ogg_free(cpi->OptimisedTokenListEb);
   cpi->OptimisedTokenListEb = 0;
 
@@ -248,9 +245,6 @@ void InitFrameInfo(CP_INSTANCE *cpi){
                 sizeof(*cpi->OptimisedTokenListPl));
 
   /* misc */
-  cpi->ModeList =
-    _ogg_malloc(cpi->frag_total*
-                sizeof(*cpi->ModeList));
   cpi->CodedBlockList =
     _ogg_malloc(cpi->frag_total * sizeof(*cpi->CodedBlockList));
 
