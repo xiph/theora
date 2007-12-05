@@ -19,21 +19,6 @@
 #include "codec_internal.h"
 
 
-static void CalcPixelIndexTable(CP_INSTANCE *cpi){
-  ogg_uint32_t plane,row,col;
-  fragment_t *fp = cpi->frag[0];
-
-  for(plane=0;plane<3;plane++){
-    ogg_uint32_t offset = cpi->offset[plane];
-    for(row=0;row<cpi->frag_v[plane];row++){
-      for(col=0;col<cpi->frag_h[plane];col++,fp++){
-	fp->buffer_index = offset+col*8;
-      }
-      offset += cpi->stride[plane]*8;
-    }
-  }
-}
-
 void ClearFrameInfo(CP_INSTANCE *cpi){
 
   if(cpi->frame) _ogg_free(cpi->frame);
@@ -47,9 +32,6 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
 
   if(cpi->recon) _ogg_free(cpi->recon);
   cpi->recon = 0;
-
-  if(cpi->CodedBlockList) _ogg_free(cpi->CodedBlockList);
-  cpi->CodedBlockList = 0;
 
   if(cpi->OptimisedTokenListEb ) _ogg_free(cpi->OptimisedTokenListEb);
   cpi->OptimisedTokenListEb = 0;
@@ -100,8 +82,6 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
    a waste of code. */
 
 void InitFrameInfo(CP_INSTANCE *cpi){
-  int FrameSize;
-
   cpi->stride[0] = (cpi->info.width + STRIDE_EXTRA);
   cpi->stride[1] = (cpi->info.width + STRIDE_EXTRA) / 2;
   cpi->stride[2] = (cpi->info.width + STRIDE_EXTRA) / 2;
@@ -109,8 +89,8 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   {
     ogg_uint32_t ry_size = cpi->stride[0] * (cpi->info.height + STRIDE_EXTRA);
     ogg_uint32_t ruv_size = ry_size / 4;
-    FrameSize = ry_size + 2 * ruv_size;
 
+    cpi->frame_size = ry_size + 2 * ruv_size;
     cpi->offset[0] = (cpi->stride[0] * UMV_BORDER) + UMV_BORDER;
     cpi->offset[1] = ry_size + cpi->stride[1] * (UMV_BORDER/2) + (UMV_BORDER/2);
     cpi->offset[2] = ry_size + ruv_size + cpi->stride[2] * (UMV_BORDER/2) + (UMV_BORDER/2);
@@ -226,30 +206,38 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   }
 
   /* allocate frames */
-  cpi->frame = _ogg_malloc(FrameSize*sizeof(*cpi->frame));
-  cpi->lastrecon = _ogg_malloc(FrameSize*sizeof(*cpi->lastrecon));
-  cpi->golden = _ogg_malloc(FrameSize*sizeof(*cpi->golden));
-  cpi->recon = _ogg_malloc(FrameSize*sizeof(*cpi->recon));
+  cpi->frame = _ogg_malloc(cpi->frame_size*sizeof(*cpi->frame));
+  cpi->lastrecon = _ogg_malloc(cpi->frame_size*sizeof(*cpi->lastrecon));
+  cpi->golden = _ogg_malloc(cpi->frame_size*sizeof(*cpi->golden));
+  cpi->recon = _ogg_malloc(cpi->frame_size*sizeof(*cpi->recon));
 
   cpi->OptimisedTokenListEb =
-    _ogg_malloc(FrameSize*
+    _ogg_malloc(cpi->frame_size*
                 sizeof(*cpi->OptimisedTokenListEb));
   cpi->OptimisedTokenList =
-    _ogg_malloc(FrameSize*
+    _ogg_malloc(cpi->frame_size*
                 sizeof(*cpi->OptimisedTokenList));
   cpi->OptimisedTokenListHi =
-    _ogg_malloc(FrameSize*
+    _ogg_malloc(cpi->frame_size*
                 sizeof(*cpi->OptimisedTokenListHi));
   cpi->OptimisedTokenListPl =
-    _ogg_malloc(FrameSize*
+    _ogg_malloc(cpi->frame_size*
                 sizeof(*cpi->OptimisedTokenListPl));
 
-  /* misc */
-  cpi->CodedBlockList =
-    _ogg_malloc(cpi->frag_total * sizeof(*cpi->CodedBlockList));
-
   /* Re-initialise the pixel index table. */
-  CalcPixelIndexTable( cpi );
-
+  {
+    ogg_uint32_t plane,row,col;
+    fragment_t *fp = cpi->frag[0];
+    
+    for(plane=0;plane<3;plane++){
+      ogg_uint32_t offset = cpi->offset[plane];
+      for(row=0;row<cpi->frag_v[plane];row++){
+	for(col=0;col<cpi->frag_h[plane];col++,fp++){
+	  fp->buffer_index = offset+col*8;
+	}
+	offset += cpi->stride[plane]*8;
+      }
+    }
+  }
 }
 

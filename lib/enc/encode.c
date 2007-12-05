@@ -159,8 +159,11 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi,
       for ( B=0; B<4; B++, frag++ ) {
 	fragment_t *fp = sp->f[frag];
 
-	/* Does Block lie in frame: */
 	if ( fp && fp->coded ) {
+
+	  cpi->coded_total++;
+	  if(plane == 0)
+	    cpi->coded_y++;
 	  
 	  /* transform and quantize block */
 	  TransformQuantizeBlock( cpi, fp );
@@ -169,9 +172,14 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi,
 	     generated after DCT) If not then mark it and the
 	     assosciated MB as coded. */
 	  if ( fp->coded ) {
-	    /* Create linear list of coded block indices */
-	    cpi->CodedBlockList[cpi->CodedBlockIndex++] = fp;
-	    
+
+	    if(cpi->coded_head){
+	      cpi->coded_head->next = fp;
+	      cpi->coded_head = fp;
+	    }else{
+	      cpi->coded_head = cpi->coded_tail = fp;
+	    }
+
 	    /* MB is still coded */
 	    coded = 1;
 	    mode = fp->mode;
@@ -182,173 +190,117 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi,
      
       /* If the MB is marked as coded and we are in the Y plane */
       /* collect coding metric */
-      if ( coded && plane == 0 ){
-	cpi->ModeCount[mode] ++;
+      if ( coded && plane == 0 ) cpi->ModeCount[mode] ++;
 
-      }
     }  
   }
   return 0;
 }
 
 static void EncodeDcTokenList (CP_INSTANCE *cpi) {
-  ogg_int32_t   i,j;
-  ogg_uint32_t  Token;
-  ogg_uint32_t  ExtraBitsToken;
-  ogg_uint32_t  HuffIndex;
-
-  ogg_uint32_t  BestDcBits;
-  ogg_uint32_t  DcHuffChoice[2];
-  ogg_uint32_t  EntropyTableBits[2][DC_HUFF_CHOICES];
-
+  int i,j;
+  int best;
+  int huff[2];
   oggpack_buffer *opb=cpi->oggbuffer;
 
-  /* Clear table data structure */
-  memset ( EntropyTableBits, 0, sizeof(ogg_uint32_t)*DC_HUFF_CHOICES*2 );
-
-  /* Analyse token list to see which is the best entropy table to use */
-  for ( i = 0; i < cpi->OptimisedTokenCount; i++ ) {
-    /* Count number of bits for each table option */
-    Token = (ogg_uint32_t)cpi->OptimisedTokenList[i];
-    for ( j = 0; j < DC_HUFF_CHOICES; j++ ){
-      EntropyTableBits[cpi->OptimisedTokenListPl[i]][j] +=
-        cpi->HuffCodeLengthArray_VP3x[DC_HUFF_OFFSET + j][Token];
+  /* Work out which table options are best for DC */
+  for(plane = 0; plane<2; plane++){
+    best = cpi->dc_bits[plane][0];
+    huff[plane] = 0;
+    for ( j = 1; j < DC_HUFF_CHOICES; j++ ) {
+      if ( cpi->dc_bits[plane][j] < best ) {
+	best = cpi->dc_bits[plane][j];
+	huff[plane] = j + DC_HUFF_OFFSET;
+      }
     }
+    oggpackB_write( opb, huff[plane] - DC_HUFF_OFFSET, DC_HUFF_CHOICE_BITS );
   }
-
-  /* Work out which table option is best for Y */
-  BestDcBits = EntropyTableBits[0][0];
-  DcHuffChoice[0] = 0;
-  for ( j = 1; j < DC_HUFF_CHOICES; j++ ) {
-    if ( EntropyTableBits[0][j] < BestDcBits ) {
-      BestDcBits = EntropyTableBits[0][j];
-      DcHuffChoice[0] = j;
-    }
-  }
-
-  /* Add the DC huffman table choice to the bitstream */
-  oggpackB_write( opb, DcHuffChoice[0], DC_HUFF_CHOICE_BITS );
-
-  /* Work out which table option is best for UV */
-  BestDcBits = EntropyTableBits[1][0];
-  DcHuffChoice[1] = 0;
-  for ( j = 1; j < DC_HUFF_CHOICES; j++ ) {
-    if ( EntropyTableBits[1][j] < BestDcBits ) {
-      BestDcBits = EntropyTableBits[1][j];
-      DcHuffChoice[1] = j;
-    }
-  }
-
-  /* Add the DC huffman table choice to the bitstream */
-  oggpackB_write( opb, DcHuffChoice[1], DC_HUFF_CHOICE_BITS );
-
+  
   /* Encode the token list */
-  for ( i = 0; i < cpi->OptimisedTokenCount; i++ ) {
+  for ( i = 0; i < cpi->dct_token_count[0]; i++){
+    int token = cpi->dct_token[0][i];
+    int eb = cpi->dct_token_eb[0][i];
+    int plane = (i >= cpi->dct_token_ycount[0]);
+    oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huff[plane]][token],
+                    cpi->HuffCodeLengthArray_VP3x[huff[plane]][token] );
+    
+    if ( cpi->ExtraBitLengths_VP3x[token] > 0 ) 
+      oggpackB_write( opb, eb, cpi->ExtraBitLengths_VP3x[token] );
+  }
+}
 
-    /* Get the token and extra bits */
-    Token = (ogg_uint32_t)cpi->OptimisedTokenList[i];
-    ExtraBitsToken = (ogg_uint32_t)cpi->OptimisedTokenListEb[i];
+static void EncodeAcGroup(CP_INSTANCE *cpi, int group, int huff_offset, int *huffchoice){
+  int i;
+  
+  int c = 0;
+  int y = cpi->dct_token_ycount[group];
+  
+  /* pre-tokens, then post-tokens */
 
-    /* Select the huffman table */
-    if ( cpi->OptimisedTokenListPl[i] == 0)
-      HuffIndex = (ogg_uint32_t)DC_HUFF_OFFSET + (ogg_uint32_t)DcHuffChoice[0];
-    else
-      HuffIndex = (ogg_uint32_t)DC_HUFF_OFFSET + (ogg_uint32_t)DcHuffChoice[1];
+  for(j=1; j<=cpi->dct_token_pre[group]; j++){
+    int token = *(cpi->dct_token[group]-j);
+    int eb = *(cpi->dct_token_eb[group]-j);
+    int plane = (c >= y);
+    int hi = huff_offset + huffchoice[plane];
 
-    /* Add the bits to the encode holding buffer. */
-    oggpackB_write( opb, cpi->HuffCodeArray_VP3x[HuffIndex][Token],
-                     (ogg_uint32_t)cpi->
-                     HuffCodeLengthArray_VP3x[HuffIndex][Token] );
+    oggpackB_write( opb, cpi->pb.HuffCodeArray_VP3x[hi][token],
+		    cpi->pb.HuffCodeLengthArray_VP3x[hi][token] );
 
-    /* If the token is followed by an extra bits token then code it */
-    if ( cpi->ExtraBitLengths_VP3x[Token] > 0 ) {
-      /* Add the bits to the encode holding buffer.  */
-      oggpackB_write( opb, ExtraBitsToken,
-                       (ogg_uint32_t)cpi->ExtraBitLengths_VP3x[Token] );
-    }
-
+    if ( cpi->pb.ExtraBitLengths_VP3x[token] > 0 ) 
+      oggpackB_write( opb, eb,cpi->pb.ExtraBitLengths_VP3x[token] );
+    
+    c++;
   }
 
-  /* Reset the count of second order optimised tokens */
-  cpi->OptimisedTokenCount = 0;
+  for(j=0; j<cpi->dct_token_count[group]; j++){
+    int token = cpi->dct_token[group][j];
+    int eb = cpi->dct_token_eb[group][j];
+    int plane = (c >= y);
+
+    int hi = huff_offset + huffchoice[plane];
+
+    oggpackB_write( opb, cpi->pb.HuffCodeArray_VP3x[hi][token],
+		    cpi->pb.HuffCodeLengthArray_VP3x[hi][token] );
+    
+    if ( cpi->pb.ExtraBitLengths_VP3x[token] > 0 ) 
+      oggpackB_write( opb, eb,cpi->pb.ExtraBitLengths_VP3x[token] );
+    
+    c++;
+  }
 }
 
 static void EncodeAcTokenList (CP_INSTANCE *cpi) {
-  ogg_int32_t   i,j;
-  ogg_uint32_t  Token;
-  ogg_uint32_t  ExtraBitsToken;
-  ogg_uint32_t  HuffIndex;
-
-  ogg_uint32_t  BestAcBits;
-  ogg_uint32_t  AcHuffChoice[2];
-  ogg_uint32_t  EntropyTableBits[2][AC_HUFF_CHOICES];
-
+  int i,j;
+  int best;
+  int huff[2];
   oggpack_buffer *opb=cpi->oggbuffer;
 
-  memset ( EntropyTableBits, 0, sizeof(ogg_uint32_t)*AC_HUFF_CHOICES*2 );
-
-  /* Analyse token list to see which is the best entropy table to use */
-  for ( i = 0; i < cpi->OptimisedTokenCount; i++ ) {
-    /* Count number of bits for each table option */
-    Token = (ogg_uint32_t)cpi->OptimisedTokenList[i];
-    HuffIndex = cpi->OptimisedTokenListHi[i];
-    for ( j = 0; j < AC_HUFF_CHOICES; j++ ) {
-      EntropyTableBits[cpi->OptimisedTokenListPl[i]][j] +=
-        cpi->HuffCodeLengthArray_VP3x[HuffIndex + j][Token];
+  /* Work out which table options are best for AC */
+  for(plane = 0; plane<2; plane++){
+    best = cpi->ac_bits[plane][0];
+    huff[plane] = 0;
+    for ( j = 1; j < AC_HUFF_CHOICES; j++ ) {
+      if ( cpi->ac_bits[plane][j] < best ){
+	best = cpi->ac_bits[plane][j];
+	huff[plane] = j + AC_HUFF_OFFSET;
+      }
     }
+    oggpackB_write( opb, huff[plane] - AC_HUFF_OFFSET, AC_HUFF_CHOICE_BITS );
   }
+  
+  /* encode dct tokens, group 1 through group 63 in the four AC ranges */
+  for(i=1;i<=AC_TABLE_2_THRESH;i++)
+    EncodeAcGroup(cpi, i, 0, huff);
 
-  /* Select the best set of AC tables for Y */
-  BestAcBits = EntropyTableBits[0][0];
-  AcHuffChoice[0] = 0;
-  for ( j = 1; j < AC_HUFF_CHOICES; j++ ) {
-    if ( EntropyTableBits[0][j] < BestAcBits ) {
-      BestAcBits = EntropyTableBits[0][j];
-      AcHuffChoice[0] = j;
-    }
-  }
+  for(;i<=AC_TABLE_3_THRESH;i++)
+    EncodeAcGroup(cpi, i, AC_HUFF_CHOICES, huff);
 
-  /* Add the AC-Y huffman table choice to the bitstream */
-  oggpackB_write( opb, AcHuffChoice[0], AC_HUFF_CHOICE_BITS );
+  for(;i<=AC_TABLE_4_THRESH;i++)
+    EncodeAcGroup(cpi, i, AC_HUFF_CHOICES*2, huff);
 
-  /* Select the best set of AC tables for UV */
-  BestAcBits = EntropyTableBits[1][0];
-  AcHuffChoice[1] = 0;
-  for ( j = 1; j < AC_HUFF_CHOICES; j++ ) {
-    if ( EntropyTableBits[1][j] < BestAcBits ) {
-      BestAcBits = EntropyTableBits[1][j];
-      AcHuffChoice[1] = j;
-    }
-  }
+  for(;i<BLOCK_SIZE;i++)
+    EncodeAcGroup(cpi, i, AC_HUFF_CHOICES*3, huff);
 
-  /* Add the AC-UV huffman table choice to the bitstream */
-  oggpackB_write( opb, AcHuffChoice[1], AC_HUFF_CHOICE_BITS );
-
-  /* Encode the token list */
-  for ( i = 0; i < cpi->OptimisedTokenCount; i++ ) {
-    /* Get the token and extra bits */
-    Token = (ogg_uint32_t)cpi->OptimisedTokenList[i];
-    ExtraBitsToken = (ogg_uint32_t)cpi->OptimisedTokenListEb[i];
-
-    /* Select the huffman table */
-    HuffIndex = (ogg_uint32_t)cpi->OptimisedTokenListHi[i] +
-      AcHuffChoice[cpi->OptimisedTokenListPl[i]];
-
-    /* Add the bits to the encode holding buffer. */
-    oggpackB_write( opb, cpi->HuffCodeArray_VP3x[HuffIndex][Token],
-		    (ogg_uint32_t)cpi->
-		    HuffCodeLengthArray_VP3x[HuffIndex][Token] );
-
-    /* If the token is followed by an extra bits token then code it */
-    if ( cpi->ExtraBitLengths_VP3x[Token] > 0 ) {
-      /* Add the bits to the encode holding buffer. */
-      oggpackB_write( opb, ExtraBitsToken,
-		      (ogg_uint32_t)cpi->ExtraBitLengths_VP3x[Token] );
-    }
-  }
-
-  /* Reset the count of second order optimised tokens */
-  cpi->OptimisedTokenCount = 0;
 }
 
 static const ogg_uint32_t NoOpModeWords[8] = {0,1,2,3,4,5,6,7};
@@ -511,258 +463,12 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
   }
 }
 
-static void PackEOBRun( CP_INSTANCE *cpi) {
-  if(cpi->RunLength == 0)
-        return;
-
-  /* Note the appropriate EOB or EOB run token and any extra bits in
-     the optimised token list.  Use the huffman index assosciated with
-     the first token in the run */
-
-  /* Mark out which plane the block belonged to */
-  cpi->OptimisedTokenListPl[cpi->OptimisedTokenCount] =
-    (unsigned char)cpi->RunPlaneIndex;
-
-  /* Note the huffman index to be used */
-  cpi->OptimisedTokenListHi[cpi->OptimisedTokenCount] =
-    (unsigned char)cpi->RunHuffIndex;
-
-  if ( cpi->RunLength <= 3 ) {
-    if ( cpi->RunLength == 1 ) {
-      cpi->OptimisedTokenList[cpi->OptimisedTokenCount] = DCT_EOB_TOKEN;
-    } else if ( cpi->RunLength == 2 ) {
-      cpi->OptimisedTokenList[cpi->OptimisedTokenCount] = DCT_EOB_PAIR_TOKEN;
-    } else {
-      cpi->OptimisedTokenList[cpi->OptimisedTokenCount] = DCT_EOB_TRIPLE_TOKEN;
-    }
-
-    cpi->RunLength = 0;
-
-  } else {
-
-    /* Choose a token appropriate to the run length. */
-    if ( cpi->RunLength < 8 ) {
-      cpi->OptimisedTokenList[cpi->OptimisedTokenCount] =
-        DCT_REPEAT_RUN_TOKEN;
-      cpi->OptimisedTokenListEb[cpi->OptimisedTokenCount] =
-        cpi->RunLength - 4;
-      cpi->RunLength = 0;
-    } else if ( cpi->RunLength < 16 ) {
-      cpi->OptimisedTokenList[cpi->OptimisedTokenCount] =
-        DCT_REPEAT_RUN2_TOKEN;
-      cpi->OptimisedTokenListEb[cpi->OptimisedTokenCount] =
-        cpi->RunLength - 8;
-      cpi->RunLength = 0;
-    } else if ( cpi->RunLength < 32 ) {
-      cpi->OptimisedTokenList[cpi->OptimisedTokenCount] =
-        DCT_REPEAT_RUN3_TOKEN;
-      cpi->OptimisedTokenListEb[cpi->OptimisedTokenCount] =
-        cpi->RunLength - 16;
-      cpi->RunLength = 0;
-    } else if ( cpi->RunLength < 4096) {
-      cpi->OptimisedTokenList[cpi->OptimisedTokenCount] =
-        DCT_REPEAT_RUN4_TOKEN;
-      cpi->OptimisedTokenListEb[cpi->OptimisedTokenCount] =
-        cpi->RunLength;
-      cpi->RunLength = 0;
-    }
-
-  }
-
-  cpi->OptimisedTokenCount++;
-  /* Reset run EOB length */
-  cpi->RunLength = 0;
-}
-
-static int TokenCoeffs( ogg_uint32_t Token,
-		 ogg_int32_t ExtraBits ){
-  if ( Token == DCT_EOB_TOKEN )
-    return BLOCK_SIZE;
-
-  /* Is the token is a combination run and value token. */
-  if ( Token >= DCT_RUN_CATEGORY1 ){
-    /* Expand the token and additional bits to a zero run length and
-       data value.  */
-    if ( Token < DCT_RUN_CATEGORY2 ) {
-      /* Decoding method depends on token */
-      if ( Token < DCT_RUN_CATEGORY1B ) {
-        /* Step on by the zero run length */
-        return(Token - DCT_RUN_CATEGORY1) + 2;
-      } else if ( Token == DCT_RUN_CATEGORY1B ) {
-        /* Bits 0-1 determines the zero run length */
-        return 7 + (ExtraBits & 0x03);
-      }else{
-        /* Bits 0-2 determines the zero run length */
-        return 11 + (ExtraBits & 0x07);
-      }
-    }else{
-      /* If token == DCT_RUN_CATEGORY2 we have a single 0 followed by
-         a value */
-      if ( Token == DCT_RUN_CATEGORY2 ){
-        /* Step on by the zero run length */
-        return  2;
-      }else{
-        /* else we have 2->3 zeros followed by a value */
-        /* Bit 0 determines the zero run length */
-        return 3 + (ExtraBits & 0x01);
-      }
-    }
-  } 
-
-  if ( Token == DCT_SHORT_ZRL_TOKEN ||  Token == DCT_ZRL_TOKEN ) 
-    /* Token is a ZRL token so step on by the appropriate number of zeros */
-    return ExtraBits + 1;
-
-  return 1;
-}
-
-static void PackToken ( CP_INSTANCE *cpi, 
-			fragment_t *fp,
-			ogg_uint32_t HuffIndex ) {
-  ogg_uint32_t Token = fp->token_list[fp->tokens_packed];
-  ogg_uint32_t ExtraBitsToken = fp->token_list[fp->tokens_packed+1];
-  ogg_uint32_t OneOrTwo;
-  ogg_uint32_t OneOrZero;
-
-  /* Update the record of what coefficient we have got up to for this
-     block and unpack the encoded token back into the quantised data
-     array. */
-  fp->coeffs_packed += TokenCoeffs ( Token, ExtraBitsToken );
-
-  /* Update record of tokens coded and where we are in this fragment. */
-  /* Is there an extra bits token */
-  OneOrTwo = 1 + ( cpi->ExtraBitLengths_VP3x[Token] > 0 );
-
-  /* Advance to the next real token. */
-  fp->tokens_packed += (unsigned char)OneOrTwo;
-
-  OneOrZero = ( fp < cpi->frag[1] );
-
-  if ( Token == DCT_EOB_TOKEN ) {
-    if ( cpi->RunLength == 0 ) {
-      cpi->RunHuffIndex = HuffIndex;
-      cpi->RunPlaneIndex = 1 -  OneOrZero;
-    }
-    cpi->RunLength++;
-
-    /* we have exceeded our longest run length  xmit an eob run token; */
-    if ( cpi->RunLength == 4095 ) PackEOBRun(cpi);
-
-  }else{
-
-    /* If we have an EOB run then code it up first */
-    if ( cpi->RunLength > 0 ) PackEOBRun( cpi);
-
-    /* Mark out which plane the block belonged to */
-    cpi->OptimisedTokenListPl[cpi->OptimisedTokenCount] =
-      (unsigned char)(1 - OneOrZero);
-
-    /* Note the token, extra bits and hufman table in the optimised
-       token list */
-    cpi->OptimisedTokenList[cpi->OptimisedTokenCount] =
-      (unsigned char)Token;
-    cpi->OptimisedTokenListEb[cpi->OptimisedTokenCount] =
-      ExtraBitsToken;
-    cpi->OptimisedTokenListHi[cpi->OptimisedTokenCount] =
-      (unsigned char)HuffIndex;
-
-    cpi->OptimisedTokenCount++;
-  }
-}
-
-static void PackCodedVideo (CP_INSTANCE *cpi) {
-  ogg_int32_t i;
-  ogg_int32_t EncodedCoeffs = 1;
-  ogg_uint32_t HuffIndex; /* Index to group of tables used to code a token */
-
-  /* Reset the count of second order optimised tokens */
-  cpi->OptimisedTokenCount = 0;
-
-  /* Blank the various fragment data structures before we start. */
-  for ( i = 0; i < cpi->CodedBlockIndex; i++ ) {
-    fragment_t *fp = cpi->CodedBlockList[i];
-    fp->coeffs_packed = 0;
-    fp->tokens_packed = 0;
-  }
-
-  /* The tree is not needed (implicit) for key frames */
-  if ( cpi->FrameType != KEY_FRAME ){
-    /* Pack the quad tree fragment mapping. */
-    PackAndWriteDFArray( cpi );
-  }
-
-  /* Mode and MV data not needed for key frames. */
-  if ( cpi->FrameType != KEY_FRAME ){
-    /* Pack and code the mode list. */
-    PackModes(cpi);
-    /* Pack the motion vectors */
-    PackMotionVectors (cpi);
-  }
-
-  /* Optimise the DC tokens */
-  for ( i = 0; i < cpi->CodedBlockIndex; i++ ) {
-    /* Get the linear index for the current fragment. */
-    fragment_t *fp = cpi->CodedBlockList[i];
-    fp->nonzero = EncodedCoeffs;
-    PackToken(cpi, fp, DC_HUFF_OFFSET );
-  }
-  
-  /* Pack any outstanding EOB tokens */
-  PackEOBRun(cpi);
-
-  /* Now output the optimised DC token list using the appropriate
-     entropy tables. */
-  EncodeDcTokenList(cpi);
-
-  /* Work out the number of DC bits coded */
-
-  /* Optimise the AC tokens */
-  while ( EncodedCoeffs < 64 ) {
-    /* Huffman table adjustment based upon coefficient number. */
-    if ( EncodedCoeffs <= AC_TABLE_2_THRESH )
-      HuffIndex = AC_HUFF_OFFSET;
-    else if ( EncodedCoeffs <= AC_TABLE_3_THRESH )
-      HuffIndex = AC_HUFF_OFFSET + AC_HUFF_CHOICES;
-    else if ( EncodedCoeffs <= AC_TABLE_4_THRESH )
-      HuffIndex = AC_HUFF_OFFSET + (AC_HUFF_CHOICES * 2);
-    else
-      HuffIndex = AC_HUFF_OFFSET + (AC_HUFF_CHOICES * 3);
-
-    /* Repeatedly scan through the list of blocks. */
-    for ( i = 0; i < cpi->CodedBlockIndex; i++ ) {
-      /* Get the linear index for the current fragment. */
-      fragment_t *fp = cpi->CodedBlockList[i];
-
-      /* Should we code a token for this block on this pass. */
-      if ( fp->tokens_packed < fp->tokens_coded &&
-           fp->coeffs_packed <= EncodedCoeffs ) {
-        /* Bit pack and a token for this block */
-        fp->nonzero = EncodedCoeffs;
-        PackToken( cpi, fp, HuffIndex );
-      }
-    }
-
-    EncodedCoeffs ++;
-  }
-
-  /* Pack any outstanding EOB tokens */
-  PackEOBRun(cpi);
-
-  /* Now output the optimised AC token list using the appropriate
-     entropy tables. */
-  EncodeAcTokenList(cpi);
-
-}
-
 void EncodeData(CP_INSTANCE *cpi){
-  ogg_int32_t   i;
 
+  /* reset all coding metadata  */
   memset(cpi->ModeCount, 0, MAX_MODES*sizeof(*cpi->ModeCount));
-  
-  /* Initialise the coded block indices variables. These allow
-     subsequent linear access to the quad tree ordered list of coded
-     blocks */
-  cpi->CodedBlockIndex = 0;
+  cpi->coded_head = cpi->coded_tail = NULL;
+  cpi->coded_y = cpi->coded_total = 0;
 
   dsp_save_fpu (cpi->dsp);
 
@@ -770,17 +476,29 @@ void EncodeData(CP_INSTANCE *cpi){
   CodePlane(cpi, 0);
   CodePlane(cpi, 1);
   CodePlane(cpi, 2);
+
+  if(cpi->coded_head)
+    cpi->coded_head->next = NULL; /* cap off the end of the coded block list */
   
   PredictDC(cpi);
+  DPCMTokenize(cpi);
 
-  /* Pack DCT tokens */
-  for ( i = 0; i < cpi->CodedBlockIndex; i++ ) 
-    DPCMTokenizeBlock ( cpi, cpi->CodedBlockList[i] );
+  ogg_int32_t EncodedCoeffs = 1;
+  fragment_t *fp;
 
-  /* Bit pack the video data data */
-  PackCodedVideo(cpi);
+  /* The tree is not needed (implicit) for key frames */
+  if ( cpi->FrameType != KEY_FRAME )
+    PackAndWriteDFArray( cpi );
 
-  /* Reconstruct the reference frames */
+  /* Mode and MV data not needed for key frames. */
+  if ( cpi->FrameType != KEY_FRAME ){
+    PackModes(cpi);
+    PackMotionVectors (cpi);
+  }
+
+  EncodeDcTokenList(cpi);
+  EncodeAcTokenList(cpi);
+
   ReconRefFrames(cpi);
 
   dsp_restore_fpu (cpi->dsp);

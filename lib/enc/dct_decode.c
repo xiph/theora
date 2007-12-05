@@ -35,7 +35,7 @@ static void SetupBoundingValueArray_Generic(ogg_int16_t *BoundingValuePtr,
   }
 }
 
-static void ExpandBlock ( CP_INSTANCE *cpi, fragment_t *fp, ogg_int32_t FragmentNumber){
+static void ExpandBlock ( CP_INSTANCE *cpi, fragment_t *fp){
   int            mode = fp->mode;
   int            qi = cpi->BaseQ; // temporary 
   int            plane = (fp<cpi->frag[1] ? 0 : (fp<cpi->frag[2] ? 1 : 2));
@@ -168,25 +168,6 @@ static void CopyRecon( CP_INSTANCE *cpi, unsigned char * DestReconPtr,
     int PlaneLineStep = cpi->stride[plane];
     for ( i = 0; i < cpi->frag_n[plane]; i++,fp++ ) {
       if ( fp->coded ) {
-	int pi= fp->buffer_index;
-	unsigned char *src = &SrcReconPtr[ pi ];
-	unsigned char *dst = &DestReconPtr[ pi ];
-	dsp_copy8x8 (cpi->dsp, src, dst, PlaneLineStep);
-      }
-    }
-  }
-}
-
-static void CopyNotRecon( CP_INSTANCE *cpi, unsigned char * DestReconPtr,
-			  unsigned char * SrcReconPtr ) {
-  ogg_uint32_t  i,plane;
-  fragment_t *fp = cpi->frag[0];
-  
-  /* Copy over only updated blocks.*/
-  for(plane=0;plane<3;plane++){  
-    int PlaneLineStep = cpi->stride[plane];
-    for ( i = 0; i < cpi->frag_n[plane]; i++,fp++ ) {
-      if ( !fp->coded ) {
 	int pi= fp->buffer_index;
 	unsigned char *src = &SrcReconPtr[ pi ];
 	unsigned char *dst = &DestReconPtr[ pi ];
@@ -479,22 +460,14 @@ static void LoopFilter(CP_INSTANCE *cpi){
 }
 
 void ReconRefFrames (CP_INSTANCE *cpi){
-  ogg_int32_t i;
-  unsigned char *SwapReconBuffersTemp;
-
-  /* Inverse DCT and reconstitute buffer in thisframe */
-  for(i=0;i<cpi->frag_total;i++)
-    ExpandBlock( cpi, cpi->frag[0]+i, i );
-
-  /* Copy the current reconstruction back to the last frame recon buffer. */
-  if(cpi->CodedBlockIndex > (ogg_int32_t) (cpi->frag_total >> 1)){
-    SwapReconBuffersTemp = cpi->recon;
-    cpi->recon = cpi->lastrecon;
-    cpi->lastrecon = SwapReconBuffersTemp;
-    CopyNotRecon( cpi, cpi->lastrecon, cpi->recon );
-  }else{
-    CopyRecon( cpi, cpi->lastrecon, cpi->recon );
+  fragment_t *fp = cpi->coded_tail;
+  
+  while(fp){
+    ExpandBlock( cpi, fp );
+    fp = fp->next;
   }
+
+  memcpy(cpi->lastrecon,cpi->recon,sizeof(*cpi->recon)*cpi->frame_size);
 
   /* Apply a loop filter to edge pixels of updated blocks */
   LoopFilter(cpi);

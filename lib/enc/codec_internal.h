@@ -106,22 +106,19 @@ typedef struct{
   ogg_int32_t   y;
 } mv_t;
 
-typedef struct fragment {
+typedef struct fragment fragment_t;
+
+struct fragment {
   int coded;
   coding_mode_t mode;
   mv_t mv;
   ogg_int16_t pred_dc;
   ogg_int16_t dct[64];
-
   unsigned char nonzero;
-  ogg_uint32_t  token_list[128];
-  unsigned char tokens_coded;
-  unsigned char coeffs_packed;
-  unsigned char tokens_packed;
-
   ogg_uint32_t buffer_index;
 
-} fragment_t;
+  fragment_t *next;
+};
 
 typedef struct macroblock {
   fragment_t *y[4]; // MV (raster) order
@@ -160,6 +157,7 @@ typedef struct CP_INSTANCE {
   unsigned char   *recon;
   unsigned char   *golden;
   unsigned char   *lastrecon;
+  ogg_uint32_t    frame_size;
 
   /* SuperBlock, MacroBLock and Fragment Information */
   fragment_t      *frag[3];
@@ -197,26 +195,28 @@ typedef struct CP_INSTANCE {
   /*********************************************************************/
   /* Token Buffers */
 
-  ogg_uint32_t    *OptimisedTokenListEb; /* Optimised token list extra bits */
-  unsigned char   *OptimisedTokenList;   /* Optimised token list. */
-  unsigned char   *OptimisedTokenListHi; /* Optimised token list huffman
-                                             table index */
+  fragment_t      *coded_head;
+  fragment_t      *coded_tail;
+  ogg_uint32_t     coded_y;
+  ogg_uint32_t     coded_total;
 
-  unsigned char   *OptimisedTokenListPl; /* Plane to which the token
-                                             belongs Y = 0 or UV = 1 */
-  ogg_int32_t      OptimisedTokenCount;           /* Count of Optimized tokens */
-  ogg_uint32_t     RunHuffIndex;         /* Huffman table in force at
-                                             the start of a run */
-  ogg_uint32_t     RunPlaneIndex;        /* The plane (Y=0 UV=1) to
-                                             which the first token in
-                                             an EOB run belonged. */
+  unsigned char   *dct_token_storage;
+  ogg_uint16_t    *dct_token_eb_storage;
+  unsigned char   *dct_token[64];
+  ogg_uint16_t    *dct_token_eb[64];
+
+  ogg_uint32_t     dct_token_pre[64];
+  ogg_uint32_t     dct_token_count[64];
+  ogg_uint32_t     dct_token_ycount[64];
+
+  ogg_uint32_t     dc_bits[2][DC_HUFF_CHOICES];
+  ogg_uint32_t     ac_bits[2][AC_HUFF_CHOICES];
+
+  ogg_int32_t      ModeCount[MAX_MODES]; /* Frequency count of modes */
 
   ogg_uint32_t     MVBits_0; /* count of bits used by MV coding mode 0 */
   ogg_uint32_t     MVBits_1; /* count of bits used by MV coding mode 1 */
-  ogg_int32_t      ModeCount[MAX_MODES]; /* Frequency count of modes */
 
-  int              CodedBlockIndex;
-  fragment_t     **CodedBlockList;           
 
   /********************************************************************/
   /* Setup */
@@ -282,7 +282,7 @@ extern void quantize( CP_INSTANCE *cpi,
 
 extern void fdct_short ( ogg_int16_t *InputData, ogg_int16_t *OutputData );
 
-extern ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi, fragment_t *fp);
+extern void DPCMTokenize (CP_INSTANCE *cpi);
 
 extern void TransformQuantizeBlock (CP_INSTANCE *cpi, fragment_t *fp) ;
 

@@ -20,221 +20,290 @@
 #include "dsp.h"
 #include "quant_lookup.h"
 
-#include <stdio.h>
-static int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };
+static int acoffset[64]={
+  16,16,16,16,16,16, 32,32,
+  32,32,32,32,32,32,32, 48,
+  48,48,48,48,48,48,48,48,
+  48,48,48,48, 64,64,64,64,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64};
 
-static unsigned char TokenizeDctValue (ogg_int16_t DataValue,
-                                       ogg_uint32_t *TokenListPtr ){
+/* plane == 0 for Y, 1 for UV */
+static void add_token(CP_INSTANCE *cpi, int plane, int coeff, 
+		      unsigned char token, ogg_uint16_t eb,
+		      int prepend){
+  if(prepend){
+    int pre = cpi->dct_token_pre[coeff]++;
+    *(cpi->dct_token[coeff] - pre)  = token;
+    *(cpi->dct_token_eb[coeff] - pre)  = eb;
+  }else{
+    cpi->dct_token[pos][cpi->dct_token_count[pos]] = token;
+    cpi->dct_token_eb[pos][cpi->dct_token_count[pos]] = eb;
+    cpi->dct_token_count[pos]++;
+  }
+
+  if(coeff == 0){
+    /* DC */
+    for ( i = 0; i < DC_HUFF_CHOICES; i++)
+      cpi->dc_bits[plane][i] += cpi->HuffCodeLengthArray_VP3x[i][token];
+  }else{
+    /* AC */
+    int offset = acoffset[coeff];
+    for ( i = 0; i < AC_HUFF_CHOICES; i++)
+      cpc->ac_bits[plane][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
+  }
+
+  if(!plane)cpi->dct_token_ycount[coeff]++;
+}
+
+static void emit_eob_run(CP_INSTANCE *cpi, int plane, int pos, int run, int prepend){
+  if ( run <= 3 ) {
+    if ( run == 1 ) {
+      add_token(cpi, plane, pos, DCT_EOB_TOKEN, 0, prepend);
+    } else if ( cpi->RunLength == 2 ) {
+      add_token(cpi, plane, pos, DCT_EOB_PAIR_TOKEN, 0, prepend);
+    } else {
+      add_token(cpi, plane, pos, DCT_EOB_TRIPLE_TOKEN, 0, prepend);
+    }
+    
+  } else {
+    
+    if ( run < 8 ) {
+      add_token(cpi, plane, pos, DCT_REPEAT_RUN_TOKEN, run-4, prepend);
+    } else if ( cpi->RunLength < 16 ) {
+      add_token(cpi, plane, pos, DCT_REPEAT_RUN2_TOKEN, run-8, prepend);
+    } else if ( cpi->RunLength < 32 ) {
+      add_token(cpi, plane, pos, DCT_REPEAT_RUN3_TOKEN, run-16, prepend);
+    } else if ( cpi->RunLength < 4096) {
+      add_token(cpi, plane, pos, DCT_REPEAT_RUN4_TOKEN, run, prepend);
+    }
+  }
+}
+
+static void add_eob_run(CP_INSTANCE *cpi, int plane, int pos, 
+			int *eob_run, int *eob_pre){
+  run = eob_run[pos];
+  if(!run) return;
+  
+  /* pre-runs for a coefficient group > DC are a special case; they're
+     handled when groups are tied together at the end of tokenization */
+  if(pos > 0 !cpi->dct_token_count[pos]){
+    /* no tokens emitted yet, this is a pre-run */
+    eob_pre[pos] += run;
+  }else{
+    emit_eob_run(cpi,plane,pos,run,0);
+  }
+  
+  eob_run[pos] = 0;
+}
+
+static void TokenizeDctValue (CP_INSTANCE *cpi, 
+			      int plane, 
+			      int coeff,
+			      ogg_int16_t DataValue){
+
   int AbsDataVal = abs(DataValue);
   int neg = (DataValue<0);
-  /* Values are tokenised as category value and a number of additional
-     bits that define the position within the category.  */
-
-  if ( AbsDataVal == 0 ) return 0;
 
   if ( AbsDataVal == 1 ){
 
-    TokenListPtr[0] = (neg ? MINUS_ONE_TOKEN : ONE_TOKEN);
-    return 1;
+    add_token(cpi, plane, pos, (neg ? MINUS_ONE_TOKEN : ONE_TOKEN), 0, 0);
 
   } else if ( AbsDataVal == 2 ) {
 
-    TokenListPtr[0] = (neg ? MINUS_TWO_TOKEN : TWO_TOKEN);
-    return 1;
+    add_token(cpi, plane, pos, (neg ? MINUS_TWO_TOKEN : TWO_TOKEN), 0, 0);
 
   } else if ( AbsDataVal <= MAX_SINGLE_TOKEN_VALUE ) {
 
-    TokenListPtr[0] = LOW_VAL_TOKENS + (AbsDataVal - DCT_VAL_CAT2_MIN);
-    TokenListPtr[1] = neg;
-    return 2;
+    add_token(cpi, plane, pos, LOW_VAL_TOKENS + (AbsDataVal - DCT_VAL_CAT2_MIN), neg, 0);
 
   } else if ( AbsDataVal <= 8 ) {
 
-    /* Bit 1 determines sign, Bit 0 the value */
-    TokenListPtr[0] = DCT_VAL_CATEGORY3;
-    TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT3_MIN) + (neg << 1);
-    return 2;
+    add_token(cpi, plane, pos, DCT_VAL_CATEGORY3, (AbsDataVal - DCT_VAL_CAT3_MIN) + (neg << 1), 0);
 
   } else if ( AbsDataVal <= 12 ) {
 
-    /* Bit 2 determines sign, Bit 0-2 the value */
-    TokenListPtr[0] = DCT_VAL_CATEGORY4;
-    TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT4_MIN) + (neg << 2);
-    return 2;
+    add_token(cpi, plane, pos, DCT_VAL_CATEGORY4, (AbsDataVal - DCT_VAL_CAT4_MIN) + (neg << 2), 0);
 
   } else if ( AbsDataVal <= 20 ) {
 
-    /* Bit 3 determines sign, Bit 0-2 the value */
-    TokenListPtr[0] = DCT_VAL_CATEGORY5;
-    TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT5_MIN) + (neg << 3);
-    return 2;
+    add_token(cpi, plane, pos, DCT_VAL_CATEGORY5, (AbsDataVal - DCT_VAL_CAT5_MIN) + (neg << 3), 0);
 
   } else if ( AbsDataVal <= 36 ) {
 
-    /* Bit 4 determines sign, Bit 0-3 the value */
-    TokenListPtr[0] = DCT_VAL_CATEGORY6;
-    TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT6_MIN) + (neg << 4);
-    return 2;
+    add_token(cpi, plane, pos, DCT_VAL_CATEGORY6, (AbsDataVal - DCT_VAL_CAT6_MIN) + (neg << 4), 0);
 
   } else if ( AbsDataVal <= 68 ) {
 
-    /* Bit 5 determines sign, Bit 0-4 the value */
-    TokenListPtr[0] = DCT_VAL_CATEGORY7;
-    TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT7_MIN) + (neg << 5);
-    return 2;
+    add_token(cpi, plane, pos, DCT_VAL_CATEGORY7, (AbsDataVal - DCT_VAL_CAT7_MIN) + (neg << 5), 0);
 
   } else {
 
-    /* Bit 9 determines sign, Bit 0-8 the value */
-    TokenListPtr[0] = DCT_VAL_CATEGORY8;
-    TokenListPtr[1] = (AbsDataVal - DCT_VAL_CAT8_MIN) + (neg <<9 );
-    return 2;
+    add_token(cpi, plane, pos, DCT_VAL_CATEGORY8, (AbsDataVal - DCT_VAL_CAT8_MIN) + (neg << 9), 0);
 
   } 
 }
 
-static unsigned char TokenizeDctRunValue (unsigned char RunLength,
-                                          ogg_int16_t DataValue,
-                                          ogg_uint32_t *TokenListPtr ){
-  unsigned char tokens_added = 0;
+static void TokenizeDctRunValue (CP_INSTANCE *cpi, 
+				 int plane, 
+				 int coeff,
+				 unsigned char RunLength,
+				 ogg_int16_t DataValue){
+
   ogg_uint32_t AbsDataVal = abs( (ogg_int32_t)DataValue );
 
   /* Values are tokenised as category value and a number of additional
      bits  that define the category.  */
-  if ( DataValue == 0 ) return 0;
+
   if ( AbsDataVal == 1 ) {
-    /* Zero runs of 1-5 */
-    if ( RunLength <= 5 ) {
-      TokenListPtr[0] = DCT_RUN_CATEGORY1 + (RunLength - 1);
-      if ( DataValue > 0 )
-        TokenListPtr[1] = 0;
-      else
-        TokenListPtr[1] = 1;
-    } else if ( RunLength <= 9 ) {
-      /* Zero runs of 6-9 */
-      TokenListPtr[0] = DCT_RUN_CATEGORY1B;
-      if ( DataValue > 0 )
-        TokenListPtr[1] = (RunLength - 6);
-      else
-        TokenListPtr[1] = 0x04 + (RunLength - 6);
-    } else {
-      /* Zero runs of 10-17 */
-      TokenListPtr[0] = DCT_RUN_CATEGORY1C;
-      if ( DataValue > 0 )
-        TokenListPtr[1] = (RunLength - 10);
-      else
-        TokenListPtr[1] = 0x08 + (RunLength - 10);
-    }
-    tokens_added = 2;
+
+    if ( RunLength <= 5 ) 
+      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1 + (RunLength - 1), ((DataValue&0x8000)>>15), 0);
+    else if ( RunLength <= 9 ) 
+      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1B, RunLength - 6 + ((DataValue&0x8000)>>13), 0);
+    else 
+      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1C, RunLength - 10 + ((DataValue&0x8000)>>12), 0);
+
   } else if ( AbsDataVal <= 3 ) {
-    if ( RunLength == 1 ) {
-      TokenListPtr[0] = DCT_RUN_CATEGORY2;
 
-      /* Extra bits token bit 1 indicates sign, bit 0 indicates value */
-      if ( DataValue > 0 )
-        TokenListPtr[1] = (AbsDataVal - 2);
-      else
-        TokenListPtr[1] = (0x02) + (AbsDataVal - 2);
-      tokens_added = 2;
-    }else{
-      TokenListPtr[0] = DCT_RUN_CATEGORY2 + 1;
+    if ( RunLength == 1 ) 
+      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY2, AbsDataVal - 2 + ((DataValue&0x8000)>>14), 0);
+    else
+      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY2B, 
+		((DataValue&0x8000)>>13) + ((AbsDataVal-2)<<1) + RunLength - 2, 0);
 
-      /* Extra bits token. */
-      /* bit 2 indicates sign, bit 1 indicates value, bit 0 indicates
-         run length */
-      if ( DataValue > 0 )
-        TokenListPtr[1] = ((AbsDataVal - 2) << 1) + (RunLength - 2);
-      else
-        TokenListPtr[1] = (0x04) + ((AbsDataVal - 2) << 1) + (RunLength - 2);
-      tokens_added = 2;
-    }
-  } else  {
-    tokens_added = 2;  /* ERROR */
-    /*IssueWarning( "Bad Input to TokenizeDctRunValue" );*/
   }
-
-  /* Return the total number of tokens added */
-  return tokens_added;
 }
 
-static unsigned char TokenizeDctBlock (fragment_t *fp){
+static int tokenize_pass (fragment_t *fp, int pos, int plane, int *eob_run, int *eob_pre){
   ogg_int16_t DC = fp->pred_dc;
   ogg_int16_t *RawData = fp->dct;
   ogg_uint32_t *TokenListPtr = fp->token_list;
-  ogg_uint32_t i;
-  unsigned char  run_count;
-  unsigned char  token_count = 0;     /* Number of tokens crated. */
-  ogg_uint32_t AbsData;
+  ogg_int16_t val = (i ? RawData[i] : DC);
+  int zero_run;
+  int i = pos;
   
-  /* Tokenize the block */
-  for( i = 0; i < BLOCK_SIZE; i++ ){
-    ogg_int16_t val = (i ? RawData[i] : DC);
-    run_count = 0;
+  while( (i < BLOCK_SIZE) && (!val) )
+    val = RawData[++i];
 
-    /* Look for a zero run.  */
-    /* NOTE the use of & instead of && which is faster (and
-       equivalent) in this instance. */
-    /* NO, NO IT ISN'T --Monty */
-    while( (i < BLOCK_SIZE) && (!val) ){
-      run_count++;
-      i++;
-      val = RawData[i];
-    }
+  if ( i == BLOCK_SIZE ){
 
-    /* If we have reached the end of the block then code EOB */
-    if ( i == BLOCK_SIZE ){
-      TokenListPtr[token_count] = DCT_EOB_TOKEN;
-      token_count++;
+    eob_run[pos]++;
+    if(eob_run[pos] >= 4095)
+      add_eob_run(cpi,plane,pos,eob_run,eob_pre);
+    return i;
+
+  }
+  
+  fp->nonzero = i;
+  add_eob_run(cpi,plane,pos,eob_run,eob_pre); /* if any */
+  
+  zero_run = i-pos;
+  if (zero_run){
+    ogg_uint32_t absval = abs(val);
+    if ( ((absval == 1) && (zero_run <= 17)) ||
+	 ((absval <= 3) && (zero_run <= 3)) ) {
+      TokenizeDctRunValue( cpi, plane, pos, run_count, val);
     }else{
-      /* If we have a short zero run followed by a low data value code
-         the two as a composite token. */
-      if ( run_count ){
-        AbsData = abs(val);
+      if ( zero_run <= 8 )
+	add_token(cpi, plane, pos, DCT_SHORT_ZRL_TOKEN, run_count - 1);
+      else
+	add_token(cpi, pos, DCT_ZRL_TOKEN, run_count - 1);
+      TokenizeDctValue( cpi, plane, pos, val );
+    }
+  }else{
+    TokenizeDctValue( cpi, plane, pos, val );
+  }
 
-        if ( ((AbsData == 1) && (run_count <= 17)) ||
-             ((AbsData <= 3) && (run_count <= 3)) ) {
-          /* Tokenise the run and subsequent value combination value */
-          token_count += TokenizeDctRunValue( run_count, val,
-                                              &TokenListPtr[token_count] );
-        }else{
+  return i+1;
+}
 
-        /* Else if we have a long non-EOB run or a run followed by a
-           value token > MAX_RUN_VAL then code the run and token
-           seperately */
-          if ( run_count <= 8 )
-            TokenListPtr[token_count] = DCT_SHORT_ZRL_TOKEN;
-          else
-            TokenListPtr[token_count] = DCT_ZRL_TOKEN;
+void DPCMTokenize (CP_INSTANCE *cpi){
+  fragment_t *fp = cpi->coded_tail;
+  int eob_run[64];
+  int eob_pre[64];
 
-          token_count++;
-          TokenListPtr[token_count] = run_count - 1;
-          token_count++;
+  memset(eob_run, 0 sizeof(eob_run));
+  memset(eob_pre, 0 sizeof(eob_pre));
+  memset(cpi->dc_bits, 0, sizeof(cpi->dc_bits));
+  memset(cpi->ac_bits, 0, sizeof(cpi->ac_bits));
+  memset(cpi->dct_token_count, 0, sizeof(cpi->dct_token_count));
+  memset(cpi->dct_token_ycount, 0, sizeof(cpi->dct_token_ycount));
+  memset(cpi->dct_token_pre, 0, sizeof(cpi->dct_token_pre));
 
-          /* Now tokenize the value */
-          token_count += TokenizeDctValue( val, &TokenListPtr[token_count] );
-        }
-      }else{
-        /* Else there was NO zero run. */
-        /* Tokenise the value  */
-        token_count += TokenizeDctValue( val, &TokenListPtr[token_count] );
+  /* Tokenise the dct data. */
+  while(fp){
+    int coeff = 0;
+    int plane = (fp >= cpi->frag[1]);
+    
+    fp->nonzero = 0;
+    while(coeff < BLOCK_SIZE)
+      coeff = tokenize_pass (fp, coeff, plane, eob_run, eob_pre);
+
+    fp = fp->next;
+  }
+    
+  /* sew together group pre- and post- EOB runs */
+  /* there are two categories of runs:
+     1) runs that end a group and may or may not extend into the next
+     2) pre runs that begin at group position 0
+     
+     Category 2 is a special case that requires potentially
+     'prepending' tokens to the group. */
+   
+  {
+    int run = 0;
+    int run_coeff = 0;
+    int run_frag = 0;
+
+    for(i=0;i<BLOCK_SIZE;i++){
+      run += cpi->dct_eob_pre[i];
+
+      if(cpi->dct_token_count[i]){
+
+	/* first code the spanning/preceeding run */
+	while(run){
+	  int v = (run < 4095 ? run : 4095);
+	  int plane = (run_frag >= cpi->coded_y);
+
+	  if(run_coeff == i){
+	    /* prepend to current group */
+	    emit_eob_run(cpi, plane, run_coeff, v, 1);
+	  }else{
+	    /* append to indicated coeff group; it is possible the run
+	       spans multiple coeffs, it will always be an append as
+	       intervening groups would have a zero token count */
+	    emit_eob_run(cpi, plane, run_coeff, v, 0);
+	  }
+	  
+	  run_frag += v;
+	  run -= v;
+	  while(run_frag >= cpi->coded_total){
+	    run_coeff++;
+	    run_frag -= cpi->coded_total;
+	  }
+	}
+
+	run_frag = cpi->coded_total - cpi->dct_eob_run[i];       
+      }
+      run += cpi->dct_eob_run[i];
+
+    }
+    
+    /* tie off last run */
+    while(run){
+      int v = (run < 4095 ? run : 4095);
+      int plane = (run_frag >= cpi->coded_y);
+      emit_eob_run(cpi, plane, run_coeff, v,0);
+      run_frag += v;
+      run -= v;
+      while(run_frag >= cpi->coded_total){
+	run_coeff++;
+	run_frag -= cpi->coded_total;
       }
     }
   }
-
-  /* Return the total number of tokens (including additional bits
-     tokens) used. */
-  return token_count;
-}
-
-ogg_uint32_t DPCMTokenizeBlock (CP_INSTANCE *cpi,
-				fragment_t *fp){
-  /* Tokenise the dct data. */
-
-  int token_count = TokenizeDctBlock(fp);  
-  fp->tokens_coded = token_count;
-
-  /* Return number of pixels coded (i.e. 8x8). */
-  return BLOCK_SIZE;
 }
 
 static int AllZeroDctData( ogg_int16_t * QuantList ){
@@ -246,6 +315,8 @@ static int AllZeroDctData( ogg_int16_t * QuantList ){
   
   return 1;
 }
+
+static int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };
 
 static void BlockUpdateDifference (CP_INSTANCE * cpi, 
 				   unsigned char *FiltPtr,
