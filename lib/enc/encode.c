@@ -161,10 +161,6 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi,
 
 	if ( fp && fp->coded ) {
 
-	  cpi->coded_total++;
-	  if(plane == 0)
-	    cpi->coded_y++;
-	  
 	  /* transform and quantize block */
 	  TransformQuantizeBlock( cpi, fp );
 	  
@@ -452,7 +448,6 @@ void EncodeData(CP_INSTANCE *cpi){
   /* reset all coding metadata  */
   memset(cpi->ModeCount, 0, MAX_MODES*sizeof(*cpi->ModeCount));
   cpi->coded_head = cpi->coded_tail = NULL;
-  cpi->coded_y = cpi->coded_total = 0;
 
   dsp_save_fpu (cpi->dsp);
 

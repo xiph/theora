@@ -197,8 +197,6 @@ typedef struct CP_INSTANCE {
 
   fragment_t      *coded_head;
   fragment_t      *coded_tail;
-  ogg_uint32_t     coded_y;
-  ogg_uint32_t     coded_total;
 
   unsigned char   *dct_token_storage;
   ogg_uint16_t    *dct_token_eb_storage;
