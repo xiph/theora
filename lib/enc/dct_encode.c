@@ -16,6 +16,7 @@
  ********************************************************************/
 
 #include <stdlib.h>
+#include <string.h>
 #include "codec_internal.h"
 #include "dsp.h"
 #include "quant_lookup.h"
@@ -31,71 +32,97 @@ static int acoffset[64]={
 
 /* plane == 0 for Y, 1 for UV */
 static void add_token(CP_INSTANCE *cpi, int plane, int coeff, 
-		      unsigned char token, ogg_uint16_t eb,
-		      int prepend){
-  if(prepend){
-    int pre = cpi->dct_token_pre[coeff]++;
-    *(cpi->dct_token[coeff] - pre)  = token;
-    *(cpi->dct_token_eb[coeff] - pre)  = eb;
-  }else{
-    cpi->dct_token[pos][cpi->dct_token_count[pos]] = token;
-    cpi->dct_token_eb[pos][cpi->dct_token_count[pos]] = eb;
-    cpi->dct_token_count[pos]++;
-  }
+		      unsigned char token, ogg_uint16_t eb){
+
+  cpi->dct_token[coeff][cpi->dct_token_count[coeff]] = token;
+  cpi->dct_token_eb[coeff][cpi->dct_token_count[coeff]] = eb;
+  cpi->dct_token_count[coeff]++;
 
   if(coeff == 0){
     /* DC */
+    int i;
     for ( i = 0; i < DC_HUFF_CHOICES; i++)
       cpi->dc_bits[plane][i] += cpi->HuffCodeLengthArray_VP3x[i][token];
   }else{
     /* AC */
-    int offset = acoffset[coeff];
+    int i,offset = acoffset[coeff];
     for ( i = 0; i < AC_HUFF_CHOICES; i++)
-      cpc->ac_bits[plane][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
+      cpi->ac_bits[plane][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
   }
 
   if(!plane)cpi->dct_token_ycount[coeff]++;
 }
 
-static void emit_eob_run(CP_INSTANCE *cpi, int plane, int pos, int run, int prepend){
+static void prepend_token(CP_INSTANCE *cpi, int plane, int coeff, 
+			  unsigned char token, ogg_uint16_t eb){
+
+  cpi->dct_token[coeff]--;
+  cpi->dct_token_eb[coeff]--;
+  cpi->dct_token[coeff][0] = token;
+  cpi->dct_token_eb[coeff][0] = eb;
+  cpi->dct_token_count[coeff]++;
+
+  if(coeff == 0){
+    /* DC */
+    int i;
+    for ( i = 0; i < DC_HUFF_CHOICES; i++)
+      cpi->dc_bits[plane][i] += cpi->HuffCodeLengthArray_VP3x[i][token];
+  }else{
+    /* AC */
+    int i,offset = acoffset[coeff];
+    for ( i = 0; i < AC_HUFF_CHOICES; i++)
+      cpi->ac_bits[plane][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
+  }
+
+  if(!plane)cpi->dct_token_ycount[coeff]++;
+}
+
+static void emit_eob_run(CP_INSTANCE *cpi, int plane, int pos, int run){
   if ( run <= 3 ) {
     if ( run == 1 ) {
-      add_token(cpi, plane, pos, DCT_EOB_TOKEN, 0, prepend);
-    } else if ( cpi->RunLength == 2 ) {
-      add_token(cpi, plane, pos, DCT_EOB_PAIR_TOKEN, 0, prepend);
+      add_token(cpi, plane, pos, DCT_EOB_TOKEN, 0);
+    } else if ( run == 2 ) {
+      add_token(cpi, plane, pos, DCT_EOB_PAIR_TOKEN, 0);
     } else {
-      add_token(cpi, plane, pos, DCT_EOB_TRIPLE_TOKEN, 0, prepend);
+      add_token(cpi, plane, pos, DCT_EOB_TRIPLE_TOKEN, 0);
     }
     
   } else {
     
     if ( run < 8 ) {
-      add_token(cpi, plane, pos, DCT_REPEAT_RUN_TOKEN, run-4, prepend);
-    } else if ( cpi->RunLength < 16 ) {
-      add_token(cpi, plane, pos, DCT_REPEAT_RUN2_TOKEN, run-8, prepend);
-    } else if ( cpi->RunLength < 32 ) {
-      add_token(cpi, plane, pos, DCT_REPEAT_RUN3_TOKEN, run-16, prepend);
-    } else if ( cpi->RunLength < 4096) {
-      add_token(cpi, plane, pos, DCT_REPEAT_RUN4_TOKEN, run, prepend);
+      add_token(cpi, plane, pos, DCT_REPEAT_RUN_TOKEN, run-4);
+    } else if ( run < 16 ) {
+      add_token(cpi, plane, pos, DCT_REPEAT_RUN2_TOKEN, run-8);
+    } else if ( run < 32 ) {
+      add_token(cpi, plane, pos, DCT_REPEAT_RUN3_TOKEN, run-16);
+    } else if ( run < 4096) {
+      add_token(cpi, plane, pos, DCT_REPEAT_RUN4_TOKEN, run);
     }
   }
 }
 
-static void add_eob_run(CP_INSTANCE *cpi, int plane, int pos, 
-			int *eob_run, int *eob_pre){
-  run = eob_run[pos];
-  if(!run) return;
-  
-  /* pre-runs for a coefficient group > DC are a special case; they're
-     handled when groups are tied together at the end of tokenization */
-  if(pos > 0 !cpi->dct_token_count[pos]){
-    /* no tokens emitted yet, this is a pre-run */
-    eob_pre[pos] += run;
-  }else{
-    emit_eob_run(cpi,plane,pos,run,0);
+static void prepend_eob_run(CP_INSTANCE *cpi, int plane, int pos, int run){
+  if ( run <= 3 ) {
+    if ( run == 1 ) {
+      prepend_token(cpi, plane, pos, DCT_EOB_TOKEN, 0);
+    } else if ( run == 2 ) {
+      prepend_token(cpi, plane, pos, DCT_EOB_PAIR_TOKEN, 0);
+    } else {
+      prepend_token(cpi, plane, pos, DCT_EOB_TRIPLE_TOKEN, 0);
+    }
+    
+  } else {
+    
+    if ( run < 8 ) {
+      prepend_token(cpi, plane, pos, DCT_REPEAT_RUN_TOKEN, run-4);
+    } else if ( run < 16 ) {
+      prepend_token(cpi, plane, pos, DCT_REPEAT_RUN2_TOKEN, run-8);
+    } else if ( run < 32 ) {
+      prepend_token(cpi, plane, pos, DCT_REPEAT_RUN3_TOKEN, run-16);
+    } else if ( run < 4096) {
+      prepend_token(cpi, plane, pos, DCT_REPEAT_RUN4_TOKEN, run);
+    }
   }
-  
-  eob_run[pos] = 0;
 }
 
 static void TokenizeDctValue (CP_INSTANCE *cpi, 
@@ -108,39 +135,39 @@ static void TokenizeDctValue (CP_INSTANCE *cpi,
 
   if ( AbsDataVal == 1 ){
 
-    add_token(cpi, plane, pos, (neg ? MINUS_ONE_TOKEN : ONE_TOKEN), 0, 0);
+    add_token(cpi, plane, coeff, (neg ? MINUS_ONE_TOKEN : ONE_TOKEN), 0);
 
   } else if ( AbsDataVal == 2 ) {
 
-    add_token(cpi, plane, pos, (neg ? MINUS_TWO_TOKEN : TWO_TOKEN), 0, 0);
+    add_token(cpi, plane, coeff, (neg ? MINUS_TWO_TOKEN : TWO_TOKEN), 0);
 
   } else if ( AbsDataVal <= MAX_SINGLE_TOKEN_VALUE ) {
 
-    add_token(cpi, plane, pos, LOW_VAL_TOKENS + (AbsDataVal - DCT_VAL_CAT2_MIN), neg, 0);
+    add_token(cpi, plane, coeff, LOW_VAL_TOKENS + (AbsDataVal - DCT_VAL_CAT2_MIN), neg);
 
   } else if ( AbsDataVal <= 8 ) {
 
-    add_token(cpi, plane, pos, DCT_VAL_CATEGORY3, (AbsDataVal - DCT_VAL_CAT3_MIN) + (neg << 1), 0);
+    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY3, (AbsDataVal - DCT_VAL_CAT3_MIN) + (neg << 1));
 
   } else if ( AbsDataVal <= 12 ) {
 
-    add_token(cpi, plane, pos, DCT_VAL_CATEGORY4, (AbsDataVal - DCT_VAL_CAT4_MIN) + (neg << 2), 0);
+    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY4, (AbsDataVal - DCT_VAL_CAT4_MIN) + (neg << 2));
 
   } else if ( AbsDataVal <= 20 ) {
 
-    add_token(cpi, plane, pos, DCT_VAL_CATEGORY5, (AbsDataVal - DCT_VAL_CAT5_MIN) + (neg << 3), 0);
+    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY5, (AbsDataVal - DCT_VAL_CAT5_MIN) + (neg << 3));
 
   } else if ( AbsDataVal <= 36 ) {
 
-    add_token(cpi, plane, pos, DCT_VAL_CATEGORY6, (AbsDataVal - DCT_VAL_CAT6_MIN) + (neg << 4), 0);
+    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY6, (AbsDataVal - DCT_VAL_CAT6_MIN) + (neg << 4));
 
   } else if ( AbsDataVal <= 68 ) {
 
-    add_token(cpi, plane, pos, DCT_VAL_CATEGORY7, (AbsDataVal - DCT_VAL_CAT7_MIN) + (neg << 5), 0);
+    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY7, (AbsDataVal - DCT_VAL_CAT7_MIN) + (neg << 5));
 
   } else {
 
-    add_token(cpi, plane, pos, DCT_VAL_CATEGORY8, (AbsDataVal - DCT_VAL_CAT8_MIN) + (neg << 9), 0);
+    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY8, (AbsDataVal - DCT_VAL_CAT8_MIN) + (neg << 9));
 
   } 
 }
@@ -152,6 +179,7 @@ static void TokenizeDctRunValue (CP_INSTANCE *cpi,
 				 ogg_int16_t DataValue){
 
   ogg_uint32_t AbsDataVal = abs( (ogg_int32_t)DataValue );
+  int neg = (DataValue<0);
 
   /* Values are tokenised as category value and a number of additional
      bits  that define the category.  */
@@ -159,150 +187,217 @@ static void TokenizeDctRunValue (CP_INSTANCE *cpi,
   if ( AbsDataVal == 1 ) {
 
     if ( RunLength <= 5 ) 
-      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1 + (RunLength - 1), ((DataValue&0x8000)>>15), 0);
+      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1 + RunLength - 1, neg);
     else if ( RunLength <= 9 ) 
-      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1B, RunLength - 6 + ((DataValue&0x8000)>>13), 0);
+      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1B, RunLength - 6 + (neg<<2));
     else 
-      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1C, RunLength - 10 + ((DataValue&0x8000)>>12), 0);
+      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1C, RunLength - 10 + (neg<<3));
 
   } else if ( AbsDataVal <= 3 ) {
 
     if ( RunLength == 1 ) 
-      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY2, AbsDataVal - 2 + ((DataValue&0x8000)>>14), 0);
+      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY2, AbsDataVal - 2 + (neg<<1));
     else
       add_token(cpi,plane,coeff, DCT_RUN_CATEGORY2B, 
-		((DataValue&0x8000)>>13) + ((AbsDataVal-2)<<1) + RunLength - 2, 0);
+		(neg<<2) + ((AbsDataVal-2)<<1) + RunLength - 2);
 
   }
 }
 
-static int tokenize_pass (fragment_t *fp, int pos, int plane, int *eob_run, int *eob_pre){
-  ogg_int16_t DC = fp->pred_dc;
-  ogg_int16_t *RawData = fp->dct;
-  ogg_uint32_t *TokenListPtr = fp->token_list;
-  ogg_int16_t val = (i ? RawData[i] : DC);
-  int zero_run;
-  int i = pos;
-  
-  while( (i < BLOCK_SIZE) && (!val) )
-    val = RawData[++i];
+static void tokenize_groups(CP_INSTANCE *cpi,
+			    int *eob_run, int *eob_plane, int *eob_ypre, int *eob_uvpre){
+  fragment_t *fp = cpi->coded_tail;
 
-  if ( i == BLOCK_SIZE ){
+  while(fp){
+    int coeff = 0;
+    int plane = (fp >= cpi->frag[1]);
+    fp->nonzero = 0;
 
-    eob_run[pos]++;
-    if(eob_run[pos] >= 4095)
-      add_eob_run(cpi,plane,pos,eob_run,eob_pre);
-    return i;
+    while(coeff < BLOCK_SIZE){
+      ogg_int16_t val = (coeff ? fp->dct[coeff] : fp->pred_dc);
+      int zero_run;
+      int i = coeff;
+  
+      fp->nonzero = coeff;
+      
+      while( !val && (++i < BLOCK_SIZE) )
+	val = fp->dct[i];
+      
+      if ( i == BLOCK_SIZE ){
 
-  }
-  
-  fp->nonzero = i;
-  add_eob_run(cpi,plane,pos,eob_run,eob_pre); /* if any */
-  
-  zero_run = i-pos;
-  if (zero_run){
-    ogg_uint32_t absval = abs(val);
-    if ( ((absval == 1) && (zero_run <= 17)) ||
-	 ((absval <= 3) && (zero_run <= 3)) ) {
-      TokenizeDctRunValue( cpi, plane, pos, run_count, val);
-    }else{
-      if ( zero_run <= 8 )
-	add_token(cpi, plane, pos, DCT_SHORT_ZRL_TOKEN, run_count - 1);
-      else
-	add_token(cpi, pos, DCT_ZRL_TOKEN, run_count - 1);
-      TokenizeDctValue( cpi, plane, pos, val );
+	/* if there are no other tokens in this group yet, set up to be
+	   prepended later.  Group 0 is the exception (can't be
+	   prepended) */
+	if(cpi->dct_token_count[coeff] == 0 && coeff){
+	  if(!plane)
+	    eob_ypre[coeff]++;
+	  else
+	    eob_uvpre[coeff]++;
+	}else{
+	  if(eob_run[coeff] == 4095){
+	    emit_eob_run(cpi,eob_plane[coeff],coeff,4095);
+	    eob_run[coeff] = 0;
+	  }
+	  
+	  if(eob_run[coeff]==0)
+	    eob_plane[coeff]=plane;
+	  
+	  eob_run[coeff]++;
+	}
+	coeff = BLOCK_SIZE;
+      }else{
+	
+	if(eob_run[coeff]){
+	  emit_eob_run(cpi,eob_plane[coeff],coeff,eob_run[coeff]);
+	  eob_run[coeff]=0;
+	}
+	
+	zero_run = i-coeff;
+	if (zero_run){
+	  ogg_uint32_t absval = abs(val);
+	  if ( ((absval == 1) && (zero_run <= 17)) ||
+	       ((absval <= 3) && (zero_run <= 3)) ) {
+	    TokenizeDctRunValue( cpi, plane, coeff, zero_run, val);
+	    coeff = i+1;
+	  }else{
+	    if ( zero_run <= 8 )
+	      add_token(cpi, plane, coeff, DCT_SHORT_ZRL_TOKEN, zero_run - 1);
+	    else
+	      add_token(cpi, plane, coeff, DCT_ZRL_TOKEN, zero_run - 1);
+	    coeff = i;
+	  }
+	}else{
+	  TokenizeDctValue( cpi, plane, coeff, val );
+	  coeff = i+1;
+	}
+      }
     }
-  }else{
-    TokenizeDctValue( cpi, plane, pos, val );
+    fp=fp->next;
   }
-
-  return i+1;
 }
 
 void DPCMTokenize (CP_INSTANCE *cpi){
-  fragment_t *fp = cpi->coded_tail;
   int eob_run[64];
-  int eob_pre[64];
+  int eob_plane[64];
 
-  memset(eob_run, 0 sizeof(eob_run));
-  memset(eob_pre, 0 sizeof(eob_pre));
+  int eob_ypre[64];
+  int eob_uvpre[64];
+  
+  int i;
+
+  memset(eob_run, 0, sizeof(eob_run));
+  memset(eob_ypre, 0, sizeof(eob_ypre));
+  memset(eob_uvpre, 0, sizeof(eob_uvpre));
   memset(cpi->dc_bits, 0, sizeof(cpi->dc_bits));
   memset(cpi->ac_bits, 0, sizeof(cpi->ac_bits));
   memset(cpi->dct_token_count, 0, sizeof(cpi->dct_token_count));
   memset(cpi->dct_token_ycount, 0, sizeof(cpi->dct_token_ycount));
-  memset(cpi->dct_token_pre, 0, sizeof(cpi->dct_token_pre));
 
-  /* Tokenise the dct data. */
-  while(fp){
-    int coeff = 0;
-    int plane = (fp >= cpi->frag[1]);
-    
-    fp->nonzero = 0;
-    while(coeff < BLOCK_SIZE)
-      coeff = tokenize_pass (fp, coeff, plane, eob_run, eob_pre);
-
-    fp = fp->next;
+  for(i=0;i<BLOCK_SIZE;i++){
+    cpi->dct_token[i] = cpi->dct_token_storage+cpi->frag_total*i;
+    cpi->dct_token_eb[i] = cpi->dct_token_eb_storage+cpi->frag_total*i;
   }
-    
-  /* sew together group pre- and post- EOB runs */
-  /* there are two categories of runs:
-     1) runs that end a group and may or may not extend into the next
-     2) pre runs that begin at group position 0
-     
-     Category 2 is a special case that requires potentially
-     'prepending' tokens to the group. */
-   
+
+  /* Tokenize the dct data. */
+  tokenize_groups (cpi, eob_run, eob_plane, eob_ypre, eob_uvpre);
+  
+  /* tie together eob runs at the beginnings/ends of coeff groups */
   {
+    int coeff = 0;
     int run = 0;
-    int run_coeff = 0;
-    int run_frag = 0;
+    int plane = 0;
 
     for(i=0;i<BLOCK_SIZE;i++){
-      run += cpi->dct_eob_pre[i];
 
-      if(cpi->dct_token_count[i]){
-
-	/* first code the spanning/preceeding run */
-	while(run){
-	  int v = (run < 4095 ? run : 4095);
-	  int plane = (run_frag >= cpi->coded_y);
-
-	  if(run_coeff == i){
-	    /* prepend to current group */
-	    emit_eob_run(cpi, plane, run_coeff, v, 1);
+      if(eob_ypre[i] || eob_uvpre[i]){
+	/* group begins with an EOB run */
+	
+	if(run && run + eob_ypre[i] >= 4095){
+	  emit_eob_run(cpi,plane,coeff,4095);
+	  eob_ypre[i] -= 4095-run; 
+	  run = 0;
+	  coeff = i;
+	  plane = (eob_ypre[i] ? 0 : 1);
+	}
+	
+	if(run && run + eob_ypre[i] + eob_uvpre[i] >= 4095){
+	  emit_eob_run(cpi,plane,coeff,4095);
+	  eob_uvpre[i] -= 4095 - eob_ypre[i] - run;
+	  eob_ypre[i] = 0;
+	  run = 0;
+	  coeff = i;
+	  plane = 1;
+	}
+	
+	if(run){
+	  if(cpi->dct_token_count[i]){
+	    /* group is not only an EOB run; emit the run token */
+	    emit_eob_run(cpi,plane,coeff,run + eob_ypre[i] + eob_uvpre[i]);
+	    eob_ypre[i] = 0;
+	    eob_uvpre[i] = 0;
+	    run = eob_run[i];
+	    coeff = i;
+	    plane = eob_plane[i];
 	  }else{
-	    /* append to indicated coeff group; it is possible the run
-	       spans multiple coeffs, it will always be an append as
-	       intervening groups would have a zero token count */
-	    emit_eob_run(cpi, plane, run_coeff, v, 0);
+	    /* group consists entirely of EOB run.  Add, iterate */
+	    run += eob_ypre[i];
+	    run += eob_uvpre[i];
+	    eob_ypre[i] = 0;
+	    eob_uvpre[i] = 0;
 	  }
+	}else{
 	  
-	  run_frag += v;
-	  run -= v;
-	  while(run_frag >= cpi->coded_total){
-	    run_coeff++;
-	    run_frag -= cpi->coded_total;
+	  if(cpi->dct_token_count[i]){
+	    /* there are other tokens in this group; work backwards as we need to prepend */
+	    while(eob_uvpre[i] >= 4095){
+	      prepend_eob_run(cpi,1,i,4095);
+	      eob_uvpre[i] -= 4095;
+	    }
+	    while(eob_uvpre[i] + eob_ypre[i] >= 4095){
+	      prepend_eob_run(cpi,0,i,4095);
+	      eob_ypre[i] -= 4095 - eob_uvpre[i];
+	      eob_uvpre[i] = 0;
+	    }
+	    if(eob_uvpre[i] + eob_ypre[i]){
+	      prepend_eob_run(cpi, (eob_ypre[i] ? 0 : 1), i, eob_ypre[i] + eob_uvpre[i]);
+	      eob_ypre[i] = 0;
+	      eob_uvpre[i] = 0;
+	    }
+	    run = eob_run[i];
+	    coeff = i;
+	    plane = eob_plane[i];
+	  }else{
+	    /* group consists entirely of EOB run.  Add, flush overs, iterate */
+	    while(eob_ypre[i] >= 4095){
+	      emit_eob_run(cpi,0,i,4095);
+	      eob_ypre[i] -= 4095;
+	    }
+	    while(eob_uvpre[i] + eob_ypre[i] >= 4095){
+	      emit_eob_run(cpi,(eob_ypre[i] ? 0 : 1), i, 4095);
+	      eob_uvpre[i] -= 4095 - eob_ypre[i];
+	      eob_ypre[i] = 0;
+	    }
+	    run = eob_uvpre[i]+eob_ypre[i];
+	    coeff = i;
+	    plane = (eob_ypre[i] ? 0 : 1);
 	  }
 	}
-
-	run_frag = cpi->coded_total - cpi->dct_eob_run[i];       
+      }else{
+	/* no eob run to begin group */
+	if(cpi->dct_token_count[i]){
+	  if(run)
+	    emit_eob_run(cpi,plane,coeff,run);
+	  
+	  run = eob_run[i];
+	  coeff = i;
+	  plane = eob_plane[i];
+	}
       }
-      run += cpi->dct_eob_run[i];
-
     }
     
-    /* tie off last run */
-    while(run){
-      int v = (run < 4095 ? run : 4095);
-      int plane = (run_frag >= cpi->coded_y);
-      emit_eob_run(cpi, plane, run_coeff, v,0);
-      run_frag += v;
-      run -= v;
-      while(run_frag >= cpi->coded_total){
-	run_coeff++;
-	run_frag -= cpi->coded_total;
-      }
-    }
+    if(run)
+      emit_eob_run(cpi,plane,coeff,run);
+    
   }
 }
 

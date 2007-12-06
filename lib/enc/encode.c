@@ -198,7 +198,7 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi,
 }
 
 static void EncodeDcTokenList (CP_INSTANCE *cpi) {
-  int i,j;
+  int i,plane;
   int best;
   int huff[2];
   oggpack_buffer *opb=cpi->oggbuffer;
@@ -206,11 +206,11 @@ static void EncodeDcTokenList (CP_INSTANCE *cpi) {
   /* Work out which table options are best for DC */
   for(plane = 0; plane<2; plane++){
     best = cpi->dc_bits[plane][0];
-    huff[plane] = 0;
-    for ( j = 1; j < DC_HUFF_CHOICES; j++ ) {
-      if ( cpi->dc_bits[plane][j] < best ) {
-	best = cpi->dc_bits[plane][j];
-	huff[plane] = j + DC_HUFF_OFFSET;
+    huff[plane] = DC_HUFF_OFFSET;
+    for ( i = 1; i < DC_HUFF_CHOICES; i++ ) {
+      if ( cpi->dc_bits[plane][i] < best ) {
+	best = cpi->dc_bits[plane][i];
+	huff[plane] = i + DC_HUFF_OFFSET;
       }
     }
     oggpackB_write( opb, huff[plane] - DC_HUFF_OFFSET, DC_HUFF_CHOICE_BITS );
@@ -221,6 +221,7 @@ static void EncodeDcTokenList (CP_INSTANCE *cpi) {
     int token = cpi->dct_token[0][i];
     int eb = cpi->dct_token_eb[0][i];
     int plane = (i >= cpi->dct_token_ycount[0]);
+
     oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huff[plane]][token],
                     cpi->HuffCodeLengthArray_VP3x[huff[plane]][token] );
     
@@ -231,46 +232,29 @@ static void EncodeDcTokenList (CP_INSTANCE *cpi) {
 
 static void EncodeAcGroup(CP_INSTANCE *cpi, int group, int huff_offset, int *huffchoice){
   int i;
-  
+  oggpack_buffer *opb=cpi->oggbuffer;
   int c = 0;
   int y = cpi->dct_token_ycount[group];
   
-  /* pre-tokens, then post-tokens */
-
-  for(j=1; j<=cpi->dct_token_pre[group]; j++){
-    int token = *(cpi->dct_token[group]-j);
-    int eb = *(cpi->dct_token_eb[group]-j);
-    int plane = (c >= y);
-    int hi = huff_offset + huffchoice[plane];
-
-    oggpackB_write( opb, cpi->pb.HuffCodeArray_VP3x[hi][token],
-		    cpi->pb.HuffCodeLengthArray_VP3x[hi][token] );
-
-    if ( cpi->pb.ExtraBitLengths_VP3x[token] > 0 ) 
-      oggpackB_write( opb, eb,cpi->pb.ExtraBitLengths_VP3x[token] );
-    
-    c++;
-  }
-
-  for(j=0; j<cpi->dct_token_count[group]; j++){
-    int token = cpi->dct_token[group][j];
-    int eb = cpi->dct_token_eb[group][j];
+  for(i=0; i<cpi->dct_token_count[group]; i++){
+    int token = cpi->dct_token[group][i];
+    int eb = cpi->dct_token_eb[group][i];
     int plane = (c >= y);
 
     int hi = huff_offset + huffchoice[plane];
 
-    oggpackB_write( opb, cpi->pb.HuffCodeArray_VP3x[hi][token],
-		    cpi->pb.HuffCodeLengthArray_VP3x[hi][token] );
+    oggpackB_write( opb, cpi->HuffCodeArray_VP3x[hi][token],
+		    cpi->HuffCodeLengthArray_VP3x[hi][token] );
     
-    if ( cpi->pb.ExtraBitLengths_VP3x[token] > 0 ) 
-      oggpackB_write( opb, eb,cpi->pb.ExtraBitLengths_VP3x[token] );
+    if (cpi->ExtraBitLengths_VP3x[token] > 0) 
+      oggpackB_write( opb, eb,cpi->ExtraBitLengths_VP3x[token] );
     
     c++;
   }
 }
 
 static void EncodeAcTokenList (CP_INSTANCE *cpi) {
-  int i,j;
+  int i,plane;
   int best;
   int huff[2];
   oggpack_buffer *opb=cpi->oggbuffer;
@@ -278,11 +262,11 @@ static void EncodeAcTokenList (CP_INSTANCE *cpi) {
   /* Work out which table options are best for AC */
   for(plane = 0; plane<2; plane++){
     best = cpi->ac_bits[plane][0];
-    huff[plane] = 0;
-    for ( j = 1; j < AC_HUFF_CHOICES; j++ ) {
-      if ( cpi->ac_bits[plane][j] < best ){
-	best = cpi->ac_bits[plane][j];
-	huff[plane] = j + AC_HUFF_OFFSET;
+    huff[plane] = AC_HUFF_OFFSET;
+    for ( i = 1; i < AC_HUFF_CHOICES; i++ ) {
+      if ( cpi->ac_bits[plane][i] < best ){
+	best = cpi->ac_bits[plane][i];
+	huff[plane] = i + AC_HUFF_OFFSET;
       }
     }
     oggpackB_write( opb, huff[plane] - AC_HUFF_OFFSET, AC_HUFF_CHOICE_BITS );
@@ -482,9 +466,6 @@ void EncodeData(CP_INSTANCE *cpi){
   
   PredictDC(cpi);
   DPCMTokenize(cpi);
-
-  ogg_int32_t EncodedCoeffs = 1;
-  fragment_t *fp;
 
   /* The tree is not needed (implicit) for key frames */
   if ( cpi->FrameType != KEY_FRAME )

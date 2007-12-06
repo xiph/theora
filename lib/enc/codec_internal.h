@@ -205,7 +205,6 @@ typedef struct CP_INSTANCE {
   unsigned char   *dct_token[64];
   ogg_uint16_t    *dct_token_eb[64];
 
-  ogg_uint32_t     dct_token_pre[64];
   ogg_uint32_t     dct_token_count[64];
   ogg_uint32_t     dct_token_ycount[64];
 
@@ -235,8 +234,6 @@ typedef struct CP_INSTANCE {
   ogg_uint32_t     FourMVThreshold;
 
   /*********************************************************************/
-
-  ogg_uint32_t     RunLength;
 
   ogg_int32_t      MVPixelOffsetY[MAX_SEARCH_SITES];
   ogg_uint32_t     InterTripOutThresh;

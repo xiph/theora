@@ -58,7 +58,7 @@ static void ExpandBlock ( CP_INSTANCE *cpi, fragment_t *fp){
   default:
     dsp_IDctSlow(cpi->dsp, data, quantizers, reconstruct );
   }
-
+  
   /* Convert fragment number to a pixel offset in a reconstruction buffer. */
   dsp_recon8x8 (cpi->dsp, &cpi->recon[fp->buffer_index],
 		reconstruct, cpi->stride[plane]);

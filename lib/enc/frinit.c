@@ -16,6 +16,7 @@
  ********************************************************************/
 
 #include <stdlib.h>
+#include <string.h>
 #include "codec_internal.h"
 
 
@@ -33,17 +34,14 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
   if(cpi->recon) _ogg_free(cpi->recon);
   cpi->recon = 0;
 
-  if(cpi->OptimisedTokenListEb ) _ogg_free(cpi->OptimisedTokenListEb);
-  cpi->OptimisedTokenListEb = 0;
+  if(cpi->dct_token_storage) _ogg_free(cpi->dct_token_storage);
+  cpi->dct_token_storage = 0;
 
-  if(cpi->OptimisedTokenList ) _ogg_free(cpi->OptimisedTokenList);
-  cpi->OptimisedTokenList = 0;
+  if(cpi->dct_token_eb_storage) _ogg_free(cpi->dct_token_eb_storage);
+  cpi->dct_token_eb_storage = 0;
 
-  if(cpi->OptimisedTokenListHi ) _ogg_free(cpi->OptimisedTokenListHi);
-  cpi->OptimisedTokenListHi = 0;
-
-  if(cpi->OptimisedTokenListPl ) _ogg_free(cpi->OptimisedTokenListPl);
-  cpi->OptimisedTokenListPl = 0;
+  memset(cpi->dct_token,0,sizeof(cpi->dct_token));
+  memset(cpi->dct_token_eb,0,sizeof(cpi->dct_token_eb));
 
   if(cpi->frag[0]) _ogg_free(cpi->frag[0]);
   cpi->frag[0] = 0;
@@ -82,6 +80,7 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
    a waste of code. */
 
 void InitFrameInfo(CP_INSTANCE *cpi){
+
   cpi->stride[0] = (cpi->info.width + STRIDE_EXTRA);
   cpi->stride[1] = (cpi->info.width + STRIDE_EXTRA) / 2;
   cpi->stride[2] = (cpi->info.width + STRIDE_EXTRA) / 2;
@@ -211,19 +210,9 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->golden = _ogg_malloc(cpi->frame_size*sizeof(*cpi->golden));
   cpi->recon = _ogg_malloc(cpi->frame_size*sizeof(*cpi->recon));
 
-  cpi->OptimisedTokenListEb =
-    _ogg_malloc(cpi->frame_size*
-                sizeof(*cpi->OptimisedTokenListEb));
-  cpi->OptimisedTokenList =
-    _ogg_malloc(cpi->frame_size*
-                sizeof(*cpi->OptimisedTokenList));
-  cpi->OptimisedTokenListHi =
-    _ogg_malloc(cpi->frame_size*
-                sizeof(*cpi->OptimisedTokenListHi));
-  cpi->OptimisedTokenListPl =
-    _ogg_malloc(cpi->frame_size*
-                sizeof(*cpi->OptimisedTokenListPl));
-
+  cpi->dct_token_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_storage));
+  cpi->dct_token_eb_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_eb_storage));
+  
   /* Re-initialise the pixel index table. */
   {
     ogg_uint32_t plane,row,col;
