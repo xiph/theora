@@ -63,7 +63,7 @@ static oc_huff_node *oc_huff_node_alloc(int _nbits){
   _node: The node to free.
          This may be NULL.*/
 static void oc_huff_node_free(oc_huff_node *_node){
-  free(_node);
+  _ogg_free(_node);
 }
 
 /*Frees the memory used by a Huffman tree.
