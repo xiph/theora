@@ -115,7 +115,7 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
   int partial=0;
   int fully = 1;
   int invalid_fi = cpi->frag_total;
-  unsigned char *cp = cpi->frag_coded[0];
+  unsigned char *cp = cpi->frag_coded;
 
   /* code the partially coded SB flags */
   for( SB = 0; SB < cpi->super_total; SB++ ) {

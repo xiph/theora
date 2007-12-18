@@ -42,8 +42,8 @@ static void PredictDC(CP_INSTANCE *cpi){
 
   int WhichFrame;
   int WhichCase;
-  coding_mode_t *mp = cpi->frag_mode[0];
-  unsigned char *cp = cpi->frag_coded[0];
+  coding_mode_t *mp = cpi->frag_mode;
+  unsigned char *cp = cpi->frag_coded;
   int fi = 0;
 
   /* for y,u,v */
@@ -144,8 +144,8 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi,
 
   ogg_uint32_t SBs = cpi->super_n[plane];
   ogg_uint32_t SB, MB, B;
-  coding_mode_t *mp = cpi->frag_mode[0];
-  unsigned char *cp = cpi->frag_coded[0];
+  coding_mode_t *mp = cpi->frag_mode;
+  unsigned char *cp = cpi->frag_coded;
 
   /* actually transform and quantize the image now that we've decided
      on the modes Parse in quad-tree ordering */
@@ -309,8 +309,8 @@ static void PackModes (CP_INSTANCE *cpi) {
   const ogg_int32_t *ModeBits;
   const unsigned char  *ModeScheme;
 
-  unsigned char *cp = cpi->frag_coded[0];
-  coding_mode_t *mp = cpi->frag_mode[0];
+  unsigned char *cp = cpi->frag_coded;
+  coding_mode_t *mp = cpi->frag_mode;
   int SB,MB,B;
 
   oggpack_buffer *opb=cpi->oggbuffer;
@@ -409,8 +409,8 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
   const ogg_uint32_t * MvBitsPtr;
 
   ogg_uint32_t SB, MB, B;
-  coding_mode_t *mp = cpi->frag_mode[0];
-  unsigned char *cp = cpi->frag_coded[0];
+  coding_mode_t *mp = cpi->frag_mode;
+  unsigned char *cp = cpi->frag_coded;
 
   oggpack_buffer *opb=cpi->oggbuffer;
 
@@ -498,8 +498,8 @@ ogg_uint32_t PickIntra( CP_INSTANCE *cpi ){
 
   int i;
   for(i=0;i<cpi->frag_total;i++){
-    cpi->frag_mode[0][i] = CODE_INTRA;
-    cpi->frag_coded[0][i] = 1;
+    cpi->frag_mode[i] = CODE_INTRA;
+    cpi->frag_coded[i] = 1;
   }
   return 0;
 }
@@ -516,7 +516,7 @@ static void SetFragMotionVectorAndMode(CP_INSTANCE *cpi,
 				       int mode){
   fragment_t *fp = &cpi->frag[0][fi];
   fp->mv = *mv;
-  cpi->frag_mode[0][fi] = mode;
+  cpi->frag_mode[fi] = mode;
 }
 
 static void SetMBMotionVectorsAndMode(CP_INSTANCE *cpi,
@@ -564,7 +564,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
   unsigned char QIndex = cpi->BaseQ; // temporary
 
-  unsigned char *cp = cpi->frag_coded[0];
+  unsigned char *cp = cpi->frag_coded;
 
   /* initialize error scores */
   *InterError = 0;

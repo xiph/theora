@@ -147,19 +147,19 @@ ogg_uint32_t GetMBIntraError (CP_INSTANCE *cpi,
 
   ogg_uint32_t  IntraError = 0;
   dsp_save_fpu (cpi->dsp);
-  unsigned char *cp = cpi->frag_coded[0];
-  fragment_t *fp = cpi->frag[0];
+  unsigned char *cp = cpi->frag_coded;
+  ogg_uint32_t *bp = cpi->frag_buffer_index;
   
   /* Add together the intra errors for those blocks in the macro block
      that are coded (Y only) */
   if ( cp[mp->y[0]] )
-    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[fp[mp->y[0]].buffer_index],cpi->stride[0]);
+    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[bp[mp->y[0]]],cpi->stride[0]);
   if ( cp[mp->y[1]] )
-    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[fp[mp->y[1]].buffer_index],cpi->stride[0]);
+    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[bp[mp->y[1]]],cpi->stride[0]);
   if ( cp[mp->y[2]] )
-    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[fp[mp->y[2]].buffer_index],cpi->stride[0]);
+    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[bp[mp->y[2]]],cpi->stride[0]);
   if ( cp[mp->y[3]] )
-    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[fp[mp->y[3]].buffer_index],cpi->stride[0]);
+    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[bp[mp->y[3]]],cpi->stride[0]);
 
   dsp_restore_fpu (cpi->dsp);
   return IntraError;
@@ -179,8 +179,8 @@ ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
   
   unsigned char * SrcPtr1;
   unsigned char * RefPtr1;
-  unsigned char *cp = cpi->frag_coded[0];
-  fragment_t *fp = cpi->frag[0];
+  unsigned char *cp = cpi->frag_coded;
+  ogg_uint32_t *bp = cpi->frag_buffer_index;
 
   dsp_save_fpu (cpi->dsp);
   
@@ -201,27 +201,27 @@ ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
   /* Add together the errors for those blocks in the macro block that
      are coded (Y only) */
   if ( cp[mp->y[0]] ) {
-    SrcPtr1 = &SrcPtr[fp[mp->y[0]].buffer_index];
-    RefPtr1 = &RefPtr[fp[mp->y[0]].buffer_index + RefPixelOffset];
+    SrcPtr1 = &SrcPtr[bp[mp->y[0]]];
+    RefPtr1 = &RefPtr[bp[mp->y[0]] + RefPixelOffset];
     InterError += GetInterErr(cpi, SrcPtr1, RefPtr1, &RefPtr1[RefPtr2Offset] );
   }
 
   if ( cp[mp->y[1]] ) {
-    SrcPtr1 = &SrcPtr[fp[mp->y[1]].buffer_index];
-    RefPtr1 = &RefPtr[fp[mp->y[1]].buffer_index + RefPixelOffset];
+    SrcPtr1 = &SrcPtr[bp[mp->y[1]]];
+    RefPtr1 = &RefPtr[bp[mp->y[1]] + RefPixelOffset];
     InterError += GetInterErr(cpi, SrcPtr1, RefPtr1, &RefPtr1[RefPtr2Offset] );
     
   }
   
   if ( cp[mp->y[2]] ) {
-    SrcPtr1 = &SrcPtr[fp[mp->y[2]].buffer_index];
-    RefPtr1 = &RefPtr[fp[mp->y[2]].buffer_index + RefPixelOffset];
+    SrcPtr1 = &SrcPtr[bp[mp->y[2]]];
+    RefPtr1 = &RefPtr[bp[mp->y[2]] + RefPixelOffset];
     InterError += GetInterErr(cpi, SrcPtr1, RefPtr1, &RefPtr1[RefPtr2Offset] );
   }
 
   if ( cp[mp->y[3]] ) {
-    SrcPtr1 = &SrcPtr[fp[mp->y[3]].buffer_index];
-    RefPtr1 = &RefPtr[fp[mp->y[3]].buffer_index + RefPixelOffset];
+    SrcPtr1 = &SrcPtr[bp[mp->y[3]]];
+    RefPtr1 = &RefPtr[bp[mp->y[3]] + RefPixelOffset];
     InterError += GetInterErr(cpi, SrcPtr1, RefPtr1, &RefPtr1[RefPtr2Offset] );
   }
   
@@ -256,8 +256,8 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
   unsigned char   BestHalfOffset;
   unsigned char * RefDataPtr1;
   unsigned char * RefDataPtr2;
-  unsigned char *cp = cpi->frag_coded[0];
-  fragment_t *fp = cpi->frag[0];
+  unsigned char *cp = cpi->frag_coded;
+  ogg_uint32_t *bp = cpi->frag_buffer_index;
 
   dsp_save_fpu (cpi->dsp);
 
@@ -269,26 +269,26 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
   disp[3] = cp[mp->y[3]];
 
   if(disp[0]){
-    SrcPtr[0] = &cpi->frame[fp[mp->y[0]].buffer_index];
-    RefPtr[0] = &RefFramePtr[fp[mp->y[0]].buffer_index];
+    SrcPtr[0] = &cpi->frame[bp[mp->y[0]]];
+    RefPtr[0] = &RefFramePtr[bp[mp->y[0]]];
     Error += dsp_sad8x8 (cpi->dsp, SrcPtr[0], RefPtr[0],
                          cpi->stride[0]);
   }
   if(disp[1]){
-    SrcPtr[1] = &cpi->frame[fp[mp->y[1]].buffer_index];
-    RefPtr[1] = &RefFramePtr[fp[mp->y[1]].buffer_index];
+    SrcPtr[1] = &cpi->frame[bp[mp->y[1]]];
+    RefPtr[1] = &RefFramePtr[bp[mp->y[1]]];
     Error += dsp_sad8x8 (cpi->dsp, SrcPtr[1], RefPtr[1],
                          cpi->stride[0]);
   }
   if(disp[2]){
-    SrcPtr[2] = &cpi->frame[fp[mp->y[2]].buffer_index];
-    RefPtr[2] = &RefFramePtr[fp[mp->y[2]].buffer_index];
+    SrcPtr[2] = &cpi->frame[bp[mp->y[2]]];
+    RefPtr[2] = &RefFramePtr[bp[mp->y[2]]];
     Error += dsp_sad8x8 (cpi->dsp, SrcPtr[2], RefPtr[2],
                          cpi->stride[0]);
   }
   if(disp[3]){
-    SrcPtr[3] = &cpi->frame[fp[mp->y[3]].buffer_index];
-    RefPtr[3] = &RefFramePtr[fp[mp->y[3]].buffer_index];
+    SrcPtr[3] = &cpi->frame[bp[mp->y[3]]];
+    RefPtr[3] = &RefFramePtr[bp[mp->y[3]]];
     Error += dsp_sad8x8 (cpi->dsp, SrcPtr[3], RefPtr[3],
                          cpi->stride[0]);
   }
@@ -434,8 +434,8 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
   unsigned char * RefDataPtr1;
   unsigned char * RefDataPtr2;
   int off;
-  unsigned char *cp = cpi->frag_coded[0];
-  fragment_t *fp = cpi->frag[0];
+  unsigned char *cp = cpi->frag_coded;
+  ogg_uint32_t *bp = cpi->frag_buffer_index;
 
   dsp_save_fpu (cpi->dsp);
 
@@ -447,20 +447,20 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
   disp[3] = cp[mp->y[3]];
 
   if(disp[0]){
-    SrcPtr[0] = &cpi->frame[fp[mp->y[0]].buffer_index];
-    RefPtr[0] = &RefFramePtr[fp[mp->y[0]].buffer_index];
+    SrcPtr[0] = &cpi->frame[bp[mp->y[0]]];
+    RefPtr[0] = &RefFramePtr[bp[mp->y[0]]];
   }
   if(disp[1]){
-    SrcPtr[1] = &cpi->frame[fp[mp->y[1]].buffer_index];
-    RefPtr[1] = &RefFramePtr[fp[mp->y[1]].buffer_index];
+    SrcPtr[1] = &cpi->frame[bp[mp->y[1]]];
+    RefPtr[1] = &RefFramePtr[bp[mp->y[1]]];
   }
   if(disp[2]){
-    SrcPtr[2] = &cpi->frame[fp[mp->y[2]].buffer_index];
-    RefPtr[2] = &RefFramePtr[fp[mp->y[2]].buffer_index];
+    SrcPtr[2] = &cpi->frame[bp[mp->y[2]]];
+    RefPtr[2] = &RefFramePtr[bp[mp->y[2]]];
   }
   if(disp[3]){
-    SrcPtr[3] = &cpi->frame[fp[mp->y[3]].buffer_index];
-    RefPtr[3] = &RefFramePtr[fp[mp->y[3]].buffer_index];
+    SrcPtr[3] = &cpi->frame[bp[mp->y[3]]];
+    RefPtr[3] = &RefFramePtr[bp[mp->y[3]]];
   }
 
   off = - ((MAX_MV_EXTENT/2) * cpi->stride[0]) - (MAX_MV_EXTENT/2);
@@ -585,11 +585,11 @@ static ogg_uint32_t GetBMVExhaustiveSearch (CP_INSTANCE *cpi,
   ogg_int32_t   BestHalfPixelError;
   unsigned char   BestHalfOffset;
   unsigned char * RefDataPtr2;
-  fragment_t *fp = &cpi->frag[0][fi];
+  int  bi = cpi->frag_buffer_index[fi];
 
   /* Set up the source pointer for the block. */
-  SrcPtr = &cpi->frame[fp->buffer_index];
-  RefPtr = &RefFramePtr[fp->buffer_index];
+  SrcPtr = &cpi->frame[bi];
+  RefPtr = &RefFramePtr[bi];
   RefPtr = RefPtr - ((MAX_MV_EXTENT/2) * cpi->stride[0]) - (MAX_MV_EXTENT/2);
   
   /* Search each pixel alligned site */
@@ -657,7 +657,7 @@ ogg_uint32_t GetFOURMVExhaustiveSearch (CP_INSTANCE *cpi,
 					macroblock_t *mp,
                                         mv_t *MV ) {
   ogg_uint32_t  InterMVError;
-  unsigned char *cp = cpi->frag_coded[0];
+  unsigned char *cp = cpi->frag_coded;
 
   dsp_save_fpu (cpi->dsp);
 

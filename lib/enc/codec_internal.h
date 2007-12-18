@@ -113,7 +113,6 @@ struct fragment {
   ogg_int16_t pred_dc;
   ogg_int16_t dct[64];
   unsigned char nonzero;
-  ogg_uint32_t buffer_index;
 
   fragment_t *next;
 };
@@ -158,8 +157,9 @@ typedef struct CP_INSTANCE {
   ogg_uint32_t     frame_size;
 
   /* SuperBlock, MacroBLock and Fragment Information */
-  unsigned char   *frag_coded[3];
-  coding_mode_t   *frag_mode[3];
+  unsigned char   *frag_coded;
+  coding_mode_t   *frag_mode;
+  ogg_uint32_t    *frag_buffer_index;
 
   fragment_t      *frag[3];
   macroblock_t    *macro;

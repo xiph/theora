@@ -37,14 +37,15 @@ static void SetupBoundingValueArray_Generic(ogg_int16_t *BoundingValuePtr,
 
 static void ExpandBlock ( CP_INSTANCE *cpi, int fi){
   fragment_t   *fp = &cpi->frag[0][fi]; 
-  int           mode = cpi->frag_mode[0][fi];
+  int           mode = cpi->frag_mode[fi];
   int           qi = cpi->BaseQ; // temporary 
   int           plane = (fp<cpi->frag[1] ? 0 : (fp<cpi->frag[2] ? 1 : 2));
   int           inter = (mode != CODE_INTRA);
   ogg_int16_t   reconstruct[64];
   ogg_int16_t  *quantizers = cpi->quant_tables[inter][plane][qi];
   ogg_int16_t  *data = fp->dct;
-  
+  int           bi = cpi->frag_buffer_index[fi];
+
   /* Invert quantisation and DCT to get pixel data. */
   switch(fp->nonzero){
   case 0:case 1:
@@ -61,7 +62,7 @@ static void ExpandBlock ( CP_INSTANCE *cpi, int fi){
   }
   
   /* Convert fragment number to a pixel offset in a reconstruction buffer. */
-  dsp_recon8x8 (cpi->dsp, &cpi->recon[fp->buffer_index],
+  dsp_recon8x8 (cpi->dsp, &cpi->recon[bi],
 		reconstruct, cpi->stride[plane]);
 
 }
@@ -82,16 +83,18 @@ static void UpdateUMV_HBorders( CP_INSTANCE *cpi,
   unsigned char   *SrcPtr2;
   unsigned char   *DestPtr1;
   unsigned char   *DestPtr2;
-  
-  fragment_t      *fp = cpi->frag[plane];
+  ogg_uint32_t    *bp = cpi->frag_buffer_index;
+
+  if(plane) bp += cpi->frag_n[0];
+  if(plane>1) bp += cpi->frag_n[1];
 
   /* Setup the source and destination pointers for the top and bottom
      borders */
-  PixelIndex = fp[0].buffer_index;
+  PixelIndex = bp[0];
   SrcPtr1 = &DestReconPtr[ PixelIndex - PlaneBorderWidth ];
   DestPtr1 = SrcPtr1 - (PlaneBorderWidth * PlaneStride);
 
-  PixelIndex = fp[PlaneFragments - LineFragments].buffer_index + BlockVStep;
+  PixelIndex = bp[PlaneFragments - LineFragments] + BlockVStep;
   SrcPtr2 = &DestReconPtr[ PixelIndex - PlaneBorderWidth];
   DestPtr2 = SrcPtr2 + PlaneStride;
 
@@ -120,16 +123,18 @@ static void UpdateUMV_VBorders( CP_INSTANCE *cpi,
   unsigned char   *SrcPtr2;
   unsigned char   *DestPtr1;
   unsigned char   *DestPtr2;
+  ogg_uint32_t    *bp = cpi->frag_buffer_index;
 
-  fragment_t      *fp = cpi->frag[plane];
+  if(plane) bp += cpi->frag_n[0];
+  if(plane>1) bp += cpi->frag_n[1];
 
   /* Setup the source data values and destination pointers for the
      left and right edge borders */
-  PixelIndex = fp[0].buffer_index;
+  PixelIndex = bp[0];
   SrcPtr1 = &DestReconPtr[ PixelIndex ];
   DestPtr1 = &DestReconPtr[ PixelIndex - PlaneBorderWidth ];
 
-  PixelIndex = fp[LineFragments - 1].buffer_index + (HFRAGPIXELS - 1);
+  PixelIndex = bp[LineFragments - 1] + (HFRAGPIXELS - 1);
   SrcPtr2 = &DestReconPtr[ PixelIndex ];
   DestPtr2 = &DestReconPtr[ PixelIndex + 1 ];
 
@@ -162,15 +167,16 @@ void UpdateUMVBorder( CP_INSTANCE *cpi,
 static void CopyRecon( CP_INSTANCE *cpi, unsigned char * DestReconPtr,
 		       unsigned char * SrcReconPtr ) {
   ogg_uint32_t  i,plane;
-  fragment_t *fp = cpi->frag[0];
-  unsigned char *cp = cpi->frag_coded[0];
+  unsigned char *cp = cpi->frag_coded;
+  ogg_uint32_t *bi = cpi->frag_buffer_index;
+  int j = 0;
 
   /* Copy over only updated blocks.*/
   for(plane=0;plane<3;plane++){  
     int PlaneLineStep = cpi->stride[plane];
-    for ( i = 0; i < cpi->frag_n[plane]; i++,fp++ ) {
-      if ( cp[i] ) {
-	int pi= fp->buffer_index;
+    for ( i = 0; i < cpi->frag_n[plane]; i++, j++ ) {
+      if ( cp[j] ) {
+	int pi= bi[j];
 	unsigned char *src = &SrcReconPtr[ pi ];
 	unsigned char *dst = &DestReconPtr[ pi ];
 	dsp_copy8x8 (cpi->dsp, src, dst, PlaneLineStep);
@@ -232,8 +238,9 @@ static void LoopFilter(CP_INSTANCE *cpi){
   ogg_int16_t *BoundingValuePtr = BoundingValues+127;
   ogg_int32_t FLimit = cpi->quant_info.loop_filter_limits[cpi->BaseQ]; // temp
   int j,m,n;
-  fragment_t *fp;
   unsigned char *cp;
+  ogg_uint32_t *bp;
+  int offset = 0;
 
   if ( FLimit == 0 ) return;
   SetupBoundingValueArray_Generic(BoundingValues, FLimit);
@@ -241,8 +248,9 @@ static void LoopFilter(CP_INSTANCE *cpi){
   for ( j = 0; j < 3 ; j++){
     ogg_int32_t LineFragments = cpi->frag_h[j];
     ogg_int32_t LineLength = cpi->stride[j];
-    fp = cpi->frag[j];
-    cp = cpi->frag_coded[j];
+    cp = cpi->frag_coded+offset;
+    bp = cpi->frag_buffer_index+offset;
+    offset += cpi->frag_n[j];
 
     /**************************************************************
      First Row
@@ -250,131 +258,111 @@ static void LoopFilter(CP_INSTANCE *cpi){
     /* first column conditions */
     /* only do 2 prediction if fragment coded and on non intra or if
        all fragments are intra */
-    if( cp[0]){
+    if(cp[0]){
       /* Filter right hand border only if the block to the right is
          not coded */
-      if ( !cp[1] ){
-        dsp_FilterHoriz(cpi->dsp,cpi->lastrecon+
-			fp[0].buffer_index+6,
+      if (!cp[1])
+        dsp_FilterHoriz(cpi->dsp,cpi->lastrecon + bp[0] + 6,
 			LineLength,BoundingValuePtr);
-      }
 
       /* Bottom done if next row set */
-      if( !cp[LineFragments] ){
-        dsp_FilterVert(cpi->dsp,cpi->lastrecon+
-		       fp[LineFragments].buffer_index,
+      if(!cp[LineFragments])
+        dsp_FilterVert(cpi->dsp,cpi->lastrecon + bp[LineFragments],
 		       LineLength, BoundingValuePtr);
-      }
     }
-    fp++;
+    bp++;
     cp++;
 
     /***************************************************************/
     /* middle columns  */
-    for ( n = 1 ; n < cpi->frag_h[j] - 1 ; n++, fp++) {
-      if( cp[0]){
+    for ( n = 1 ; n < cpi->frag_h[j] - 1 ; n++, bp++, cp++) {
+      if(cp[0]){
+	
         /* Filter Left edge always */
-        dsp_FilterHoriz(cpi->dsp,cpi->lastrecon+
-			fp[0].buffer_index-2,
+        dsp_FilterHoriz(cpi->dsp,cpi->lastrecon + bp[0] - 2,
 			LineLength, BoundingValuePtr);
-
+	
         /* Filter right hand border only if the block to the right is
            not coded */
-        if ( !cp[1] ){
-          dsp_FilterHoriz(cpi->dsp,cpi->lastrecon+
-			  fp[0].buffer_index+6,
+        if (!cp[1])
+          dsp_FilterHoriz(cpi->dsp,cpi->lastrecon + bp[0] + 6,
 			  LineLength, BoundingValuePtr);
-        }
-
+	
         /* Bottom done if next row set */
-        if( !cp[LineFragments] ){
-          dsp_FilterVert(cpi->dsp,cpi->lastrecon+
-			 fp[LineFragments].buffer_index,
+        if(!cp[LineFragments])
+          dsp_FilterVert(cpi->dsp,cpi->lastrecon + bp[LineFragments],
 			 LineLength, BoundingValuePtr);
-        }
 	
       }
     }
-
+    
     /***************************************************************/
     /* Last Column */
     if(cp[0]){
       /* Filter Left edge always */
-      dsp_FilterHoriz(cpi->dsp,cpi->lastrecon+
-		      fp[0].buffer_index - 2 ,
+      dsp_FilterHoriz(cpi->dsp,cpi->lastrecon + bp[0] - 2,
 		      LineLength, BoundingValuePtr);
       
       /* Bottom done if next row set */
-      if( !cp[LineFragments] ){
-        dsp_FilterVert(cpi->dsp,cpi->lastrecon+
-		       fp[LineFragments].buffer_index,
+      if(!cp[LineFragments])
+        dsp_FilterVert(cpi->dsp,cpi->lastrecon + bp[LineFragments],
 		       LineLength, BoundingValuePtr);
-      }
+      
     }
-    fp++;
+    bp++;
     cp++;
 
     /***************************************************************/
     /* Middle Rows */
     /***************************************************************/
     for ( m = 1 ; m < cpi->frag_v[j]-1 ; m++) {
-
+      
       /*****************************************************************/
       /* first column conditions */
       /* only do 2 prediction if fragment coded and on non intra or if
          all fragments are intra */
-      if( cp[0] ){
+      if(cp[0]){
         /* TopRow is always done */
-        dsp_FilterVert(cpi->dsp,cpi->lastrecon+
-		       fp[0].buffer_index,
+        dsp_FilterVert(cpi->dsp,cpi->lastrecon + bp[0],
 		       LineLength, BoundingValuePtr);
-
+	
         /* Filter right hand border only if the block to the right is
            not coded */
-        if ( !cp[1] ){
-          dsp_FilterHoriz(cpi->dsp,cpi->lastrecon+
-			  fp[0].buffer_index + 6,
+        if (!cp[1])
+          dsp_FilterHoriz(cpi->dsp,cpi->lastrecon + bp[0] + 6,
 			  LineLength, BoundingValuePtr);
-        }
 	
         /* Bottom done if next row set */
-        if( !cp[LineFragments] ){
-          dsp_FilterVert(cpi->dsp,cpi->lastrecon+
-			 fp[LineFragments].buffer_index,
+        if(!cp[LineFragments])
+          dsp_FilterVert(cpi->dsp,cpi->lastrecon + bp[LineFragments],
 			 LineLength, BoundingValuePtr);
-        }
+        
       }
-      fp++;
+      bp++;
       cp++;
 
       /*****************************************************************/
       /* middle columns  */
-      for ( n = 1 ; n < cpi->frag_h[j] - 1 ; n++, fp++){
-        if( cp[0] ){
+      for ( n = 1 ; n < cpi->frag_h[j] - 1 ; n++, bp++, cp++){
+        if(cp[0]){
           /* Filter Left edge always */
-          dsp_FilterHoriz(cpi->dsp,cpi->lastrecon+
-			  fp[0].buffer_index - 2,
+          dsp_FilterHoriz(cpi->dsp,cpi->lastrecon + bp[0] - 2,
 			  LineLength, BoundingValuePtr);
-
+	  
           /* TopRow is always done */
-          dsp_FilterVert(cpi->dsp,cpi->lastrecon+
-			 fp[0].buffer_index,
+          dsp_FilterVert(cpi->dsp,cpi->lastrecon + bp[0],
 			 LineLength, BoundingValuePtr);
 	  
           /* Filter right hand border only if the block to the right
              is not coded */
-          if ( !cp[1] ){
-            dsp_FilterHoriz(cpi->dsp,cpi->lastrecon+
-			    fp[0].buffer_index + 6,
+          if (!cp[1])
+            dsp_FilterHoriz(cpi->dsp,cpi->lastrecon + bp[0] + 6,
 			    LineLength, BoundingValuePtr);
-          }
 
           /* Bottom done if next row set */
-          if( !cp[LineFragments] ){
-            dsp_FilterVert(cpi->dsp,cpi->lastrecon+
-			   fp[LineFragments].buffer_index,
+          if(!cp[LineFragments])
+            dsp_FilterVert(cpi->dsp,cpi->lastrecon + bp[LineFragments],
 			   LineLength, BoundingValuePtr);
-          }
         }
       }
 
@@ -382,23 +370,19 @@ static void LoopFilter(CP_INSTANCE *cpi){
       /* Last Column */
       if(cp[0]){
         /* Filter Left edge always*/
-        dsp_FilterHoriz(cpi->dsp,cpi->lastrecon+
-			fp[0].buffer_index - 2,
+        dsp_FilterHoriz(cpi->dsp,cpi->lastrecon + bp[0] - 2,
 			LineLength, BoundingValuePtr);
-
+	
         /* TopRow is always done */
-        dsp_FilterVert(cpi->dsp,cpi->lastrecon+
-		       fp[0].buffer_index,		       
+        dsp_FilterVert(cpi->dsp,cpi->lastrecon + bp[0],		       
 		       LineLength, BoundingValuePtr);
 	
         /* Bottom done if next row set */
-        if( !cp[LineFragments] ){
-          dsp_FilterVert(cpi->dsp,cpi->lastrecon+
-			 fp[LineFragments].buffer_index,
+        if(!cp[LineFragments])
+          dsp_FilterVert(cpi->dsp,cpi->lastrecon + bp[LineFragments],
 			 LineLength, BoundingValuePtr);
-        }
       }
-      fp++;
+      bp++;
       cp++;
     }
 
@@ -411,60 +395,51 @@ static void LoopFilter(CP_INSTANCE *cpi){
     if(cp[0]){
 
       /* TopRow is always done */
-      dsp_FilterVert(cpi->dsp,cpi->lastrecon+
-		     fp[0].buffer_index,
+      dsp_FilterVert(cpi->dsp,cpi->lastrecon + bp[0],
 		     LineLength, BoundingValuePtr);
-
+      
       /* Filter right hand border only if the block to the right is
          not coded */
-      if ( !cp[1] ){
-        dsp_FilterHoriz(cpi->dsp,cpi->lastrecon+
-			fp[0].buffer_index + 6,
+      if (!cp[1])
+        dsp_FilterHoriz(cpi->dsp,cpi->lastrecon + bp[0] + 6,
 			LineLength, BoundingValuePtr);
-      }
     }
-    fp++;
+    bp++;
     cp++;
 
     /******************************************************************/
     /* middle columns  */
-    for ( n = 1 ; n < cpi->frag_h[j] - 1 ; n++, fp++){
-      if( cp[0] ){
+    for ( n = 1 ; n < cpi->frag_h[j] - 1 ; n++, bp++, cp++){
+      if(cp[0]){
         /* Filter Left edge always */
-        dsp_FilterHoriz(cpi->dsp,cpi->lastrecon+
-			fp[0].buffer_index - 2,
+        dsp_FilterHoriz(cpi->dsp,cpi->lastrecon + bp[0] - 2,
 			LineLength, BoundingValuePtr);
 	
         /* TopRow is always done */
-        dsp_FilterVert(cpi->dsp,cpi->lastrecon+
-		       fp[0].buffer_index,
+        dsp_FilterVert(cpi->dsp,cpi->lastrecon + bp[0],
 		       LineLength, BoundingValuePtr);
 
         /* Filter right hand border only if the block to the right is
            not coded */
-        if ( !cp[1] ){
-          dsp_FilterHoriz(cpi->dsp,cpi->lastrecon+
-			  fp[0].buffer_index + 6,
+        if (!cp[1])
+          dsp_FilterHoriz(cpi->dsp,cpi->lastrecon + bp[0] + 6,
 			  LineLength, BoundingValuePtr);
-        }
       }
     }
 
     /******************************************************************/
     /* Last Column */
-    if( cp[0] ){
+    if(cp[0]){
       /* Filter Left edge always */
-      dsp_FilterHoriz(cpi->dsp,cpi->lastrecon+
-		      fp[0].buffer_index - 2,
+      dsp_FilterHoriz(cpi->dsp,cpi->lastrecon + bp[0] - 2,
 		      LineLength, BoundingValuePtr);
-
+      
       /* TopRow is always done */
-      dsp_FilterVert(cpi->dsp,cpi->lastrecon+
-		     fp[0].buffer_index,
+      dsp_FilterVert(cpi->dsp,cpi->lastrecon + bp[0],
 		     LineLength, BoundingValuePtr);
       
     }
-    fp++;
+    bp++;
     cp++;
   }
 }

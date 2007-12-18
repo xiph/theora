@@ -27,12 +27,11 @@
 #include "codec_internal.h"
 
 static void SetupKeyFrame(CP_INSTANCE *cpi) {
-  int i,j;
+  int j;
 
   /* code all blocks */
-  for(i=0;i<3;i++)
-    for(j=0;j<cpi->frag_n[i];j++)
-      cpi->frag_coded[i][j]=1;
+  for(j=0;j<cpi->frag_total;j++)
+    cpi->frag_coded[j]=1;
   
   /* Set up for a KEY FRAME */
   cpi->FrameType = KEY_FRAME;
@@ -81,8 +80,8 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
 
   /* Clear down the macro block level mode and MV arrays. */
   for ( i = 0; i < cpi->frag_total; i++, fp++, fi++ ) {
-    cpi->frag_mode[0][fi] = CODE_INTER_NO_MV;  /* Default coding mode */
-    cpi->frag_coded[0][fi] = 1; /* TEMPORARY */
+    cpi->frag_mode[fi] = CODE_INTER_NO_MV;  /* Default coding mode */
+    cpi->frag_coded[fi] = 1; /* TEMPORARY */
     fp->mv.x=0;
     fp->mv.y=0;
   }

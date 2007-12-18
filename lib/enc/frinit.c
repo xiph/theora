@@ -48,15 +48,14 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
   cpi->frag[1] = 0;
   cpi->frag[2] = 0;
 
-  if(cpi->frag_coded[0]) _ogg_free(cpi->frag_coded[0]);
-  cpi->frag_coded[0] = 0;
-  cpi->frag_coded[1] = 0;
-  cpi->frag_coded[2] = 0;
+  if(cpi->frag_coded) _ogg_free(cpi->frag_coded);
+  cpi->frag_coded = 0;
 
-  if(cpi->frag_mode[0]) _ogg_free(cpi->frag_mode[0]);
-  cpi->frag_mode[0] = 0;
-  cpi->frag_mode[1] = 0;
-  cpi->frag_mode[2] = 0;
+  if(cpi->frag_mode) _ogg_free(cpi->frag_mode);
+  cpi->frag_mode = 0;
+
+  if(cpi->frag_buffer_index) _ogg_free(cpi->frag_buffer_index);
+  cpi->frag_buffer_index = 0;
 
   if(cpi->macro) _ogg_free(cpi->macro);
   cpi->macro = 0;
@@ -136,13 +135,9 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->frag[2] = cpi->frag[1] + cpi->frag_n[1];
 
   /* +1; the last entry is the 'invalid' frag, which is always set to not coded as it doesn't really exist */
-  cpi->frag_coded[0] = calloc(cpi->frag_total+1, sizeof(**cpi->frag_coded)); 
-  cpi->frag_coded[1] = cpi->frag_coded[0] + cpi->frag_n[0];
-  cpi->frag_coded[2] = cpi->frag_coded[1] + cpi->frag_n[1];
-
-  cpi->frag_mode[0] = calloc(cpi->frag_total+1, sizeof(**cpi->frag_mode));
-  cpi->frag_mode[1] = cpi->frag_mode[0] + cpi->frag_n[0];
-  cpi->frag_mode[2] = cpi->frag_mode[1] + cpi->frag_n[1];
+  cpi->frag_coded = calloc(cpi->frag_total+1, sizeof(*cpi->frag_coded)); 
+  cpi->frag_mode = calloc(cpi->frag_total+1, sizeof(*cpi->frag_mode));
+  cpi->frag_buffer_index = calloc(cpi->frag_total+1, sizeof(*cpi->frag_buffer_index));
 
   /* +1; the last entry is the 'invalid' mb, which contains only 'invalid' frags */
   cpi->macro = calloc(cpi->macro_total+1, sizeof(*cpi->macro));
@@ -257,13 +252,13 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   /* Re-initialise the pixel index table. */
   {
     ogg_uint32_t plane,row,col;
-    fragment_t *fp = cpi->frag[0];
+    ogg_uint32_t *bp = cpi->frag_buffer_index;
     
     for(plane=0;plane<3;plane++){
       ogg_uint32_t offset = cpi->offset[plane];
       for(row=0;row<cpi->frag_v[plane];row++){
-	for(col=0;col<cpi->frag_h[plane];col++,fp++){
-	  fp->buffer_index = offset+col*8;
+	for(col=0;col<cpi->frag_h[plane];col++,bp++){
+	  *bp = offset+col*8;
 	}
 	offset += cpi->stride[plane]*8;
       }

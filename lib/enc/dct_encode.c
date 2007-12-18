@@ -416,12 +416,12 @@ static int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };
 static void BlockUpdateDifference (CP_INSTANCE * cpi, 
 				   unsigned char *FiltPtr,
 				   ogg_int16_t *DctInputPtr, 
-				   unsigned char *thisrecon,
 				   ogg_int32_t MvDevisor,
-				   fragment_t *fp,
+				   int fi,
 				   ogg_uint32_t PixelsPerLine,
 				   int mode) {
 
+  fragment_t *fp = &cpi->frag[0][fi];
   ogg_int32_t MvShift;
   ogg_int32_t MvModMask;
   ogg_int32_t  AbsRefOffset;
@@ -433,6 +433,8 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
   unsigned char  *ReconPtr1;    /* DCT reconstructed image pointers */
   unsigned char  *ReconPtr2;    /* Pointer used in half pixel MC */
   mv_t mv;
+  int bi = cpi->frag_buffer_index[fi];
+  unsigned char *thisrecon = &cpi->recon[bi];
 
   if ( ModeUsesMC[mode] ){
     switch(MvDevisor) {
@@ -476,9 +478,9 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
     }
     
     if ( mode==CODE_GOLDEN_MV ) {
-      ReconPtr1 = &cpi->golden[fp->buffer_index];
+      ReconPtr1 = &cpi->golden[bi];
     } else {
-      ReconPtr1 = &cpi->lastrecon[fp->buffer_index];
+      ReconPtr1 = &cpi->lastrecon[bi];
     }
     
     ReconPtr1 += MVOffset;
@@ -501,9 +503,9 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
     if ( ( mode==CODE_INTER_NO_MV ) ||
 	 ( mode==CODE_USING_GOLDEN ) ) {
       if ( mode==CODE_INTER_NO_MV ) {
-	ReconPtr1 = &cpi->lastrecon[fp->buffer_index];
+	ReconPtr1 = &cpi->lastrecon[bi];
       } else {
-	ReconPtr1 = &cpi->golden[fp->buffer_index];
+	ReconPtr1 = &cpi->golden[bi];
       }
       
       dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,PixelsPerLine);
@@ -519,10 +521,10 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
 			     int fi){
   
   fragment_t *fp = &cpi->frag[0][fi];
-  coding_mode_t mode = cpi->frag_mode[0][fi];
-  unsigned char *cp = &cpi->frag_coded[0][fi];
+  coding_mode_t mode = cpi->frag_mode[fi];
+  unsigned char *cp = &cpi->frag_coded[fi];
 
-  unsigned char *FiltPtr = &cpi->frame[fp->buffer_index];
+  unsigned char *FiltPtr = &cpi->frame[cpi->frag_buffer_index[fi]];
   int qi = cpi->BaseQ; // temporary
   int inter = (mode != CODE_INTRA);
   int plane = (fp < cpi->frag[1] ? 0 : (fp < cpi->frag[2] ? 1 : 2)); 
@@ -531,7 +533,6 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
   ogg_int16_t DCTOutput[64];
   ogg_int32_t   MvDivisor;      /* Defines MV resolution (2 = 1/2
                                    pixel for Y or 4 = 1/4 for UV) */
-  unsigned char   *ReconPtr1 = &cpi->recon[fp->buffer_index];
 
   /* Set plane specific values */
   if (plane == 0){
@@ -543,8 +544,8 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
   /* produces the appropriate motion compensation block, applies it to
      the reconstruction buffer, and proces a difference block for
      forward DCT */
-  BlockUpdateDifference(cpi, FiltPtr, DCTInput, ReconPtr1,
-			MvDivisor, fp, cpi->stride[plane], mode);
+  BlockUpdateDifference(cpi, FiltPtr, DCTInput, 
+			MvDivisor, fi, cpi->stride[plane], mode);
   
   /* Proceed to encode the data into the encode buffer if the encoder
      is enabled. */
