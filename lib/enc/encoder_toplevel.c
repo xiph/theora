@@ -75,15 +75,14 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
   ogg_uint32_t IntraError;
   ogg_uint32_t  i;
   ogg_uint32_t  KFIndicator = 0;
-  fragment_t *fp = cpi->frag[0];
   int fi = 0;
 
   /* Clear down the macro block level mode and MV arrays. */
-  for ( i = 0; i < cpi->frag_total; i++, fp++, fi++ ) {
+  for ( i = 0; i < cpi->frag_total; i++, fi++ ) {
     cpi->frag_mode[fi] = CODE_INTER_NO_MV;  /* Default coding mode */
     cpi->frag_coded[fi] = 1; /* TEMPORARY */
-    fp->mv.x=0;
-    fp->mv.y=0;
+    cpi->frag_mv[fi].x=0;
+    cpi->frag_mv[fi].y=0;
   }
 
   /* Default to delta frames. */

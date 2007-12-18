@@ -101,21 +101,14 @@ typedef struct HUFF_ENTRY {
   ogg_uint32_t       Frequency;
 } HUFF_ENTRY;
 
+typedef struct {
+  ogg_int16_t data[64];
+} dct_t;
+
 typedef struct{
   ogg_int32_t   x;
   ogg_int32_t   y;
 } mv_t;
-
-typedef struct fragment fragment_t;
-
-struct fragment {
-  mv_t mv;
-  ogg_int16_t pred_dc;
-  ogg_int16_t dct[64];
-  unsigned char nonzero;
-
-  fragment_t *next;
-};
 
 typedef struct macroblock {
   int y[4]; // raster order
@@ -160,8 +153,11 @@ typedef struct CP_INSTANCE {
   unsigned char   *frag_coded;
   coding_mode_t   *frag_mode;
   ogg_uint32_t    *frag_buffer_index;
+  mv_t            *frag_mv;
+  unsigned char   *frag_nonzero;
+  ogg_int16_t     *frag_dc;
+  dct_t           *frag_dct;
 
-  fragment_t      *frag[3];
   macroblock_t    *macro;
   superblock_t    *super[3];
 
@@ -196,8 +192,8 @@ typedef struct CP_INSTANCE {
   /*********************************************************************/
   /* Token Buffers */
 
-  fragment_t      *coded_head;
-  fragment_t      *coded_tail;
+  int             *coded_fi_list;
+  int              coded_fi_count;
 
   unsigned char   *dct_token_storage;
   ogg_uint16_t    *dct_token_eb_storage;

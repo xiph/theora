@@ -43,11 +43,6 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
   memset(cpi->dct_token,0,sizeof(cpi->dct_token));
   memset(cpi->dct_token_eb,0,sizeof(cpi->dct_token_eb));
 
-  if(cpi->frag[0]) _ogg_free(cpi->frag[0]);
-  cpi->frag[0] = 0;
-  cpi->frag[1] = 0;
-  cpi->frag[2] = 0;
-
   if(cpi->frag_coded) _ogg_free(cpi->frag_coded);
   cpi->frag_coded = 0;
 
@@ -56,6 +51,21 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
 
   if(cpi->frag_buffer_index) _ogg_free(cpi->frag_buffer_index);
   cpi->frag_buffer_index = 0;
+
+  if(cpi->frag_mv) _ogg_free(cpi->frag_mv);
+  cpi->frag_mv = 0;
+
+  if(cpi->frag_nonzero) _ogg_free(cpi->frag_nonzero);
+  cpi->frag_nonzero = 0;
+
+  if(cpi->frag_dct) _ogg_free(cpi->frag_dct);
+  cpi->frag_dct = 0;
+
+  if(cpi->frag_dc) _ogg_free(cpi->frag_dc);
+  cpi->frag_dc = 0;
+
+  if(cpi->coded_fi_list) _ogg_free(cpi->coded_fi_list);
+  cpi->coded_fi_list = 0;
 
   if(cpi->macro) _ogg_free(cpi->macro);
   cpi->macro = 0;
@@ -130,14 +140,17 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->super_n[2] = cpi->super_h[2] * cpi->super_v[2];
   cpi->super_total = cpi->super_n[0] + cpi->super_n[1] + cpi->super_n[2];
 
-  cpi->frag[0] = calloc(cpi->frag_total+1, sizeof(**cpi->frag));
-  cpi->frag[1] = cpi->frag[0] + cpi->frag_n[0];
-  cpi->frag[2] = cpi->frag[1] + cpi->frag_n[1];
-
   /* +1; the last entry is the 'invalid' frag, which is always set to not coded as it doesn't really exist */
   cpi->frag_coded = calloc(cpi->frag_total+1, sizeof(*cpi->frag_coded)); 
-  cpi->frag_mode = calloc(cpi->frag_total+1, sizeof(*cpi->frag_mode));
-  cpi->frag_buffer_index = calloc(cpi->frag_total+1, sizeof(*cpi->frag_buffer_index));
+  cpi->frag_mode = calloc(cpi->frag_total, sizeof(*cpi->frag_mode));
+  cpi->frag_buffer_index = calloc(cpi->frag_total, sizeof(*cpi->frag_buffer_index));
+  cpi->frag_mv = calloc(cpi->frag_total, sizeof(*cpi->frag_mv));
+  cpi->frag_nonzero = calloc(cpi->frag_total, sizeof(*cpi->frag_nonzero));
+  cpi->frag_dct = calloc(cpi->frag_total, sizeof(*cpi->frag_dct));
+  cpi->frag_dc = calloc(cpi->frag_total, sizeof(*cpi->frag_dc));
+
+  /* possibly to be eliminated eventually when tokenize is rolled into transform */
+  cpi->coded_fi_list = calloc(cpi->frag_total, sizeof(*cpi->coded_fi_list));
 
   /* +1; the last entry is the 'invalid' mb, which contains only 'invalid' frags */
   cpi->macro = calloc(cpi->macro_total+1, sizeof(*cpi->macro));

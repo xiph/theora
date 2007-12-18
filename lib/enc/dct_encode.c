@@ -206,22 +206,23 @@ static void TokenizeDctRunValue (CP_INSTANCE *cpi,
 
 static void tokenize_groups(CP_INSTANCE *cpi,
 			    int *eob_run, int *eob_plane, int *eob_ypre, int *eob_uvpre){
-  fragment_t *fp = cpi->coded_tail;
+  int *fip = cpi->coded_fi_list;
 
-  while(fp){
+  while(*fip>=0){
     int coeff = 0;
-    int plane = (fp >= cpi->frag[1]);
-    fp->nonzero = 0;
-
+    int plane = (*fip >= cpi->frag_n[0]);
+    dct_t *dct = &cpi->frag_dct[*fip];
+    cpi->frag_nonzero[*fip] = 0;
+    
     while(coeff < BLOCK_SIZE){
-      ogg_int16_t val = (coeff ? fp->dct[coeff] : fp->pred_dc);
+      ogg_int16_t val = dct->data[coeff];
       int zero_run;
       int i = coeff;
   
-      fp->nonzero = coeff;
+      cpi->frag_nonzero[*fip] = coeff;
       
       while( !val && (++i < BLOCK_SIZE) )
-	val = fp->dct[i];
+	val = dct->data[i];
       
       if ( i == BLOCK_SIZE ){
 
@@ -272,7 +273,7 @@ static void tokenize_groups(CP_INSTANCE *cpi,
 	}
       }
     }
-    fp=fp->next;
+    fip++;
   }
 }
 
@@ -416,12 +417,11 @@ static int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };
 static void BlockUpdateDifference (CP_INSTANCE * cpi, 
 				   unsigned char *FiltPtr,
 				   ogg_int16_t *DctInputPtr, 
-				   ogg_int32_t MvDevisor,
+				   ogg_int32_t MvDivisor,
 				   int fi,
 				   ogg_uint32_t PixelsPerLine,
 				   int mode) {
 
-  fragment_t *fp = &cpi->frag[0][fi];
   ogg_int32_t MvShift;
   ogg_int32_t MvModMask;
   ogg_int32_t  AbsRefOffset;
@@ -432,12 +432,12 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
                                    half pixel MC */
   unsigned char  *ReconPtr1;    /* DCT reconstructed image pointers */
   unsigned char  *ReconPtr2;    /* Pointer used in half pixel MC */
-  mv_t mv;
+  mv_t mv = cpi->frag_mv[fi];
   int bi = cpi->frag_buffer_index[fi];
   unsigned char *thisrecon = &cpi->recon[bi];
 
   if ( ModeUsesMC[mode] ){
-    switch(MvDevisor) {
+    switch(MvDivisor) {
     case 2:
       MvShift = 1;
       MvModMask = 1;
@@ -450,18 +450,16 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
       break;
     }
     
-    mv = fp->mv;
-    
     /* Set up the baseline offset for the motion vector. */
-    MVOffset = ((mv.y / MvDevisor) * PixelsPerLine) + (mv.x / MvDevisor);
+    MVOffset = ((mv.y / MvDivisor) * PixelsPerLine) + (mv.x / MvDivisor);
     
     /* Work out the offset of the second reference position for 1/2
        pixel interpolation.  For the U and V planes the MV specifies 1/4
        pixel accuracy. This is adjusted to 1/2 pixel as follows ( 0->0,
        1/4->1/2, 1/2->1/2, 3/4->1/2 ). */
     ReconPtr2Offset = 0;
-    AbsXOffset = mv.x % MvDevisor;
-    AbsYOffset = mv.y % MvDevisor;
+    AbsXOffset = mv.x % MvDivisor;
+    AbsYOffset = mv.y % MvDivisor;
     
     if ( AbsXOffset ) {
       if ( mv.x > 0 )
@@ -520,14 +518,14 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
 void TransformQuantizeBlock (CP_INSTANCE *cpi, 
 			     int fi){
   
-  fragment_t *fp = &cpi->frag[0][fi];
   coding_mode_t mode = cpi->frag_mode[fi];
   unsigned char *cp = &cpi->frag_coded[fi];
 
   unsigned char *FiltPtr = &cpi->frame[cpi->frag_buffer_index[fi]];
   int qi = cpi->BaseQ; // temporary
   int inter = (mode != CODE_INTRA);
-  int plane = (fp < cpi->frag[1] ? 0 : (fp < cpi->frag[2] ? 1 : 2)); 
+  int plane = (fi < cpi->frag_n[0] ? 0 : 
+	       (fi-cpi->frag_n[0] < cpi->frag_n[1] ? 1 : 2)); 
   ogg_int32_t *q = cpi->iquant_tables[inter][plane][qi];
   ogg_int16_t DCTInput[64];
   ogg_int16_t DCTOutput[64];
@@ -553,10 +551,11 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
   dsp_fdct_short(cpi->dsp, DCTInput, DCTOutput);
 
   /* Quantize that transform data. */
-  quantize (cpi, q, DCTOutput, fp->dct);
+  quantize (cpi, q, DCTOutput, cpi->frag_dct[fi].data);
+  cpi->frag_dc[fi] = cpi->frag_dct[fi].data[0];
 
   if ( (mode == CODE_INTER_NO_MV) &&
-       ( AllZeroDctData(fp->dct) ) ) {
+       ( AllZeroDctData(cpi->frag_dct[fi].data) ) ) {
     *cp = 0;
   }
 

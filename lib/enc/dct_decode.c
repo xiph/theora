@@ -36,18 +36,19 @@ static void SetupBoundingValueArray_Generic(ogg_int16_t *BoundingValuePtr,
 }
 
 static void ExpandBlock ( CP_INSTANCE *cpi, int fi){
-  fragment_t   *fp = &cpi->frag[0][fi]; 
   int           mode = cpi->frag_mode[fi];
   int           qi = cpi->BaseQ; // temporary 
-  int           plane = (fp<cpi->frag[1] ? 0 : (fp<cpi->frag[2] ? 1 : 2));
+  int           plane = (fi<cpi->frag_n[0] ? 0 : (fi-cpi->frag_n[0]<cpi->frag_n[1] ? 1 : 2));
   int           inter = (mode != CODE_INTRA);
   ogg_int16_t   reconstruct[64];
   ogg_int16_t  *quantizers = cpi->quant_tables[inter][plane][qi];
-  ogg_int16_t  *data = fp->dct;
+  ogg_int16_t  *data = cpi->frag_dct[fi].data;
   int           bi = cpi->frag_buffer_index[fi];
 
+  data[0] = cpi->frag_dc[fi];
+
   /* Invert quantisation and DCT to get pixel data. */
-  switch(fp->nonzero){
+  switch(cpi->frag_nonzero[fi]){
   case 0:case 1:
     IDct1( data, quantizers, reconstruct );
     break;
@@ -445,11 +446,11 @@ static void LoopFilter(CP_INSTANCE *cpi){
 }
 
 void ReconRefFrames (CP_INSTANCE *cpi){
-  fragment_t *fp = cpi->coded_tail;
+  int *fip = cpi->coded_fi_list;
   
-  while(fp){
-    ExpandBlock( cpi, fp-cpi->frag[0] );
-    fp = fp->next;
+  while(*fip>=0){
+    ExpandBlock( cpi, *fip );
+    fip++;
   }
 
   memcpy(cpi->lastrecon,cpi->recon,sizeof(*cpi->recon)*cpi->frame_size);
