@@ -158,6 +158,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
     int fhilberty[16] = {0,0,1,1,2,3,3,2,2,3,3,2,1,1,0,0};
     int mhilbertx[4] = {0,0,1,1};
     int mhilberty[4] = {0,1,1,0};
+    int offset = 0;
     int plane;
 
     for(plane=0;plane<3;plane++){
@@ -170,15 +171,16 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	    int frow = row*4 + fhilberty[frag];
 	    int fcol = col*4 + fhilbertx[frag];
 	    if(frow<cpi->frag_v[plane] && fcol<cpi->frag_h[plane]){
-	      int fragindex = frow*cpi->frag_h[plane] + fcol;
-	      cpi->super[plane][superindex].f[frag] = &cpi->frag[plane][fragindex] - cpi->frag[0]; 
+	      int fragindex = frow*cpi->frag_h[plane] + fcol + offset;
+	      cpi->super[plane][superindex].f[frag] = fragindex;
 	    }else
 	      cpi->super[plane][superindex].f[frag] = cpi->frag_total; /* 'invalid' */
 	  }
 	}
       }
+      offset+=cpi->frag_n[plane];
     }
-
+    
     for(row=0;row<cpi->super_v[0];row++){
       for(col=0;col<cpi->super_h[0];col++){
 	int superindex = row*cpi->super_h[0] + col;
@@ -188,7 +190,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	  int mcol = col*2 + mhilbertx[mb];
 	  if(mrow<cpi->macro_v && mcol<cpi->macro_h){
 	    int macroindex = mrow*cpi->macro_h + mcol;
-	    cpi->super[0][superindex].m[mb] = &cpi->macro[macroindex] - cpi->macro;
+	    cpi->super[0][superindex].m[mb] = macroindex;
 	  }else
 	    cpi->super[0][superindex].m[mb] = cpi->macro_total;
 
@@ -220,13 +222,15 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	}
 	
 	if(row<cpi->frag_v[1] && col<cpi->frag_h[1])
-	  cpi->macro[macroindex].u = &cpi->frag[1][macroindex]-cpi->frag[0];
+	  cpi->macro[macroindex].u = cpi->frag_n[0] + macroindex;
 	else
 	  cpi->macro[macroindex].u = cpi->frag_total;
+
 	if(row<cpi->frag_v[2] && col<cpi->frag_h[2])
-	  cpi->macro[macroindex].v = &cpi->frag[2][macroindex]-cpi->frag[0];
+	  cpi->macro[macroindex].v = cpi->frag_n[0] + cpi->frag_n[1] + macroindex; 
 	else
 	  cpi->macro[macroindex].v = cpi->frag_total;
+
       }
     }
   }
