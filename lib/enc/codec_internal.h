@@ -119,15 +119,15 @@ struct fragment {
 };
 
 typedef struct macroblock {
-  fragment_t *y[4]; // MV (raster) order
-  fragment_t *u;
-  fragment_t *v;
+  int y[4]; // raster order
+  int u;
+  int v;
 } macroblock_t;
 
 #define SB_MB_BLFRAG(sb,mbnum) ((sb).f[ ((mbnum)<2? ((mbnum)==0?0:4) : ((mbnum)==2?8:14)) ])
 typedef struct superblock {
-  fragment_t *f[16]; // hilbert order
-  macroblock_t *m[4]; // hilbert order
+  int f[16]; // hilbert order
+  int m[4];  // hilbert order
 } superblock_t;
 
 typedef ogg_int16_t    quant_table[64];

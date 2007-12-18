@@ -114,6 +114,7 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
   int run_break = 0;
   int partial=0;
   int fully = 1;
+  int invalid_fi = cpi->frag_total;
   unsigned char *cp = cpi->frag_coded[0];
 
   /* code the partially coded SB flags */
@@ -123,10 +124,9 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
     fully = 1;
 
     for ( B=0; B<16; B++ ) {
-      fragment_t *fp = sp->f[B];
-      int fi = (fp ? fp-cpi->frag[0] : -1);
+      int fi = sp->f[B];
 
-      if ( fp ) {
+      if ( fi != invalid_fi ){
 	if ( cp[fi] ) {
 	  coded = 1; /* SB at least partly coded */
 	}else{
@@ -170,9 +170,8 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
     fully = 1;
     
     for ( B=0; B<16; B++ ) {
-      fragment_t *fp = sp->f[B];
-      int fi = (fp ? fp-cpi->frag[0] : -1);
-      if ( fp ) {
+      int fi = sp->f[B];
+      if ( fi != invalid_fi ) {
 	if ( cp[fi] ) {
 	  coded = 1;
 	}else{
@@ -215,9 +214,8 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
     fully = 1;
 
     for ( B=0; B<16; B++ ) {
-      fragment_t *fp = sp->f[B];      
-      int fi = (fp ? fp-cpi->frag[0] : -1);
-      if ( fp ) {
+      int fi = sp->f[B];      
+      if ( fi != invalid_fi ) {
 	if ( cp[fi] ) {
 	  coded = 1;
 	}else{
@@ -229,9 +227,8 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
     if(fully || !coded) continue;
 
     for ( B=0; B<16; B++ ) {
-      fragment_t *fp = sp->f[B];      
-      int fi = (fp ? fp-cpi->frag[0] : -1);
-      if(fp){
+      int fi = sp->f[B];      
+      if(fi != invalid_fi){
 	if(run_last == -1){
 	  oggpackB_write( cpi->oggbuffer, cp[fi], 1);      
 	  run_last = cp[fi];
