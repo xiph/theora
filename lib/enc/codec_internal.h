@@ -109,8 +109,6 @@ typedef struct{
 typedef struct fragment fragment_t;
 
 struct fragment {
-  int coded;
-  coding_mode_t mode;
   mv_t mv;
   ogg_int16_t pred_dc;
   ogg_int16_t dct[64];
@@ -157,9 +155,12 @@ typedef struct CP_INSTANCE {
   unsigned char   *recon;
   unsigned char   *golden;
   unsigned char   *lastrecon;
-  ogg_uint32_t    frame_size;
+  ogg_uint32_t     frame_size;
 
   /* SuperBlock, MacroBLock and Fragment Information */
+  unsigned char   *frag_coded[3];
+  coding_mode_t   *frag_mode[3];
+
   fragment_t      *frag[3];
   macroblock_t    *macro;
   superblock_t    *super[3];
@@ -279,7 +280,7 @@ extern void fdct_short ( ogg_int16_t *InputData, ogg_int16_t *OutputData );
 
 extern void DPCMTokenize (CP_INSTANCE *cpi);
 
-extern void TransformQuantizeBlock (CP_INSTANCE *cpi, fragment_t *fp) ;
+extern void TransformQuantizeBlock (CP_INSTANCE *cpi, int fi) ;
 
 extern void WriteQTables(CP_INSTANCE *cpi,oggpack_buffer *opb);
 

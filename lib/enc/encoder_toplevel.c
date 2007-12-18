@@ -32,7 +32,7 @@ static void SetupKeyFrame(CP_INSTANCE *cpi) {
   /* code all blocks */
   for(i=0;i<3;i++)
     for(j=0;j<cpi->frag_n[i];j++)
-      cpi->frag[i][j].coded=1;
+      cpi->frag_coded[i][j]=1;
   
   /* Set up for a KEY FRAME */
   cpi->FrameType = KEY_FRAME;
@@ -72,13 +72,17 @@ static void CompressKeyFrame(CP_INSTANCE *cpi){
 }
 
 static int CompressFrame( CP_INSTANCE *cpi ) {
-  ogg_uint32_t  i,j;
+  ogg_uint32_t InterError;
+  ogg_uint32_t IntraError;
+  ogg_uint32_t  i;
   ogg_uint32_t  KFIndicator = 0;
   fragment_t *fp = cpi->frag[0];
+  int fi = 0;
 
   /* Clear down the macro block level mode and MV arrays. */
-  for ( i = 0; i < cpi->frag_total; i++, fp++ ) {
-    fp->mode = CODE_INTER_NO_MV;  /* Default coding mode */
+  for ( i = 0; i < cpi->frag_total; i++, fp++, fi++ ) {
+    cpi->frag_mode[0][fi] = CODE_INTER_NO_MV;  /* Default coding mode */
+    cpi->frag_coded[0][fi] = 1; /* TEMPORARY */
     fp->mv.x=0;
     fp->mv.y=0;
   }
@@ -86,48 +90,30 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
   /* Default to delta frames. */
   cpi->FrameType = DELTA_FRAME;
 
-  /* Clear down the difference arrays for the current frame. */
-  for(i=0;i<3;i++)
-    for(j=0;j<cpi->frag_n[i];j++)
-      cpi->frag[i][j].coded=0;
-
-  {
-    /*  pick all the macroblock modes and motion vectors */
-    ogg_uint32_t InterError;
-    ogg_uint32_t IntraError;
-    
-    /* for now, mark all blocks to be coded... */
-    /* TEMPORARY */
-    for(i=0;i<3;i++)
-      for(j=0;j<cpi->frag_n[i];j++)
-	cpi->frag[i][j].coded=1;
-    
-    /* Select modes and motion vectors for each of the blocks : return
-       an error score for inter and intra */
-    PickModes( cpi, &InterError, &IntraError );
-
-    /* decide whether we really should have made this frame a key frame */
-    /* forcing out a keyframe if the max interval is up is done at a higher level */
-    if( cpi->info.keyframe_auto_p){
-      if( ( 2* IntraError < 5 * InterError )
-          && ( KFIndicator >= (ogg_uint32_t)
-               cpi->info.keyframe_auto_threshold)
-          && ( cpi->LastKeyFrame > cpi->info.keyframe_mindistance)
-          ){
-        CompressKeyFrame(cpi);  /* Code a key frame */
-        return 0;
-      }
-
+  /* Select modes and motion vectors for each of the blocks : return
+     an error score for inter and intra */
+  PickModes( cpi, &InterError, &IntraError );
+  
+  /* decide whether we really should have made this frame a key frame */
+  /* forcing out a keyframe if the max interval is up is done at a higher level */
+  if( cpi->info.keyframe_auto_p){
+    if( ( 2* IntraError < 5 * InterError )
+	&& ( KFIndicator >= (ogg_uint32_t)
+	     cpi->info.keyframe_auto_threshold)
+	&& ( cpi->LastKeyFrame > cpi->info.keyframe_mindistance)
+	){
+      CompressKeyFrame(cpi);  /* Code a key frame */
+      return 0;
     }
-
-    /* Increment the frames since last key frame count */
-    cpi->LastKeyFrame++;
-
-    /* Proceed with the frame update. */
-    UpdateFrame(cpi);
-
+    
   }
+  
+  /* Increment the frames since last key frame count */
+  cpi->LastKeyFrame++;
 
+  /* Proceed with the frame update. */
+  UpdateFrame(cpi);
+  
   return 0;
 }
 

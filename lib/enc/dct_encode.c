@@ -516,11 +516,15 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
 }
 
 void TransformQuantizeBlock (CP_INSTANCE *cpi, 
-			     fragment_t *fp){
+			     int fi){
+  
+  fragment_t *fp = &cpi->frag[0][fi];
+  coding_mode_t mode = cpi->frag_mode[0][fi];
+  unsigned char *cp = &cpi->frag_coded[0][fi];
 
   unsigned char *FiltPtr = &cpi->frame[fp->buffer_index];
   int qi = cpi->BaseQ; // temporary
-  int inter = (fp->mode != CODE_INTRA);
+  int inter = (mode != CODE_INTRA);
   int plane = (fp < cpi->frag[1] ? 0 : (fp < cpi->frag[2] ? 1 : 2)); 
   ogg_int32_t *q = cpi->iquant_tables[inter][plane][qi];
   ogg_int16_t DCTInput[64];
@@ -540,7 +544,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
      the reconstruction buffer, and proces a difference block for
      forward DCT */
   BlockUpdateDifference(cpi, FiltPtr, DCTInput, ReconPtr1,
-			MvDivisor, fp, cpi->stride[plane], fp->mode);
+			MvDivisor, fp, cpi->stride[plane], mode);
   
   /* Proceed to encode the data into the encode buffer if the encoder
      is enabled. */
@@ -550,9 +554,9 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
   /* Quantize that transform data. */
   quantize (cpi, q, DCTOutput, fp->dct);
 
-  if ( (fp->mode == CODE_INTER_NO_MV) &&
+  if ( (mode == CODE_INTER_NO_MV) &&
        ( AllZeroDctData(fp->dct) ) ) {
-    fp->coded = 0;
+    *cp = 0;
   }
 
 }

@@ -48,6 +48,16 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
   cpi->frag[1] = 0;
   cpi->frag[2] = 0;
 
+  if(cpi->frag_coded[0]) _ogg_free(cpi->frag_coded[0]);
+  cpi->frag_coded[0] = 0;
+  cpi->frag_coded[1] = 0;
+  cpi->frag_coded[2] = 0;
+
+  if(cpi->frag_mode[0]) _ogg_free(cpi->frag_mode[0]);
+  cpi->frag_mode[0] = 0;
+  cpi->frag_mode[1] = 0;
+  cpi->frag_mode[2] = 0;
+
   if(cpi->macro) _ogg_free(cpi->macro);
   cpi->macro = 0;
 
@@ -124,6 +134,14 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->frag[0] = calloc(cpi->frag_total, sizeof(**cpi->frag));
   cpi->frag[1] = cpi->frag[0] + cpi->frag_n[0];
   cpi->frag[2] = cpi->frag[1] + cpi->frag_n[1];
+
+  cpi->frag_coded[0] = calloc(cpi->frag_total, sizeof(**cpi->frag_coded));
+  cpi->frag_coded[1] = cpi->frag_coded[0] + cpi->frag_n[0];
+  cpi->frag_coded[2] = cpi->frag_coded[1] + cpi->frag_n[1];
+
+  cpi->frag_mode[0] = calloc(cpi->frag_total, sizeof(**cpi->frag_mode));
+  cpi->frag_mode[1] = cpi->frag_mode[0] + cpi->frag_n[0];
+  cpi->frag_mode[2] = cpi->frag_mode[1] + cpi->frag_n[1];
 
   cpi->macro = calloc(cpi->macro_total, sizeof(*cpi->macro));
 
