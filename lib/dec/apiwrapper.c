@@ -40,7 +40,7 @@ void theora_info_clear(theora_info *_ci){
   memset(_ci,0,sizeof(*_ci));
   if(api!=NULL){
     if(api->clear!=NULL)(*api->clear)(api);
-    free(api);
+    _ogg_free(api);
   }
 }
 
