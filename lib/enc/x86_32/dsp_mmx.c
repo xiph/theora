@@ -161,7 +161,7 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
        "+r" (ReconPtr1),
        "+r" (ReconPtr2),
        "+r" (DctInputPtr)
-     : "m" (PixelsPerLine),
+     : "m" (PixelsPerLine)
      : "memory"
   );
 }
@@ -341,7 +341,7 @@ static ogg_uint32_t sad8x8__mmx (unsigned char *ptr1, unsigned char *ptr2,
      : "=m" (DiffVal),
        "+r" (ptr1), 
        "+r" (ptr2) 
-     : "r" (stride1)
+     : "r" (stride)
      : "memory"
   );
 
@@ -412,7 +412,7 @@ static ogg_uint32_t sad8x8_xy2_thres__mmx (unsigned char *SrcData, unsigned char
        "+r" (SrcData), 
        "+r" (RefDataPtr1), 
        "+r" (RefDataPtr2) 
-     : "m" (SrcStride)
+    : "m" (Stride)
      : "edi", "memory"
   );
 

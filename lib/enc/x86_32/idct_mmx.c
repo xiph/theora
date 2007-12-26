@@ -599,9 +599,9 @@ static void MMX_dump()
  *
  ***************************************************************************************
  */
-void IDctSlow__mmx(  Q_LIST_ENTRY * InputData,
-                ogg_int16_t *QuantMatrix,
-                ogg_int16_t * OutputData ) {
+void IDctSlow__mmx(ogg_int16_t * InputData,
+		   ogg_int16_t *QuantMatrix,
+		   ogg_int16_t * OutputData ) {
 
 #   define MIDM(M,I)    MtoSTR(M+I*8(%ecx))
 #   define M(I)         MIDM( MaskOffset , I )
@@ -1068,7 +1068,7 @@ void IDctSlow__mmx(  Q_LIST_ENTRY * InputData,
 
 /* --------------------------------------------------------------- */
 /* IDCT 10 */
-void IDct10__mmx( Q_LIST_ENTRY * InputData,
+void IDct10__mmx( ogg_int16_t *InputData,
              ogg_int16_t *QuantMatrix,
              ogg_int16_t * OutputData ) {
 
@@ -1358,7 +1358,7 @@ void IDct10__mmx( Q_LIST_ENTRY * InputData,
 );
 //End of ColumnIDCT_3
 
-void IDct3__mmx( Q_LIST_ENTRY * InputData,
+void IDct3__mmx( ogg_int16_t * InputData,
             ogg_int16_t *QuantMatrix,
             ogg_int16_t * OutputData ) {
 
