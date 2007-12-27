@@ -149,17 +149,18 @@ ogg_uint32_t GetMBIntraError (CP_INSTANCE *cpi,
   dsp_save_fpu (cpi->dsp);
   unsigned char *cp = cpi->frag_coded;
   ogg_uint32_t *bp = cpi->frag_buffer_index;
-  
+  int *y = mp->yuv[0];
+
   /* Add together the intra errors for those blocks in the macro block
      that are coded (Y only) */
-  if ( cp[mp->y[0]] )
-    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[bp[mp->y[0]]],cpi->stride[0]);
-  if ( cp[mp->y[1]] )
-    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[bp[mp->y[1]]],cpi->stride[0]);
-  if ( cp[mp->y[2]] )
-    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[bp[mp->y[2]]],cpi->stride[0]);
-  if ( cp[mp->y[3]] )
-    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[bp[mp->y[3]]],cpi->stride[0]);
+  if ( cp[y[0]] )
+    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[bp[y[0]]],cpi->stride[0]);
+  if ( cp[y[1]] )
+    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[bp[y[1]]],cpi->stride[0]);
+  if ( cp[y[2]] )
+    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[bp[y[2]]],cpi->stride[0]);
+  if ( cp[y[3]] )
+    IntraError += dsp_intra8x8_err (cpi->dsp, &cpi->frame[bp[y[3]]],cpi->stride[0]);
 
   dsp_restore_fpu (cpi->dsp);
   return IntraError;
@@ -181,6 +182,7 @@ ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
   unsigned char * RefPtr1;
   unsigned char *cp = cpi->frag_coded;
   ogg_uint32_t *bp = cpi->frag_buffer_index;
+  int *y = mp->yuv[0];
 
   dsp_save_fpu (cpi->dsp);
   
@@ -200,28 +202,28 @@ ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
 
   /* Add together the errors for those blocks in the macro block that
      are coded (Y only) */
-  if ( cp[mp->y[0]] ) {
-    SrcPtr1 = &SrcPtr[bp[mp->y[0]]];
-    RefPtr1 = &RefPtr[bp[mp->y[0]] + RefPixelOffset];
+  if ( cp[y[0]] ) {
+    SrcPtr1 = &SrcPtr[bp[y[0]]];
+    RefPtr1 = &RefPtr[bp[y[0]] + RefPixelOffset];
     InterError += GetInterErr(cpi, SrcPtr1, RefPtr1, &RefPtr1[RefPtr2Offset] );
   }
 
-  if ( cp[mp->y[1]] ) {
-    SrcPtr1 = &SrcPtr[bp[mp->y[1]]];
-    RefPtr1 = &RefPtr[bp[mp->y[1]] + RefPixelOffset];
+  if ( cp[y[1]] ) {
+    SrcPtr1 = &SrcPtr[bp[y[1]]];
+    RefPtr1 = &RefPtr[bp[y[1]] + RefPixelOffset];
     InterError += GetInterErr(cpi, SrcPtr1, RefPtr1, &RefPtr1[RefPtr2Offset] );
     
   }
   
-  if ( cp[mp->y[2]] ) {
-    SrcPtr1 = &SrcPtr[bp[mp->y[2]]];
-    RefPtr1 = &RefPtr[bp[mp->y[2]] + RefPixelOffset];
+  if ( cp[y[2]] ) {
+    SrcPtr1 = &SrcPtr[bp[y[2]]];
+    RefPtr1 = &RefPtr[bp[y[2]] + RefPixelOffset];
     InterError += GetInterErr(cpi, SrcPtr1, RefPtr1, &RefPtr1[RefPtr2Offset] );
   }
 
-  if ( cp[mp->y[3]] ) {
-    SrcPtr1 = &SrcPtr[bp[mp->y[3]]];
-    RefPtr1 = &RefPtr[bp[mp->y[3]] + RefPixelOffset];
+  if ( cp[y[3]] ) {
+    SrcPtr1 = &SrcPtr[bp[y[3]]];
+    RefPtr1 = &RefPtr[bp[y[3]] + RefPixelOffset];
     InterError += GetInterErr(cpi, SrcPtr1, RefPtr1, &RefPtr1[RefPtr2Offset] );
   }
   
@@ -258,37 +260,38 @@ ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
   unsigned char * RefDataPtr2;
   unsigned char *cp = cpi->frag_coded;
   ogg_uint32_t *bp = cpi->frag_buffer_index;
+  int *yp = mp->yuv[0];
 
   dsp_save_fpu (cpi->dsp);
 
   /* Note which of the four blocks in the macro block are to be
      included in the search. */
-  disp[0] = cp[mp->y[0]];
-  disp[1] = cp[mp->y[1]];
-  disp[2] = cp[mp->y[2]];
-  disp[3] = cp[mp->y[3]];
+  disp[0] = cp[yp[0]];
+  disp[1] = cp[yp[1]];
+  disp[2] = cp[yp[2]];
+  disp[3] = cp[yp[3]];
 
   if(disp[0]){
-    SrcPtr[0] = &cpi->frame[bp[mp->y[0]]];
-    RefPtr[0] = &RefFramePtr[bp[mp->y[0]]];
+    SrcPtr[0] = &cpi->frame[bp[yp[0]]];
+    RefPtr[0] = &RefFramePtr[bp[yp[0]]];
     Error += dsp_sad8x8 (cpi->dsp, SrcPtr[0], RefPtr[0],
                          cpi->stride[0]);
   }
   if(disp[1]){
-    SrcPtr[1] = &cpi->frame[bp[mp->y[1]]];
-    RefPtr[1] = &RefFramePtr[bp[mp->y[1]]];
+    SrcPtr[1] = &cpi->frame[bp[yp[1]]];
+    RefPtr[1] = &RefFramePtr[bp[yp[1]]];
     Error += dsp_sad8x8 (cpi->dsp, SrcPtr[1], RefPtr[1],
                          cpi->stride[0]);
   }
   if(disp[2]){
-    SrcPtr[2] = &cpi->frame[bp[mp->y[2]]];
-    RefPtr[2] = &RefFramePtr[bp[mp->y[2]]];
+    SrcPtr[2] = &cpi->frame[bp[yp[2]]];
+    RefPtr[2] = &RefFramePtr[bp[yp[2]]];
     Error += dsp_sad8x8 (cpi->dsp, SrcPtr[2], RefPtr[2],
                          cpi->stride[0]);
   }
   if(disp[3]){
-    SrcPtr[3] = &cpi->frame[bp[mp->y[3]]];
-    RefPtr[3] = &RefFramePtr[bp[mp->y[3]]];
+    SrcPtr[3] = &cpi->frame[bp[yp[3]]];
+    RefPtr[3] = &RefFramePtr[bp[yp[3]]];
     Error += dsp_sad8x8 (cpi->dsp, SrcPtr[3], RefPtr[3],
                          cpi->stride[0]);
   }
@@ -436,31 +439,32 @@ ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
   int off;
   unsigned char *cp = cpi->frag_coded;
   ogg_uint32_t *bp = cpi->frag_buffer_index;
+  int *yp = mp->yuv[0];
 
   dsp_save_fpu (cpi->dsp);
 
   /* Note which of the four blocks in the macro block are to be
      included in the search. */
-  disp[0] = cp[mp->y[0]];
-  disp[1] = cp[mp->y[1]];
-  disp[2] = cp[mp->y[2]];
-  disp[3] = cp[mp->y[3]];
+  disp[0] = cp[yp[0]];
+  disp[1] = cp[yp[1]];
+  disp[2] = cp[yp[2]];
+  disp[3] = cp[yp[3]];
 
   if(disp[0]){
-    SrcPtr[0] = &cpi->frame[bp[mp->y[0]]];
-    RefPtr[0] = &RefFramePtr[bp[mp->y[0]]];
+    SrcPtr[0] = &cpi->frame[bp[yp[0]]];
+    RefPtr[0] = &RefFramePtr[bp[yp[0]]];
   }
   if(disp[1]){
-    SrcPtr[1] = &cpi->frame[bp[mp->y[1]]];
-    RefPtr[1] = &RefFramePtr[bp[mp->y[1]]];
+    SrcPtr[1] = &cpi->frame[bp[yp[1]]];
+    RefPtr[1] = &RefFramePtr[bp[yp[1]]];
   }
   if(disp[2]){
-    SrcPtr[2] = &cpi->frame[bp[mp->y[2]]];
-    RefPtr[2] = &RefFramePtr[bp[mp->y[2]]];
+    SrcPtr[2] = &cpi->frame[bp[yp[2]]];
+    RefPtr[2] = &RefFramePtr[bp[yp[2]]];
   }
   if(disp[3]){
-    SrcPtr[3] = &cpi->frame[bp[mp->y[3]]];
-    RefPtr[3] = &RefFramePtr[bp[mp->y[3]]];
+    SrcPtr[3] = &cpi->frame[bp[yp[3]]];
+    RefPtr[3] = &RefFramePtr[bp[yp[3]]];
   }
 
   off = - ((MAX_MV_EXTENT/2) * cpi->stride[0]) - (MAX_MV_EXTENT/2);
@@ -658,29 +662,30 @@ ogg_uint32_t GetFOURMVExhaustiveSearch (CP_INSTANCE *cpi,
                                         mv_t *MV ) {
   ogg_uint32_t  InterMVError;
   unsigned char *cp = cpi->frag_coded;
+  int *y = mp->yuv[0];
 
   dsp_save_fpu (cpi->dsp);
 
   /* For the moment the 4MV mode is only deemed to be valid 
      if all four Y blocks are to be updated */
   /* This may be adapted later. */
-  if ( cp[mp->y[0]] &&
-       cp[mp->y[1]] &&
-       cp[mp->y[2]] &&
-       cp[mp->y[3]] ) {
+  if ( cp[y[0]] &&
+       cp[y[1]] &&
+       cp[y[2]] &&
+       cp[y[3]] ) {
     
     /* Reset the error score. */
     InterMVError = 0;
     
     /* Get the error component from each coded block */
     InterMVError +=
-      GetBMVExhaustiveSearch(cpi, RefFramePtr, mp->y[0], &(MV[0]) );
+      GetBMVExhaustiveSearch(cpi, RefFramePtr, y[0], &(MV[0]) );
     InterMVError +=
-      GetBMVExhaustiveSearch(cpi, RefFramePtr, mp->y[1], &(MV[1]) );
+      GetBMVExhaustiveSearch(cpi, RefFramePtr, y[1], &(MV[1]) );
     InterMVError +=
-      GetBMVExhaustiveSearch(cpi, RefFramePtr, mp->y[2], &(MV[2]) );
+      GetBMVExhaustiveSearch(cpi, RefFramePtr, y[2], &(MV[2]) );
     InterMVError +=
-      GetBMVExhaustiveSearch(cpi, RefFramePtr, mp->y[3], &(MV[3]) );
+      GetBMVExhaustiveSearch(cpi, RefFramePtr, y[3], &(MV[3]) );
   }else{
     InterMVError = HUGE_ERROR;
   }

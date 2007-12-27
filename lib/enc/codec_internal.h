@@ -112,9 +112,7 @@ typedef struct{
 
 typedef struct macroblock {
   /* the blocks comprising this macroblock */
-  int y[4]; // raster order
-  int u;
-  int v;
+  int yuv[3][4]; /* [Y,U,V][raster order] */
 
   coding_mode_t mode;
   mv_t mv[4];

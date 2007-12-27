@@ -451,22 +451,22 @@ void ReconRefFrames (CP_INSTANCE *cpi){
 
   for (i=0; i<cpi->macro_total; i++, mp++ ) {
     coding_mode_t mode = mp->mode;
-    int fi = mp->y[0];
+    int fi = mp->yuv[0][0];
     if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
 
-    fi = mp->y[1];
+    fi = mp->yuv[0][1];
     if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
 
-    fi = mp->y[2];
+    fi = mp->yuv[0][2];
     if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
 
-    fi = mp->y[3];
+    fi = mp->yuv[0][3];
     if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
 
-    fi = mp->u;
+    fi = mp->yuv[1][0];
     if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
 
-    fi = mp->v;
+    fi = mp->yuv[2][0];
     if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
   }
 

@@ -153,64 +153,49 @@ static void PredictDC(CP_INSTANCE *cpi){
   }
 }
 
-/* temporary hack; going to MB addressing */
-static int hmap4[16]={0,1,3,2,0,2,3,1,0,2,3,1,3,2,0,1};
 static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
-  ogg_uint32_t n = cpi->super_n[plane];
-  ogg_uint32_t SB, MB, B;
+  int B;
   unsigned char *cp = cpi->frag_coded;
-  superblock_t *sp = cpi->super[plane];
+  macroblock_t *mp = cpi->macro;
+  macroblock_t *mp_end = cpi->macro+cpi->macro_total;
+  int fi;
 
   switch(subsample){
   case 1:
-    for ( SB=0; SB<n; SB++,sp++ ){
-      int frag = 0;
-     
-      for ( MB=0; MB<4; MB++ ) {
-	macroblock_t *mp = &cpi->macro[sp->m[MB]];
-	
-	for ( B=0; B<4; B++, frag++ ) {
-	  int fi = sp->f[frag];
-	  
-	  if ( cp[fi] ) {
-	    TransformQuantizeBlock( cpi, mp->mode, fi, mp->mv[hmap4[frag]] );
-	    if(cp[fi] && plane == 0)
-	      mp->coded |= (1<<hmap4[frag]);
-	  }
+    for ( ; mp<mp_end; mp++ ) {
+      int *yuv = mp->yuv[plane];
+
+      for ( B=0; B<4; B++) {
+	fi = yuv[B];
+	if ( cp[fi] ) {
+	  TransformQuantizeBlock( cpi, mp->mode, fi, mp->mv[B] );
+	  if(cp[fi] && plane == 0)
+	    mp->coded |= (1<<B);
 	}
-	if ( plane == 0 && mp->coded ) 
-	  cpi->ModeCount[mp->mode] ++;
-	
-      }  
+      }
+      if ( plane == 0 && mp->coded ) 
+	cpi->ModeCount[mp->mode] ++; 
     }
     return 0;
   case 2:
     /* fill me in when we need to support 4:2:2 */
     return 1;
   case 4:
-    for ( SB=0; SB<n; SB++,sp++ ){
-      for ( MB=0; MB<16; MB++ ) { /* MB:B :: 1:1 */
-	int fi = sp->f[MB];
-	if ( cp[fi] ) {
-	  macroblock_t *mp = &cpi->macro[sp->m[MB]];
-	  mv_t mv;
+    for ( ; mp<mp_end; mp++ ) {
+      int fi = mp->yuv[plane][0];
+      if ( cp[fi] ) {
+	mv_t mv;
 
-	  /* Calculate motion vector as the average of the Y plane ones. */
-	  /* Uncoded members are 0,0 and not special-cased */
-	  mv.x = mp->mv[0].x + mp->mv[1].x + mp->mv[2].x + mp->mv[3].x;
-	  mv.y = mp->mv[0].y + mp->mv[1].y + mp->mv[2].y + mp->mv[3].y;
+	/* Calculate motion vector as the average of the Y plane ones. */
+	/* Uncoded members are 0,0 and not special-cased */
+	mv.x = mp->mv[0].x + mp->mv[1].x + mp->mv[2].x + mp->mv[3].x;
+	mv.y = mp->mv[0].y + mp->mv[1].y + mp->mv[2].y + mp->mv[3].y;
 
-	  if ( mv.x >= 0 )
-	    mv.x = (mv.x + 2) / 4;
-	  else
-	    mv.x = (mv.x - 2) / 4;
-	  if ( mv.y >= 0 )
-	    mv.y = (mv.y + 2) / 4;
-	  else
-	    mv.y = (mv.y - 2) / 4;
-	  
-	  TransformQuantizeBlock( cpi, mp->mode, fi, mv );
-	}
+	mv.x = ( mv.x >= 0 ? (mv.x + 2) / 4 : (mv.x - 2) / 4);
+	mv.y = ( mv.y >= 0 ? (mv.y + 2) / 4 : (mv.y - 2) / 4);
+	
+	TransformQuantizeBlock( cpi, mp->mode, fi, mv );
+    
       }  
     }
     return 0;
@@ -402,6 +387,7 @@ static void PackModes (CP_INSTANCE *cpi) {
     ModeBits = NoOpModeBits;
   }
 
+  /* modes coded in hilbert order; use superblock addressing */
   for ( SB=0 ; SB < cpi->super_n[0]; SB++ ){
     superblock_t *sp = &cpi->super[0][SB];
     for ( MB=0; MB<4; MB++ ) {
@@ -435,7 +421,8 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
   }
 
   /* Pack and encode the motion vectors */
-  /* iterate through MB list */
+  /* MBs are iterated in Hilbert scan order, but the MVs within the MB are coded in raster order */
+
   for ( SB=0 ; SB < cpi->super_n[0]; SB++ ){
     superblock_t *sp = &cpi->super[0][SB];
     for ( MB=0; MB<4; MB++ ) {
@@ -589,9 +576,9 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
     /* Check its four Macro-Blocks */
     for ( MB=0; MB<4; MB++ ) {
       macroblock_t *mbp = &cpi->macro[sp->m[MB]];      
-      int fi = mbp->y[0];
+      int fi = mbp->yuv[0][0];
 
-      for ( B=1; !cp[fi] && B<4; B++ ) fi = mbp->y[B];
+      for ( B=1; !cp[fi] && B<4; B++ ) fi = mbp->yuv[0][B];
       
       /* This one isn't coded go to the next one */
       if(!cp[fi]) continue;

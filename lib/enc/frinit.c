@@ -230,6 +230,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   }
 
   /* fill in macroblock fragment pointers; raster (MV coding) order */
+  /* 4:2:0 only for now */
   {
     int row,col,frag;
     int scanx[4] = {0,1,0,1};
@@ -246,20 +247,20 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	  int fcol = basecol + scanx[frag];
 	  if(frow<cpi->frag_v[0] && fcol<cpi->frag_h[0]){
 	    int fragindex = frow*cpi->frag_h[0] + fcol;
-	    cpi->macro[macroindex].y[frag] = fragindex;
+	    cpi->macro[macroindex].yuv[0][frag] = fragindex;
 	  }else
-	    cpi->macro[macroindex].y[frag] = cpi->frag_total;
+	    cpi->macro[macroindex].yuv[0][frag] = cpi->frag_total;
 	}
 	
 	if(row<cpi->frag_v[1] && col<cpi->frag_h[1])
-	  cpi->macro[macroindex].u = cpi->frag_n[0] + macroindex;
+	  cpi->macro[macroindex].yuv[1][0] = cpi->frag_n[0] + macroindex;
 	else
-	  cpi->macro[macroindex].u = cpi->frag_total;
+	  cpi->macro[macroindex].yuv[1][0] = cpi->frag_total;
 
 	if(row<cpi->frag_v[2] && col<cpi->frag_h[2])
-	  cpi->macro[macroindex].v = cpi->frag_n[0] + cpi->frag_n[1] + macroindex; 
+	  cpi->macro[macroindex].yuv[2][0] = cpi->frag_n[0] + cpi->frag_n[1] + macroindex; 
 	else
-	  cpi->macro[macroindex].v = cpi->frag_total;
+	  cpi->macro[macroindex].yuv[2][0] = cpi->frag_total;
 
       }
     }
@@ -267,12 +268,10 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 
   /* fill in 'invalid' macroblock */
   {
-    cpi->macro[cpi->macro_total].y[0] = cpi->frag_total;
-    cpi->macro[cpi->macro_total].y[1] = cpi->frag_total;
-    cpi->macro[cpi->macro_total].y[2] = cpi->frag_total;
-    cpi->macro[cpi->macro_total].y[3] = cpi->frag_total;
-    cpi->macro[cpi->macro_total].u = cpi->frag_total;
-    cpi->macro[cpi->macro_total].v = cpi->frag_total;
+    int p,f;
+    for(p=0;p<3;p++)
+      for(f=0;f<4;f++)
+	cpi->macro[cpi->macro_total].yuv[p][f] = cpi->frag_total;
   }
 
   /* allocate frames */
