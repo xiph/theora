@@ -77,9 +77,11 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
   ogg_uint32_t  KFIndicator = 0;
   int fi = 0;
 
+  for ( i = 0; i < cpi->macro_total; i++) 
+    cpi->macro[i].mode = CODE_INTER_NO_MV;  /* Default coding mode */
+
   /* Clear down the macro block level mode and MV arrays. */
   for ( i = 0; i < cpi->frag_total; i++, fi++ ) {
-    cpi->frag_mode[fi] = CODE_INTER_NO_MV;  /* Default coding mode */
     cpi->frag_coded[fi] = 1; /* TEMPORARY */
     cpi->frag_mv[fi].x=0;
     cpi->frag_mv[fi].y=0;

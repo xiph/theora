@@ -35,8 +35,7 @@ static void SetupBoundingValueArray_Generic(ogg_int16_t *BoundingValuePtr,
   }
 }
 
-static void ExpandBlock ( CP_INSTANCE *cpi, int fi){
-  int           mode = cpi->frag_mode[fi];
+static void ExpandBlock ( CP_INSTANCE *cpi, coding_mode_t mode, int fi){
   int           qi = cpi->BaseQ; // temporary 
   int           plane = (fi<cpi->frag_n[0] ? 0 : (fi-cpi->frag_n[0]<cpi->frag_n[1] ? 1 : 2));
   int           inter = (mode != CODE_INTRA);
@@ -446,11 +445,29 @@ static void LoopFilter(CP_INSTANCE *cpi){
 }
 
 void ReconRefFrames (CP_INSTANCE *cpi){
-  int *fip = cpi->coded_fi_list;
-  
-  while(*fip>=0){
-    ExpandBlock( cpi, *fip );
-    fip++;
+  int i;
+  unsigned char *cp = cpi->frag_coded;
+  macroblock_t *mp = cpi->macro;
+
+  for (i=0; i<cpi->macro_total; i++, mp++ ) {
+    coding_mode_t mode = mp->mode;
+    int fi = mp->y[0];
+    if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
+
+    fi = mp->y[1];
+    if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
+
+    fi = mp->y[2];
+    if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
+
+    fi = mp->y[3];
+    if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
+
+    fi = mp->u;
+    if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
+
+    fi = mp->v;
+    if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
   }
 
   memcpy(cpi->lastrecon,cpi->recon,sizeof(*cpi->recon)*cpi->frame_size);

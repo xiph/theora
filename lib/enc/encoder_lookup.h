@@ -125,24 +125,23 @@ static const ogg_uint32_t MVChangeFactorTable[Q_TABLE_SIZE] = {
 #define HIGHBITDUPPED(X) (((ogg_int16_t) X)  >> 15)
 
 /* predictor multiplier up-left, up, up-right,left, shift
-   Entries are packed in the order L, UL, U, UR, with missing entries
-   moved to the end (before the shift parameters). */
+   Entries are unpacked in the order L, UL, U, UR */
 static const ogg_int16_t pc[16][6]={
   {0,0,0,0,0,0},
   {1,0,0,0,0,0},      /* PL */
-  {1,0,0,0,0,0},      /* PUL */
+  {0,1,0,0,0,0},      /* PUL */
   {1,0,0,0,0,0},      /* PUL|PL */
-  {1,0,0,0,0,0},      /* PU */
-  {1,1,0,0,1,1},      /* PU|PL */
-  {0,1,0,0,0,0},      /* PU|PUL */
+  {0,0,1,0,0,0},      /* PU */
+  {1,0,1,0,1,1},      /* PU|PL */
+  {0,0,1,0,0,0},      /* PU|PUL */
   {29,-26,29,0,5,31}, /* PU|PUL|PL */
-  {1,0,0,0,0,0},      /* PUR */
-  {75,53,0,0,7,127},  /* PUR|PL */
-  {1,1,0,0,1,1},      /* PUR|PUL */
-  {75,0,53,0,7,127},  /* PUR|PUL|PL */
-  {1,0,0,0,0,0},      /* PUR|PU */
-  {75,0,53,0,7,127},  /* PUR|PU|PL */
-  {3,10,3,0,4,15},    /* PUR|PU|PUL */
+  {0,0,0,1,0,0},      /* PUR */
+  {75,0,0,53,7,127},  /* PUR|PL */
+  {0,1,0,1,1,1},      /* PUR|PUL */
+  {75,0,0,53,7,127},  /* PUR|PUL|PL */
+  {0,0,1,0,0,0},      /* PUR|PU */
+  {75,0,0,53,7,127},  /* PUR|PU|PL */
+  {0,3,10,3,4,15},    /* PUR|PU|PUL */
   {29,-26,29,0,5,31}  /* PUR|PU|PUL|PL */
 };
 

@@ -20,166 +20,183 @@
 #include "codec_internal.h"
 #include "encoder_lookup.h"
 
+static void predict_frag(CP_INSTANCE  *cpi,
+			 ogg_int16_t  *Last,
+			 
+			 macroblock_t *mb, 
+			 macroblock_t *mb_left, 
+			 macroblock_t *mb_downleft,
+			 macroblock_t *mb_down,
+			 macroblock_t *mb_downright, 
+			 
+			 int fi,
+			 int fi_down){
+
+  unsigned char *cp = cpi->frag_coded;
+  ogg_int16_t   *dc = cpi->frag_dc;
+  dct_t        *dct = cpi->frag_dct;
+  int wpc = 0;
+
+  /* only do 2 prediction if fragment coded and on non intra or
+     if all fragments are intra */
+  if(cp[fi]) {
+    
+    int WhichFrame = Mode2Frame[mb->mode];
+    
+    /* L, DL, D, DR */
+    if(mb_left && cp[fi-1] && Mode2Frame[mb_left->mode] == WhichFrame)
+      wpc|=1;
+    if(mb_downleft && cp[fi_down-1] && Mode2Frame[mb_downleft->mode] == WhichFrame)
+      wpc|=2;
+    if(mb_down && cp[fi_down] && Mode2Frame[mb_down->mode] == WhichFrame)
+      wpc|=4;
+    if(mb_downright && cp[fi_down+1] && Mode2Frame[mb_downright->mode] == WhichFrame)
+      wpc|=8;
+
+    if(wpc){
+      ogg_int16_t DC = 0;
+
+      if(wpc&0x1) DC += pc[wpc][0]*dc[fi-1];
+      if(wpc&0x2) DC += pc[wpc][1]*dc[fi_down-1];
+      if(wpc&0x4) DC += pc[wpc][2]*dc[fi_down];
+      if(wpc&0x8) DC += pc[wpc][3]*dc[fi_down+1];
+
+      /* if we need to do a shift */
+      if(pc[wpc][4]) {
+	/* If negative add in the negative correction factor */
+	DC += (HIGHBITDUPPED(DC) & pc[wpc][5]);
+	/* Shift in lieu of a divide */
+	DC >>= pc[wpc][4];
+      }
+      
+      /* check for outranging on the two predictors that can outrange */
+      if((wpc&(PU|PUL|PL)) == (PU|PUL|PL)){
+	if( abs(DC - dc[fi_down]) > 128) {
+	  DC = dc[fi_down];
+	} else if( abs(DC - dc[fi-1]) > 128) {
+	  DC = dc[fi-1];
+	} else if( abs(DC - dc[fi_down-1]) > 128) {
+	  DC = dc[fi_down-1];
+	}
+      }
+      
+      dct[fi].data[0] = dc[fi] - DC;
+    
+    }else{
+      dct[fi].data[0] = dc[fi] - Last[WhichFrame];
+    }
+
+    /* Save the last fragment coded for whatever frame we are
+       predicting from */
+    
+    Last[WhichFrame] = dc[fi];
+  }
+}
+
 static void PredictDC(CP_INSTANCE *cpi){
   ogg_int32_t plane;
-  int k,m,n;
-
-  /* value left value up-left, value up, value up-right, missing
-      values skipped. */
-  int v[4];
-
-  /* fragment number left, up-left, up, up-right */
-  int fn[4];
-
-  /* predictor count. */
-  int pcount;
-
-  /*which predictor constants to use */
-  ogg_int16_t wpc;
-
-  /* last used inter predictor (Raster Order) */
   ogg_int16_t Last[3];  /* last value used for given frame */
+  int y,y2,x,fi = 0;
 
-  coding_mode_t *mp = cpi->frag_mode;
-  unsigned char *cp = cpi->frag_coded;
-  dct_t         *dct = cpi->frag_dct;
-  ogg_int16_t   *dc = cpi->frag_dc;
-  int fi = 0;
-
-  /* for y,u,v */
+  /* for y,u,v; handles arbitrary plane subsampling arrangement.  Shouldn't need to be altered for 4:2:2 or 4:4:4 */
   for ( plane = 0; plane < 3 ; plane++) {
+    macroblock_t *mb_row = cpi->macro;
+    macroblock_t *mb_down = NULL;
+    int fi_stride = cpi->frag_h[plane];
+    int v = cpi->macro_v;
+    int h = cpi->macro_h;
 
-    for(k=0;k<3;k++)Last[k]=0;
-    fn[0]=1;
-    fn[1]=cpi->frag_h[plane]+1;
-    fn[2]=cpi->frag_h[plane];
-    fn[3]=cpi->frag_h[plane]-1;
-    
-    /* do prediction on all of Y, U or V */
-    for ( m = 0 ; m < cpi->frag_v[plane] ; m++) {
-      for ( n = 0 ; n < cpi->frag_h[plane] ; n++, fi++) {
+    for(x=0;x<3;x++)Last[x]=0;
 
-        /* only do 2 prediction if fragment coded and on non intra or
-           if all fragments are intra */
-        if(cp[fi]) {
+    for ( y = 0 ; y < v ; y++) {
+      for ( y2 = 0 ; y2 <= (cpi->macro_v < cpi->frag_v[plane]) ; y2++) {
 
-          int WhichFrame = Mode2Frame[mp[fi]];
+	macroblock_t *mb = mb_row;
+	macroblock_t *mb_left = NULL;
+	macroblock_t *mb_downleft = NULL;
+	macroblock_t *mb_downright = ((1<h && mb_down) ? mb_down+1: NULL);	    
 
-          /* Check Borderline Cases */
-          int WhichCase = (n==0) + ((m==0) << 1) + ((n+1 == cpi->frag_h[plane]) << 2);
-
-          /* fragment valid for prediction use if coded and it comes
-             from same frame as the one we are predicting */
-          for(k=pcount=wpc=0; k<4; k++) {
-            int pflag = 1<<k;
-            if((bc_mask[WhichCase]&pflag)){
-	      int fni = fi - fn[k];	
-	      if(cp[fni] &&
-		 (Mode2Frame[mp[fni]] == WhichFrame)){
-		v[pcount]=dc[fni];
-		wpc|=pflag;
-		pcount++;
-	      }
-	    }
-          }
-
-          if(wpc==0) {
-
-            /* fall back to the last coded fragment */
-            dct[fi].data[0] = dc[fi] - Last[WhichFrame];
-
-          } else {
-
-            /* don't do divide if divisor is 1 or 0 */
-            ogg_int16_t DC = pc[wpc][0]*v[0];
-            for(k=1; k<pcount; k++)
-              DC += pc[wpc][k]*v[k];
+	if(h < cpi->frag_h[plane]){
+	  for ( x = 0 ; x < h ; x++) {
+	    predict_frag(cpi,Last,mb, mb_left,mb_downleft,mb_down,mb_down, fi,fi-fi_stride);
+	    predict_frag(cpi,Last,mb, mb,mb_down,mb_down,mb_downright, fi+1,fi-fi_stride+1);
+	    fi+=2;
+	    mb_left = mb;
+	    mb_downleft = mb_down;
 	    
-            /* if we need to do a shift */
-            if(pc[wpc][4] != 0 ) {
-	      
-              /* If negative add in the negative correction factor */
-              DC += (HIGHBITDUPPED(DC) & pc[wpc][5]);
-              /* Shift in lieu of a divide */
-              DC >>= pc[wpc][4];
-
-            }
-
-            /* check for outranging on the two predictors that can outrange */
-            if((wpc&(PU|PUL|PL)) == (PU|PUL|PL)){
-              if( abs(DC - v[2]) > 128) {
-                DC = v[2];
-              } else if( abs(DC - v[0]) > 128) {
-                DC = v[0];
-              } else if( abs(DC - v[1]) > 128) {
-                DC = v[1];
-              }
-            }
-
-            dct[fi].data[0] = dc[fi] - DC;
-          }
-
-          /* Save the last fragment coded for whatever frame we are
-             predicting from */
-
-          Last[WhichFrame] = dc[fi];
-
-        }
+	    mb++;
+	    if(mb_down){
+	      mb_down++;
+	      mb_downright = (x+2<h ? mb_down+1: NULL);	    
+	    }
+	  }
+	}else{
+	  for ( x = 0 ; x < h ; x++) {
+	    
+	    predict_frag(cpi,Last,mb, mb_left,mb_downleft,mb_down,mb_downright, fi,fi-fi_stride);
+	    fi++;
+	    mb_left = mb;
+	    mb_downleft = mb_down;
+	    
+	    mb++;
+	    if(mb_down){
+	      mb_down++;
+	      mb_downright = (x+2<h ? mb_down+1: NULL);	    
+	    }	    
+	  }
+	}
+	mb_down = mb_row;
       }
+      
+      mb_row += h;
     }
   }
 }
 
-
-static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi,
-				int plane ){
-
-  ogg_uint32_t SBs = cpi->super_n[plane];
+static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
+  ogg_uint32_t n = cpi->super_n[plane];
   ogg_uint32_t SB, MB, B;
-  coding_mode_t *mp = cpi->frag_mode;
   unsigned char *cp = cpi->frag_coded;
+  superblock_t *sp = cpi->super[plane];
 
-  /* actually transform and quantize the image now that we've decided
-     on the modes Parse in quad-tree ordering */
-
-  for ( SB=0; SB<SBs; SB++ ){
-    superblock_t *sp = &cpi->super[plane][SB];
-    int frag=0;
-
-    int SBi = SB;
-    if(plane>0)SBi+=cpi->super_n[0];
-    if(plane>1)SBi+=cpi->super_n[1];
-
-    for ( MB=0; MB<4; MB++ ) {
-      int coded = 0;
-      int mode = 0;
-
-      for ( B=0; B<4; B++, frag++ ) {
-	int fi = sp->f[frag];
-
-	if ( cp[fi] ) {
-
-	  /* transform and quantize block */
-	  TransformQuantizeBlock( cpi, fi );
+  switch(subsample){
+  case 1:
+    for ( SB=0; SB<n; SB++,sp++ ){
+      int frag = 0;
+      
+      for ( MB=0; MB<4; MB++ ) {
+	macroblock_t *mp = &cpi->macro[sp->m[MB]];
+	unsigned char coded = 0;
+	
+	for ( B=0; B<4; B++, frag++ ) {
+	  int fi = sp->f[frag];
 	  
-	  /* Has the block got struck off (no MV and no data
-	     generated after DCT) If not then mark it and the
-	     assosciated MB as coded. */
 	  if ( cp[fi] ) {
-	    cpi->coded_fi_list[cpi->coded_fi_count++]=fi;
-	    coded = 1;
-	    mode = mp[fi];	    
+	    TransformQuantizeBlock( cpi, mp->mode, fi );
+	    coded |= cp[fi];
 	  }
 	}
-      }
-     
-      /* If the MB is marked as coded and we are in the Y plane */
-      /* collect coding metric */
-      if ( coded && plane == 0 ) cpi->ModeCount[mode] ++;
-
-    }  
+	if ( plane == 0 && coded ) 
+	  cpi->ModeCount[mp->mode] ++;
+	
+      }  
+    }
+    return 0;
+  case 2:
+    /* fill me in when we need to support 4:2:2 */
+    return 1;
+  case 4:
+    for ( SB=0; SB<n; SB++,sp++ ){
+      for ( MB=0; MB<16; MB++ ) { /* MB:B :: 1:1 */
+	int fi = sp->f[MB];
+	if ( cp[fi] ) 
+	  TransformQuantizeBlock( cpi, cpi->macro[sp->m[MB]].mode, fi );
+      }  
+    }
+    return 0;
+  default:
+    return 1;
   }
-  return 0;
 }
 
 static void EncodeDcTokenList (CP_INSTANCE *cpi) {
@@ -292,7 +309,6 @@ static void PackModes (CP_INSTANCE *cpi) {
   const unsigned char  *ModeScheme;
 
   unsigned char *cp = cpi->frag_coded;
-  coding_mode_t *mp = cpi->frag_mode;
   int SB,MB,B;
 
   oggpack_buffer *opb=cpi->oggbuffer;
@@ -378,7 +394,7 @@ static void PackModes (CP_INSTANCE *cpi) {
   
       if(cp[fi]){
 	/* Add the appropriate mode entropy token. */
-	int index = ModeScheme[mp[fi]];
+	int index = ModeScheme[mbp->mode];
 	oggpackB_write( opb, ModeWords[index],
 			(ogg_uint32_t)ModeBits[index] );
       }
@@ -391,7 +407,6 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
   const ogg_uint32_t * MvBitsPtr;
 
   ogg_uint32_t SB, MB, B;
-  coding_mode_t *mp = cpi->frag_mode;
   unsigned char *cp = cpi->frag_coded;
   mv_t          *mv = cpi->frag_mv;
 
@@ -419,11 +434,11 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
       for(B=1; !cp[fi] && B<4; B++ ) fi = mbp->y[B];
       if(B==4) continue;
 
-      if(mp[fi]==CODE_INTER_PLUS_MV || mp[fi]==CODE_GOLDEN_MV){
+      if(mbp->mode==CODE_INTER_PLUS_MV || mbp->mode==CODE_GOLDEN_MV){
 	/* One MV for the macroblock */
 	oggpackB_write( opb, MvPatternPtr[mv[fi].x], MvBitsPtr[mv[fi].x] );
 	oggpackB_write( opb, MvPatternPtr[mv[fi].y], MvBitsPtr[mv[fi].y] );
-      }else if (mp[fi] == CODE_INTER_FOURMV){
+      }else if (mbp->mode == CODE_INTER_FOURMV){
 	/* MV for each codedblock */
 	for(B=0; B<4; B++ ){
 	  fi = mbp->y[B];
@@ -441,17 +456,15 @@ void EncodeData(CP_INSTANCE *cpi){
 
   /* reset all coding metadata  */
   memset(cpi->ModeCount, 0, MAX_MODES*sizeof(*cpi->ModeCount));
-  cpi->coded_fi_count = 0;
 
   dsp_save_fpu (cpi->dsp);
 
   /* Encode and tokenise the Y, U and V components */
-  CodePlane(cpi, 0);
-  CodePlane(cpi, 1);
-  CodePlane(cpi, 2);
+  /* 4:2:0 for now */
+  CodePlane(cpi, 0, 1);
+  CodePlane(cpi, 1, 4);
+  CodePlane(cpi, 2, 4);
 
-  cpi->coded_fi_list[cpi->coded_fi_count]=-1;
-  
   PredictDC(cpi);
   DPCMTokenize(cpi);
 
@@ -476,10 +489,12 @@ void EncodeData(CP_INSTANCE *cpi){
 ogg_uint32_t PickIntra( CP_INSTANCE *cpi ){
 
   int i;
-  for(i=0;i<cpi->frag_total;i++){
-    cpi->frag_mode[i] = CODE_INTRA;
+  for(i=0;i<cpi->frag_total;i++)
     cpi->frag_coded[i] = 1;
-  }
+
+  for(i=0;i<cpi->macro_total;i++)
+    cpi->macro[i].mode = CODE_INTRA;
+
   return 0;
 }
 
@@ -489,11 +504,9 @@ static void CountMotionVector(CP_INSTANCE *cpi, mv_t *mv) {
   cpi->MVBits_1 += 12; /* Simple six bits per mv component fallback */
 }
 
-static void SetFragMotionVectorAndMode(CP_INSTANCE *cpi,
-				       int fi,
-				       mv_t *mv,
-				       int mode){
-  cpi->frag_mode[fi] = mode;
+static void SetFragMotionVector(CP_INSTANCE *cpi,
+				int fi,
+				mv_t *mv){
   cpi->frag_mv[fi] = *mv;
 }
 
@@ -501,12 +514,14 @@ static void SetMBMotionVectorsAndMode(CP_INSTANCE *cpi,
 				      macroblock_t *mp,
 				      mv_t *mv,
 				      int mode){
-  SetFragMotionVectorAndMode(cpi, mp->y[0], mv, mode);
-  SetFragMotionVectorAndMode(cpi, mp->y[1], mv, mode);
-  SetFragMotionVectorAndMode(cpi, mp->y[2], mv, mode);
-  SetFragMotionVectorAndMode(cpi, mp->y[3], mv, mode);
-  SetFragMotionVectorAndMode(cpi, mp->u, mv, mode);
-  SetFragMotionVectorAndMode(cpi, mp->v, mv, mode);
+  mp->mode = mode;
+  mp->mv[0] = *mv;
+  SetFragMotionVector(cpi, mp->y[0], mv);
+  SetFragMotionVector(cpi, mp->y[1], mv);
+  SetFragMotionVector(cpi, mp->y[2], mv);
+  SetFragMotionVector(cpi, mp->y[3], mv);
+  SetFragMotionVector(cpi, mp->u, mv);
+  SetFragMotionVector(cpi, mp->v, mv);
 }
 
 ogg_uint32_t PickModes(CP_INSTANCE *cpi,
@@ -800,12 +815,17 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 	  FourMVect[4].y = (FourMVect[4].y - 2) / 4;
 	FourMVect[5].y = FourMVect[4].y;
 
-	SetFragMotionVectorAndMode(cpi,mbp->y[0], &FourMVect[0],CODE_INTER_FOURMV);
-	SetFragMotionVectorAndMode(cpi,mbp->y[1], &FourMVect[1],CODE_INTER_FOURMV);
-	SetFragMotionVectorAndMode(cpi,mbp->y[2], &FourMVect[2],CODE_INTER_FOURMV);
-	SetFragMotionVectorAndMode(cpi,mbp->y[3], &FourMVect[3],CODE_INTER_FOURMV);
-	SetFragMotionVectorAndMode(cpi,mbp->u, &FourMVect[4],CODE_INTER_FOURMV);
-	SetFragMotionVectorAndMode(cpi,mbp->v, &FourMVect[5],CODE_INTER_FOURMV);
+	mbp->mode = CODE_INTER_FOURMV;
+	mbp->mv[0] = FourMVect[0];
+	mbp->mv[1] = FourMVect[1];
+	mbp->mv[2] = FourMVect[2];
+	mbp->mv[3] = FourMVect[3];
+	SetFragMotionVector(cpi,mbp->y[0], &FourMVect[0]);
+	SetFragMotionVector(cpi,mbp->y[1], &FourMVect[1]);
+	SetFragMotionVector(cpi,mbp->y[2], &FourMVect[2]);
+	SetFragMotionVector(cpi,mbp->y[3], &FourMVect[3]);
+	SetFragMotionVector(cpi,mbp->u, &FourMVect[4]);
+	SetFragMotionVector(cpi,mbp->v, &FourMVect[5]);
 
 	/* Note the four MVs values for current macro-block. */
 	CountMotionVector( cpi, &FourMVect[0]);

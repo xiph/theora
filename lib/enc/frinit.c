@@ -46,9 +46,6 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
   if(cpi->frag_coded) _ogg_free(cpi->frag_coded);
   cpi->frag_coded = 0;
 
-  if(cpi->frag_mode) _ogg_free(cpi->frag_mode);
-  cpi->frag_mode = 0;
-
   if(cpi->frag_buffer_index) _ogg_free(cpi->frag_buffer_index);
   cpi->frag_buffer_index = 0;
 
@@ -63,9 +60,6 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
 
   if(cpi->frag_dc) _ogg_free(cpi->frag_dc);
   cpi->frag_dc = 0;
-
-  if(cpi->coded_fi_list) _ogg_free(cpi->coded_fi_list);
-  cpi->coded_fi_list = 0;
 
   if(cpi->macro) _ogg_free(cpi->macro);
   cpi->macro = 0;
@@ -142,15 +136,11 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 
   /* +1; the last entry is the 'invalid' frag, which is always set to not coded as it doesn't really exist */
   cpi->frag_coded = calloc(cpi->frag_total+1, sizeof(*cpi->frag_coded)); 
-  cpi->frag_mode = calloc(cpi->frag_total, sizeof(*cpi->frag_mode));
   cpi->frag_buffer_index = calloc(cpi->frag_total, sizeof(*cpi->frag_buffer_index));
   cpi->frag_mv = calloc(cpi->frag_total, sizeof(*cpi->frag_mv));
   cpi->frag_nonzero = calloc(cpi->frag_total, sizeof(*cpi->frag_nonzero));
   cpi->frag_dct = calloc(cpi->frag_total, sizeof(*cpi->frag_dct));
   cpi->frag_dc = calloc(cpi->frag_total, sizeof(*cpi->frag_dc));
-
-  /* possibly to be eliminated eventually when tokenize is rolled into transform */
-  cpi->coded_fi_list = calloc(cpi->frag_total, sizeof(*cpi->coded_fi_list));
 
   /* +1; the last entry is the 'invalid' mb, which contains only 'invalid' frags */
   cpi->macro = calloc(cpi->macro_total+1, sizeof(*cpi->macro));
@@ -189,6 +179,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
       offset+=cpi->frag_n[plane];
     }
     
+    /* Y */
     for(row=0;row<cpi->super_v[0];row++){
       for(col=0;col<cpi->super_h[0];col++){
 	int superindex = row*cpi->super_h[0] + col;
@@ -205,6 +196,41 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	}
       }
     }
+
+    /* U (assuming 4:2:0 for now) */
+    for(row=0;row<cpi->super_v[1];row++){
+      for(col=0;col<cpi->super_h[1];col++){
+	int superindex = row*cpi->super_h[1] + col;
+	for(mb=0;mb<16;mb++){
+	  /* translate to macroblock index */
+	  int mrow = row*4 + fhilberty[mb];
+	  int mcol = col*4 + fhilbertx[mb];
+	  if(mrow<cpi->macro_v && mcol<cpi->macro_h){
+	    int macroindex = mrow*cpi->macro_h + mcol;
+	    cpi->super[1][superindex].m[mb] = macroindex;
+	  }else
+	    cpi->super[1][superindex].m[mb] = cpi->macro_total;
+	}
+      }
+    }
+
+    /* V (assuming 4:2:0 for now) */
+    for(row=0;row<cpi->super_v[2];row++){
+      for(col=0;col<cpi->super_h[2];col++){
+	int superindex = row*cpi->super_h[2] + col;
+	for(mb=0;mb<16;mb++){
+	  /* translate to macroblock index */
+	  int mrow = row*4 + fhilberty[mb];
+	  int mcol = col*4 + fhilbertx[mb];
+	  if(mrow<cpi->macro_v && mcol<cpi->macro_h){
+	    int macroindex = mrow*cpi->macro_h + mcol;
+	    cpi->super[2][superindex].m[mb] = macroindex;
+	  }else
+	    cpi->super[2][superindex].m[mb] = cpi->macro_total;
+	}
+      }
+    }
+
   }
 
   /* fill in macroblock fragment pointers; raster (MV coding) order */

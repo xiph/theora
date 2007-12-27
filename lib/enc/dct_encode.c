@@ -206,74 +206,81 @@ static void TokenizeDctRunValue (CP_INSTANCE *cpi,
 
 static void tokenize_groups(CP_INSTANCE *cpi,
 			    int *eob_run, int *eob_plane, int *eob_ypre, int *eob_uvpre){
-  int *fip = cpi->coded_fi_list;
+  int SB,B;
+  unsigned char *cp=cpi->frag_coded;
 
-  while(*fip>=0){
-    int coeff = 0;
-    int plane = (*fip >= cpi->frag_n[0]);
-    dct_t *dct = &cpi->frag_dct[*fip];
-    cpi->frag_nonzero[*fip] = 0;
-    
-    while(coeff < BLOCK_SIZE){
-      ogg_int16_t val = dct->data[coeff];
-      int zero_run;
-      int i = coeff;
-  
-      cpi->frag_nonzero[*fip] = coeff;
-      
-      while( !val && (++i < BLOCK_SIZE) )
-	val = dct->data[i];
-      
-      if ( i == BLOCK_SIZE ){
+  for ( SB=0; SB<cpi->super_total; SB++ ){
+    superblock_t *sp = &cpi->super[0][SB];
+    for ( B=0; B<16; B++ ) {
+      int fi = sp->f[B];
+      if ( cp[fi] ) {
 
-	/* if there are no other tokens in this group yet, set up to be
-	   prepended later.  Group 0 is the exception (can't be
-	   prepended) */
-	if(cpi->dct_token_count[coeff] == 0 && coeff){
-	  if(!plane)
-	    eob_ypre[coeff]++;
-	  else
-	    eob_uvpre[coeff]++;
-	}else{
-	  if(eob_run[coeff] == 4095){
-	    emit_eob_run(cpi,eob_plane[coeff],coeff,4095);
-	    eob_run[coeff] = 0;
-	  }
-	  
-	  if(eob_run[coeff]==0)
-	    eob_plane[coeff]=plane;
-	  
-	  eob_run[coeff]++;
-	}
-	coeff = BLOCK_SIZE;
-      }else{
+	int coeff = 0;
+	int plane = (fi >= cpi->frag_n[0]);
+	dct_t *dct = &cpi->frag_dct[fi];
+	cpi->frag_nonzero[fi] = 0;
 	
-	if(eob_run[coeff]){
-	  emit_eob_run(cpi,eob_plane[coeff],coeff,eob_run[coeff]);
-	  eob_run[coeff]=0;
-	}
-	
-	zero_run = i-coeff;
-	if (zero_run){
-	  ogg_uint32_t absval = abs(val);
-	  if ( ((absval == 1) && (zero_run <= 17)) ||
-	       ((absval <= 3) && (zero_run <= 3)) ) {
-	    TokenizeDctRunValue( cpi, plane, coeff, zero_run, val);
-	    coeff = i+1;
+	while(coeff < BLOCK_SIZE){
+	  ogg_int16_t val = dct->data[coeff];
+	  int zero_run;
+	  int i = coeff;
+	  
+	  cpi->frag_nonzero[fi] = coeff;
+	  
+	  while( !val && (++i < BLOCK_SIZE) )
+	    val = dct->data[i];
+	  
+	  if ( i == BLOCK_SIZE ){
+	    
+	    /* if there are no other tokens in this group yet, set up to be
+	       prepended later.  Group 0 is the exception (can't be
+	       prepended) */
+	    if(cpi->dct_token_count[coeff] == 0 && coeff){
+	      if(!plane)
+		eob_ypre[coeff]++;
+	      else
+		eob_uvpre[coeff]++;
+	    }else{
+	      if(eob_run[coeff] == 4095){
+		emit_eob_run(cpi,eob_plane[coeff],coeff,4095);
+		eob_run[coeff] = 0;
+	      }
+	      
+	      if(eob_run[coeff]==0)
+		eob_plane[coeff]=plane;
+	      
+	      eob_run[coeff]++;
+	    }
+	    coeff = BLOCK_SIZE;
 	  }else{
-	    if ( zero_run <= 8 )
-	      add_token(cpi, plane, coeff, DCT_SHORT_ZRL_TOKEN, zero_run - 1);
-	    else
-	      add_token(cpi, plane, coeff, DCT_ZRL_TOKEN, zero_run - 1);
-	    coeff = i;
+	    
+	    if(eob_run[coeff]){
+	      emit_eob_run(cpi,eob_plane[coeff],coeff,eob_run[coeff]);
+	      eob_run[coeff]=0;
+	    }
+	    
+	    zero_run = i-coeff;
+	    if (zero_run){
+	      ogg_uint32_t absval = abs(val);
+	      if ( ((absval == 1) && (zero_run <= 17)) ||
+		   ((absval <= 3) && (zero_run <= 3)) ) {
+		TokenizeDctRunValue( cpi, plane, coeff, zero_run, val);
+		coeff = i+1;
+	      }else{
+		if ( zero_run <= 8 )
+		  add_token(cpi, plane, coeff, DCT_SHORT_ZRL_TOKEN, zero_run - 1);
+		else
+		  add_token(cpi, plane, coeff, DCT_ZRL_TOKEN, zero_run - 1);
+		coeff = i;
+	      }
+	    }else{
+	      TokenizeDctValue( cpi, plane, coeff, val );
+	      coeff = i+1;
+	    }
 	  }
-	}else{
-	  TokenizeDctValue( cpi, plane, coeff, val );
-	  coeff = i+1;
 	}
       }
     }
-    fip++;
   }
 }
 
@@ -516,9 +523,9 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
 }
 
 void TransformQuantizeBlock (CP_INSTANCE *cpi, 
+			     coding_mode_t mode,
 			     int fi){
-  
-  coding_mode_t mode = cpi->frag_mode[fi];
+
   unsigned char *cp = &cpi->frag_coded[fi];
 
   unsigned char *FiltPtr = &cpi->frame[cpi->frag_buffer_index[fi]];

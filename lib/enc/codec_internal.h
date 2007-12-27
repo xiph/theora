@@ -111,15 +111,20 @@ typedef struct{
 } mv_t;
 
 typedef struct macroblock {
+  /* the blocks comprising this macroblock */
   int y[4]; // raster order
   int u;
   int v;
+
+  coding_mode_t mode;
+  mv_t mv[4];
+
 } macroblock_t;
 
 #define SB_MB_BLFRAG(sb,mbnum) ((sb).f[ ((mbnum)<2? ((mbnum)==0?0:4) : ((mbnum)==2?8:14)) ])
 typedef struct superblock {
   int f[16]; // hilbert order
-  int m[4];  // hilbert order
+  int m[16]; // hilbert order; 4 for Y, 4 for UZ in 4:4:4, 8 for UV in 4:2:2, 16 for UV in 4:2:0
 } superblock_t;
 
 typedef ogg_int16_t    quant_table[64];
@@ -151,7 +156,6 @@ typedef struct CP_INSTANCE {
 
   /* SuperBlock, MacroBLock and Fragment Information */
   unsigned char   *frag_coded;
-  coding_mode_t   *frag_mode;
   ogg_uint32_t    *frag_buffer_index;
   mv_t            *frag_mv;
   unsigned char   *frag_nonzero;
@@ -191,9 +195,6 @@ typedef struct CP_INSTANCE {
   
   /*********************************************************************/
   /* Token Buffers */
-
-  int             *coded_fi_list;
-  int              coded_fi_count;
 
   unsigned char   *dct_token_storage;
   ogg_uint16_t    *dct_token_eb_storage;
@@ -276,7 +277,7 @@ extern void fdct_short ( ogg_int16_t *InputData, ogg_int16_t *OutputData );
 
 extern void DPCMTokenize (CP_INSTANCE *cpi);
 
-extern void TransformQuantizeBlock (CP_INSTANCE *cpi, int fi) ;
+extern void TransformQuantizeBlock (CP_INSTANCE *cpi, coding_mode_t mode, int fi) ;
 
 extern void WriteQTables(CP_INSTANCE *cpi,oggpack_buffer *opb);
 
