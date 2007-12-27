@@ -49,9 +49,6 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
   if(cpi->frag_buffer_index) _ogg_free(cpi->frag_buffer_index);
   cpi->frag_buffer_index = 0;
 
-  if(cpi->frag_mv) _ogg_free(cpi->frag_mv);
-  cpi->frag_mv = 0;
-
   if(cpi->frag_nonzero) _ogg_free(cpi->frag_nonzero);
   cpi->frag_nonzero = 0;
 
@@ -137,7 +134,6 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   /* +1; the last entry is the 'invalid' frag, which is always set to not coded as it doesn't really exist */
   cpi->frag_coded = calloc(cpi->frag_total+1, sizeof(*cpi->frag_coded)); 
   cpi->frag_buffer_index = calloc(cpi->frag_total, sizeof(*cpi->frag_buffer_index));
-  cpi->frag_mv = calloc(cpi->frag_total, sizeof(*cpi->frag_mv));
   cpi->frag_nonzero = calloc(cpi->frag_total, sizeof(*cpi->frag_nonzero));
   cpi->frag_dct = calloc(cpi->frag_total, sizeof(*cpi->frag_dct));
   cpi->frag_dc = calloc(cpi->frag_total, sizeof(*cpi->frag_dc));

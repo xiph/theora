@@ -153,6 +153,8 @@ static void PredictDC(CP_INSTANCE *cpi){
   }
 }
 
+/* temporary hack; going to MB addressing */
+static int hmap4[16]={0,1,3,2,0,2,3,1,0,2,3,1,3,2,0,1};
 static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
   ogg_uint32_t n = cpi->super_n[plane];
   ogg_uint32_t SB, MB, B;
@@ -163,20 +165,20 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
   case 1:
     for ( SB=0; SB<n; SB++,sp++ ){
       int frag = 0;
-      
+     
       for ( MB=0; MB<4; MB++ ) {
 	macroblock_t *mp = &cpi->macro[sp->m[MB]];
-	unsigned char coded = 0;
 	
 	for ( B=0; B<4; B++, frag++ ) {
 	  int fi = sp->f[frag];
 	  
 	  if ( cp[fi] ) {
-	    TransformQuantizeBlock( cpi, mp->mode, fi );
-	    coded |= cp[fi];
+	    TransformQuantizeBlock( cpi, mp->mode, fi, mp->mv[hmap4[frag]] );
+	    if(cp[fi] && plane == 0)
+	      mp->coded |= (1<<hmap4[frag]);
 	  }
 	}
-	if ( plane == 0 && coded ) 
+	if ( plane == 0 && mp->coded ) 
 	  cpi->ModeCount[mp->mode] ++;
 	
       }  
@@ -189,8 +191,26 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
     for ( SB=0; SB<n; SB++,sp++ ){
       for ( MB=0; MB<16; MB++ ) { /* MB:B :: 1:1 */
 	int fi = sp->f[MB];
-	if ( cp[fi] ) 
-	  TransformQuantizeBlock( cpi, cpi->macro[sp->m[MB]].mode, fi );
+	if ( cp[fi] ) {
+	  macroblock_t *mp = &cpi->macro[sp->m[MB]];
+	  mv_t mv;
+
+	  /* Calculate motion vector as the average of the Y plane ones. */
+	  /* Uncoded members are 0,0 and not special-cased */
+	  mv.x = mp->mv[0].x + mp->mv[1].x + mp->mv[2].x + mp->mv[3].x;
+	  mv.y = mp->mv[0].y + mp->mv[1].y + mp->mv[2].y + mp->mv[3].y;
+
+	  if ( mv.x >= 0 )
+	    mv.x = (mv.x + 2) / 4;
+	  else
+	    mv.x = (mv.x - 2) / 4;
+	  if ( mv.y >= 0 )
+	    mv.y = (mv.y + 2) / 4;
+	  else
+	    mv.y = (mv.y - 2) / 4;
+	  
+	  TransformQuantizeBlock( cpi, mp->mode, fi, mv );
+	}
       }  
     }
     return 0;
@@ -307,9 +327,7 @@ static void PackModes (CP_INSTANCE *cpi) {
   const ogg_uint32_t *ModeWords;
   const ogg_int32_t *ModeBits;
   const unsigned char  *ModeScheme;
-
-  unsigned char *cp = cpi->frag_coded;
-  int SB,MB,B;
+  int SB,MB;
 
   oggpack_buffer *opb=cpi->oggbuffer;
   for(i=0;i<MAX_MODES;i++)
@@ -388,11 +406,7 @@ static void PackModes (CP_INSTANCE *cpi) {
     superblock_t *sp = &cpi->super[0][SB];
     for ( MB=0; MB<4; MB++ ) {
       macroblock_t *mbp = &cpi->macro[sp->m[MB]];
-      int fi = mbp->y[0];
-
-      for(B=1; !cp[fi] && B<4; B++ ) fi = mbp->y[B];
-  
-      if(cp[fi]){
+      if(mbp->coded){
 	/* Add the appropriate mode entropy token. */
 	int index = ModeScheme[mbp->mode];
 	oggpackB_write( opb, ModeWords[index],
@@ -407,9 +421,6 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
   const ogg_uint32_t * MvBitsPtr;
 
   ogg_uint32_t SB, MB, B;
-  unsigned char *cp = cpi->frag_coded;
-  mv_t          *mv = cpi->frag_mv;
-
   oggpack_buffer *opb=cpi->oggbuffer;
 
   /* Choose the coding method */
@@ -429,22 +440,18 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
     superblock_t *sp = &cpi->super[0][SB];
     for ( MB=0; MB<4; MB++ ) {
       macroblock_t *mbp = &cpi->macro[sp->m[MB]];
-      int fi = mbp->y[0];
- 
-      for(B=1; !cp[fi] && B<4; B++ ) fi = mbp->y[B];
-      if(B==4) continue;
+      if(!mbp->coded) continue;
 
       if(mbp->mode==CODE_INTER_PLUS_MV || mbp->mode==CODE_GOLDEN_MV){
 	/* One MV for the macroblock */
-	oggpackB_write( opb, MvPatternPtr[mv[fi].x], MvBitsPtr[mv[fi].x] );
-	oggpackB_write( opb, MvPatternPtr[mv[fi].y], MvBitsPtr[mv[fi].y] );
+	oggpackB_write( opb, MvPatternPtr[mbp->mv[0].x], MvBitsPtr[mbp->mv[0].x] );
+	oggpackB_write( opb, MvPatternPtr[mbp->mv[0].y], MvBitsPtr[mbp->mv[0].y] );
       }else if (mbp->mode == CODE_INTER_FOURMV){
 	/* MV for each codedblock */
 	for(B=0; B<4; B++ ){
-	  fi = mbp->y[B];
-	  if(cp[fi]){
-	    oggpackB_write( opb, MvPatternPtr[mv[fi].x], MvBitsPtr[mv[fi].x] );
-	    oggpackB_write( opb, MvPatternPtr[mv[fi].y], MvBitsPtr[mv[fi].y] );
+	  if(mbp->coded & (1<<B)){
+	    oggpackB_write( opb, MvPatternPtr[mbp->mv[B].x], MvBitsPtr[mbp->mv[B].x] );
+	    oggpackB_write( opb, MvPatternPtr[mbp->mv[B].y], MvBitsPtr[mbp->mv[B].y] );
 	  }
 	}
       }
@@ -504,24 +511,15 @@ static void CountMotionVector(CP_INSTANCE *cpi, mv_t *mv) {
   cpi->MVBits_1 += 12; /* Simple six bits per mv component fallback */
 }
 
-static void SetFragMotionVector(CP_INSTANCE *cpi,
-				int fi,
-				mv_t *mv){
-  cpi->frag_mv[fi] = *mv;
-}
-
 static void SetMBMotionVectorsAndMode(CP_INSTANCE *cpi,
 				      macroblock_t *mp,
 				      mv_t *mv,
 				      int mode){
   mp->mode = mode;
   mp->mv[0] = *mv;
-  SetFragMotionVector(cpi, mp->y[0], mv);
-  SetFragMotionVector(cpi, mp->y[1], mv);
-  SetFragMotionVector(cpi, mp->y[2], mv);
-  SetFragMotionVector(cpi, mp->y[3], mv);
-  SetFragMotionVector(cpi, mp->u, mv);
-  SetFragMotionVector(cpi, mp->v, mv);
+  mp->mv[1] = *mv;
+  mp->mv[2] = *mv;
+  mp->mv[3] = *mv;
 }
 
 ogg_uint32_t PickModes(CP_INSTANCE *cpi,
@@ -545,7 +543,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                                            block */
   ogg_uint32_t  BestError;              /* Best error so far. */
 
-  mv_t          FourMVect[6] = {{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}};
+  mv_t          FourMVect[4] = {{0,0},{0,0},{0,0},{0,0}};
   mv_t          LastInterMVect = {0,0};
   mv_t          PriorLastInterMVect = {0,0};
   mv_t          TmpMVect = {0,0};  
@@ -796,36 +794,11 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 	CountMotionVector( cpi, &GFMVect);
       } else if ( BestError == MBInterFOURMVError ) {
 
-	/* Calculate the UV vectors as the average of the Y plane ones. */
-	/* First .x component */
-	FourMVect[4].x = FourMVect[0].x + FourMVect[1].x +
-	  FourMVect[2].x + FourMVect[3].x;
-	if ( FourMVect[4].x >= 0 )
-	  FourMVect[4].x = (FourMVect[4].x + 2) / 4;
-	else
-	  FourMVect[4].x = (FourMVect[4].x - 2) / 4;
-	FourMVect[5].x = FourMVect[4].x;
-
-	/* Then .y component */
-	FourMVect[4].y = FourMVect[0].y + FourMVect[1].y +
-	  FourMVect[2].y + FourMVect[3].y;
-	if ( FourMVect[4].y >= 0 )
-	  FourMVect[4].y = (FourMVect[4].y + 2) / 4;
-	else
-	  FourMVect[4].y = (FourMVect[4].y - 2) / 4;
-	FourMVect[5].y = FourMVect[4].y;
-
 	mbp->mode = CODE_INTER_FOURMV;
 	mbp->mv[0] = FourMVect[0];
 	mbp->mv[1] = FourMVect[1];
 	mbp->mv[2] = FourMVect[2];
 	mbp->mv[3] = FourMVect[3];
-	SetFragMotionVector(cpi,mbp->y[0], &FourMVect[0]);
-	SetFragMotionVector(cpi,mbp->y[1], &FourMVect[1]);
-	SetFragMotionVector(cpi,mbp->y[2], &FourMVect[2]);
-	SetFragMotionVector(cpi,mbp->y[3], &FourMVect[3]);
-	SetFragMotionVector(cpi,mbp->u, &FourMVect[4]);
-	SetFragMotionVector(cpi,mbp->v, &FourMVect[5]);
 
 	/* Note the four MVs values for current macro-block. */
 	CountMotionVector( cpi, &FourMVect[0]);

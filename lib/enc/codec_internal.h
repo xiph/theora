@@ -119,6 +119,7 @@ typedef struct macroblock {
   coding_mode_t mode;
   mv_t mv[4];
 
+  char coded;
 } macroblock_t;
 
 #define SB_MB_BLFRAG(sb,mbnum) ((sb).f[ ((mbnum)<2? ((mbnum)==0?0:4) : ((mbnum)==2?8:14)) ])
@@ -157,7 +158,6 @@ typedef struct CP_INSTANCE {
   /* SuperBlock, MacroBLock and Fragment Information */
   unsigned char   *frag_coded;
   ogg_uint32_t    *frag_buffer_index;
-  mv_t            *frag_mv;
   unsigned char   *frag_nonzero;
   ogg_int16_t     *frag_dc;
   dct_t           *frag_dct;
@@ -277,7 +277,7 @@ extern void fdct_short ( ogg_int16_t *InputData, ogg_int16_t *OutputData );
 
 extern void DPCMTokenize (CP_INSTANCE *cpi);
 
-extern void TransformQuantizeBlock (CP_INSTANCE *cpi, coding_mode_t mode, int fi) ;
+extern void TransformQuantizeBlock (CP_INSTANCE *cpi, coding_mode_t mode, int fi, mv_t mv) ;
 
 extern void WriteQTables(CP_INSTANCE *cpi,oggpack_buffer *opb);
 

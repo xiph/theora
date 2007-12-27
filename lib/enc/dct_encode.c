@@ -427,7 +427,8 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
 				   ogg_int32_t MvDivisor,
 				   int fi,
 				   ogg_uint32_t PixelsPerLine,
-				   int mode) {
+				   int mode,
+				   mv_t mv) {
 
   ogg_int32_t MvShift;
   ogg_int32_t MvModMask;
@@ -439,7 +440,6 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
                                    half pixel MC */
   unsigned char  *ReconPtr1;    /* DCT reconstructed image pointers */
   unsigned char  *ReconPtr2;    /* Pointer used in half pixel MC */
-  mv_t mv = cpi->frag_mv[fi];
   int bi = cpi->frag_buffer_index[fi];
   unsigned char *thisrecon = &cpi->recon[bi];
 
@@ -524,7 +524,8 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
 
 void TransformQuantizeBlock (CP_INSTANCE *cpi, 
 			     coding_mode_t mode,
-			     int fi){
+			     int fi,
+			     mv_t mv){
 
   unsigned char *cp = &cpi->frag_coded[fi];
 
@@ -550,7 +551,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
      the reconstruction buffer, and proces a difference block for
      forward DCT */
   BlockUpdateDifference(cpi, FiltPtr, DCTInput, 
-			MvDivisor, fi, cpi->stride[plane], mode);
+			MvDivisor, fi, cpi->stride[plane], mode, mv);
   
   /* Proceed to encode the data into the encode buffer if the encoder
      is enabled. */
