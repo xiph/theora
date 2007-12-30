@@ -78,7 +78,7 @@ if test -r doc/spec/spec.tex; then
  if test "x$HAVE_PDFLATEX" = "xyes"; then
   if test "x$HAVE_BIBTEX" = "xyes"; then
     if test "x$HAVE_TRANSFIG" = "xyes"; then
-      tex_pkg_list=`fgrep usepackage doc/spec/spec.tex | grep \{`
+      tex_pkg_list=`fgrep usepackage doc/spec/spec.tex | grep \{ | grep -v ltablex`
       tex_pkg_ok="yes"
       for pkg_line in $tex_pkg_list; do
 	pkg_name=`echo $pkg_line | sed -e 's/.*{\(.*\)}.*/\1/'`
