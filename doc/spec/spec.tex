@@ -4195,27 +4195,27 @@ Assign $\bitvar{MVECTS}[\locvar{E}]$ and $\bitvar{MVECTS}[\locvar{F}]$ the
 If \bitvar{PF} is 2 (4:2:2):
 \begin{enumerate}
 \item
-Let \locvar{E} and \locvar{F} be the indices in coded order of the top and
- bottom blocks in the macro block from the $C_b$ plane, respectively, and
- \locvar{G} and \locvar{H} be the indices in coded order of the top and bottom
+Let \locvar{E} and \locvar{F} be the indices in coded order of the bottom and
+ top blocks in the macro block from the $C_b$ plane, respectively, and
+ \locvar{G} and \locvar{H} be the indices in coded order of the bottom and top
  blocks in the $C_r$ plane, respectively. %TODO: as shown in Figure~REF.
 \item
 Assign $\bitvar{MVECTS}[\locvar{E}]$ and $\bitvar{MVECTS}[\locvar{G}]$ the
  value
 \begin{multline*}
 (\round\left(\frac{
- \bitvar{MVECTS}[\locvar{A}]_x+\bitvar{MVECTS}[\locvar{B}]_x}{4}\right), \\
+ \bitvar{MVECTS}[\locvar{A}]_x+\bitvar{MVECTS}[\locvar{B}]_x}{2}\right), \\
  \round\left(\frac{
- \bitvar{MVECTS}[\locvar{A}]_y+\bitvar{MVECTS}[\locvar{B}]_y}{4}\right))
+ \bitvar{MVECTS}[\locvar{A}]_y+\bitvar{MVECTS}[\locvar{B}]_y}{2}\right))
 \end{multline*}
 \item
 Assign $\bitvar{MVECTS}[\locvar{F}]$ and $\bitvar{MVECTS}[\locvar{H}]$ the
  value
 \begin{multline*}
 (\round\left(\frac{
- \bitvar{MVECTS}[\locvar{C}]_x+\bitvar{MVECTS}[\locvar{D}]_x}{4}\right), \\
+ \bitvar{MVECTS}[\locvar{C}]_x+\bitvar{MVECTS}[\locvar{D}]_x}{2}\right), \\
  \round\left(\frac{
- \bitvar{MVECTS}[\locvar{C}]_y+\bitvar{MVECTS}[\locvar{D}]_y}{4}\right))
+ \bitvar{MVECTS}[\locvar{C}]_y+\bitvar{MVECTS}[\locvar{D}]_y}{2}\right))
 \end{multline*}
 \end{enumerate}
 \item
