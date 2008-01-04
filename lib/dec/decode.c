@@ -598,6 +598,7 @@ void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
        corrupt and the rest of the packet is garbage anyway, but this way we
        won't crash, and we'll decode SOMETHING.*/
     TH_DEBUG("mode scheme list = { ");
+    /*LOOP VECTORIZES.*/
     for(mi=0;mi<OC_NMODES;mi++)scheme0_alphabet[mi]=OC_MODE_INTER_NOMV;
     for(mi=0;mi<OC_NMODES;mi++){
       theora_read(&_dec->opb,3,&val);
@@ -1289,6 +1290,7 @@ void oc_token_expand_run_cat1a(int _token,int _extra_bits,
   int zzi;
   int rl;
   zzi=*_zzi;
+  /*LOOP VECTORIZES.*/
   for(rl=_token-OC_DCT_RUN_CAT1A+1;rl-->0;)_dct_coeffs[zzi++]=0;
   _dct_coeffs[zzi++]=(ogg_int16_t)(1-(_extra_bits<<1));
   *_zzi=zzi;
@@ -1321,6 +1323,7 @@ void oc_token_expand_run(int _token,int _extra_bits,
   _token-=OC_DCT_RUN_CAT1B;
   rl=(_extra_bits&NZEROS_MASK[_token])+NZEROS_ADJUST[_token];
   zzi=*_zzi;
+  /*LOOP VECTORIZES.*/
   while(rl-->0)_dct_coeffs[zzi++]=0;
   valsigned[0]=VALUE_ADJUST[_token]+
    (_extra_bits>>VALUE_SHIFT[_token]&VALUE_MASK[_token]);

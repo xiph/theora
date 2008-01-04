@@ -186,6 +186,7 @@ int oc_frag_pred_dc(const oc_fragment *_frag,
   if(pflags==0)return _pred_last[pred_frame];
   else{
     ret=PRED_SCALE[pflags][0]*p[0];
+    /*LOOP VECTORIZES.*/
     for(i=1;i<np;i++)ret+=PRED_SCALE[pflags][i]*p[i];
     ret=OC_DIV_POW2(ret,PRED_SHIFT[pflags],PRED_RMASK[pflags]);
   }

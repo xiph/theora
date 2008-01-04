@@ -821,6 +821,7 @@ void oc_state_frag_recon_c(oc_theora_state *_state, oc_fragment *_frag,
       Who knows.*/
 
     p=(ogg_int16_t)((ogg_int32_t)_frag->dc*_dc_iquant+15>>5);
+    /*LOOP VECTORIZES.*/
     for(ci=0;ci<64;ci++)res_buf[ci]=p;
 
 #ifdef _TH_DEBUG_
