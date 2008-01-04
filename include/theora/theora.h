@@ -698,12 +698,17 @@ extern int theora_packet_iskeyframe(ogg_packet *op);
 int theora_granule_shift(theora_info *ti);
 
 /**
- * Convert a granulepos to an absolute frame number. The granulepos is
+ * Convert a granulepos to an absolute frame index. The granulepos is
  * interpreted in the context of a given theora_state handle.
+ * 
+ * Note that while the granulepos encodes the frame count (i.e. starting
+ * from 1) this call returns the frame index, starting from zero. Thus
+ * One can calculate the presentation time by multiplying the index by
+ * the rate.
  *
  * \param th A previously initialized theora_state handle (encode or decode)
  * \param granulepos The granulepos to convert.
- * \returns The frame number corresponding to \a granulepos.
+ * \returns The frame index corresponding to \a granulepos.
  * \retval -1 The given granulepos is undefined (i.e. negative)
  *
  * Thus function was added in the 1.0alpha4 release.
@@ -712,7 +717,9 @@ extern ogg_int64_t theora_granule_frame(theora_state *th,ogg_int64_t granulepos)
 
 /**
  * Convert a granulepos to absolute time in seconds. The granulepos is
- * interpreted in the context of a given theora_state handle.
+ * interpreted in the context of a given theora_state handle, and gives
+ * the end time of a frame's presentation as used in Ogg mux ordering.
+ *
  * \param th A previously initialized theora_state handle (encode or decode)
  * \param granulepos The granulepos to convert.
  * \returns The absolute time in seconds corresponding to \a granulepos.
