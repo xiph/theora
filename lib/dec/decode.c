@@ -651,30 +651,21 @@ static int oc_vlc_mv_comp_unpack(oggpack_buffer *_opb){
   int  mvsigned[2];
   theora_read(_opb,3,&bits);
   switch(bits){
-    case 0:return 0;
-    case 1:return 1;
-    case 2:return -1;
-    case 3:{
-      mvsigned[0]=2;
+    case  0:return 0;
+    case  1:return 1;
+    case  2:return -1;
+    case  3:
+    case  4:{
+      mvsigned[0]=(int)(bits-1);
       theora_read1(_opb,&bits);
     }break;
-    case 4:{
-      mvsigned[0]=3;
-      theora_read1(_opb,&bits);
-    }break;
-    case 5:{
-      theora_read(_opb,3,&bits);
-      mvsigned[0]=4+(bits>>1);
-      bits&=1;
-    }break;
-    case 6:{
-      theora_read(_opb,4,&bits);
-      mvsigned[0]=8+(bits>>1);
-      bits&=1;
-    }break;
-    case 7:{
-      theora_read(_opb,5,&bits);
-      mvsigned[0]=16+(bits>>1);
+    /*case  5:
+    case  6:
+    case  7:*/
+    default:{
+      mvsigned[0]=1<<bits-3;
+      theora_read(_opb,bits-2,&bits);
+      mvsigned[0]+=(int)(bits>>1);
       bits&=1;
     }break;
   }
