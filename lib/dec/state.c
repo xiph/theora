@@ -993,6 +993,9 @@ static void loop_filter_h(unsigned char *_pix,int _ystride,int *_bv){
   for(y=0;y<8;y++){
     int f;
     f=_pix[0]-_pix[3]+3*(_pix[2]-_pix[1]);
+    /*The _bv array is used to compute the function
+      f=OC_CLAMPI(OC_MINI(-_2flimit-f,0),f,OC_MAXI(_2flimit-f,0));
+      where _2flimit=_state->loop_filter_limits[_state->qis[0]]<<1;*/
     f=*(_bv+(f+4>>3));
     _pix[1]=OC_CLAMP255(_pix[1]+f);
     _pix[2]=OC_CLAMP255(_pix[2]-f);
@@ -1006,6 +1009,9 @@ static void loop_filter_v(unsigned char *_pix,int _ystride,int *_bv){
   for(y=0;y<8;y++){
     int f;
     f=_pix[0]-_pix[_ystride*3]+3*(_pix[_ystride*2]-_pix[_ystride]);
+    /*The _bv array is used to compute the function
+      f=OC_CLAMPI(OC_MINI(-_2flimit-f,0),f,OC_MAXI(_2flimit-f,0));
+      where _2flimit=_state->loop_filter_limits[_state->qis[0]]<<1;*/
     f=*(_bv+(f+4>>3));
     _pix[_ystride]=OC_CLAMP255(_pix[_ystride]+f);
     _pix[_ystride*2]=OC_CLAMP255(_pix[_ystride*2]-f);
@@ -1021,12 +1027,12 @@ int oc_state_loop_filter_init(oc_theora_state *_state,int *_bv){
   int i;
   flimit=_state->loop_filter_limits[_state->qis[0]];
   if(flimit==0)return 1;
-  memset(_bv,0,sizeof(_bv[0])*512);
+  memset(_bv,0,sizeof(_bv[0])*256);
   for(i=0;i<flimit;i++){
-    _bv[256-i-flimit]=i-flimit;
-    _bv[256-i]=-i;
-    _bv[256+i]=i;
-    _bv[256+i+flimit]=flimit-i;
+    if(127-i-flimit>=0)_bv[127-i-flimit]=i-flimit;
+    _bv[127-i]=-i;
+    _bv[127+i]=i;
+    if(127+i+flimit<256)_bv[127+i+flimit]=flimit-i;
   }
   return 0;
 }
@@ -1055,7 +1061,7 @@ void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
   oc_fragment       *frag_end;
   oc_fragment       *frag0_end;
   oc_fragment       *frag_bot;
-  _bv+=256;
+  _bv+=127;
   iplane=_state->ref_frame_bufs[_refi]+_pli;
   fplane=_state->fplanes+_pli;
 

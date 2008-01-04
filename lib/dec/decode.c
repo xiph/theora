@@ -1484,7 +1484,7 @@ typedef struct{
   int  ti[3][64];
   int  ebi[3][64];
   int  eob_runs[3][64];
-  int  bounding_values[512];
+  int  bounding_values[256];
   int *coded_fragis[3];
   int *uncoded_fragis[3];
   int  fragy0[3];
