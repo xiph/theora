@@ -137,7 +137,7 @@ static const ogg_uint16_t __attribute__((aligned(8),used))
 
 /*38+8=46 cycles.*/
 #define OC_ROW_IDCT \
-  "#OC\n" \
+  "#OC_ROW_IDCT\n" \
   OC_IDCT_BEGIN \
   /*r3=D'*/ \
   "movq "OC_I(2)",%%mm3\n\t" \
