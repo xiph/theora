@@ -204,78 +204,78 @@ void oc_frag_recon_inter2_mmx(unsigned char *_dst,int _dst_ystride,
   __asm__ __volatile__("pxor %%mm7,%%mm7\n\t"::);
   for(i=4;i-->0;){
     __asm__ __volatile__(
-      "movq (%[src1]),%%mm0\n\t"
       /*#0 Load src1.*/
-      "movq (%[src2]),%%mm2\n\t"
+      "movq (%[src1]),%%mm0\n\t"
       /*#0 Load src2.*/
-      "movq %%mm0,%%mm1\n\t"
+      "movq (%[src2]),%%mm2\n\t"
       /*#0 Copy src1.*/
-      "movq %%mm2,%%mm3\n\t"
+      "movq %%mm0,%%mm1\n\t"
       /*#0 Copy src2.*/
-      "movq (%[src1],%[ystride]),%%mm4\n\t"
+      "movq %%mm2,%%mm3\n\t"
       /*#1 Load src1.*/
-      "punpcklbw %%mm7,%%mm0\n\t"
+      "movq (%[src1],%[ystride]),%%mm4\n\t"
       /*#0 Unpack lower src1.*/
-      "movq (%[src2],%[ystride]),%%mm5\n\t"
+      "punpcklbw %%mm7,%%mm0\n\t"
       /*#1 Load src2.*/
-      "punpckhbw %%mm7,%%mm1\n\t"
+      "movq (%[src2],%[ystride]),%%mm5\n\t"
       /*#0 Unpack higher src1.*/
-      "punpcklbw %%mm7,%%mm2\n\t"
+      "punpckhbw %%mm7,%%mm1\n\t"
       /*#0 Unpack lower src2.*/
-      "punpckhbw %%mm7,%%mm3\n\t"
+      "punpcklbw %%mm7,%%mm2\n\t"
       /*#0 Unpack higher src2.*/
-      "lea (%[src1],%[ystride],2),%[src1]\n\t"
-      /*Advance src1 ptr.*/
-      "lea (%[src2],%[ystride],2),%[src2]\n\t"
-      /*Advance src2 ptr.*/
-      "paddsw %%mm2,%%mm0\n\t"
-      /*#0 Lower src1+src2.*/
-      "paddsw %%mm3,%%mm1\n\t"
-      /*#0 Higher src1+src2.*/
-      "movq %%mm4,%%mm2\n\t"
-      /*#1 Copy src1.*/
-      "psraw $1,%%mm0\n\t"
-      /*#0 Build lo average.*/
-      "movq %%mm5,%%mm3\n\t"
-      /*#1 Copy src2.*/
-      "punpcklbw %%mm7,%%mm4\n\t"
-      /*#1 Unpack lower src1.*/
-      "psraw $1,%%mm1\n\t"
-      /*#0 Build hi average.*/
-      "punpckhbw %%mm7,%%mm2\n\t"
-      /*#1 Unpack higher src1.*/
-      "paddsw (%[residue]),%%mm0\n\t"
-      /*#0 low+=residue.*/
-      "punpcklbw %%mm7,%%mm5\n\t"
-      /*#1 Unpack lower src2.*/
-      "paddsw 8(%[residue]),%%mm1\n\t"
-      /*#0 high+=residue.*/
       "punpckhbw %%mm7,%%mm3\n\t"
+      /*Advance src1 ptr.*/
+      "lea (%[src1],%[ystride],2),%[src1]\n\t"
+      /*Advance src2 ptr.*/
+      "lea (%[src2],%[ystride],2),%[src2]\n\t"
+      /*#0 Lower src1+src2.*/
+      "paddsw %%mm2,%%mm0\n\t"
+      /*#0 Higher src1+src2.*/
+      "paddsw %%mm3,%%mm1\n\t"
+      /*#1 Copy src1.*/
+      "movq %%mm4,%%mm2\n\t"
+      /*#0 Build lo average.*/
+      "psraw $1,%%mm0\n\t"
+      /*#1 Copy src2.*/
+      "movq %%mm5,%%mm3\n\t"
+      /*#1 Unpack lower src1.*/
+      "punpcklbw %%mm7,%%mm4\n\t"
+      /*#0 Build hi average.*/
+      "psraw $1,%%mm1\n\t"
+      /*#1 Unpack higher src1.*/
+      "punpckhbw %%mm7,%%mm2\n\t"
+      /*#0 low+=residue.*/
+      "paddsw (%[residue]),%%mm0\n\t"
+      /*#1 Unpack lower src2.*/
+      "punpcklbw %%mm7,%%mm5\n\t"
+      /*#0 high+=residue.*/
+      "paddsw 8(%[residue]),%%mm1\n\t"
       /*#1 Unpack higher src2.*/
-      "paddsw %%mm4,%%mm5\n\t"
+      "punpckhbw %%mm7,%%mm3\n\t"
       /*#1 Lower src1+src2.*/
-      "packuswb %%mm1,%%mm0\n\t"
+      "paddsw %%mm4,%%mm5\n\t"
       /*#0 Pack and saturate.*/
-      "paddsw %%mm2,%%mm3\n\t"
+      "packuswb %%mm1,%%mm0\n\t"
       /*#1 Higher src1+src2.*/
-      "movq %%mm0,(%[dst])\n\t"
+      "paddsw %%mm2,%%mm3\n\t"
       /*#0 Write row.*/
-      "psraw $1,%%mm5\n\t"
+      "movq %%mm0,(%[dst])\n\t"
       /*#1 Build lo average.*/
-      "psraw $1,%%mm3\n\t"
+      "psraw $1,%%mm5\n\t"
       /*#1 Build hi average.*/
-      "paddsw 16(%[residue]),%%mm5\n\t"
+      "psraw $1,%%mm3\n\t"
       /*#1 low+=residue.*/
-      "paddsw 24(%[residue]),%%mm3\n\t"
+      "paddsw 16(%[residue]),%%mm5\n\t"
       /*#1 high+=residue.*/
-      "packuswb  %%mm3,%%mm5\n\t"
+      "paddsw 24(%[residue]),%%mm3\n\t"
       /*#1 Pack and saturate.*/
-      "movq %%mm5,(%[dst],%[ystride])\n\t"
+      "packuswb  %%mm3,%%mm5\n\t"
       /*#1 Write row ptr.*/
-      "add $32,%[residue]\n\t"
+      "movq %%mm5,(%[dst],%[ystride])\n\t"
       /*Advance residue ptr.*/
-      "lea (%[dst],%[ystride],2),%[dst]\n\t"
+      "add $32,%[residue]\n\t"
       /*Advance dest ptr.*/
+      "lea (%[dst],%[ystride],2),%[dst]\n\t"
      :[dst]"+r"(_dst),[residue]"+r"(_residue),
       [src1]"+r"(_src1),[src2]"+r"(_src2)
      :[ystride]"r"((long)_dst_ystride)
