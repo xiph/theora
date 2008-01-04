@@ -427,8 +427,8 @@ void oc_state_borders_fill(oc_theora_state *_state,int _refi);
 void oc_state_fill_buffer_ptrs(oc_theora_state *_state,int _buf_idx,
  th_ycbcr_buffer _img);
 int oc_state_mbi_for_pos(oc_theora_state *_state,int _mbx,int _mby);
-int oc_state_get_mv_offsets(oc_theora_state *_state,int *_offset0,
- int *_offset1,int _dx,int _dy,int _ystride,int _pli);
+int oc_state_get_mv_offsets(oc_theora_state *_state,int *_offsets,
+ int _dx,int _dy,int _ystride,int _pli);
 
 int oc_state_loop_filter_init(oc_theora_state *_state,int *_bv);
 void oc_state_loop_filter(oc_theora_state *_state,int _frame);

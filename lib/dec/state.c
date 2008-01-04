@@ -713,22 +713,19 @@ int oc_state_mbi_for_pos(oc_theora_state *_state,int _mbx,int _mby){
 
 /*Determines the offsets in an image buffer to use for motion compensation.
   _state:   The Theora state the offsets are to be computed with.
-  _offset0: Returns the offset for the first buffer.
-  _offset1: Returns the offset for the second buffer, if the motion vector
-             has non-zero fractional components.
+  _offsets: Returns the offset for the buffer(s).
+            _offsets[0] is always set.
+            _offsets[1] is set if the motion vector has non-zero fractional
+             components.
   _dx:      The X component of the motion vector.
   _dy:      The Y component of the motion vector.
   _ystride: The Y stride in the buffer the motion vector points into.
   _pli:     The color plane index.
   Return: The number of offsets returned: 1 or 2.*/
-int oc_state_get_mv_offsets(oc_theora_state *_state,int *_offset0,
- int *_offset1,int _dx,int _dy,int _ystride,int _pli){
-  int offset0;
-  int offset1;
+int oc_state_get_mv_offsets(oc_theora_state *_state,int _offsets[2],
+ int _dx,int _dy,int _ystride,int _pli){
   int xprec;
   int yprec;
-  int xsign;
-  int ysign;
   int xfrac;
   int yfrac;
   /*Here is a brief description of how Theora handles motion vectors:
@@ -749,55 +746,32 @@ int oc_state_get_mv_offsets(oc_theora_state *_state,int *_offset0,
      precision in each component.*/
   xprec=1+(!(_state->info.pixel_fmt&1)&!!_pli);
   yprec=1+(!(_state->info.pixel_fmt&2)&!!_pli);
-  /*These two variables are either 0 for a non-negative vector or all 1's for
-     a negative one.*/
-  xsign=-(_dx<0);
-  ysign=-(_dy<0);
   /*These two variables are either 0 if all the fractional bits are 0 or 1 if
      any of them are non-zero.*/
   xfrac=!!(_dx&(1<<xprec)-1);
   yfrac=!!(_dy&(1<<yprec)-1);
-  /*This branchless code is equivalent to:
-  if(_dx<0){
-    if(_dy<0){
-      offset0=-(-_dx>>xprec)-(-_dy>>yprec)*_ystride;
-    }
-    else{
-      offset0=-(-_dx>>xprec)+(_dy>>yprec)*_ystride;
-    }
-  }
-  else{
-    if(_dy<0){
-      offset0=(_dx>>xprec)-(-_dy>>yprec)*_ystride;
-    }
-    else{
-      offset0=(_dx>>xprec)+(_dy>>yprec)*_ystride;
-    }
-  }*/
-  *_offset0=offset0=(_dx>>xprec)+(xfrac&xsign)+
-   ((_dy>>yprec)+(yfrac&ysign))*_ystride;
+  _offsets[0]=(_dx>>xprec)+(_dy>>yprec)*_ystride;
   if(xfrac||yfrac){
-    int o[2];
     /*This branchless code is equivalent to:
+    if(_dx<0)_offests[0]=-(-_dx>>xprec);
+    else _offsets[0]=(_dx>>xprec);
+    if(_dy<0)_offsets[0]-=(-_dy>>yprec)*_ystride;
+    else _offsets[0]+=(_dy>>yprec)*_ystride;
+    _offsets[1]=_offsets[0];
     if(xfrac){
-      if(_dx<0)offset1=offset0-1;
-      else offset1=offset0+1;
+      if(_dx<0)_offsets[1]++;
+      else _offsets[1]--;
     }
-    else offset1=offset0;*/
-    o[0]=offset0;
-    o[1]=offset0+(xsign|1);
-    offset1=o[xfrac];
-    /*This branchless code is equivalent to:
     if(yfrac){
-      if(_dy<0)offset1-=ref_stride;
-      else offset1+=ref_stride;
+      if(_dy<0)_offsets[1]+=_ystride;
+      else _offsets[1]-=_ystride;
     }*/
-    o[0]=offset1;
-    o[1]=offset1+(_ystride&~ysign)-(_ystride&ysign);
-    *_offset1=o[yfrac];
+    _offsets[1]=_offsets[0];
+    _offsets[_dx>=0]+=xfrac;
+    _offsets[_dy>=0]+=_ystride&-yfrac;
     return 2;
   }
-  return 1;
+  else return 1;
 }
 
 void oc_state_frag_recon(oc_theora_state *_state, oc_fragment *_frag,
@@ -927,19 +901,18 @@ void oc_state_frag_recon_c(oc_theora_state *_state, oc_fragment *_frag,
   else{
     int ref_framei;
     int ref_ystride;
-    int mvoffset0;
-    int mvoffset1;
+    int mvoffsets[2];
     ref_framei=_state->ref_frame_idx[OC_FRAME_FOR_MODE[_frag->mbmode]];
     ref_ystride=_state->ref_frame_bufs[ref_framei][_pli].ystride;
-    if(oc_state_get_mv_offsets(_state,&mvoffset0,&mvoffset1,_frag->mv[0],
-     _frag->mv[1],ref_ystride,_pli)>1){
+    if(oc_state_get_mv_offsets(_state,mvoffsets,_frag->mv[0],_frag->mv[1],
+     ref_ystride,_pli)>1){
       oc_frag_recon_inter2(_state,_frag->buffer[dst_framei],dst_ystride,
-       _frag->buffer[ref_framei]+mvoffset0,ref_ystride,
-       _frag->buffer[ref_framei]+mvoffset1,ref_ystride,res_buf);
+       _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,
+       _frag->buffer[ref_framei]+mvoffsets[1],ref_ystride,res_buf);
     }
     else{
       oc_frag_recon_inter(_state,_frag->buffer[dst_framei],dst_ystride,
-       _frag->buffer[ref_framei]+mvoffset0,ref_ystride,res_buf);
+       _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,res_buf);
     }
   }
   oc_restore_fpu(_state);

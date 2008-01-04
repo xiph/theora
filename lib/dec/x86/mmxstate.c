@@ -153,19 +153,18 @@ void oc_state_frag_recon_mmx(oc_theora_state *_state,const oc_fragment *_frag,
   else{
     int ref_framei;
     int ref_ystride;
-    int mvoffset0;
-    int mvoffset1;
+    int mvoffsets[2];
     ref_framei=_state->ref_frame_idx[OC_FRAME_FOR_MODE[_frag->mbmode]];
     ref_ystride=_state->ref_frame_bufs[ref_framei][_pli].ystride;
-    if(oc_state_get_mv_offsets(_state,&mvoffset0,&mvoffset1,_frag->mv[0],
-     _frag->mv[1],ref_ystride,_pli)>1){
+    if(oc_state_get_mv_offsets(_state,mvoffsets,_frag->mv[0],_frag->mv[1],
+     ref_ystride,_pli)>1){
       oc_frag_recon_inter2(_state,_frag->buffer[dst_framei],dst_ystride,
-       _frag->buffer[ref_framei]+mvoffset0,ref_ystride,
-       _frag->buffer[ref_framei]+mvoffset1,ref_ystride,res_buf);
+       _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,
+       _frag->buffer[ref_framei]+mvoffsets[1],ref_ystride,res_buf);
     }
     else{
       oc_frag_recon_inter(_state,_frag->buffer[dst_framei],dst_ystride,
-       _frag->buffer[ref_framei]+mvoffset0,ref_ystride,res_buf);
+       _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,res_buf);
     }
   }
   oc_restore_fpu(_state);
