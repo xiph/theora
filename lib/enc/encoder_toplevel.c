@@ -1054,6 +1054,8 @@ int theora_encode_init(theora_state *th, theora_info *c){
   cpi->readyflag = 1;
   
   cpi->pb.HeadersWritten = 0;
+  /*We overload this flag to track header output.*/
+  cpi->doneflag=-3;
 
   return 0;
 }
@@ -1066,7 +1068,7 @@ int theora_encode_YUVin(theora_state *t,
   CP_INSTANCE *cpi=(CP_INSTANCE *)(t->internal_encode);
 
   if(!cpi->readyflag)return OC_EINVAL;
-  if(cpi->doneflag)return OC_EINVAL;
+  if(cpi->doneflag>0)return OC_EINVAL;
 
   /* If frame size has changed, abort out for now */
   if (yuv->y_height != (int)cpi->pb.info.height ||
@@ -1151,7 +1153,7 @@ int theora_encode_packetout( theora_state *t, int last_p, ogg_packet *op){
 
   if(!bytes)return(0);
   if(!cpi->packetflag)return(0);
-  if(cpi->doneflag)return(-1);
+  if(cpi->doneflag>0)return(-1);
 
 #ifndef LIBOGG2
   op->packet=oggpackB_get_buffer(cpi->oggbuffer);

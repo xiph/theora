@@ -34,6 +34,7 @@ encoder_sources = \
 	enc/encoder_idct.c \
 	enc/encoder_toplevel.c \
 	enc/encoder_quant.c \
+	enc/encapiwrapper.c \
 	enc/blockmap.c \
 	enc/dct.c \
 	enc/dct_decode.c \
