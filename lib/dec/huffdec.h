@@ -33,7 +33,29 @@ typedef struct oc_huff_node oc_huff_node;
   We do _not_ require that a subtree be complete to be collapsed, but instead
    store duplicate pointers in the table, and record the actual depth of the
    node below its parent.
-  This tells us the number of bits to advance the stream after reaching it.*/
+  This tells us the number of bits to advance the stream after reaching it.
+
+  This turns out to be equivalent to the method described in \cite{Hash95},
+   without the requirement that codewords be sorted by length.
+  If the codewords were sorted by length (so-called ``canonical-codes''), they
+   could be decoded much faster via either Lindell and Moffat's approach or
+   Hashemian's Condensed Huffman Code approach, the latter of which has an
+   extremely small memory footprint.
+  We can't use Choueka et al.'s finite state machine approach, which is
+   extremely fast, because we can't allow multiple symbols to be output at a
+   time; the codebook can and does change between symbols.
+  It also has very large memory requirements, which impairs cache coherency.
+
+  @ARTICLE{Hash95,
+    author="Reza Hashemian",
+    title="Memory Efficient and High-Speed Search {Huffman} Coding",
+    journal="{IEEE} Transactions on Communications",
+    volume=43,
+    number=10,
+    pages="2576--2581",
+    month=Oct,
+    year=1995
+  }*/
 struct oc_huff_node{
   /*The number of bits of the code needed to descend through this node.
     0 indicates a leaf node.
