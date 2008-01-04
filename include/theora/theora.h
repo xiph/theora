@@ -698,8 +698,8 @@ extern int theora_packet_iskeyframe(ogg_packet *op);
 int theora_granule_shift(theora_info *ti);
 
 /**
- * Convert a granulepos to an absolute frame index. The granulepos is
- * interpreted in the context of a given theora_state handle.
+ * Convert a granulepos to an absolute frame index, starting at 0.
+ * The granulepos is interpreted in the context of a given theora_state handle.
  * 
  * Note that while the granulepos encodes the frame count (i.e. starting
  * from 1) this call returns the frame index, starting from zero. Thus
@@ -723,6 +723,9 @@ extern ogg_int64_t theora_granule_frame(theora_state *th,ogg_int64_t granulepos)
  * \param th A previously initialized theora_state handle (encode or decode)
  * \param granulepos The granulepos to convert.
  * \returns The absolute time in seconds corresponding to \a granulepos.
+ *          This is the "end time" for the frame, or the latest time it should
+ *           be displayed.
+ *          It is not the presentation time.
  * \retval -1. The given granulepos is undefined (i.e. negative), or
  * \retval -1. The function has been disabled because floating 
  *              point support is not available.

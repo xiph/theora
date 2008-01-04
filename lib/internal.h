@@ -49,6 +49,10 @@ extern FILE *debugout;
 # define TH_VERSION_MAJOR (3)
 # define TH_VERSION_MINOR (2)
 # define TH_VERSION_SUB   (1)
+# define TH_VERSION_CHECK(_info,_maj,_min,_sub) \
+ ((_info)->version_major>(_maj)||(_info)->version_major==(_maj)&& \
+ ((_info)->version_minor>(_min)||(_info)->version_minor==(_min)&& \
+ (_info)->version_subminor>=(_sub)))
 
 /*A keyframe.*/
 #define OC_INTRA_FRAME (0)

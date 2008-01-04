@@ -444,13 +444,14 @@ extern const char *th_version_string(void);
  * \endcode
  * \return the version number.*/
 extern ogg_uint32_t th_version_number(void);
-/**Converts a granule position to an absolute frame number.
+/**Converts a granule position to an absolute frame index, starting at
+ *  <tt>0</tt>.
  * The granule position is interpreted in the context of a given
  *  #th_enc_ctx or #th_dec_ctx handle (either will suffice).
  * \param _encdec  A previously allocated #th_enc_ctx or #th_dec_ctx
  *                  handle.
  * \param _granpos The granule position to convert.
- * \returns The absolute frame number corresponding to \a _granpos.
+ * \returns The absolute frame index corresponding to \a _granpos.
  * \retval -1 The given granule position was invalid (i.e. negative).*/
 extern ogg_int64_t th_granule_frame(void *_encdec,ogg_int64_t _granpos);
 /**Converts a granule position to an absolute time in seconds.
@@ -460,6 +461,9 @@ extern ogg_int64_t th_granule_frame(void *_encdec,ogg_int64_t _granpos);
  *                  handle.
  * \param _granpos The granule position to convert.
  * \return The absolute time in seconds corresponding to \a _granpos.
+ *         This is the "end time" for the frame, or the latest time it should
+ *          be displayed.
+ *         It is not the presentation time.
  * \retval -1 The given granule position was invalid (i.e. negative).*/
 extern double th_granule_time(void *_encdec,ogg_int64_t _granpos);
 /**Determines whether a Theora packet is a header or not.
