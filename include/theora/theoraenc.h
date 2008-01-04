@@ -29,53 +29,6 @@ extern "C" {
 
 
 
-/**The configuration information for the VBR encoding mode.
- * This mode attempts to encode the video with a constant psychovisual
- *  quality.
- * It can be enabled by calling th_encode_ctl() with #TH_ENCCTL_SETUP_VBR.
- * See the #th_info struct documentation for details on how the default
- *  encoding mode is chosen.*/
-typedef struct th_vbr_cfg{
-  /**The target quality index.
-   * Valid values range from 0 to 63, inclusive, with higher values giving
-   *  higher quality.
-   * Note that, in this case, this corresponds to a <em>perceptual</em>
-   *  quality, and may not translate directly into a quantization setting.
-   * Limits on the admissible quantizers can be controlled below.*/
-  int qi;
-  /**The minimum quality to use for a keyframe.
-   * Valid values range from 0 to 63, inclusive, with higher values giving
-   *  higher quality.*/
-  int kf_qi_min;
-  /**The maximum quality to use for a keyframe.
-   * Valid values range from 0 to 63, inclusive, with higher values giving
-   *  higher quality.
-   * This must be at least as large as #kf_qi_max.*/
-  int kf_qi_max;
-  /**The minimum quality to use for a delta frame.
-   * Valid values range from 0 to 63, inclusive, with higher values giving
-   *  higher quality.*/
-  int df_qi_min;
-  /**The maximum quality to use for a delta frame.
-   * Valid values range from 0 to 63, inclusive, with higher values giving
-   *  higher quality.
-   * This must be at least as large as #df_qi_max.*/
-  int df_qi_max;
-}th_vbr_cfg;
-
-/**The configuration information for the constant QI encoding mode.
- * This mode encodes the video with a constant quality index.
- * This is the fastest encoding mode.
- * It can be enabled by calling th_encode_ctl() with #TH_ENCCTL_SETUP_CQI.
- * See the #th_info struct documentation for details on how the default
- *  encoding mode is chosen.*/
-typedef struct th_cqi_cfg{
-  /**The target quality index.
-     Valid values range from 0 to 63, inclusive, with higher values giving
-      higher quality.*/
-  int qi;
-}th_cqi_cfg;
-
 /**\name th_encode_ctl() codes
  * \anchor encctlcodes
  * These are the available request codes for th_encode_ctl().
@@ -185,41 +138,6 @@ typedef struct th_cqi_cfg{
  * \retval TH_IMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_SET_SPLEVEL (14)
-/**Puts the encoder in VBR mode.
- * This can be done at any time during the encoding process, with different
- *  configuration parameters, to encode different regions of the video segment
- *  with different qualities.
- * See the #th_info struct documentation for details on how the default
- *  encoding mode is chosen.
- *
- * \param[in] _buf <tt>#th_vbr_cfg</tt>: the configuration parameters.
- *                 This may be <tt>NULL</tt>, in which case the current VBR
- *                  configuration is unchanged.
- *                 The default is to use the QI setting passed in via the
- *                  #th_info struct when the encoder was initialized, with a
- *                  full range of admissible quantizers.
- * \retval TH_EFAULT \a _enc_ctx is <tt>NULL</tt>.
- * \retval TH_EINVAL The configuration parameters do not meet one of their
- *                    stated requirements, \a _buf is <tt>NULL</tt> and
- *                    \a _buf_sz is not zero, or \a _buf is non-<tt>NULL</tt>
- *                    and \a _buf_sz is not <tt>sizeof(#th_vbr_cfg)</tt>.
- * \retval TH_IMPL   Not supported by this implementation.*/
-#define TH_ENCCTL_SETUP_VBR (16)
-/**Puts the encoder in CQI mode.
- * This can be done at any time during the encoding process, with different QI
- *  values.
- * See the #th_info struct documentation for details on how the default
- *  encoding mode is chosen.
- *
- * \param[in] _buf <tt>#th_cqi_cfg</tt>: the configuration parameters.
- *                 This may be <tt>NULL</tt>, in which case the current CQI
- *                  configuration is unchanged.
- *                 The default is to use the QI setting passed in via the
- *                  #th_info struct when the encoder was initialized.
- * \retval TH_EFAULT \a _enc_ctx is <tt>NULL</tt>.
- * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(#th_cqi_cfg)</tt>.
- * \retval TH_IMPL   Not supported by this implementation.*/
-#define TH_ENCCTL_SETUP_CQI (18)
 /*@}*/
 
 
