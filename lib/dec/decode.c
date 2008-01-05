@@ -163,7 +163,8 @@ static int oc_dec_init(oc_dec_ctx *_dec,const th_info *_info,
   int ret;
   ret=oc_state_init(&_dec->state,_info);
   if(ret<0)return ret;
-  oc_huff_trees_copy(_dec->huff_tables,_setup->huff_tables);
+  oc_huff_trees_copy(_dec->huff_tables,
+   (const oc_huff_node *const *)_setup->huff_tables);
   for(qti=0;qti<2;qti++)for(pli=0;pli<3;pli++){
     _dec->state.dequant_tables[qti][pli]=
      _dec->state.dequant_table_data[qti][pli];
