@@ -96,7 +96,7 @@ static int oc_huff_tree_unpack(oggpack_buffer *_opb,
   long          bits;
   /*Prevent infinite recursion.*/
   if(++_depth>32)return TH_EBADHEADER;
-  if(theora_read1(_opb,&bits)<0)return TH_EBADHEADER;
+  if(theorapackB_read1(_opb,&bits)<0)return TH_EBADHEADER;
   /*Read an internal node:*/
   if(!bits){
     int ret;
@@ -111,7 +111,7 @@ static int oc_huff_tree_unpack(oggpack_buffer *_opb,
   }
   /*Read a leaf node:*/
   else{
-    if(theora_read(_opb,OC_NDCT_TOKEN_BITS,&bits)<0)return TH_EBADHEADER;
+    if(theorapackB_read(_opb,OC_NDCT_TOKEN_BITS,&bits)<0)return TH_EBADHEADER;
     binode=oc_huff_node_alloc(0);
     binode->depth=(unsigned char)(_depth>1);
     binode->token=(unsigned char)bits;
@@ -270,9 +270,9 @@ void oc_huff_trees_clear(oc_huff_node *_nodes[TH_NHUFFMAN_TABLES]){
 int oc_huff_token_decode(oggpack_buffer *_opb,const oc_huff_node *_node){
   long bits;
   while(_node->nbits!=0){
-    theora_look(_opb,_node->nbits,&bits);
+    theorapackB_look(_opb,_node->nbits,&bits);
     _node=_node->nodes[bits];
-    oggpackB_adv(_opb,_node->depth);
+    theorapackB_adv(_opb,_node->depth);
   }
   return _node->token;
 }

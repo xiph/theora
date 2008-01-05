@@ -74,6 +74,7 @@ endif
 
 decoder_sources = \
 	dec/apiwrapper.c \
+	dec/bitwise.c \
 	dec/decapiwrapper.c \
 	dec/decinfo.c \
 	dec/decode.c \
@@ -114,6 +115,7 @@ noinst_HEADERS = \
 	enc/toplevel_lookup.h \
 	enc/dsp.h \
 	dec/apiwrapper.h \
+	dec/bitwise.h \
 	dec/dct.h \
 	dec/decint.h \
 	dec/dequant.h \

@@ -43,70 +43,6 @@
 /*Maximum valid post-processing level.*/
 #define OC_PP_LEVEL_MAX       (7)
 
-/*Read 32 bits.
-  *_ret is set to 0 on failure.
-  Return: 0 on success, or a negative value on failure.*/
-int theora_read32(oggpack_buffer *_opb,long *_ret){
-  long ret1;
-  long ret2;
-  long mask;
-  ret1=oggpackB_read(_opb,16);
-  ret2=oggpackB_read(_opb,16);
-  mask=ret2>>31;
-  *_ret=((ret1<<16)|ret2)&~mask;
-  return (int)mask;
-}
-
-/*Read n bits, where n <= 31 for libogg1.
-  *_ret is set to 0 on failure.
-  Return: 0 on success, or a negative value on failure.*/
-int theora_read(oggpack_buffer *_opb,int _nbits,long *_ret){
-  long mask;
-  *_ret=oggpackB_read(_opb,_nbits);
-  mask=*_ret>>31;
-  *_ret&=~mask;
-  return (int)mask;
-}
-
-/*Read 1 bit,
-  *_ret is set to 0 on failure.
-  Return: 0 on success, or a negative value on failure.*/
-int theora_read1(oggpack_buffer *_opb,long *_ret){
-  int mask;
-  *_ret=oggpackB_read1(_opb);
-  mask=(int)*_ret>>31;
-  *_ret&=~mask;
-  return mask;
-}
-
-/*Look ahead n bits, where n <= 31 for libogg1.
-  In the event that there are some bits remaining, but fewer than n, then the
-   remaining bits are returned, with the missing bits set to 0, and the
-   function succeeds.
-  The stream can be advanced afterwards with oggpackB_adv().
-  *_ret is set to 0 on failure.
-  Return: 0 on success, or a negative value on failure.*/
-int theora_look(oggpack_buffer *_opb,int _nbits,long *_ret){
-  int nbits;
-  *_ret=oggpackB_look(_opb,_nbits);
-  if(*_ret>=0)return 0;
-  /*libogg1 fails if we try to look past the end of the stream.
-    We might be looking ahead more bits than we actually need, however, and so
-     we must return the ones that are actually there.*/
-  /*There's no accessor for the storage field, which we need to figure out
-     how many bits _are_ left in the buffer (without resorting to trial and
-     error, which would be silly).*/
-  nbits=(_opb->storage<<3)-oggpackB_bits(_opb);
-  if(nbits>0){
-    /*If there are some bits left, return them.*/
-    *_ret=oggpackB_look(_opb,nbits)<<_nbits-nbits;
-    /*Success should be guaranteed.*/
-    return 0;
-  }
-  /*If there are no bits left, then we truly should fail.*/
-  *_ret=0;
-  return -1;
-}
 
 
 /*The mode alphabets for the various mode coding schemes.
@@ -165,26 +101,26 @@ static int oc_sb_run_unpack(oggpack_buffer *_opb){
      11110xxx                10-17
      111110xxxx              18-33
      111111xxxxxxxxxxxx      34-4129*/
-  theora_read1(_opb,&bits);
+  theorapackB_read1(_opb,&bits);
   if(bits==0)return 1;
-  theora_read(_opb,2,&bits);
+  theorapackB_read(_opb,2,&bits);
   if((bits&2)==0)return 2+(int)bits;
   else if((bits&1)==0){
-    theora_read1(_opb,&bits);
+    theorapackB_read1(_opb,&bits);
     return 4+(int)bits;
   }
-  theora_read(_opb,3,&bits);
+  theorapackB_read(_opb,3,&bits);
   if((bits&4)==0)return 6+(int)bits;
   else if((bits&2)==0){
     ret=10+((bits&1)<<2);
-    theora_read(_opb,2,&bits);
+    theorapackB_read(_opb,2,&bits);
     return ret+(int)bits;
   }
   else if((bits&1)==0){
-    theora_read(_opb,4,&bits);
+    theorapackB_read(_opb,4,&bits);
     return 18+(int)bits;
   }
-  theora_read(_opb,12,&bits);
+  theorapackB_read(_opb,12,&bits);
   return 34+(int)bits;
 }
 
@@ -199,21 +135,21 @@ static int oc_block_run_unpack(oggpack_buffer *_opb){
      1110xx                  7-10
      11110xx                 11-14
      11111xxxx               15-30*/
-  theora_read(_opb,2,&bits);
+  theorapackB_read(_opb,2,&bits);
   if((bits&2)==0)return 1+(int)bits;
   else if((bits&1)==0){
-    theora_read1(_opb,&bits);
+    theorapackB_read1(_opb,&bits);
     return 3+(int)bits;
   }
-  theora_read(_opb,2,&bits);
+  theorapackB_read(_opb,2,&bits);
   if((bits&2)==0)return 5+(int)bits;
   else if((bits&1)==0){
-    theora_read(_opb,2,&bits);
+    theorapackB_read(_opb,2,&bits);
     return 7+(int)bits;
   }
-  theora_read(_opb,3,&bits);
+  theorapackB_read(_opb,3,&bits);
   if((bits&4)==0)return 11+bits;
-  theora_read(_opb,2,&bits2);
+  theorapackB_read(_opb,2,&bits2);
   return 15+((bits&3)<<2)+bits2;
 }
 
@@ -277,27 +213,27 @@ static int oc_dec_frame_header_unpack(oc_dec_ctx *_dec){
   TH_DEBUG("\n>>>> beginning frame %ld\n\n",dframe);
 
   /*Check to make sure this is a data packet.*/
-  theora_read1(&_dec->opb,&val);
+  theorapackB_read1(&_dec->opb,&val);
   TH_DEBUG("frame type = %s, ",val==0?"video":"unknown");
   if(val!=0)return TH_EBADPACKET;
   /*Read in the frame type (I or P).*/
-  theora_read1(&_dec->opb,&val);
+  theorapackB_read1(&_dec->opb,&val);
   _dec->state.frame_type=(int)val;
   TH_DEBUG("%s\n",val?"predicted":"key");
   /*Read in the current qi.*/
-  theora_read(&_dec->opb,6,&val);
+  theorapackB_read(&_dec->opb,6,&val);
   _dec->state.qis[0]=(int)val;
   TH_DEBUG("frame quality = { %ld ",val);
-  theora_read1(&_dec->opb,&val);
+  theorapackB_read1(&_dec->opb,&val);
   if(!val)_dec->state.nqis=1;
   else{
-    theora_read(&_dec->opb,6,&val);
+    theorapackB_read(&_dec->opb,6,&val);
     _dec->state.qis[1]=(int)val;
     TH_DEBUG("%ld ",val);
-    theora_read1(&_dec->opb,&val);
+    theorapackB_read1(&_dec->opb,&val);
     if(!val)_dec->state.nqis=2;
     else{
-      theora_read(&_dec->opb,6,&val);
+      theorapackB_read(&_dec->opb,6,&val);
       TH_DEBUG("%ld ",val);
       _dec->state.qis[2]=(int)val;
       _dec->state.nqis=3;
@@ -310,7 +246,7 @@ static int oc_dec_frame_header_unpack(oc_dec_ctx *_dec){
       Most of the other unused bits in the VP3 headers were eliminated.
       I don't know why these remain.*/
     /* I wanted to eliminate wasted bits, but not all config wiggle room --Monty */
-    theora_read(&_dec->opb,3,&val);
+    theorapackB_read(&_dec->opb,3,&val);
     if(val!=0)return TH_EIMPL;
   }
   return 0;
@@ -366,7 +302,7 @@ static int oc_dec_partial_sb_flags_unpack(oc_dec_ctx *_dec){
   int    flag;
   int    npartial;
   int    run_count;
-  theora_read1(&_dec->opb,&val);
+  theorapackB_read1(&_dec->opb,&val);
   flag=(int)val;
 
   sb=_dec->state.sbs;
@@ -385,7 +321,7 @@ static int oc_dec_partial_sb_flags_unpack(oc_dec_ctx *_dec){
 
     while(--run_count>0&&sb<sb_end);
     if(full_run&&sb<sb_end){
-      theora_read1(&_dec->opb,&val);
+      theorapackB_read1(&_dec->opb,&val);
       flag=(int)val;
     }
     else flag=!flag;
@@ -410,7 +346,7 @@ static void oc_dec_coded_sb_flags_unpack(oc_dec_ctx *_dec){
   sb_end=sb+_dec->state.nsbs;
   /*Skip partially coded super blocks.*/
   for(;sb->coded_partially;sb++);
-  theora_read1(&_dec->opb,&val);
+  theorapackB_read1(&_dec->opb,&val);
   flag=(int)val;
 
   while(sb<sb_end){
@@ -423,7 +359,7 @@ static void oc_dec_coded_sb_flags_unpack(oc_dec_ctx *_dec){
       sb->coded_fully=flag;
     }
     if(full_run&&sb<sb_end){
-      theora_read1(&_dec->opb,&val);
+      theorapackB_read1(&_dec->opb,&val);
       flag=(int)val;
     }
     else flag=!flag;
@@ -447,7 +383,7 @@ static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
   npartial=oc_dec_partial_sb_flags_unpack(_dec);
   if(npartial<_dec->state.nsbs)oc_dec_coded_sb_flags_unpack(_dec);
   if(npartial>0){
-    theora_read1(&_dec->opb,&val);
+    theorapackB_read1(&_dec->opb,&val);
     flag=!(int)val;
   }
   else flag=0;
@@ -566,7 +502,7 @@ static int oc_vlc_mode_unpack(oggpack_buffer *_opb){
   long val;
   int  i;
   for(i=0;i<7;i++){
-    theora_read1(_opb,&val);
+    theorapackB_read1(_opb,&val);
     if(!val)break;
   }
   return i;
@@ -574,7 +510,7 @@ static int oc_vlc_mode_unpack(oggpack_buffer *_opb){
 
 static int oc_clc_mode_unpack(oggpack_buffer *_opb){
   long val;
-  theora_read(_opb,3,&val);
+  theorapackB_read(_opb,3,&val);
   return (int)val;
 }
 
@@ -587,7 +523,7 @@ void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
   long                 val,j;
   int                  scheme0_alphabet[8];
   int                  mode_scheme;
-  theora_read(&_dec->opb,3,&val);
+  theorapackB_read(&_dec->opb,3,&val);
   mode_scheme=(int)val;
   TH_DEBUG("mode encode scheme = %d\n",(int)val);
 
@@ -601,7 +537,7 @@ void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
     /*LOOP VECTORIZES.*/
     for(mi=0;mi<OC_NMODES;mi++)scheme0_alphabet[mi]=OC_MODE_INTER_NOMV;
     for(mi=0;mi<OC_NMODES;mi++){
-      theora_read(&_dec->opb,3,&val);
+      theorapackB_read(&_dec->opb,3,&val);
       scheme0_alphabet[val]=OC_MODE_ALPHABETS[6][mi];
       TH_DEBUG("%d ",(int)val);
     }
@@ -649,7 +585,7 @@ typedef int (*oc_mv_comp_unpack_func)(oggpack_buffer *_opb);
 static int oc_vlc_mv_comp_unpack(oggpack_buffer *_opb){
   long bits;
   int  mvsigned[2];
-  theora_read(_opb,3,&bits);
+  theorapackB_read(_opb,3,&bits);
   switch(bits){
     case  0:return 0;
     case  1:return 1;
@@ -657,14 +593,14 @@ static int oc_vlc_mv_comp_unpack(oggpack_buffer *_opb){
     case  3:
     case  4:{
       mvsigned[0]=(int)(bits-1);
-      theora_read1(_opb,&bits);
+      theorapackB_read1(_opb,&bits);
     }break;
     /*case  5:
     case  6:
     case  7:*/
     default:{
       mvsigned[0]=1<<bits-3;
-      theora_read(_opb,bits-2,&bits);
+      theorapackB_read(_opb,bits-2,&bits);
       mvsigned[0]+=(int)(bits>>1);
       bits&=1;
     }break;
@@ -676,7 +612,7 @@ static int oc_vlc_mv_comp_unpack(oggpack_buffer *_opb){
 static int oc_clc_mv_comp_unpack(oggpack_buffer *_opb){
   long bits;
   int  mvsigned[2];
-  theora_read(_opb,6,&bits);
+  theorapackB_read(_opb,6,&bits);
   mvsigned[0]=bits>>1;
   mvsigned[1]=-mvsigned[0];
   return mvsigned[bits&1];
@@ -698,7 +634,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
   oc_mv                   last_mv[2];
   oc_mv                   cbmvs[4];
   set_chroma_mvs=OC_SET_CHROMA_MVS_TABLE[_dec->state.info.pixel_fmt];
-  theora_read1(&_dec->opb,&val);
+  theorapackB_read1(&_dec->opb,&val);
   TH_DEBUG("motion vector table = %d\n",(int)val);
   mv_comp_unpack=val?oc_clc_mv_comp_unpack:oc_vlc_mv_comp_unpack;
   map_idxs=OC_MB_MAP_IDXS[_dec->state.info.pixel_fmt];
@@ -871,7 +807,7 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
      At first we just store the qii in the fragment.
      After all the qii's are decoded, we make a final pass to replace them
       with the corresponding qi's for this frame.*/
-    theora_read1(&_dec->opb,&val);
+    theorapackB_read1(&_dec->opb,&val);
     flag=(int)val;
     run_count=nqi0=0;
     while(coded_fragi<coded_fragi_end){
@@ -884,7 +820,7 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
       }
       while(--run_count>0&&coded_fragi<coded_fragi_end);
       if(full_run&&coded_fragi<coded_fragi_end){
-        theora_read1(&_dec->opb,&val);
+        theorapackB_read1(&_dec->opb,&val);
         flag=(int)val;
       }
       else flag=!flag;
@@ -897,7 +833,7 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
       /*Skip qii==0 fragments.*/
       for(coded_fragi=_dec->state.coded_fragis;
        _dec->state.frags[*coded_fragi].qi==0;coded_fragi++);
-      theora_read1(&_dec->opb,&val);
+      theorapackB_read1(&_dec->opb,&val);
       flag=(int)val;
       while(coded_fragi<coded_fragi_end){
         int full_run;
@@ -911,7 +847,7 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
           frag->qi+=flag;
         }
         if(full_run&&coded_fragi<coded_fragi_end){
-          theora_read1(&_dec->opb,&val);
+          theorapackB_read1(&_dec->opb,&val);
           flag=(int)val;
         }
         else flag=!flag;
@@ -1064,7 +1000,7 @@ static int oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[3],
       _dec->dct_tokens[0][ti++]=(unsigned char)token;
       neb=OC_DCT_TOKEN_EXTRA_BITS[token];
       if(neb){
-        theora_read(&_dec->opb,neb,&val);
+        theorapackB_read(&_dec->opb,neb,&val);
         eb=(int)val;
         _dec->extra_bits[0][ebi++]=(ogg_uint16_t)eb;
       }
@@ -1136,7 +1072,7 @@ static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[3],
       _dec->dct_tokens[_zzi][ti++]=(unsigned char)token;
       neb=OC_DCT_TOKEN_EXTRA_BITS[token];
       if(neb){
-        theora_read(&_dec->opb,neb,&val);
+        theorapackB_read(&_dec->opb,neb,&val);
         eb=(int)val;
         _dec->extra_bits[_zzi][ebi++]=(ogg_uint16_t)eb;
       }
@@ -1204,17 +1140,17 @@ static void oc_dec_residual_tokens_unpack(oc_dec_ctx *_dec){
   for(pli=0;pli<3;pli++)for(zzi=0;zzi<64;zzi++){
     ntoks_left[pli][zzi]=_dec->state.ncoded_fragis[pli];
   }
-  theora_read(&_dec->opb,4,&val);
+  theorapackB_read(&_dec->opb,4,&val);
   huffi_y=(int)val;
-  theora_read(&_dec->opb,4,&val);
+  theorapackB_read(&_dec->opb,4,&val);
   huffi_c=(int)val;
   huff_idxs[0]=huffi_y;
   huff_idxs[1]=huff_idxs[2]=huffi_c;
   _dec->eob_runs[0][0]=0;
   eobs=oc_dec_dc_coeff_unpack(_dec,huff_idxs,ntoks_left);
-  theora_read(&_dec->opb,4,&val);
+  theorapackB_read(&_dec->opb,4,&val);
   huffi_y=(int)val;
-  theora_read(&_dec->opb,4,&val);
+  theorapackB_read(&_dec->opb,4,&val);
   huffi_c=(int)val;
   zzi=1;
   for(hgi=1;hgi<5;hgi++){
@@ -2111,7 +2047,7 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
     int                   pli;
     int                   notstart;
     int                   notdone;
-    oggpackB_readinit(&_dec->opb,_op->packet,_op->bytes);
+    theorapackB_readinit(&_dec->opb,_op->packet,_op->bytes);
     ret=oc_dec_frame_header_unpack(_dec);
     if(ret<0)return ret;
     /*Select a free buffer to use for the reconstructed version of this
