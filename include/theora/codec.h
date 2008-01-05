@@ -32,14 +32,32 @@
  *
  * \subsection Organization
  *
- * The functions documented here are actually subdivided into two separate
- *  libraries:
- * - <tt>libtheoradec</tt>, contains the decoder and shared routines.
- *   You must link to this if you use any of the functions listed in
- *    this API, i.e., those listed in \ref basefuncs and \ref decfuncs.*/
+ * The functions documented here are actually subdivided into three 
+ * separate libraries:
+ * - <tt>libtheoraenc</tt> contains the encoder interface,
+ *   described in \ref encfuncs.
+ * - <tt>libtheoradec</tt> contains the decoder interface and
+ *   routines shared with the encoder.
+ *   You must also link to this if you link to <tt>libtheoraenc</tt>.
+ *   The routines in this library are described in \ref decfuncs and 
+ *   \ref basefuncs.
+ * - <tt>libtheora</tt> contains the \ref oldfuncs.
+ *
+ * New code should link to <tt>libtheoradec</tt> and, if using encoder
+ * features, <tt>libtheoraenc</tt>. Together these two export both
+ * the standard and the legacy API, so this is all that is needed by
+ * any code. The older <tt>libtheora</tt> library is provided just for
+ * compatibility with older build configurations.
+ *
+ * In general the recommended 1.x API symbols can be distinguished
+ * by their <tt>th_</tt> or <tt>TH_</tt> namespace prefix.
+ * The older, legacy API uses <tt>theora_</tt> or <tt>OC_</tt>
+ * prefixes instead.
+ */
 
 /**\file
- * The shared <tt>libtheoradec</tt> and <tt>libtheoraenc</tt> C API.*/
+ * The shared <tt>libtheoradec</tt> and <tt>libtheoraenc</tt> C API.
+ * You don't need to include this directly.*/
 
 #if !defined(_O_THEORA_CODEC_H_)
 # define _O_THEORA_CODEC_H_ (1)

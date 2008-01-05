@@ -33,11 +33,19 @@ extern "C"
 ogg_buffer_state *ogg_buffer_create(void);
 #endif
 
+/** \defgroup oldfuncs Legacy pre-1.0 C API */
+/*  @{ */
+
 /** \mainpage
  * 
  * \section intro Introduction
  *
- * This is the documentation for the libtheora C API.
+ * This is the documentation for the libtheora legacy C API, declared in 
+ * the theora.h header, which describes the old interface used before
+ * the 1.0 release. This API was widely deployed for several years and
+ * remains supported, but for new code we recommend the cleaner API 
+ * declared in theoradec.h and theoraenc.h.
+ *
  * libtheora is the reference implementation for
  * <a href="http://www.theora.org/">Theora</a>, a free video codec.
  * Theora is derived from On2's VP3 codec with improved integration for
@@ -125,7 +133,7 @@ ogg_buffer_state *ogg_buffer_create(void);
  */
 
 /** \file
- * The libtheora C API.
+ * The libtheora pre-1.0 legacy C API.
  */
 
 /**
@@ -830,6 +838,8 @@ extern void  theora_comment_clear(theora_comment *tc);
  * \param buf    The parameters for this control code.
  * \param buf_sz The size of the parameter buffer.*/
 extern int theora_control(theora_state *th,int req,void *buf,size_t buf_sz);
+
+/* @} */ /* end oldfuncs doxygen group */
 
 #ifdef __cplusplus
 }
