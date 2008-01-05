@@ -22,9 +22,6 @@ Mauricio Piacentini
 	- Original win32 projects and example ports
 	- VP3->Theora transcoder
 
-Arc Riley
-	- libogg2 porting.
-
 Silvia Pfeiffer
 	- Figures for the spec
 
@@ -37,8 +34,9 @@ Edward Hervey
 Adam Moss
 Colin Ward
 Jeremy C. Reed
+Arc Riley
 Rodolphe Ortalo
 	- Bug fixes
 
 
-and other xiph.org contributors
+and other Xiph.org contributors

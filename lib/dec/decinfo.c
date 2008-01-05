@@ -222,7 +222,6 @@ int th_decode_headerin(th_info *_info,th_comment *_tc,
   if(_info==NULL)return TH_EFAULT;
   theorapackB_readinit(&opb,_op->packet,_op->bytes);
   ret=oc_dec_headerin(&opb,_info,_tc,_setup,_op);
-  /*TODO: Clear opb in libogg2.*/
   return ret;
 }
 

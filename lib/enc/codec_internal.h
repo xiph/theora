@@ -26,11 +26,7 @@
 #include "encoder_huffman.h"
 #include "dsp.h"
 
-#ifndef LIBOGG2
 #define theora_read(x,y,z) ( *z = oggpackB_read(x,y) )
-#else
-#define theora_read(x,y,z) ( oggpackB_read(x,y,z) )
-#endif
 
 #define CURRENT_ENCODE_VERSION   1
 #define HUGE_ERROR              (1<<28)  /*  Out of range test value */
@@ -713,9 +709,6 @@ typedef struct CP_INSTANCE {
 
   /* ogg bitpacker for use in packet coding, other API state */
   oggpack_buffer   *oggbuffer;
-#ifdef LIBOGG2  /* Remember, this is just until we drop libogg1 */
-  ogg_buffer_state *oggbufferstate;
-#endif
   int               readyflag;
   int               packetflag;
   int               doneflag;

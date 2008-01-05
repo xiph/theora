@@ -69,10 +69,9 @@ int th_encode_flushheader(th_enc_ctx *_enc,th_comment *_comments,
     case -2:{
       if(_comments==NULL)return OC_FAULT;
       theora_encode_comment((theora_comment *)_comments,_op);
-#ifndef LIBOGG2
       /*The old API does not require a theora_state struct when writing the
          comment header, so it can't use its internal buffer and relies on the
-         application to free it when using libogg 1.
+         application to free it.
         The old documentation is wrong on this subject, and this breaks on
          Windows when linking against multiple versions of libc (which is
          almost always done when, e.g., using DLLs built with mingw32).
@@ -84,7 +83,6 @@ int th_encode_flushheader(th_enc_ctx *_enc,th_comment *_comments,
       oggpackB_writecopy(cpi->oggbuffer,_op->packet,_op->bytes*8);
       _ogg_free(_op->packet);
       _op->packet=oggpackB_get_buffer(cpi->oggbuffer);
-#endif
       return -cpi->doneflag++;
     }break;
     case -1:{

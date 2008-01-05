@@ -74,11 +74,7 @@ void InitPBInstance(PB_INSTANCE *pbi){
   InitTmpBuffers(pbi);
 
   /* allocate memory for the oggpack_buffer */
-#ifndef LIBOGG2
   pbi->opb = _ogg_malloc(sizeof(oggpack_buffer));
-#else
-  pbi->opb = _ogg_malloc(oggpack_buffersize());
-#endif
 
   /* variables needing initialization (not being set to 0) */
 

@@ -9,6 +9,7 @@ libtheora 1.0beta3 (unreleased)
  - Fix a problem with decoder quantizer initialization
  - Fix a page queue problem with png2theora.
  - Dropped build support for Microsoft VS2003.
+ - Dropped build support for the unreleased libogg2.
  - Added the specification to the autotools build.
  - Specification corrections.
 
