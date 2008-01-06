@@ -25,13 +25,7 @@ extern "C"
 
 #include <stddef.h>	/* for size_t */
 
-#ifndef LIBOGG2
 #include <ogg/ogg.h>
-#else
-#include <ogg2/ogg.h>
-/* This is temporary until libogg2 is more complete */
-ogg_buffer_state *ogg_buffer_create(void);
-#endif
 
 /** \defgroup oldfuncs Legacy pre-1.0 C API */
 /*  @{ */
