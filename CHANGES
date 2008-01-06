@@ -6,7 +6,9 @@ libtheora 1.0beta3 (unreleased)
    This is a change of behaviour from 1.0beta1.
  - Document that granule_time() returns the end of the 
    presentation interval. 
- - Fix a problem with decoder quantizer initialization
+ - Use a custom copy of the libogg bitpacker in the decoder
+   to avoid function call overhead.
+ - Fix a problem with decoder quantizer initialization.
  - Fix a page queue problem with png2theora.
  - Dropped build support for Microsoft VS2003.
  - Dropped build support for the unreleased libogg2.
