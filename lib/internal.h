@@ -282,7 +282,7 @@ typedef struct{
    int _src2_ystride,const ogg_int16_t *_residue);
   void (*state_frag_copy)(const oc_theora_state *_state,
    const int *_fragis,int _nfragis,int _dst_frame,int _src_frame,int _pli);
-  void (*state_frag_recon)(oc_theora_state *_state, oc_fragment *_frag,
+  void (*state_frag_recon)(oc_theora_state *_state,oc_fragment *_frag,
    int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
    ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]);
   void (*restore_fpu)(void);
@@ -453,7 +453,7 @@ void oc_frag_recon_inter2(const oc_theora_state *_state,
  int _src2_ystride,const ogg_int16_t *_residue);
 void oc_state_frag_copy(const oc_theora_state *_state,const int *_fragis,
  int _nfragis,int _dst_frame,int _src_frame,int _pli);
-void oc_state_frag_recon(oc_theora_state *_state, oc_fragment *_frag,
+void oc_state_frag_recon(oc_theora_state *_state,oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]);
 void oc_state_loop_filter_frag_rows(oc_theora_state *_state,int *_bv,
@@ -470,7 +470,7 @@ void oc_frag_recon_inter2_c(unsigned char *_dst,int _dst_ystride,
  int _src2_ystride,const ogg_int16_t *_residue);
 void oc_state_frag_copy_c(const oc_theora_state *_state,const int *_fragis,
  int _nfragis,int _dst_frame,int _src_frame,int _pli);
-void oc_state_frag_recon_c(oc_theora_state *_state, oc_fragment *_frag,
+void oc_state_frag_recon_c(oc_theora_state *_state,oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]);
 void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,

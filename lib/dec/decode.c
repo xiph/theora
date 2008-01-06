@@ -516,7 +516,7 @@ static int oc_clc_mode_unpack(oggpack_buffer *_opb){
 }
 
 /*Unpacks the list of macro block modes for INTER frames.*/
-void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
+static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
   oc_mode_unpack_func  mode_unpack;
   oc_mb               *mb;
   oc_mb               *mb_end;
@@ -951,7 +951,7 @@ static const oc_token_dec1val_func OC_TOKEN_DEC1VAL_TABLE[TH_NDCT_TOKENS-
   _token:      The token value to skip.
   _extra_bits: The extra bits attached to this token.
   Return: The decoded coefficient value.*/
-int oc_dct_token_dec1val(int _token,int _extra_bits){
+static int oc_dct_token_dec1val(int _token,int _extra_bits){
   return (*OC_TOKEN_DEC1VAL_TABLE[_token-OC_NDCT_EOB_TOKEN_MAX])(_token,
    _extra_bits);
 }
@@ -1183,7 +1183,7 @@ typedef void (*oc_token_expand_func)(int _token,int _extra_bits,
  ogg_int16_t _dct_coeffs[128],int *_zzi);
 
 /*Expands a zero run token.*/
-void oc_token_expand_zrl(int _token,int _extra_bits,
+static void oc_token_expand_zrl(int _token,int _extra_bits,
  ogg_int16_t _dct_coeffs[128],int *_zzi){
   int zzi;
   zzi=*_zzi;
@@ -1193,27 +1193,27 @@ void oc_token_expand_zrl(int _token,int _extra_bits,
 }
 
 /*Expands a constant, single-value token.*/
-void oc_token_expand_const(int _token,int _extra_bits,
+static void oc_token_expand_const(int _token,int _extra_bits,
  ogg_int16_t _dct_coeffs[128],int *_zzi){
   _dct_coeffs[(*_zzi)++]=(ogg_int16_t)oc_token_dec1val_const(_token);
 }
 
 /*Expands category 2 single-valued tokens.*/
-void oc_token_expand_cat2(int _token,int _extra_bits,
+static void oc_token_expand_cat2(int _token,int _extra_bits,
  ogg_int16_t _dct_coeffs[128],int *_zzi){
   _dct_coeffs[(*_zzi)++]=
    (ogg_int16_t)oc_token_dec1val_cat2(_token,_extra_bits);
 }
 
 /*Expands category 3 through 8 single-valued tokens.*/
-void oc_token_expand_cati(int _token,int _extra_bits,
+static void oc_token_expand_cati(int _token,int _extra_bits,
  ogg_int16_t _dct_coeffs[128],int *_zzi){
   _dct_coeffs[(*_zzi)++]=
    (ogg_int16_t)oc_token_dec1val_cati(_token,_extra_bits);
 }
 
 /*Expands a category 1a zero run/value combo token.*/
-void oc_token_expand_run_cat1a(int _token,int _extra_bits,
+static void oc_token_expand_run_cat1a(int _token,int _extra_bits,
  ogg_int16_t _dct_coeffs[128],int *_zzi){
   int zzi;
   int rl;
@@ -1225,7 +1225,7 @@ void oc_token_expand_run_cat1a(int _token,int _extra_bits,
 }
 
 /*Expands all other zero run/value combo tokens.*/
-void oc_token_expand_run(int _token,int _extra_bits,
+static void oc_token_expand_run(int _token,int _extra_bits,
  ogg_int16_t _dct_coeffs[128],int *_zzi){
   static const int NZEROS_ADJUST[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
     6,10,1,2

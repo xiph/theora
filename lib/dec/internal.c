@@ -381,4 +381,3 @@ int th_packet_isheader(ogg_packet *_op){
 int th_packet_iskeyframe(ogg_packet *_op){
   return _op->bytes<=0?0:_op->packet[0]&0x80?-1:!(_op->packet[0]&0x40);
 }
-

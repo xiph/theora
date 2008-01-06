@@ -6,6 +6,7 @@ libtheora 1.0beta3 (unreleased)
    This is a change of behaviour from 1.0beta1.
  - Document that granule_time() returns the end of the 
    presentation interval. 
+ - Additional MMX improvements by Nils Pipenbrinck.
  - Use a custom copy of the libogg bitpacker in the decoder
    to avoid function call overhead.
  - Fix a problem with decoder quantizer initialization.

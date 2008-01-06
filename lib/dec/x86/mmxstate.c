@@ -35,7 +35,7 @@ static const __attribute__((aligned(8),used)) int OC_FZIG_ZAGMMX[64]={
 
 
 
-void oc_state_frag_recon_mmx(oc_theora_state *_state,const oc_fragment *_frag,
+void oc_state_frag_recon_mmx(oc_theora_state *_state,oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]){
   ogg_int16_t  __attribute__((aligned(8))) res_buf[64];
@@ -148,7 +148,7 @@ void oc_state_frag_recon_mmx(oc_theora_state *_state,const oc_fragment *_frag,
   dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].ystride;
   /*For now ystride values in all ref frames assumed to be equal.*/
   if(_frag->mbmode==OC_MODE_INTRA){
-    oc_frag_recon_intra(_state,_frag->buffer[dst_framei],dst_ystride,res_buf);
+    oc_frag_recon_intra_mmx(_frag->buffer[dst_framei],dst_ystride,res_buf);
   }
   else{
     int ref_framei;
@@ -158,12 +158,12 @@ void oc_state_frag_recon_mmx(oc_theora_state *_state,const oc_fragment *_frag,
     ref_ystride=_state->ref_frame_bufs[ref_framei][_pli].ystride;
     if(oc_state_get_mv_offsets(_state,mvoffsets,_frag->mv[0],_frag->mv[1],
      ref_ystride,_pli)>1){
-      oc_frag_recon_inter2(_state,_frag->buffer[dst_framei],dst_ystride,
+      oc_frag_recon_inter2_mmx(_frag->buffer[dst_framei],dst_ystride,
        _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,
        _frag->buffer[ref_framei]+mvoffsets[1],ref_ystride,res_buf);
     }
     else{
-      oc_frag_recon_inter(_state,_frag->buffer[dst_framei],dst_ystride,
+      oc_frag_recon_inter_mmx(_frag->buffer[dst_framei],dst_ystride,
        _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,res_buf);
     }
   }

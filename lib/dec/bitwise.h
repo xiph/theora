@@ -48,13 +48,7 @@ static int theorapackB_look(oggpack_buffer *b,int bits,long *_ret){
       return -1;
     }
     /*If we have some bits left, but not enough, return the ones we have.*/
-    if(b->endbyte*8+bits>b->storage*8){
-      int rem_bits;
-      rem_bits=b->storage*8-(b->endbyte*8+b->endbit);
-      theorapackB_look(b,rem_bits,_ret);
-      *_ret<<=bits-b->endbit-rem_bits;
-      return 0;
-    }
+    if((b->storage-b->endbyte)*8<bits)bits=(b->storage-b->endbyte)*8;
   }
   ret=b->ptr[0]<<(24+b->endbit);
   if(bits>8){
@@ -63,7 +57,7 @@ static int theorapackB_look(oggpack_buffer *b,int bits,long *_ret){
       ret|=b->ptr[2]<<(8+b->endbit);
       if(bits>24){
         ret|=b->ptr[3]<<(b->endbit);
-        if(bits>32 && b->endbit)
+        if(bits>32&&b->endbit)
           ret|=b->ptr[4]>>(8-b->endbit);
       }
     }

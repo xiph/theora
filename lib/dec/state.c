@@ -752,8 +752,8 @@ int oc_state_get_mv_offsets(oc_theora_state *_state,int _offsets[2],
      appropriate amount, always truncating _away_ from zero.*/
   /*These two variables decide whether we are in half- or quarter-pixel
      precision in each component.*/
-  xprec=1+(!(_state->info.pixel_fmt&1)&!!_pli);
-  yprec=1+(!(_state->info.pixel_fmt&2)&!!_pli);
+  xprec=1+(!(_state->info.pixel_fmt&1)&&_pli);
+  yprec=1+(!(_state->info.pixel_fmt&2)&&_pli);
   /*These two variables are either 0 if all the fractional bits are 0 or 1 if
      any of them are non-zero.*/
   xfrac=!!(_dx&(1<<xprec)-1);
@@ -782,14 +782,14 @@ int oc_state_get_mv_offsets(oc_theora_state *_state,int _offsets[2],
   else return 1;
 }
 
-void oc_state_frag_recon(oc_theora_state *_state, oc_fragment *_frag,
+void oc_state_frag_recon(oc_theora_state *_state,oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]){
   _state->opt_vtable.state_frag_recon(_state,_frag,_pli,_dct_coeffs,
    _last_zzi,_ncoefs,_dc_iquant,_ac_iquant);
 }
 
-void oc_state_frag_recon_c(oc_theora_state *_state, oc_fragment *_frag,
+void oc_state_frag_recon_c(oc_theora_state *_state,oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_iquant, const ogg_uint16_t _ac_iquant[64]){
   ogg_int16_t dct_buf[64];
