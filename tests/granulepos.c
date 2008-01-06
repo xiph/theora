@@ -112,7 +112,7 @@ granulepos_test_encode (int frequency, int auto_p)
     if ((keyframe + keydist) != frame + 1)
       FAIL ("encoder granulepos does not map to the correct frame number");
     tframe = theora_granule_frame (&th, op.granulepos);
-    if (tframe != frame + 1)
+    if (tframe != frame)
       FAIL ("theora_granule_frame returned incorrect results");
 #if DEBUG
     printf("++ frame %d granulepos %lld %d:%d %d %.3lfs\n", 
