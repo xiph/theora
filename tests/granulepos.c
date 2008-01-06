@@ -17,6 +17,7 @@
 
 #include <stdlib.h>
 #include <theora/theora.h>
+#include <math.h>
 
 #include "tests.h"
 
@@ -37,6 +38,7 @@ granulepos_test_encode (int frequency, int auto_p)
   int result;
   int frame, tframe, keyframe, keydist;
   int shift;
+  double rate, ttime;
   yuv_buffer yuv;
   unsigned char *framedata;
   ogg_packet op;
@@ -97,6 +99,7 @@ granulepos_test_encode (int frequency, int auto_p)
 
   INFO ("+ Checking granulepos generation");
   shift = theora_granule_shift(&ti);
+  rate = (double)ti.fps_denominator/ti.fps_numerator;
   for (frame = 0; frame < frequency * 2 + 1; frame++) {
     result = theora_encode_YUVin (&th, &yuv);
     if (result < 0) {
@@ -114,6 +117,9 @@ granulepos_test_encode (int frequency, int auto_p)
     tframe = theora_granule_frame (&th, op.granulepos);
     if (tframe != frame)
       FAIL ("theora_granule_frame returned incorrect results");
+    ttime = theora_granule_time(&th, op.granulepos);
+    if (fabs(rate*(frame+1) - ttime) > 1.0e-6)
+      FAIL ("theora_granule_time returned incorrect results");
 #if DEBUG
     printf("++ frame %d granulepos %lld %d:%d %d %.3lfs\n", 
 	frame, (long long int)op.granulepos, keyframe, keydist,
