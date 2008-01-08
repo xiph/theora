@@ -15,7 +15,7 @@ TESTS_ENVIRONMENT = $(VALGRIND_ENVIRONMENT)
 
 TESTS = noop noop_theoraenc noop_theora \
 	comment comment_theoradec comment_theora \
-	granulepos
+	granulepos granulepos_theoraenc granulepos_theora
 
 noinst_PROGRAMS = $(TESTS)
 
@@ -50,5 +50,13 @@ comment_theora_LDADD = $(THEORA_LIBS)
 comment_theora_CFLAGS = $(OGG_CFLAGS)
 
 granulepos_SOURCES = granulepos.c
-granulepos_LDADD = $(THEORA_LIBS)
+granulepos_LDADD = $(THEORAENC_LIBS)
 granulepos_CFLAGS = $(OGG_CFLAGS)
+
+granulepos_theoraenc_SOURCES = granulepos_theora.c
+granulepos_theoraenc_LDADD = $(THEORAENC_LIBS)
+granulepos_theoraenc_CFLAGS = $(OGG_CFLAGS)
+
+granulepos_theora_SOURCES = granulepos_theora.c
+granulepos_theora_LDADD = $(THEORA_LIBS)
+granulepos_theora_CFLAGS = $(OGG_CFLAGS)
