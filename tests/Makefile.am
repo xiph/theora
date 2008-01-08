@@ -6,22 +6,48 @@ AM_CFLAGS = $(OGG_CFLAGS)
 
 THEORADIR = ../lib
 THEORA_LIBS = $(THEORADIR)/libtheora.la $(OGG_LIBS)
-
+THEORADEC_LIBS = $(THEORADIR)/libtheoradec.la $(OGG_LIBS)
+THEORAENC_LIBS = $(THEORADIR)/libtheoraenc.la \
+		 $(THEORADIR)/libtheoradec.la $(OGG_LIBS)
 test: check
 
 TESTS_ENVIRONMENT = $(VALGRIND_ENVIRONMENT)
 
-TESTS = noop comment-test granulepos
+TESTS = noop noop_theoraenc noop_theora \
+	comment comment_theoradec comment_theora \
+	granulepos
 
 noinst_PROGRAMS = $(TESTS)
 
+# dummy call tests for the current api
 noop_SOURCES = noop.c
-noop_LDADD = $(THEORA_LIBS)
+noop_LDADD = $(THEORAENC_LIBS)
 noop_CFLAGS = $(OGG_CFLAGS)
 
-comment_test_SOURCES = comment-test.c
-comment_test_LDADD = $(THEORA_LIBS)
-comment_test_CFLAGS = $(OGG_CFLAGS)
+# dummy call tests for the pre-1.0 legacy api with current link line
+noop_theoraenc_SOURCES = noop_theora.c
+noop_theoraenc_LDADD = $(THEORAENC_LIBS)
+noop_theoraenc_CFLAGS = $(OGG_CFLAGS)
+
+# dummy call tests for the pre-1.0 legacy api with legacy link line
+noop_theora_SOURCES = noop_theora.c
+noop_theora_LDADD = $(THEORA_LIBS)
+noop_theora_CFLAGS = $(OGG_CFLAGS)
+
+# comment utilities for the current api
+comment_SOURCES = comment.c
+comment_LDADD = $(THEORADEC_LIBS)
+comment_CFLAGS = $(OGG_CFLAGS)
+
+# comment utilities for the legacy api and current lib
+comment_theoradec_SOURCES = comment.c
+comment_theoradec_LDADD = $(THEORADEC_LIBS)
+comment_theoradec_CFLAGS = $(OGG_CFLAGS)
+
+# comment utilities for the legacy api and legacy lib
+comment_theora_SOURCES = comment_theora.c
+comment_theora_LDADD = $(THEORA_LIBS)
+comment_theora_CFLAGS = $(OGG_CFLAGS)
 
 granulepos_SOURCES = granulepos.c
 granulepos_LDADD = $(THEORA_LIBS)
