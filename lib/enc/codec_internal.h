@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2005                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2008                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -114,8 +114,29 @@ typedef struct macroblock {
   /* the blocks comprising this macroblock */
   int yuv[3][4]; /* [Y,U,V][raster order] */
 
+  int cneighbors[4];      
+  int ncneighbors;
+  int pneighbors[4];
+  int npneighbors; 
+
   coding_mode_t mode;
+
+  /* per-block final motion vectors */
   mv_t mv[4];
+
+  /* Motion vectors for a macro block for the current frame and the
+     previous two frames.
+
+     Each is a set of 2 vectors against the previous frame and against
+     the golden frame, which can be used to judge constant velocity
+     and constant acceleration.
+
+     Uninitialized MVs are (0,0).*/
+  mv_t   analysis_mv[3][2]; /* [cur,prev,prev2][frame,golden] */
+  /*Minimum motion estimation error from the analysis stage.*/
+  int    aerror;
+  /*Minimum 4V motion estimation error from the analysis stage.*/
+  int    aerror4mv;
 
   char coded;
 } macroblock_t;
@@ -131,6 +152,27 @@ typedef quant_table    quant_tables[64];
 
 typedef ogg_int32_t    iquant_table[64];
 typedef iquant_table   iquant_tables[64];
+
+struct oc_mode_scheme_chooser{
+  const int          *mode_bits[8];
+  /*Pointers to the a list containing the index of each mode in the mode
+    alphabet used by each scheme.
+    The first entry points to the dynamic scheme0_ranks, while the remaining
+    7 point to the constant entries stored in OC_MODE_SCHEMES.*/
+  const int          *mode_ranks[8];
+  /*The ranks for each mode when coded with scheme 0.
+    These are optimized so that the more frequent modes have lower ranks.*/
+  int                 scheme0_ranks[OC_NMODES];
+  /*The list of modes, sorted in descending order of frequency, that
+    corresponds to the ranks above.*/
+  int                 scheme0_list[OC_NMODES];
+  /*The number of times each mode has been chosen so far.*/
+  int                 mode_counts[OC_NMODES];
+  /*The list of mode coding schemes, sorted in ascending order of bit cost.*/
+  int                 scheme_list[8];
+  /*The number of bits used by each mode coding scheme.*/
+  int                 scheme_bits[8];
+};
 
 /* Encoder (Compressor) instance -- installed in a theora_state */
 typedef struct CP_INSTANCE {
@@ -205,7 +247,7 @@ typedef struct CP_INSTANCE {
   ogg_uint32_t     dc_bits[2][DC_HUFF_CHOICES];
   ogg_uint32_t     ac_bits[2][AC_HUFF_CHOICES];
 
-  ogg_int32_t      ModeCount[MAX_MODES]; /* Frequency count of modes */
+  oc_mode_scheme_chooser chooser;
 
   ogg_uint32_t     MVBits_0; /* count of bits used by MV coding mode 0 */
   ogg_uint32_t     MVBits_1; /* count of bits used by MV coding mode 1 */
@@ -218,29 +260,6 @@ typedef struct CP_INSTANCE {
   int              GoldenFrameEnabled;
   int              InterPrediction;
   int              MotionCompensation;
-
-  /* Controlling Block Selection */
-  ogg_uint32_t     MVChangeFactor;
-  ogg_uint32_t     FourMvChangeFactor;
-  ogg_uint32_t     MinImprovementForNewMV;
-  ogg_uint32_t     ExhaustiveSearchThresh;
-  ogg_uint32_t     MinImprovementForFourMV;
-  ogg_uint32_t     FourMVThreshold;
-
-  /*********************************************************************/
-
-  ogg_int32_t      MVPixelOffsetY[MAX_SEARCH_SITES];
-  ogg_uint32_t     InterTripOutThresh;
-  unsigned char    MVEnabled;
-  ogg_uint32_t     MotionVectorSearchCount;
-  ogg_uint32_t     FrameMVSearcOunt;
-  ogg_int32_t      MVSearchSteps;
-  ogg_int32_t      MVOffsetX[MAX_SEARCH_SITES];
-  ogg_int32_t      MVOffsetY[MAX_SEARCH_SITES];
-  ogg_int32_t      HalfPixelRef2Offset[9]; /* Offsets for half pixel
-                                               compensation */
-  signed char      HalfPixelXOffset[9];    /* Half pixel MV offsets for X */
-  signed char      HalfPixelYOffset[9];    /* Half pixel MV offsets for Y */
 
   /* hufftables and quant setup ****************************************/
 
@@ -290,39 +309,9 @@ extern void WriteHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES],
 
 extern void PackAndWriteDFArray( CP_INSTANCE *cpi );
 
-extern void InitMotionCompensation ( CP_INSTANCE *cpi );
-
-extern ogg_uint32_t GetMBIntraError (CP_INSTANCE *cpi, 
-				     macroblock_t *mp );
-
-extern ogg_uint32_t GetMBInterError (CP_INSTANCE *cpi,
-                                     unsigned char *SrcPtr,
-                                     unsigned char *RefPtr,
-				     macroblock_t *mp,
-                                     ogg_int32_t LastXMV,
-                                     ogg_int32_t LastYMV );
-
 extern void WriteFrameHeader( CP_INSTANCE *cpi) ;
 
-extern ogg_uint32_t GetMBMVInterError (CP_INSTANCE *cpi,
-                                       unsigned char *RefFramePtr,
-				       macroblock_t *mp,
-                                       ogg_int32_t *MVPixelOffset,
-                                       mv_t *MV );
-
-extern ogg_uint32_t GetMBMVExhaustiveSearch (CP_INSTANCE *cpi,
-                                             unsigned char *RefFramePtr,
-					     macroblock_t *mp,
-                                             mv_t *MV );
-
-extern ogg_uint32_t GetFOURMVExhaustiveSearch (CP_INSTANCE *cpi,
-                                               unsigned char *RefFramePtr,
-					       macroblock_t *mp,
-                                               mv_t *MV ) ;
-
 extern void EncodeData(CP_INSTANCE *cpi);
-
-extern ogg_uint32_t PickIntra( CP_INSTANCE *cpi );
 
 extern ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                               ogg_uint32_t *InterError,

@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2008                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -266,12 +266,51 @@ void InitFrameInfo(CP_INSTANCE *cpi){
     }
   }
 
+  /* fill in macroblock neighbor information for MC analysis */
+  {
+    int row,col,frag;
+    int scanx[4] = {0,1,0,1};
+    int scany[4] = {0,0,1,1};
+
+    for(row=0;row<cpi->macro_v;row++){
+      for(col=0;col<cpi->macro_h;col++){
+	int macroindex = row*cpi->macro_h + col;
+	int count=0;
+
+	/* cneighbors are of four possible already-filled-in neighbors from the eight-neighbor square */
+	if(col)
+	  cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
+	if(col && row)
+	  cpi->macro[macroindex].cneighbors[count++]=macroindex-macro_h-1;
+	if(row)
+	  cpi->macro[macroindex].cneighbors[count++]=macroindex-macro_h;
+	if(row && col+1<macro_h)
+	  cpi->macro[macroindex].cneighbors[count++]=macroindex-macro_h+1;
+	cpi->macro[macroindex].ncneighbors=count;
+
+	/* pneighbors are of the four possible direct neighbors (plus pattern), not the same as cneighbors */
+	count=0;
+	if(col)
+	  cpi->macro[macroindex].pneighbors[count++]=macroindex-1;
+	if(row)
+	  cpi->macro[macroindex].pneighbors[count++]=macroindex-macro_h;
+	if(col+1<macro_h)
+	  cpi->macro[macroindex].pneighbors[count++]=macroindex+1;
+	if(row+1<macro_v)
+	  cpi->macro[macroindex].pneighbors[count++]=macroindex+macro_h;
+	cpi->macro[macroindex].npneighbors=count;
+      }
+    }
+  }
+
   /* fill in 'invalid' macroblock */
   {
     int p,f;
     for(p=0;p<3;p++)
       for(f=0;f<4;f++)
 	cpi->macro[cpi->macro_total].yuv[p][f] = cpi->frag_total;
+    cpi->macro[cpi->macro_total].ncneighbors=0;
+    cpi->macro[cpi->macro_total].npneighbors=0;
   }
 
   /* allocate frames */
