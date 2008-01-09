@@ -260,149 +260,238 @@ void oc_mode_unset(CP_INSTANCE *cpi,
   }
 }
 
-static void SetMBMotionVectorsAndMode(CP_INSTANCE *cpi, 
-				      macroblock_t *mp,
-				      mv_t *mv,
-				      int mode){
-  oc_mode_set(cpi,mp,mode);
-  mp->mv[0] = *mv;
-  mp->mv[1] = *mv;
-  mp->mv[2] = *mv;
-  mp->mv[3] = *mv;
-}
-
-static int BIntraSAD420(CP_INSTANCE *cpi, int fi){
+static int BIntraSAD(CP_INSTANCE *cpi, int fi, int plane){
   int sad = 0;
-  unsigned char *y = frame + cpi->frag_buffer_index[fi];
+  unsigned char *b = cpi->frame + cpi->frag_buffer_index[fi];
   ogg_uint32_t acc = 0;
+  int stride = cpi->stride[plane];
   int j;
+  
   for(j=0;j<8;j++){
-    acc += y[0]; 
-    acc += y[1]; 
-    acc += y[2]; 
-    acc += y[3]; 
-    acc += y[4]; 
-    acc += y[5]; 
-    acc += y[6]; 
-    acc += y[7]; 
-    y += cpi->stride[0];
+    acc += b[0]; 
+    acc += b[1]; 
+    acc += b[2]; 
+    acc += b[3]; 
+    acc += b[4]; 
+    acc += b[5]; 
+    acc += b[6]; 
+    acc += b[7]; 
+    b += stride;
   }
   
-  y = frame + cpi->frag_buffer_index[fi];
+  b = cpi->frame + cpi->frag_buffer_index[fi];
   for(j=0;j<8;j++){
-    sad += abs ((y[0]<<6)-acc); 
-    sad += abs ((y[1]<<6)-acc); 
-    sad += abs ((y[2]<<6)-acc); 
-    sad += abs ((y[3]<<6)-acc); 
-    sad += abs ((y[4]<<6)-acc); 
-    sad += abs ((y[5]<<6)-acc); 
-    sad += abs ((y[6]<<6)-acc); 
-    sad += abs ((y[7]<<6)-acc); 
-    y += cpi->stride[0];
+    sad += abs ((b[0]<<6)-acc); 
+    sad += abs ((b[1]<<6)-acc); 
+    sad += abs ((b[2]<<6)-acc); 
+    sad += abs ((b[3]<<6)-acc); 
+    sad += abs ((b[4]<<6)-acc); 
+    sad += abs ((b[5]<<6)-acc); 
+    sad += abs ((b[6]<<6)-acc); 
+      sad += abs ((b[7]<<6)-acc); 
+      b += stride;
   }
 
   return sad;
 }
 
 /* equivalent to adding up the abs values of the AC components of a block */
-static int MBIntraSAD420(CP_INSTANCE *cpi, int mbi){
-  macroblock_t *mb = &cpi->macro[mbi];
+static int MBIntraCost420(CP_INSTANCE *cpi, int qi, int mbi, int all){
   unsigned char *cp = cpi->frag_coded;
-  int sad = 0;
+  macroblock_t *mb = &cpi->macro[mbi];
+  int cost=0;
 
-  int fi = mb->yuv[0][0];
-  if(cp[fi]) sad += BIntraSAD420(cpi,fi);
-
-  fi = mb->yuv[0][1];
-  if(cp[fi]) sad += BIntraSAD420(cpi,fi);
-
-  fi = mb->yuv[0][2];
-  if(cp[fi]) sad += BIntraSAD420(cpi,fi);
-
-  fi = mb->yuv[0][3];
-  if(cp[fi]) sad += BIntraSAD420(cpi,fi);
-
-  fi = mb->yuv[1][0];
-  if(cp[fi]) sad += BIntraSAD420(cpi,fi);
-
-  fi = mb->yuv[2][0];
-  if(cp[fi]) sad += BIntraSAD420(cpi,fi);
-
-  return sad;
+  /* all frags in a macroblock are valid so long as the macroblock itself is valid */
+  if(mbi < cpi->macro_total){ 
+    if(all || cp[mb->yuv[0][0]])
+      cost += OC_RES_BITRATES[qi][0][OC_MODE_INTRA]
+	[OC_MINI(BIntraSAD(cpi,mb->yuv[0][0],0)>>12,15)];
+    if(all || cp[mb->yuv[0][1]])
+      cost += OC_RES_BITRATES[qi][0][OC_MODE_INTRA]
+	[OC_MINI(BIntraSAD(cpi,mb->yuv[0][1],0)>>12,15)];
+    if(all || cp[mb->yuv[0][2]])
+      cost += OC_RES_BITRATES[qi][0][OC_MODE_INTRA]
+	[OC_MINI(BIntraSAD(cpi,mb->yuv[0][2],0)>>12,15)];
+    if(all || cp[mb->yuv[0][3]])
+      cost += OC_RES_BITRATES[qi][0][OC_MODE_INTRA]
+	[OC_MINI(BIntraSAD(cpi,mb->yuv[0][3],0)>>12,15)];
+    
+    if(all || cp[mb->yuv[1][0]])
+      cost += OC_RES_BITRATES[qi][1][OC_MODE_INTRA]
+	[OC_MINI(BIntraSAD(cpi,mb->yuv[1][0],1)>>12,15)];
+    if(all || cp[mb->yuv[2][0]])
+      cost += OC_RES_BITRATES[qi][2][OC_MODE_INTRA]
+	[OC_MINI(BIntraSAD(cpi,mb->yuv[2][0],2)>>12,15)];
+  }
+  
+  /* Bit costs are stored in the table with extra precision. Round them down to whole bits.*/
+  return cost + (1<<OC_BIT_SCALE-1) >> OC_BIT_SCALE;
 }
 
-static int InterSad(CP_INSTANCE *cpi, int mbi, mv_t mv){
-  macroblock_t *mb = &cpi->macro[mbi];
-  unsigned char *cp = cpi->frag_coded;
-  int sad = 0;
-  int i;
-  for(i=0;i<4;i++){
-    int fi = mb->y[i];
-    if(cp[fi]){
-      unsigned char *y = frame + cpi->frag_buffer_index[fi];
-      ogg_uint32_t acc = 0;
-      int j;
-      for(j=0;j<8;j++){
-	acc += y[0]; 
-	acc += y[1]; 
-	acc += y[2]; 
-	acc += y[3]; 
-	acc += y[4]; 
-	acc += y[5]; 
-	acc += y[6]; 
-	acc += y[7]; 
-	y += cpi->stride[0];
-      }
+static signed char mvmap[2][63] = {
+  {     -15,-15,-14, -14,-13,-13,-12, -12,-11,-11,-10, -10, -9, -9, -8,
+     -8, -7, -7, -6,  -6, -5, -5, -4,  -4, -3, -3, -2,  -2, -1, -1,  0,
+      0,  0,  1,  1,   2,  2,  3,  3,   4,  4,  5,  5,   6,  6,  7,  7, 
+      8,  8,  9,  9,  10, 10, 11, 11,  12, 12, 13, 13,  14, 14, 15, 15 },
+  {      -7, -7, -7,  -7, -6, -6, -6,  -6, -5, -5, -5,  -5, -4, -4, -4,
+     -4, -3, -3, -3,  -3, -2, -2, -2,  -2, -1, -1, -1,  -1,  0,  0,  0,
+      0,  0,  0,  0,   1,  1,  1,  1,   2,  2,  2,  2,   3,  3,  3,  3,
+      4,  4,  4,  4,   5,  5,  5,  5,   6,  6,  6,  6,   7,  7,  7,  7 }
+};
 
-      y = frame + cpi->frag_buffer_index[fi];
-      for(j=0;j<8;j++){
-	sad += abs ((y[0]<<6)-acc); 
-	sad += abs ((y[1]<<6)-acc); 
-	sad += abs ((y[2]<<6)-acc); 
-	sad += abs ((y[3]<<6)-acc); 
-	sad += abs ((y[4]<<6)-acc); 
-	sad += abs ((y[5]<<6)-acc); 
-	sad += abs ((y[6]<<6)-acc); 
-	sad += abs ((y[7]<<6)-acc); 
-	y += cpi->stride[0];
-      }
+static signed char mvmap2[2][63] = {
+  {   -1, 0,-1,  0,-1, 0,-1,  0,-1, 0,-1,  0,-1, 0,-1,
+    0,-1, 0,-1,  0,-1, 0,-1,  0,-1, 0,-1,  0,-1, 0,-1,
+    0, 1, 0, 1,  0, 1, 0, 1,  0, 1, 0, 1,  0, 1, 0, 1,
+    0, 1, 0, 1,  0, 1, 0, 1,  0, 1, 0, 1,  0, 1, 0, 1 },
+  {   -1,-1,-1,  0,-1,-1,-1,  0,-1,-1,-1,  0,-1,-1,-1,
+    0,-1,-1,-1,  0,-1,-1,-1,  0,-1,-1,-1,  0,-1,-1,-1,
+    0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1,
+    0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1 }
+};
+
+static int BInterSAD(CP_INSTANCE *cpi, int fi, int plane, int goldenp, mv_t mv, int qp){
+  int sad = 0;
+  unsigned char *b = cpi->frame + cpi->frag_buffer_index[fi];
+  int mx = mvmap[qp][mv.x+31];
+  int my = mvmap[qp][mv.y+31];
+  int mx2 = mvmap2[qp][mv.x+31];
+  int my2 = mvmap2[qp][mv.y+31];
+  unsigned char *r = (goldenp ? cpi->golden : cpi->recon ) + 
+    cpi->frag_buffer_index[fi] + my * stride + mx;
+  int stride = cpi->stride[plane];
+  int j;
+  
+  if(mx2 || my2){
+    unsigned char *r2 = r1 + my2 * stride + mx2;
+    
+    for(j=0;j<8;j++){
+      sad += abs (b[0]-((r[0]+r2[0])>>1));
+      sad += abs (b[1]-((r[1]+r2[1])>>1));
+      sad += abs (b[2]-((r[2]+r2[2])>>1));
+      sad += abs (b[3]-((r[3]+r2[3])>>1));
+      sad += abs (b[4]-((r[4]+r2[4])>>1));
+      sad += abs (b[5]-((r[5]+r2[5])>>1));
+      sad += abs (b[6]-((r[6]+r2[6])>>1));
+      sad += abs (b[7]-((r[7]+r2[7])>>1));
+      b += stride;
+    }
+    
+  }else{
+    for(j=0;j<8;j++){
+      sad += abs (b[0]-r[0]);
+      sad += abs (b[1]-r[1]);
+      sad += abs (b[2]-r[2]);
+      sad += abs (b[3]-r[3]);
+      sad += abs (b[4]-r[4]);
+      sad += abs (b[5]-r[5]);
+      sad += abs (b[6]-r[6]);
+      sad += abs (b[7]-r[7]);
+      b += stride;
     }
   }
   return sad;
-
-
-
-
-
 }
 
-ogg_uint32_t PickModes(CP_INSTANCE *cpi,
-                       ogg_uint32_t *InterError, 
-		       ogg_uint32_t *IntraError) {
+static int MBInterCost420(CP_INSTANCE *cpi, int mbi, mv_t mv, int goldenp){
+  unsigned char *cp = cpi->frag_coded;
+  macroblock_t *mb = &cpi->macro[mbi];
+  int cost = 0;
+
+  if(cp[mb->yuv[0][0]])
+    cost += OC_RES_BITRATES[qi][0][modei]
+      [OC_MINI(BInterSAD(cpi,mb->yuv[0][0],0,goldenp,mv,0)>>6,15)];
+  if(cp[mb->yuv[0][1]])
+    cost += OC_RES_BITRATES[qi][0][modei]
+      [OC_MINI(BInterSAD(cpi,mb->yuv[0][1],0,goldenp,mv,0)>>6,15)];
+  if(cp[mb->yuv[0][2]])
+    cost += OC_RES_BITRATES[qi][0][modei]
+      [OC_MINI(BInterSAD(cpi,mb->yuv[0][2],0,goldenp,mv,0)>>6,15)];
+  if(cp[mb->yuv[0][3]])
+    cost += OC_RES_BITRATES[qi][0][modei]
+      [OC_MINI(BInterSAD(cpi,mb->yuv[0][3],0,goldenp,mv,0)>>6,15)];
+
+  if(cp[mb->yuv[1][0]])
+    cost += OC_RES_BITRATES[qi][1][modei]
+      [OC_MINI(BInterSAD(cpi,mb->yuv[1][0],1,goldenp,mv,1)>>6,15)];
+  if(cp[mb->yuv[2][0]])
+    cost += OC_RES_BITRATES[qi][2][modei]
+      [OC_MINI(BInterSAD(cpi,mb->yuv[2][0],2,goldenp,mv,1)>>6,15)];
+
+  /* Bit costs are stored in the table with extra precision. Round them down to whole bits.*/
+  return cost + (1<<OC_BIT_SCALE-1) >> OC_BIT_SCALE;
+}
+
+static int MBInter4Cost420(CP_INSTANCE *cpi, int mbi, mv_t mv[4], int goldenp){
+  unsigned char *cp = cpi->frag_coded;
+  macroblock_t *mb = &cpi->macro[mbi];
+  int cost = 0;
+  mv_t ch;
+
+  if(cp[mb->yuv[0][0]])
+    cost += OC_RES_BITRATES[qi][0][modei]
+      [OC_MINI(BInterSAD(cpi,mb->yuv[0][0],0,goldenp,mv[0],0)>>6,15)];
+  if(cp[mb->yuv[0][1]])
+    cost += OC_RES_BITRATES[qi][0][modei]
+      [OC_MINI(BInterSAD(cpi,mb->yuv[0][1],0,goldenp,mv[1],0)>>6,15)];
+  if(cp[mb->yuv[0][2]])
+    cost += OC_RES_BITRATES[qi][0][modei]
+      [OC_MINI(BInterSAD(cpi,mb->yuv[0][2],0,goldenp,mv[2],0)>>6,15)];
+  if(cp[mb->yuv[0][3]])
+    cost += OC_RES_BITRATES[qi][0][modei]
+      [OC_MINI(BInterSAD(cpi,mb->yuv[0][3],0,goldenp,mv[3],0)>>6,15)];
+
+  /* Calculate motion vector as the average of the Y plane ones. */
+  /* Uncoded members are 0,0 and not special-cased */
+  ch.x = mv[0].x + mv[1].x + mv[2].x + mv[3].x;
+  ch.y = mv[0].y + mv[1].y + mv[2].y + mv[3].y;
+  
+  ch.x = ( ch.x >= 0 ? (ch.x + 2) / 4 : (ch.x - 2) / 4);
+  ch.y = ( ch.y >= 0 ? (ch.y + 2) / 4 : (ch.y - 2) / 4);
+  
+  if(cp[mb->yuv[1][0]])
+    cost += OC_RES_BITRATES[qi][1][modei]
+      [OC_MINI(BInterSAD(cpi,mb->yuv[1][0],1,goldenp,ch,1)>>6,15)];
+  if(cp[mb->yuv[2][0]])
+    cost += OC_RES_BITRATES[qi][2][modei]
+      [OC_MINI(BInterSAD(cpi,mb->yuv[2][0],2,goldenp,ch,1)>>6,15)];
+
+  /* Bit costs are stored in the table with extra precision. Round them down to whole bits.*/
+  return cost + (1<<OC_BIT_SCALE-1) >> OC_BIT_SCALE;
+}
+
+int PickModes(CP_INSTANCE *cpi){
   
   unsigned char qi = cpi->BaseQ; // temporary
-
+  superblock_t *sb = cp->super[0];
+  superblock_t *sb_end = sb + cpi->super_n[0];
   mc_state mcenc;
-  mv_t bmvs[4];
   int mbi, bi;
-  
-  oc_mode_scheme_chooser_init(cpi);
+  ogg_uint32_t interbits = 0;
+  ogg_uint32_t intrabits = 0;
+
+  mv_t last_mv = {0,0};
+  mv_t prior_mv = {0,0};
+
   oc_mcenc_start(cpi, &mcenc); 
-  *InterError = 0;
-  *IntraError = 0;
-  cpi->MVBits_0 = 0;
-  cpi->MVBits_1 = 0;
- 
-  /* Scan through macroblocks. */
   for(mbi = 0; mbi<cpi->macro_total; mbi++){
-    ogg_uint32_t  sad[8] = {0,0,0,0, 0,0,0,0};
     macroblock_t *mb     = &cp->macro[mbi];
 
     /*Move the motion vector predictors back a frame */
     memmove(mb->analysis_mv+1,mb->analysis_mv,2*sizeof(mb->analysis_mv[0]));
 
     /* basic 1MV search always done for all macroblocks, coded or not, keyframe or not */
-    oc_mcenc_search(cpi, &mcenc, mbi, 0, bmvs, &errormv, &error4mv);
+    oc_mcenc_search(cpi, &mcenc, mbi, 0, mb->mv);
+
+    /* replace the block MVs for not-coded blocks with (0,0).*/    
+    mb->coded = 0;
+    for ( bi=0; bi<4; bi++ ){
+      fi = mbp->yuv[0][bi];
+      if(!cp[fi]) 
+	mb->mv[fi]={0,0};
+      else
+	mb->coded |= (1<<B);
+    }
 
     if(mb->coded==0){
       /* Don't bother to do a MV search against the golden frame.
@@ -413,258 +502,167 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
     }
 
     /* search golden frame */
-    oc_mcenc_search(cpi, &mcenc, mbi, 1, NULL, &errormv_gold, NULL);
+    oc_mcenc_search(cpi, &mcenc, mbi, 1, NULL);
+  }
+  
+  oc_mode_scheme_chooser_init(cpi);
+  cpi->MVBits_0 = 0;
+  cpi->MVBits_1 = 0;
+ 
+  /* Choose modes; must be done in Hilbert order */
+  for(; sb<sb_end; sb++){
+    for(mbi = 0; mbi<4; mbi++){ /* mode addressing is through Y plane, always 4 MB per SB */
+      ogg_uint32_t  cost[8] = {0,0,0,0, 0,0,0,0};
+      macroblock_t *mb     = sb->m[mbi];
 
-    if(cpi->FrameType == KEY_FRAME){
-      mb->mode = CODE_INTRA;
-      continue;
-    }
-
-    /* Count the number of coded blocks that are luma blocks, and replace the
-       block MVs for not-coded blocks with (0,0).*/    
-    for ( bi=0; bi<4; bi++ ){
-      fi = mbp->yuv[0][bi];
-      if(!cp[fi]) bmvs[bi]={0,0};
-    }
-      
-    /**************************************************************
-     Find the block choice with the lowest estimated coding cost
-
-     NOTE THAT if U or V is coded but no Y from a macro block then the
-     mode will be CODE_INTER_NO_MV as this is the default state to
-     which the mode data structure is initialised in encoder and
-     decoder at the start of each frame. */
-
-    /* calculate INTRA error */
-    for(ci=1;ci<64;ci++)
-      sad[CODE_INTRA]+=abs(efrag->dct_coeffs[ci]);
-   
-
-
-      BestError = HUGE_ERROR;
-      
-      
-      /* Look at the intra coding error. */
-      MBIntraError = GetMBIntraError( cpi, mbp );
-      BestError = (BestError > MBIntraError) ? MBIntraError : BestError;
-      
-      /* Get the golden frame error */
-      MBGFError = GetMBInterError( cpi, cpi->frame, cpi->golden, 
-				   mbp, 0, 0 );
-      BestError = (BestError > MBGFError) ? MBGFError : BestError;
-      
-      /* Calculate the 0,0 case. */
-      MBInterError = GetMBInterError( cpi, cpi->frame,
-				      cpi->lastrecon,
-				      mbp, 0, 0 );
-      BestError = (BestError > MBInterError) ? MBInterError : BestError;
-      
-      /* Measure error for last MV */
-      MBLastInterError =  GetMBInterError( cpi, cpi->frame,
-					   cpi->lastrecon,
-					   mbp, LastInterMVect.x,
-					   LastInterMVect.y );
-      BestError = (BestError > MBLastInterError) ?
-	MBLastInterError : BestError;
-      
-      /* Measure error for prior last MV */
-      MBPriorLastInterError =  GetMBInterError( cpi, cpi->frame,
-						cpi->lastrecon,
-						mbp, PriorLastInterMVect.x,
-						PriorLastInterMVect.y );
-      BestError = (BestError > MBPriorLastInterError) ?
-	MBPriorLastInterError : BestError;
-
-      /* Temporarily force usage of no motionvector blocks */
-      MBInterMVError = HUGE_ERROR;
-      InterMVect.x = 0;  /* Set 0,0 motion vector */
-      InterMVect.y = 0;
-
-      /* If the best error is above the required threshold search
-	 for a new inter MV */
-      if ( BestError > cpi->MinImprovementForNewMV && cpi->MotionCompensation) {
-	/* Use a mix of heirachical and exhaustive searches for
-	   quick mode. */
-	if ( cpi->info.quick_p ) {
-	  MBInterMVError = GetMBMVInterError( cpi, cpi->lastrecon,
-					      mbp,
-					      cpi->MVPixelOffsetY,
-					      &InterMVect );
-
-	  /* If we still do not have a good match try an exhaustive
-	     MBMV search */
-	  if ( (MBInterMVError > cpi->ExhaustiveSearchThresh) &&
-	       (BestError > cpi->ExhaustiveSearchThresh) ) {
-
-	    MBInterMVExError =
-	      GetMBMVExhaustiveSearch( cpi, cpi->lastrecon,
-				       mbp,
-				       &InterMVectEx );
-
-	    /* Is the Variance measure for the EX search
-	       better... If so then use it. */
-	    if ( MBInterMVExError < MBInterMVError ) {
-	      MBInterMVError = MBInterMVExError;
-	      InterMVect.x = InterMVectEx.x;
-	      InterMVect.y = InterMVectEx.y;
-	    }
-	  }
-	}else{
-	  /* Use an exhaustive search */
-	  MBInterMVError =
-	    GetMBMVExhaustiveSearch( cpi, cpi->lastrecon,
-				     mbp,
-				     &InterMVect );
-	}
-
-
-	/* Is the improvement, if any, good enough to justify a new MV */
-	if ( (16 * MBInterMVError < (BestError * cpi->MVChangeFactor)) &&
-	     ((MBInterMVError + cpi->MinImprovementForNewMV) < BestError) ){
-	  BestError = MBInterMVError;
-	}
-
+      if(cpi->FrameType == KEY_FRAME){
+	mb->mode = CODE_INTRA;
+	continue;
       }
 
-      /* If the best error is still above the required threshold
-	 search for a golden frame MV */
-      MBGF_MVError = HUGE_ERROR;
-      GFMVect.x = 0; /* Set 0,0 motion vector */
-      GFMVect.y = 0;
-      if ( BestError > cpi->MinImprovementForNewMV && cpi->MotionCompensation) {
-	/* Do an MV search in the golden reference frame */
-	MBGF_MVError = GetMBMVInterError( cpi, cpi->golden,
-					  mbp,
-					  cpi->MVPixelOffsetY, &GFMVect );
+      /**************************************************************
+       Find the block choice with the lowest estimated coding cost
 
-	/* Measure error for last GFMV */
-	LastMBGF_MVError =  GetMBInterError( cpi, cpi->frame,
-					     cpi->golden,
-					     mbp,
-					     LastGFMVect.x,
-					     LastGFMVect.y );
+       NOTE THAT if U or V is coded but no Y from a macro block then
+       the mode will be CODE_INTER_NO_MV as this is the default
+       state to which the mode data structure is initialised in
+       encoder and decoder at the start of each frame. */
 
-	/* Check against last GF motion vector and reset if the
-	   search has thrown a worse result. */
-	if ( LastMBGF_MVError < MBGF_MVError ) {
-	  GFMVect.x = LastGFMVect.x;
-	  GFMVect.y = LastGFMVect.y;
-	  MBGF_MVError = LastMBGF_MVError;
-	}else{
-	  LastGFMVect.x = GFMVect.x;
-	  LastGFMVect.y = GFMVect.y;
+      /* block coding cost is estimated from correlated SAD metrics */
+
+      cost[CODE_INTER_NO_MV] = MBInterCost420(cpi,mbi,(mv_t){0,0},0);
+
+      /* 'should this have been a keyframe in retrospect' tracking;
+	 includes none of the rest of the inter-style labelling and
+	 flagging overhead, but must count 'uncoded' frags within the
+	 frame */
+      intrabits += MBIntraCost420(cpi,mbi,1);
+
+      if(mb->coded == 0){
+
+	mb->mode = CODE_INTER_NO_MV;
+
+      }else{
+      
+	cost[CODE_INTRA] = MBIntraCost420(cpi,mbi,0);
+	cost[CODE_INTER_PLUS_MV] = MBInterError420(cpi,mbi,mb->analysis_mv[0][0],0);
+	cost[CODE_INTER_LAST_MV] = MBInterError420(cpi,mbi,last_mv,0);
+	cost[CODE_INTER_PRIOR_LAST] = MBInterError420(cpi,mbi,prior_mv,0);
+	cost[CODE_USING_GOLDEN] = MBInterError420(cpi,mbi,(mv_t){0,0},1);
+	cost[CODE_GOLDEN_MV] = MBInterError420(cpi,mbi,mb->analysis_mv[0][1],0);
+	cost[CODE_INTER_FOURMV] = MBInter4Error420(cpi,mbi,mb->mv,0);
+	
+	/* add estimated labelling cost for each mode */
+	for(mode = 0; mode < 8; mode++)
+	  cost[mode] += oc_mode_cost(&cpi->chooser,mode);
+	
+	/* Add the motion vector bits for each mode that requires them.*/
+	mb_mv_bits_0  = MvBits[mb->analysis_mv[0][0].x] + MvBits[mb->analysis_mv[0][0].y];
+	mb_gmv_bits_0 = MvBits[mb->analysis_mv[0][1].x] + MvBits[mb->analysis_mv[0][1].y];
+	mb_4mv_bits_0 = mb_4mv_bits_1 = 0;
+	if(mb->coded & 1){
+	  mb_4mv_bits_0 += MvBits[mb->mv[0].x] + MvBits[mb->mv[0].y];
+	  mb_4mv_bits_1 += 12;
 	}
-
-	/* Is the improvement, if any, good enough to justify a new MV */
-	if ( (16 * MBGF_MVError < (BestError * cpi->MVChangeFactor)) &&
-	     ((MBGF_MVError + cpi->MinImprovementForNewMV) < BestError) ) {
-	  BestError = MBGF_MVError;
+	if(mb->coded & 2){
+	  mb_4mv_bits_0 += MvBits[mb->mv[1].x] + MvBits[mb->mv[1].y];
+	  mb_4mv_bits_1 += 12;
 	}
+	if(mb->coded & 4){
+	  mb_4mv_bits_0 += MvBits[mb->mv[2].x] + MvBits[mb->mv[2].y];
+	  mb_4mv_bits_1 += 12;
+	}
+	if(mb->coded & 8){
+	  mb_4mv_bits_0 += MvBits[mb->mv[3].x] + MvBits[mb->mv[3].y];
+	  mb_4mv_bits_1 += 12;
+	}
+	
+	/* We use the same opportunity cost method of estimating the
+	   cost of coding the motion vectors with the two different
+	   schemes as we do for estimating the cost of the mode
+	   labels. However, because there are only two schemes and
+	   they're both pretty simple, this can just be done inline.*/
+	cost[CODE_INTER_MV] += 
+	  OC_MINI(cp->MVBits_0 + mb_mv_bits_0, cp->MVBits_1+12)-
+	  OC_MINI(cp->MVBits_0, cp->MVBits_1);
+	cost[CODE_GOLDEN_MV] +=
+	  OC_MINI(cp->MVBits_0 + mb_gmv_bits_0, cp->MVBits_1+12)-
+	  OC_MINI(cp->MVBits_0, cp->MVBits_1);
+	cost[CODE_INTER_FOURMV] +=
+	  OC_MINI(cp->MVBits_0 + mb_4mv_bits_0, cp->MVBits_1 + mb_4mv_bits_1)-
+	  OC_MINI(cp->MVBits_0, cp->MVBits_1);
+	
+	/* Finally, pick the mode with the cheapest estimated bit cost.*/
+	mode=0;
+	for(i=1;i<8;i++)
+	  if(cost[i]<cost[mode])
+	    mode=i;
       }
 
-      /* Finally... If the best error is still to high then consider
-	 the 4MV mode */
-      MBInterFOURMVError = HUGE_ERROR;
-      if ( BestError > cpi->FourMVThreshold && cpi->MotionCompensation) {
-	/* Get the 4MV error. */
-	MBInterFOURMVError =
-	  GetFOURMVExhaustiveSearch( cpi, cpi->lastrecon,
-				     mbp,
-				     FourMVect );
+      oc_mode_set(cpi,mb,mode);      
+      interbits += cost[mode];
 
-	/* If the improvement is great enough then use the four MV mode */
-	if ( ((MBInterFOURMVError + cpi->MinImprovementForFourMV) <
-	      BestError) && (16 * MBInterFOURMVError <
-			     (BestError * cpi->FourMvChangeFactor))) {
-	  BestError = MBInterFOURMVError;
-	}
+      switch(mode){
+      case CODE_INTER_MV:
+	cpi->MVBits_0 += mb_mv_bits_0;
+	cpi->MVBits_1 += 12;
+	prior_mv = last_mav;
+	last_mv = mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = mb->analysis_mv[0][0];
+	break;
+      case OC_MODE_INTER_MV_LAST:
+	mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = last_mv;
+	mb->mv = last_mv;
+	break;
+      case OC_MODE_INTER_MV_LAST2:
+	mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = prior_mv;
+	prior_mv = last_mv;
+	last_mv = mb->mv[0];
+        break;
+      case OC_MODE_INTER_MV_FOUR:
+	cpi->MVBits_0 += mb_4mv_bits_0;
+	cpi->MVBits_1 += mb_4mv_bits_1;
+	prior_mv = last_mv;
+	last_mv = mb->mv[3]; /* if coded, it is still used forced to 0,0 according to spec */
+	break;
+      case OC_MODE_GOLDEN_MV:
+	cpi->MVBits_0 += mb_gmv_bits_0;
+	cpi->MVBits_1 += 12;
+	mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = mb->analysis_mv[0][1];
+	break;
+      default:
+	mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = (mv_t){0,0};
+	break;
       }
-
-      /********************************************************
-         end finding the best error
-         *******************************************************
-
-         Figure out what to do with the block we chose
-
-         Over-ride and force intra if error high and Intra error similar
-         Now choose a mode based on lowest error (with bias towards no MV) */
-
-      if ( (BestError > cpi->InterTripOutThresh) &&
-	   (10 * BestError > MBIntraError * 7 ) ) {
-	SetMBMotionVectorsAndMode(cpi,mbp,&ZeroVect,CODE_INTRA);
-      } else if ( BestError == MBInterError ) {
-	SetMBMotionVectorsAndMode(cpi,mbp,&ZeroVect,CODE_INTER_NO_MV);
-      } else if ( BestError == MBGFError ) {
-	SetMBMotionVectorsAndMode(cpi,mbp,&ZeroVect,CODE_USING_GOLDEN);
-      } else if ( BestError == MBLastInterError ) {
-	SetMBMotionVectorsAndMode(cpi,mbp,&LastInterMVect,CODE_INTER_LAST_MV);
-      } else if ( BestError == MBPriorLastInterError ) {
-	SetMBMotionVectorsAndMode(cpi,mbp,&PriorLastInterMVect,CODE_INTER_PRIOR_LAST);
-
-	/* Swap the prior and last MV cases over */
-	TmpMVect = PriorLastInterMVect;
-	PriorLastInterMVect = LastInterMVect;
-	LastInterMVect = TmpMVect;
-
-      } else if ( BestError == MBInterMVError ) {
-
-	SetMBMotionVectorsAndMode(cpi,mbp,&InterMVect,CODE_INTER_PLUS_MV);
-
-	/* Update Prior last mv with last mv */
-	PriorLastInterMVect.x = LastInterMVect.x;
-	PriorLastInterMVect.y = LastInterMVect.y;
-
-	/* Note last inter MV for future use */
-	LastInterMVect.x = InterMVect.x;
-	LastInterMVect.y = InterMVect.y;
-
-	CountMotionVector( cpi, &InterMVect);
-
-      } else if ( BestError == MBGF_MVError ) {
-
-	SetMBMotionVectorsAndMode(cpi,mbp,&GFMVect,CODE_GOLDEN_MV);
-
-	/* Note last inter GF MV for future use */
-	LastGFMVect.x = GFMVect.x;
-	LastGFMVect.y = GFMVect.y;
-
-	CountMotionVector( cpi, &GFMVect);
-      } else if ( BestError == MBInterFOURMVError ) {
-
-	mbp->mode = CODE_INTER_FOURMV;
-	mbp->mv[0] = FourMVect[0];
-	mbp->mv[1] = FourMVect[1];
-	mbp->mv[2] = FourMVect[2];
-	mbp->mv[3] = FourMVect[3];
-
-	/* Note the four MVs values for current macro-block. */
-	CountMotionVector( cpi, &FourMVect[0]);
-	CountMotionVector( cpi, &FourMVect[1]);
-	CountMotionVector( cpi, &FourMVect[2]);
-	CountMotionVector( cpi, &FourMVect[3]);
-
-	/* Update Prior last mv with last mv */
-	PriorLastInterMVect = LastInterMVect;
-
-	/* Note last inter MV for future use */
-	LastInterMVect = FourMVect[3];
-
-      } else {
-
-	SetMBMotionVectorsAndMode(cpi, mbp,&ZeroVect,CODE_INTRA);
-
-      }
-
-      /* setting up mode specific block types
-         *******************************************************/
-
-      *InterError += (BestError>>8);
-      *IntraError += (MBIntraError>>8);
-
     }
   }
 
-  /* Return number of pixels coded */
+  if(cpi->FrameType != KEY_FRAME){
+
+    if(interbits>intrabits) return 1; /* short circuit */
+
+    /* finish adding flagging overhead costs to inter bit counts */
+    
+    if(cpi->MVBits_0 < cpi->MVBits_1)
+      interbits += cpi->MVBits_0;
+    else
+      interbits += cpi->MVBits_1;
+    
+    interbits+=cpi->chooser.scheme_bits[cpi->chooser.scheme_list[0]];
+    
+    if(interbits>intrabits) return 1; /* short circuit */
+
+    /* The easiest way to count the bits needed for coded/not coded fragments is
+       to code them. */
+    {
+      ogg_uint32_t bits = oggpackB_bits(cpi->oggpack_buffer);
+      PackAndWriteDFArray(cpi);
+      interbits += oggpackB_bits(cpi->oggpack_buffer) - bits;
+    }
+    
+    if(interbits>intrabits) return 1; 
+    
+  }
+
   return 0;
 }
 

@@ -26,92 +26,58 @@
 #include "dsp.h"
 #include "codec_internal.h"
 
-static void SetupKeyFrame(CP_INSTANCE *cpi) {
-  int j;
+static void CompressKeyFrame(CP_INSTANCE *cpi){
+
+  oggpackB_reset(cpi->oggbuffer);
+  cpi->FrameType = KEY_FRAME;
 
   /* code all blocks */
   for(j=0;j<cpi->frag_total;j++)
     cpi->frag_coded[j]=1;
   
-  /* Set up for a KEY FRAME */
-  cpi->FrameType = KEY_FRAME;
+  /* mark as video frame */
+  oggpackB_write(cpi->oggbuffer,0,1);
+  
+  /* Write out the frame header information including size. */
+  WriteFrameHeader(cpi);
+  
+  /* still need to go through mode selection to do MV/mode analysis that
+     will be used by subsequent inter frames.  Mode will be special-forced to INTRA for each MB. */
+  PickModes(cpi);
+  
+  /* Encode the data.  */
+  EncodeData(cpi);
+  
+  cpi->LastKeyFrame = 1;
 }
 
-static void UpdateFrame(CP_INSTANCE *cpi){
+static int CompressFrame( CP_INSTANCE *cpi ) {
+  ogg_uint32_t  i;
 
-  /* Initialise bit packing mechanism. */
-#ifndef LIBOGG2
   oggpackB_reset(cpi->oggbuffer);
-#else
-  oggpackB_writeinit(cpi->oggbuffer, cpi->oggbufferstate);
-#endif
+  cpi->FrameType = DELTA_FRAME;
 
+  for ( i = 0; i < cpi->frag_total; i++, fi++ ) 
+    cpi->frag_coded[i] = 1; /* TEMPORARY */
+  
   /* mark as video frame */
   oggpackB_write(cpi->oggbuffer,0,1);
 
   /* Write out the frame header information including size. */
   WriteFrameHeader(cpi);
 
-  /* Encode the data.  */
-  EncodeData(cpi);
-
-  if ( cpi->FrameType == KEY_FRAME ) 
-    cpi->LastKeyFrame = 1;
-
-}
-
-static void CompressKeyFrame(CP_INSTANCE *cpi){
-
-  SetupKeyFrame(cpi);
-
-  /* Compress and output the frist frame. */
-  PickIntra(cpi);
-  UpdateFrame(cpi);
-
-}
-
-static int CompressFrame( CP_INSTANCE *cpi ) {
-  ogg_uint32_t InterError;
-  ogg_uint32_t IntraError;
-  ogg_uint32_t  i;
-  ogg_uint32_t  KFIndicator = 0;
-  int fi = 0;
-
-  for ( i = 0; i < cpi->macro_total; i++) {
-    cpi->macro[i].mode = CODE_INTER_NO_MV;  /* Default coding mode */
-    cpi->macro[i].coded = 0; 
-  }
-
-  /* Clear down the macro block level mode and MV arrays. */
-  for ( i = 0; i < cpi->frag_total; i++, fi++ ) 
-    cpi->frag_coded[fi] = 1; /* TEMPORARY */
-
-  /* Default to delta frames. */
-  cpi->FrameType = DELTA_FRAME;
-
-  /* Select modes and motion vectors for each of the blocks : return
-     an error score for inter and intra */
-  PickModes( cpi, &InterError, &IntraError );
-  
-  /* decide whether we really should have made this frame a key frame */
-  /* forcing out a keyframe if the max interval is up is done at a higher level */
-  if( cpi->info.keyframe_auto_p){
-    if( ( 2* IntraError < 5 * InterError )
-	&& ( KFIndicator >= (ogg_uint32_t)
-	     cpi->info.keyframe_auto_threshold)
-	&& ( cpi->LastKeyFrame > cpi->info.keyframe_mindistance)
-	){
-      CompressKeyFrame(cpi);  /* Code a key frame */
-      return 0;
-    }
-    
+  /* Select modes and motion vectors for each of the blocks */
+  if(PickModes( cpi ) && cpi->info.keyframe_auto_p){
+    /* mode analysis thinks this should have been a keyframe; start over and code as a keyframe instead */
+    CompressKeyFrame(cpi);  /* Code a key frame */
+    return 0;
   }
   
   /* Increment the frames since last key frame count */
   cpi->LastKeyFrame++;
-
-  /* Proceed with the frame update. */
-  UpdateFrame(cpi);
+  
+  /* Encode the data.  */
+  EncodeData(cpi);
   
   return 0;
 }

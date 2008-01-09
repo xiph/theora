@@ -414,16 +414,12 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,
    _mbi:      The macro block index.
    _frame:    The frame to search, either OC_FRAME_PREV or OC_FRAME_GOLD.
    _bmvs:     Returns the individual block motion vectors.
-   _error:    Returns the prediction error for the macro block motion vector.
-   _error4mv: Returns sum of the prediction error for the individual block
-              motion vectors.*/
+
 void oc_mcenc_search(CP_INSTANCE *cpi, 
 		     mc_state *_mcenc,
 		     int _mbi,
 		     int _goldenp,
-		     mv_t *_bmvs,
-		     int *_error,
-		     int *_error4mv){
+		     mv_t *_bmvs){
   
   /*TODO: customize error function for speed/(quality+size) tradeoff.*/
 
@@ -549,7 +545,7 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
         /*Final 4-MV search.*/
         /*Simply use 1/4 of the macro block set A and B threshold as the
            individual block threshold.*/
-	if(_bmvs && _error4mv){
+	if(_bmvs){
 	  t2>>=2;
 	  for(bi=0;bi<4;bi++)
 	    if(best_block_err[bi]>t2){
@@ -611,16 +607,20 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
     }
   }
 
-  *_error=oc_mcenc_ysad_halfpel_mbrefine(cpi,_mcenc,_mbi,&best_vec,best_err,ref_framei);
-  mb->analysis_mv[0][_goldenp]=best_vec;
-  if(_bmvs && _error4mv){
-    *_error4mv=0;
-    for(bi=0;bi<4;bi++){
-      (*_error4mv)+=oc_mcenc_ysad_halfpel_brefine(cpi,_mcenc,_mbi,bi,
-						  &best_block_vec[bi],
-						  best_block_err[bi],
-						  _goldenp);
-      _bmvs[bi]=best_block_vec[bi];
+  {
+
+    int error=oc_mcenc_ysad_halfpel_mbrefine(cpi,_mcenc,_mbi,&best_vec,best_err,ref_framei);
+    if(!_goldenp) mb->aerror = error;
+    mb->analysis_mv[0][_goldenp]=best_vec;
+
+    if(_bmvs){
+      for(bi=0;bi<4;bi++){
+	oc_mcenc_ysad_halfpel_brefine(cpi,_mcenc,_mbi,bi,
+				      &best_block_vec[bi],
+				      best_block_err[bi],
+				      _goldenp);
+	_bmvs[bi]=best_block_vec[bi];
+      }
     }
   }
 }

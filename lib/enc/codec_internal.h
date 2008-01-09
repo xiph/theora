@@ -135,8 +135,6 @@ typedef struct macroblock {
   mv_t   analysis_mv[3][2]; /* [cur,prev,prev2][frame,golden] */
   /*Minimum motion estimation error from the analysis stage.*/
   int    aerror;
-  /*Minimum 4V motion estimation error from the analysis stage.*/
-  int    aerror4mv;
 
   char coded;
 } macroblock_t;
@@ -185,9 +183,6 @@ typedef struct CP_INSTANCE {
 
   /* ogg bitpacker for use in packet coding, other API state */
   oggpack_buffer   *oggbuffer;
-#ifdef LIBOGG2  /* Remember, this is just until we drop libogg1 */
-  ogg_buffer_state *oggbufferstate;
-#endif
 
   unsigned char   *frame;
   unsigned char   *recon;
@@ -313,9 +308,7 @@ extern void WriteFrameHeader( CP_INSTANCE *cpi) ;
 
 extern void EncodeData(CP_INSTANCE *cpi);
 
-extern ogg_uint32_t PickModes(CP_INSTANCE *cpi,
-                              ogg_uint32_t *InterError,
-                              ogg_uint32_t *IntraError);
+extern int PickModes(CP_INSTANCE *cpi);
 
 extern void InitFrameInfo(CP_INSTANCE *cpi);
 

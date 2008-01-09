@@ -169,12 +169,12 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
 	fi = yuv[B];
 	if ( cp[fi] ) {
 	  TransformQuantizeBlock( cpi, mp->mode, fi, mp->mv[B] );
-	  if(cp[fi] && plane == 0)
-	    mp->coded |= (1<<B);
+	  if(!cp[fi] && plane == 0){
+	    mp->coded &= ~(1<<B);
+	    if(!mp->coded) oc_unset_mode(cpi,mp);
+	  }
 	}
       }
-      if ( plane == 0 && mp->coded ) 
-	cpi->ModeCount[mp->mode] ++; 
     }
     return 0;
   case 2:
@@ -184,17 +184,21 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
     for ( ; mp<mp_end; mp++ ) {
       int fi = mp->yuv[plane][0];
       if ( cp[fi] ) {
-	mv_t mv;
-
-	/* Calculate motion vector as the average of the Y plane ones. */
-	/* Uncoded members are 0,0 and not special-cased */
-	mv.x = mp->mv[0].x + mp->mv[1].x + mp->mv[2].x + mp->mv[3].x;
-	mv.y = mp->mv[0].y + mp->mv[1].y + mp->mv[2].y + mp->mv[3].y;
-
-	mv.x = ( mv.x >= 0 ? (mv.x + 2) / 4 : (mv.x - 2) / 4);
-	mv.y = ( mv.y >= 0 ? (mv.y + 2) / 4 : (mv.y - 2) / 4);
 	
-	TransformQuantizeBlock( cpi, mp->mode, fi, mv );
+	if(mp->mode == CODE_INTER_FOURMV){
+	  mv_t mv;
+	  
+	  /* Calculate motion vector as the average of the Y plane ones. */
+	  /* Uncoded members are 0,0 and not special-cased */
+	  mv.x = mp->mv[0].x + mp->mv[1].x + mp->mv[2].x + mp->mv[3].x;
+	  mv.y = mp->mv[0].y + mp->mv[1].y + mp->mv[2].y + mp->mv[3].y;
+	  
+	  mv.x = ( mv.x >= 0 ? (mv.x + 2) / 4 : (mv.x - 2) / 4);
+	  mv.y = ( mv.y >= 0 ? (mv.y + 2) / 4 : (mv.y - 2) / 4);
+
+	  TransformQuantizeBlock( cpi, mp->mode, fi, mv );
+	}else
+	  TransformQuantizeBlock( cpi, mp->mode, fi, mp->mv[0] );
     
       }  
     }
@@ -300,14 +304,7 @@ static const unsigned char NoOpScheme[8] = {0,1,2,3,4,5,6,7};
 
 static void PackModes (CP_INSTANCE *cpi) {
   ogg_uint32_t    i,j;
-
-  unsigned char   Mode0[MAX_MODES];
-  ogg_int32_t     TmpFreq = -1;
-  ogg_int32_t     TmpIndex = -1;
-
-  ogg_uint32_t    BestScheme;
-  ogg_uint32_t    BestSchemeScore;
-  ogg_uint32_t    modes=0;
+  ogg_uint32_t    BestScheme = cpi->chooser.scheme_list[0];
 
   const ogg_uint32_t *ModeWords;
   const ogg_int32_t *ModeBits;
@@ -315,53 +312,6 @@ static void PackModes (CP_INSTANCE *cpi) {
   int SB,MB;
 
   oggpack_buffer *opb=cpi->oggbuffer;
-  for(i=0;i<MAX_MODES;i++)
-    modes+=cpi->ModeCount[i];
-
-  /* Default/ fallback scheme uses MODE_BITS bits per mode entry */
-  BestScheme = (MODE_METHODS - 1);
-  BestSchemeScore = modes * 3;
-  /* Get a bit score for the available predefined schemes. */
-  for (  j = 1; j < (MODE_METHODS - 1); j++ ) {
-    int SchemeScore = 0;
-    const unsigned char *SchemeList = ModeSchemes[j-1];
-
-    /* Find the total bits to code using each avaialable scheme */
-    for ( i = 0; i < MAX_MODES; i++ )
-      SchemeScore += ModeBitLengths[SchemeList[i]] * cpi->ModeCount[i];
-
-    /* Is this the best scheme so far ??? */
-    if ( SchemeScore < BestSchemeScore ) {
-      BestSchemeScore = SchemeScore;
-      BestScheme = j;
-    }
-  }
-
-  /* Order the modes from most to least frequent.  Store result as
-     scheme 0 */
-  {
-    int SchemeScore = 24;
-    
-    for ( j = 0; j < MAX_MODES; j++ ) {
-      TmpFreq = -1;  /* need to re-initialize for each loop */
-      /* Find the most frequent */
-      for ( i = 0; i < MAX_MODES; i++ ) {
-	/* Is this the best scheme so far ??? */
-	if ( cpi->ModeCount[i] > TmpFreq ) {
-	  TmpFreq = cpi->ModeCount[i];
-	  TmpIndex = i;
-	}
-      }
-      SchemeScore += ModeBitLengths[j] * cpi->ModeCount[TmpIndex];
-      cpi->ModeCount[TmpIndex] = -1;
-      Mode0[TmpIndex] = j;
-    }
-
-    if ( SchemeScore < BestSchemeScore ) {
-      BestSchemeScore = SchemeScore;
-      BestScheme = 0;
-    }
-  }
 
   /* Encode the best scheme. */
   oggpackB_write( opb, BestScheme, (ogg_uint32_t)MODE_METHOD_BITS );
@@ -371,9 +321,9 @@ static void PackModes (CP_INSTANCE *cpi) {
   if ( BestScheme == 0 ) {
     for ( j = 0; j < MAX_MODES; j++ ){
       /* Note that the last two entries are implicit */
-      oggpackB_write( opb, Mode0[j], (ogg_uint32_t)MODE_BITS );
+      oggpackB_write( opb, cpi->chooser.scheme0_ranks, (ogg_uint32_t)MODE_BITS );
     }
-    ModeScheme = Mode0;
+    ModeScheme = cpi->chooser.scheme0_ranks;
     ModeWords = ModeBitPatterns;
     ModeBits = ModeBitLengths;
   }
