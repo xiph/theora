@@ -115,12 +115,12 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _ycbcr){
   }
   yuv.y_width=_ycbcr[0].width;
   yuv.y_height=_ycbcr[0].height;
-  yuv.y_stride=_ycbcr[0].ystride;
+  yuv.y_stride=_ycbcr[0].stride;
   yuv.y=_ycbcr[0].data;
   yuv.uv_width=_ycbcr[1].width;
   yuv.uv_height=_ycbcr[1].height;
-  if(_ycbcr[1].ystride==_ycbcr[2].ystride){
-    yuv.uv_stride=_ycbcr[1].ystride;
+  if(_ycbcr[1].stride==_ycbcr[2].stride){
+    yuv.uv_stride=_ycbcr[1].stride;
     yuv.u=_ycbcr[1].data;
     yuv.v=_ycbcr[2].data;
     tmpbuf=NULL;
@@ -140,14 +140,14 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _ycbcr){
     for(i=0;i<yuv.uv_height;i++){
       memcpy(dst,src,yuv.uv_width);
       dst+=yuv.uv_width;
-      src+=_ycbcr[1].ystride;
+      src+=_ycbcr[1].stride;
     }
     yuv.v=dst;
     src=_ycbcr[2].data;
     for(i=0;i<yuv.uv_height;i++){
       memcpy(dst,src,yuv.uv_width);
       dst+=yuv.uv_width;
-      src+=_ycbcr[2].ystride;
+      src+=_ycbcr[2].stride;
     }
     yuv.uv_stride=yuv.uv_width;
   }

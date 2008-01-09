@@ -189,10 +189,10 @@ int theora_decode_YUVout(theora_state *_td,yuv_buffer *_yuv){
   if(ret>=0){
     _yuv->y_width=buf[0].width;
     _yuv->y_height=buf[0].height;
-    _yuv->y_stride=buf[0].ystride;
+    _yuv->y_stride=buf[0].stride;
     _yuv->uv_width=buf[1].width;
     _yuv->uv_height=buf[1].height;
-    _yuv->uv_stride=buf[1].ystride;
+    _yuv->uv_stride=buf[1].stride;
     _yuv->y=buf[0].data;
     _yuv->u=buf[1].data;
     _yuv->v=buf[2].data;

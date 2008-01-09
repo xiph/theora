@@ -486,12 +486,12 @@ static void oc_state_ref_bufs_init(oc_theora_state *_state){
   /*Set up the width, height and stride for the image buffers.*/
   _state->ref_frame_bufs[0][0].width=info->frame_width;
   _state->ref_frame_bufs[0][0].height=info->frame_height;
-  _state->ref_frame_bufs[0][0].ystride=yhstride;
+  _state->ref_frame_bufs[0][0].stride=yhstride;
   _state->ref_frame_bufs[0][1].width=_state->ref_frame_bufs[0][2].width=
    info->frame_width>>!(info->pixel_fmt&1);
   _state->ref_frame_bufs[0][1].height=_state->ref_frame_bufs[0][2].height=
    info->frame_height>>!(info->pixel_fmt&2);
-  _state->ref_frame_bufs[0][1].ystride=_state->ref_frame_bufs[0][2].ystride=
+  _state->ref_frame_bufs[0][1].stride=_state->ref_frame_bufs[0][2].stride=
    chstride;
   memcpy(_state->ref_frame_bufs[1],_state->ref_frame_bufs[0],
    sizeof(_state->ref_frame_bufs[0]));
@@ -615,15 +615,15 @@ void oc_state_borders_fill_rows(oc_theora_state *_state,int _refi,int _pli,
   int               hpadding;
   hpadding=OC_UMV_PADDING>>(_pli!=0&&!(_state->info.pixel_fmt&1));
   iplane=_state->ref_frame_bufs[_refi]+_pli;
-  apix=iplane->data+_y0*iplane->ystride;
+  apix=iplane->data+_y0*iplane->stride;
   bpix=apix+iplane->width-1;
-  epix=iplane->data+_yend*iplane->ystride;
+  epix=iplane->data+_yend*iplane->stride;
   /*Note the use of != instead of <, which allows ystride to be negative.*/
   while(apix!=epix){
     memset(apix-hpadding,apix[0],hpadding);
     memset(bpix+1,bpix[0],hpadding);
-    apix+=iplane->ystride;
-    bpix+=iplane->ystride;
+    apix+=iplane->stride;
+    bpix+=iplane->stride;
   }
 }
 
@@ -646,13 +646,13 @@ void oc_state_borders_fill_caps(oc_theora_state *_state,int _refi,int _pli){
   iplane=_state->ref_frame_bufs[_refi]+_pli;
   fullw=iplane->width+(hpadding<<1);
   apix=iplane->data-hpadding;
-  bpix=iplane->data+(iplane->height-1)*iplane->ystride-hpadding;
-  epix=apix-iplane->ystride*vpadding;
+  bpix=iplane->data+(iplane->height-1)*iplane->stride-hpadding;
+  epix=apix-iplane->stride*vpadding;
   while(apix!=epix){
-    memcpy(apix-iplane->ystride,apix,fullw);
-    memcpy(bpix+iplane->ystride,bpix,fullw);
-    apix-=iplane->ystride;
-    bpix+=iplane->ystride;
+    memcpy(apix-iplane->stride,apix,fullw);
+    memcpy(bpix+iplane->stride,bpix,fullw);
+    apix-=iplane->stride;
+    bpix+=iplane->stride;
   }
 }
 
@@ -705,7 +705,7 @@ void oc_state_fill_buffer_ptrs(oc_theora_state *_state,int _buf_idx,
         frag->buffer[_buf_idx]=hpix;
         hpix+=8;
       }
-      vpix+=iplane->ystride<<3;
+      vpix+=iplane->stride<<3;
     }
   }
 }
@@ -902,7 +902,7 @@ void oc_state_frag_recon_c(oc_theora_state *_state,oc_fragment *_frag,
   }
   /*Fill in the target buffer.*/
   dst_framei=_state->ref_frame_idx[OC_FRAME_SELF];
-  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].ystride;
+  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].stride;
   /*For now ystride values in all ref frames assumed to be equal.*/
   if(_frag->mbmode==OC_MODE_INTRA){
     oc_frag_recon_intra(_state,_frag->buffer[dst_framei],dst_ystride,res_buf);
@@ -912,7 +912,7 @@ void oc_state_frag_recon_c(oc_theora_state *_state,oc_fragment *_frag,
     int ref_ystride;
     int mvoffsets[2];
     ref_framei=_state->ref_frame_idx[OC_FRAME_FOR_MODE[_frag->mbmode]];
-    ref_ystride=_state->ref_frame_bufs[ref_framei][_pli].ystride;
+    ref_ystride=_state->ref_frame_bufs[ref_framei][_pli].stride;
     if(oc_state_get_mv_offsets(_state,mvoffsets,_frag->mv[0],_frag->mv[1],
      ref_ystride,_pli)>1){
       oc_frag_recon_inter2(_state,_frag->buffer[dst_framei],dst_ystride,
@@ -950,8 +950,8 @@ void oc_state_frag_copy_c(const oc_theora_state *_state,const int *_fragis,
   int        src_ystride;
   dst_framei=_state->ref_frame_idx[_dst_frame];
   src_framei=_state->ref_frame_idx[_src_frame];
-  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].ystride;
-  src_ystride=_state->ref_frame_bufs[src_framei][_pli].ystride;
+  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].stride;
+  src_ystride=_state->ref_frame_bufs[src_framei][_pli].stride;
   fragi_end=_fragis+_nfragis;
   for(fragi=_fragis;fragi<fragi_end;fragi++){
     oc_fragment   *frag;
@@ -1062,17 +1062,17 @@ void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
     while(frag<frag_end){
       if(frag->coded){
         if(frag>frag0){
-          loop_filter_h(frag->buffer[_refi],iplane->ystride,_bv);
+          loop_filter_h(frag->buffer[_refi],iplane->stride,_bv);
         }
         if(frag0>frag_top){
-          loop_filter_v(frag->buffer[_refi],iplane->ystride,_bv);
+          loop_filter_v(frag->buffer[_refi],iplane->stride,_bv);
         }
         if(frag+1<frag_end&&!(frag+1)->coded){
-          loop_filter_h(frag->buffer[_refi]+8,iplane->ystride,_bv);
+          loop_filter_h(frag->buffer[_refi]+8,iplane->stride,_bv);
         }
         if(frag+fplane->nhfrags<frag_bot&&!(frag+fplane->nhfrags)->coded){
           loop_filter_v((frag+fplane->nhfrags)->buffer[_refi],
-           iplane->ystride,_bv);
+           iplane->stride,_bv);
         }
       }
 
@@ -1110,7 +1110,7 @@ void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
 	  for(i=0,j=0;j<8;j++){
 	    for(k=0;k<8;k++,i++)
 	      f->loop[i] = src[k];
-	    src+=iplane->ystride;
+	    src+=iplane->stride;
 	  }
 	}
       }
@@ -1177,9 +1177,9 @@ int oc_state_dump_frame(const oc_theora_state *_state,int _frame,
   y_row=_state->ref_frame_bufs[framei][0].data;
   u_row=_state->ref_frame_bufs[framei][1].data;
   v_row=_state->ref_frame_bufs[framei][2].data;
-  y_stride=_state->ref_frame_bufs[framei][0].ystride;
-  u_stride=_state->ref_frame_bufs[framei][1].ystride;
-  v_stride=_state->ref_frame_bufs[framei][2].ystride;
+  y_stride=_state->ref_frame_bufs[framei][0].stride;
+  u_stride=_state->ref_frame_bufs[framei][1].stride;
+  v_stride=_state->ref_frame_bufs[framei][2].stride;
   /*Chroma up-sampling is just done with a box filter.
     This is very likely what will actually be used in practice on a real
      display, and also removes one more layer to search in for the source of

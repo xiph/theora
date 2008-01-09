@@ -1366,9 +1366,9 @@ static int oc_dec_postprocess_init(oc_dec_ctx *_dec){
        _dec->pp_frame_data,frame_sz*sizeof(_dec->pp_frame_data[0]));
       _dec->pp_frame_buf[0].width=_dec->state.info.frame_width;
       _dec->pp_frame_buf[0].height=_dec->state.info.frame_height;
-      _dec->pp_frame_buf[0].ystride=-_dec->pp_frame_buf[0].width;
+      _dec->pp_frame_buf[0].stride=-_dec->pp_frame_buf[0].width;
       _dec->pp_frame_buf[0].data=_dec->pp_frame_data+
-       (1-_dec->pp_frame_buf[0].height)*_dec->pp_frame_buf[0].ystride;
+       (1-_dec->pp_frame_buf[0].height)*_dec->pp_frame_buf[0].stride;
     }
     else{
       size_t y_sz;
@@ -1386,15 +1386,15 @@ static int oc_dec_postprocess_init(oc_dec_ctx *_dec){
        _dec->pp_frame_data,frame_sz*sizeof(_dec->pp_frame_data[0]));
       _dec->pp_frame_buf[0].width=_dec->state.info.frame_width;
       _dec->pp_frame_buf[0].height=_dec->state.info.frame_height;
-      _dec->pp_frame_buf[0].ystride=_dec->pp_frame_buf[0].width;
+      _dec->pp_frame_buf[0].stride=_dec->pp_frame_buf[0].width;
       _dec->pp_frame_buf[0].data=_dec->pp_frame_data;
       _dec->pp_frame_buf[1].width=c_w;
       _dec->pp_frame_buf[1].height=c_h;
-      _dec->pp_frame_buf[1].ystride=_dec->pp_frame_buf[1].width;
+      _dec->pp_frame_buf[1].stride=_dec->pp_frame_buf[1].width;
       _dec->pp_frame_buf[1].data=_dec->pp_frame_buf[0].data+y_sz;
       _dec->pp_frame_buf[2].width=c_w;
       _dec->pp_frame_buf[2].height=c_h;
-      _dec->pp_frame_buf[2].ystride=_dec->pp_frame_buf[2].width;
+      _dec->pp_frame_buf[2].stride=_dec->pp_frame_buf[2].width;
       _dec->pp_frame_buf[2].data=_dec->pp_frame_buf[1].data+c_sz;
       oc_ycbcr_buffer_flip(_dec->pp_frame_buf,_dec->pp_frame_buf);
     }
@@ -1602,7 +1602,7 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
   {
     int i,j,k;
     int framei=_dec->state.ref_frame_idx[OC_FRAME_SELF];
-    int ystride=_dec->state.ref_frame_bufs[framei][_pli].ystride;
+    int ystride=_dec->state.ref_frame_bufs[framei][_pli].stride;
     int *fragi_end = _pipe->coded_fragis[_pli];
     int *fragi = fragi_end-_pipe->ncoded_fragis[_pli];
 
@@ -1754,48 +1754,48 @@ static void oc_dec_deblock_frag_rows(oc_dec_ctx *_dec,
    (_fragy_end+notdone-_fragy0-notstart)*fplane->nhfrags*sizeof(variance[0]));
   /*Except for the first time, we want to point to the middle of the row.*/
   y=(_fragy0<<3)+(notstart<<2);
-  dst=_dst->data+y*_dst->ystride;
-  src=_src->data+y*_src->ystride;
+  dst=_dst->data+y*_dst->stride;
+  src=_src->data+y*_src->stride;
   for(;y<4;y++){
     memcpy(dst,src,_dst->width*sizeof(dst[0]));
-    dst+=_dst->ystride;
-    src+=_src->ystride;
+    dst+=_dst->stride;
+    src+=_src->stride;
   }
   /*We also want to skip the last row in the frame for this loop.*/
   y_end=_fragy_end-!notdone<<3;
   for(;y<y_end;y+=8){
     qstep=_dec->pp_dc_scale[*dc_qi];
     flimit=(qstep*3)>>2;
-    oc_filter_hedge(dst,_dst->ystride,src-_src->ystride,_src->ystride,
+    oc_filter_hedge(dst,_dst->stride,src-_src->stride,_src->stride,
      qstep,flimit,variance,variance+fplane->nhfrags);
     variance++;
     dc_qi++;
     for(x=8;x<_dst->width;x+=8){
       qstep=_dec->pp_dc_scale[*dc_qi];
       flimit=(qstep*3)>>2;
-      oc_filter_hedge(dst+x,_dst->ystride,src+x-_src->ystride,_src->ystride,
+      oc_filter_hedge(dst+x,_dst->stride,src+x-_src->stride,_src->stride,
        qstep,flimit,variance,variance+fplane->nhfrags);
-      oc_filter_vedge(dst+x-(_dst->ystride<<2)-4,_dst->ystride,
+      oc_filter_vedge(dst+x-(_dst->stride<<2)-4,_dst->stride,
        qstep,flimit,variance-1);
       variance++;
       dc_qi++;
     }
-    dst+=_dst->ystride<<3;
-    src+=_src->ystride<<3;
+    dst+=_dst->stride<<3;
+    src+=_src->stride<<3;
   }
   /*And finally, handle the last row in the frame, if it's in the range.*/
   if(!notdone){
     for(;y<_dst->height;y++){
       memcpy(dst,src,_dst->width*sizeof(dst[0]));
-      dst+=_dst->ystride;
-      src+=_src->ystride;
+      dst+=_dst->stride;
+      src+=_src->stride;
     }
     /*Filter the last row of vertical block edges.*/
     dc_qi++;
     for(x=8;x<_dst->width;x+=8){
       qstep=_dec->pp_dc_scale[*dc_qi++];
       flimit=(qstep*3)>>2;
-      oc_filter_vedge(dst+x-(_dst->ystride<<3)-4,_dst->ystride,
+      oc_filter_vedge(dst+x-(_dst->stride<<3)-4,_dst->stride,
        qstep,flimit,variance++);
     }
   }
@@ -1928,7 +1928,7 @@ static void oc_dec_dering_frag_rows(oc_dec_ctx *_dec,th_img_plane *_img,
   strong=_dec->pp_level>=(_pli?OC_PP_LEVEL_SDERINGC:OC_PP_LEVEL_SDERINGY);
   sthresh=_pli?OC_DERING_THRESH4:OC_DERING_THRESH3;
   y=_fragy0<<3;
-  idata=iplane->data+y*iplane->ystride;
+  idata=iplane->data+y*iplane->stride;
   y_end=_fragy_end<<3;
   for(;y<y_end;y+=8){
     for(x=0;x<iplane->width;x+=8){
@@ -1939,30 +1939,30 @@ static void oc_dec_dering_frag_rows(oc_dec_ctx *_dec,th_img_plane *_img,
       var=*variance;
       b=(x<=0)|(x+8>=iplane->width)<<1|(y<=0)<<2|(y+8>=iplane->height)<<3;
       if(strong&&var>sthresh){
-        oc_dering_block(idata+x,iplane->ystride,b,
+        oc_dering_block(idata+x,iplane->stride,b,
          _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],1);
         if(_pli||(b&1)&&*(variance-1)>OC_DERING_THRESH4||
          (b&2)&&variance[1]>OC_DERING_THRESH4||
          (b&4)&&*(variance-fplane->nvfrags)>OC_DERING_THRESH4||
          (b&8)&&variance[fplane->nvfrags]>OC_DERING_THRESH4){
-          oc_dering_block(idata+x,iplane->ystride,b,
+          oc_dering_block(idata+x,iplane->stride,b,
            _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],1);
-          oc_dering_block(idata+x,iplane->ystride,b,
+          oc_dering_block(idata+x,iplane->stride,b,
            _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],1);
         }
       }
       else if(var>OC_DERING_THRESH2){
-        oc_dering_block(idata+x,iplane->ystride,b,
+        oc_dering_block(idata+x,iplane->stride,b,
          _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],1);
       }
       else if(var>OC_DERING_THRESH1){
-        oc_dering_block(idata+x,iplane->ystride,b,
+        oc_dering_block(idata+x,iplane->stride,b,
          _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],0);
       }
       frag++;
       variance++;
     }
-    idata+=iplane->ystride<<3;
+    idata+=iplane->stride<<3;
   }
 }
 

@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2008                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -74,15 +74,15 @@ granulepos_test_encode (int frequency)
   framedata = calloc(ti.frame_height, ti.frame_width);
   yuv[0].width = ti.frame_width;
   yuv[0].height = ti.frame_height;
-  yuv[0].ystride = ti.frame_width;
+  yuv[0].stride = ti.frame_width;
   yuv[0].data = framedata;
   yuv[1].width = ti.frame_width / 2;
   yuv[1].height = ti.frame_width / 2;
-  yuv[1].ystride = ti.frame_width;
+  yuv[1].stride = ti.frame_width;
   yuv[1].data = framedata;
   yuv[2].width = ti.frame_width / 2;
   yuv[2].height = ti.frame_width / 2;
-  yuv[2].ystride = ti.frame_width;
+  yuv[2].stride = ti.frame_width;
   yuv[2].data = framedata;
 
   INFO ("+ Checking granulepos generation");

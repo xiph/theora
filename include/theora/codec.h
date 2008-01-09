@@ -130,8 +130,8 @@ typedef enum{
  * This contains the image data in a left-to-right, top-down format.
  * Each row of pixels is stored contiguously in memory, but successive rows
  *  need not be.
- * Use \a ystride to compute the offset of the next row.
- * The encoder accepts both positive \a ystride values (top-down in memory) and
+ * Use \a stride to compute the offset of the next row.
+ * The encoder accepts both positive \a stride values (top-down in memory) and
  *  negative (bottom-up in memory).
  * The decoder currently always generates images with positive strides.*/
 typedef struct{
@@ -140,7 +140,7 @@ typedef struct{
   /**The height of this plane.*/
   int            height;
   /**The offset in bytes between successive rows.*/
-  int            ystride;
+  int            stride;
   /**A pointer to the beginning of the first row.*/
   unsigned char *data;
 }th_img_plane;

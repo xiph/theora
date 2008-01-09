@@ -1028,16 +1028,16 @@ int fetch_and_process_video(FILE *video,ogg_page *videopage,
          with the reference encoder.*/
       ycbcr[0].width=frame_w;
       ycbcr[0].height=frame_h;
-      ycbcr[0].ystride=pic_w;
+      ycbcr[0].stride=pic_w;
       ycbcr[0].data=yuvframe[0]-pic_x-pic_y*pic_w;
       ycbcr[1].width=frame_c_w;
       ycbcr[1].height=frame_c_h;
-      ycbcr[1].ystride=c_w;
+      ycbcr[1].stride=c_w;
       ycbcr[1].data=yuvframe[0]+pic_sz-(pic_x/dst_c_dec_h)-
        (pic_y/dst_c_dec_v)*c_w;
       ycbcr[2].width=frame_c_w;
       ycbcr[2].height=frame_c_h;
-      ycbcr[2].ystride=c_w;
+      ycbcr[2].stride=c_w;
       ycbcr[2].data=ycbcr[1].data+c_sz;
 
       th_encode_ycbcr_in(td,ycbcr);

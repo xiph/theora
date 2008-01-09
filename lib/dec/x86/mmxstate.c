@@ -145,7 +145,7 @@ void oc_state_frag_recon_mmx(oc_theora_state *_state,oc_fragment *_frag,
   }
   /*Fill in the target buffer.*/
   dst_framei=_state->ref_frame_idx[OC_FRAME_SELF];
-  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].ystride;
+  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].stride;
   /*For now ystride values in all ref frames assumed to be equal.*/
   if(_frag->mbmode==OC_MODE_INTRA){
     oc_frag_recon_intra_mmx(_frag->buffer[dst_framei],dst_ystride,res_buf);
@@ -155,7 +155,7 @@ void oc_state_frag_recon_mmx(oc_theora_state *_state,oc_fragment *_frag,
     int ref_ystride;
     int mvoffsets[2];
     ref_framei=_state->ref_frame_idx[OC_FRAME_FOR_MODE[_frag->mbmode]];
-    ref_ystride=_state->ref_frame_bufs[ref_framei][_pli].ystride;
+    ref_ystride=_state->ref_frame_bufs[ref_framei][_pli].stride;
     if(oc_state_get_mv_offsets(_state,mvoffsets,_frag->mv[0],_frag->mv[1],
      ref_ystride,_pli)>1){
       oc_frag_recon_inter2_mmx(_frag->buffer[dst_framei],dst_ystride,
@@ -187,8 +187,8 @@ void oc_state_frag_copy_mmx(const oc_theora_state *_state,const int *_fragis,
   long       src_ystride;
   dst_framei=_state->ref_frame_idx[_dst_frame];
   src_framei=_state->ref_frame_idx[_src_frame];
-  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].ystride;
-  src_ystride=_state->ref_frame_bufs[src_framei][_pli].ystride;
+  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].stride;
+  src_ystride=_state->ref_frame_bufs[src_framei][_pli].stride;
   fragi_end=_fragis+_nfragis;
   for(fragi=_fragis;fragi<fragi_end;fragi++){
     oc_fragment   *frag;
@@ -626,17 +626,17 @@ void oc_state_loop_filter_frag_rows_mmx(oc_theora_state *_state,int *_bv,
     while(frag<frag_end){
       if(frag->coded){
         if(frag>frag0){
-          loop_filter_h(frag->buffer[_refi],iplane->ystride,ll);
+          loop_filter_h(frag->buffer[_refi],iplane->stride,ll);
         }
         if(frag0>frag_top){
-          loop_filter_v(frag->buffer[_refi],iplane->ystride,ll);
+          loop_filter_v(frag->buffer[_refi],iplane->stride,ll);
         }
         if(frag+1<frag_end&&!(frag+1)->coded){
-          loop_filter_h(frag->buffer[_refi]+8,iplane->ystride,ll);
+          loop_filter_h(frag->buffer[_refi]+8,iplane->stride,ll);
         }
         if(frag+fplane->nhfrags<frag_bot&&!(frag+fplane->nhfrags)->coded){
           loop_filter_v((frag+fplane->nhfrags)->buffer[_refi],
-           iplane->ystride,ll);
+           iplane->stride,ll);
         }
       }
       frag++;
