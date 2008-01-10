@@ -111,7 +111,7 @@ static const int OC_SQUARE_SITES[11][8]={
 static void oc_mcenc_find_candidates(CP_INSTANCE *cpi, 
 				     mc_state *_mcenc,
 				     int _mbi,
-				     int _which_frame){
+				     int _goldenp){
   macroblock_t *nemb;
   macroblock_t *emb;
   ogg_int32_t   mvapw1;
@@ -121,24 +121,22 @@ static void oc_mcenc_find_candidates(CP_INSTANCE *cpi,
   int           i;
   emb = &cpi->macro[_mbi];
   if(emb->ncneighbors>0){
+
     /*Fill in the first part of set A: the last motion vectors used and the
        vectors from adjacent blocks.*/
     /*Skip a position to store the median predictor in.*/
+
     ncandidates=1;
     for(i=0;i<emb->ncneighbors;i++){
-      nemb=&cpi->macro[emb->cneighbors[i]];
-      _mcenc->candidates[ncandidates].x = nemb->analysis_mv[0][_which_frame].x;
-      _mcenc->candidates[ncandidates].y = nemb->analysis_mv[0][_which_frame].y;
-      ncandidates++;
+      nemb = &cpi->macro[emb->cneighbors[i]];
+      _mcenc->candidates[ncandidates++] = nemb->analysis_mv[0][_goldenp];
     }
-    /*Add a few additional vectors to set A: the vector used in the previous
-       frame and the (0,0) vector.*/
-    _mcenc->candidates[ncandidates].x=emb->analysis_mv[1][_which_frame].x;
-    _mcenc->candidates[ncandidates].y=emb->analysis_mv[1][_which_frame].y;
-    ncandidates++;
-    _mcenc->candidates[ncandidates].x=0;
-    _mcenc->candidates[ncandidates].y=0;
-    ncandidates++;
+
+    /* Add a few additional vectors to set A: the vector used in the
+       previous frame and the (0,0) vector.*/
+    _mcenc->candidates[ncandidates++] = emb->analysis_mv[1][_goldenp];
+    _mcenc->candidates[ncandidates++] = (mv_t){0,0};
+
     /*Use the first three vectors of set A to find our best predictor: their
        median.*/
     memcpy(a,_mcenc->candidates+1,sizeof(a));
@@ -148,37 +146,39 @@ static void oc_mcenc_find_candidates(CP_INSTANCE *cpi,
     OC_SORT2I(a[1].y,a[2].y);
     OC_SORT2I(a[0].x,a[1].x);
     OC_SORT2I(a[0].y,a[1].y);
-    _mcenc->candidates[0].x=a[1].x;
-    _mcenc->candidates[0].y=a[1].y;
-  }
-  /*The upper-left most macro block has no neighbors at all
-    We just use 0,0 as the median predictor and its previous motion vector
-     for set A.*/
-  else{
-    _mcenc->candidates[0].x=0;
-    _mcenc->candidates[0].y=0;
-    _mcenc->candidates[1].x=emb->analysis_mv[1][_which_frame].x;
-    _mcenc->candidates[1].y=emb->analysis_mv[1][_which_frame].y;
+    _mcenc->candidates[0] = a[1];
+
+  } else {
+
+    /*The upper-left most macro block has no neighbors at all
+      We just use 0,0 as the median predictor and its previous motion vector
+      for set A.*/
+
+    _mcenc->candidates[0] = (mv_t){0,0};
+    _mcenc->candidates[1] = emb->analysis_mv[1][_goldenp];
     ncandidates=2;
   }
+
   /*Fill in set B: accelerated predictors for this and adjacent macro
      blocks.*/
-  _mcenc->setb0=ncandidates;
-  mvapw1=_mcenc->mvapw1[_which_frame];
-  mvapw2=_mcenc->mvapw2[_which_frame];
+
+  _mcenc->setb0 = ncandidates;
+  mvapw1=_mcenc->mvapw1[_goldenp];
+  mvapw2=_mcenc->mvapw2[_goldenp];
+
   /*The first time through the loop use the current macro block.*/
   nemb=emb;
   for(i=0;;i++){
     _mcenc->candidates[ncandidates].x =
-      OC_DIV_ROUND_POW2(nemb->analysis_mv[1][_which_frame].x*mvapw1-
-			nemb->analysis_mv[2][_which_frame].x*mvapw2,16,0x8000);
+      OC_DIV_ROUND_POW2(nemb->analysis_mv[1][_goldenp].x*mvapw1-
+			nemb->analysis_mv[2][_goldenp].x*mvapw2,16,0x8000);
     _mcenc->candidates[ncandidates].y =
-      OC_DIV_ROUND_POW2(nemb->analysis_mv[1][_which_frame].y*mvapw1-
-			nemb->analysis_mv[2][_which_frame].y*mvapw2,16,0x8000);
+      OC_DIV_ROUND_POW2(nemb->analysis_mv[1][_goldenp].y*mvapw1-
+			nemb->analysis_mv[2][_goldenp].y*mvapw2,16,0x8000);
     _mcenc->candidates[ncandidates].x = OC_CLAMPI(-31,_mcenc->candidates[ncandidates].x,31);
     _mcenc->candidates[ncandidates].y = OC_CLAMPI(-31,_mcenc->candidates[ncandidates].y,31);
     ncandidates++;
-    if(i>=emb->npneighbors)break;
+    if(i >= emb->npneighbors) break;
     nemb=&cpi->macro[emb->pneighbors[i]];
   }
   /*Truncate to full-pel positions.*/
@@ -199,7 +199,7 @@ static int oc_sad8_halfpel(const unsigned char *_cur,
   err=0;
   for(i=0;i<8;i++){
     for(j=0;j<8;j++)
-      err+=abs(_cur[j]-((int)_ref0[j]+_ref1[j]>>1));
+      err+=abs(_cur[j]-(((int)_ref0[j]+_ref1[j])>>1));
     _cur+=_stride;
     _ref0+=_stride;
     _ref1+=_stride;
@@ -235,14 +235,12 @@ static int oc_sad16_halfpel(CP_INSTANCE *cpi,
   err=0;
   for(i=0;i<4;i++){
     int fi = mb->yuv[0][i];
-    if(fi < cpi->frag_total){ /* last fragment is the 'invalid fragment' */
-      ogg_uint32_t base_offset = cpi->frag_buffer_index[fi];
-      const unsigned char *cur = cpi->frame + base_offset;
-      const unsigned char *ref = (_goldenp ? cpi->golden : cpi->recon) + base_offset;
-      
-      err+=oc_sad8_halfpel(cur, ref+_mvoffset0, ref+_mvoffset1, cpi->stride[0]);
+    ogg_uint32_t base_offset = cpi->frag_buffer_index[fi];
+    const unsigned char *cur = cpi->frame + base_offset;
+    const unsigned char *ref = (_goldenp ? cpi->golden : cpi->recon) + base_offset;
+    
+    err+=oc_sad8_halfpel(cur, ref+_mvoffset0, ref+_mvoffset1, cpi->stride[0]);
 
-    }
   }
   
   return err;
@@ -297,6 +295,7 @@ static int oc_mcenc_ysad_halfpel_mbrefine(CP_INSTANCE *cpi,
   offset_y[6]=offset_y[7]=offset_y[8]=stride;
   err=_best_err;
   best_site=4;
+
   for(sitei=0;sitei<8;sitei++){
     int site;
     int xmask;
@@ -325,6 +324,7 @@ static int oc_mcenc_ysad_halfpel_mbrefine(CP_INSTANCE *cpi,
       best_site=site;
     }
   }
+
   _vec->x=(_vec->x<<1)+OC_SQUARE_DX[best_site];
   _vec->y=(_vec->y<<1)+OC_SQUARE_DY[best_site];
   return _best_err;
@@ -435,8 +435,8 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
   /*Start with the median predictor.*/
   cand=_mcenc->candidates[0];
   hit_cache[cand.y+15]|=(ogg_int32_t)1<<cand.x+15;
-  best_err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,_mcenc,_mbi,cand,
-						   _goldenp,block_err);
+  best_err = oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,_mcenc,_mbi,cand,
+						     _goldenp,block_err);
   best_vec=cand;
   for(bi=0;bi<4;bi++){
     best_block_err[bi]=block_err[bi];
@@ -454,7 +454,7 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
     ncs=OC_MINI(3,mb->ncneighbors);
     for(ci=0;ci<ncs;ci++)
       t2=OC_MAXI(t2,cpi->macro[mb->cneighbors[ci]].aerror);
-    t2=t2+(t2>>OC_YSAD_THRESH2_SCALE_BITS)+OC_YSAD_THRESH2_OFFSET;
+    t2+=(t2>>OC_YSAD_THRESH2_SCALE_BITS)+OC_YSAD_THRESH2_OFFSET;
 
     /*Examine the candidates in set A.*/
     for(ci=1;ci<_mcenc->setb0;ci++){

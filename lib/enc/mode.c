@@ -433,6 +433,7 @@ int PickModes(CP_INSTANCE *cpi){
   mv_t prior_mv = {0,0};
 
   oc_mcenc_start(cpi, &mcenc); 
+
   for(mbi = 0; mbi<cpi->macro_total; mbi++){
     macroblock_t *mb     = &cpi->macro[mbi];
 
@@ -463,7 +464,7 @@ int PickModes(CP_INSTANCE *cpi){
     /* search golden frame */
     oc_mcenc_search(cpi, &mcenc, mbi, 1, NULL);
   }
-  
+
   oc_mode_scheme_chooser_init(cpi);
   cpi->MVBits_0 = 0;
   cpi->MVBits_1 = 0;
@@ -594,6 +595,7 @@ int PickModes(CP_INSTANCE *cpi){
 	  break;
 	}
 	oc_mode_set(cpi,mb,mode);      
+
       }
 
       interbits += cost[mb->mode];

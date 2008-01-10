@@ -409,16 +409,6 @@ void DPCMTokenize (CP_INSTANCE *cpi){
   }
 }
 
-static int AllZeroDctData( ogg_int16_t * QuantList ){
-  ogg_uint32_t i;
-
-  for ( i = 0; i < 64; i ++ )
-    if ( QuantList[i] != 0 )
-      return 0;
-  
-  return 1;
-}
-
 static int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };
 
 static void BlockUpdateDifference (CP_INSTANCE * cpi, 
@@ -526,8 +516,6 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
 			     coding_mode_t mode,
 			     int fi,
 			     mv_t mv){
-
-  unsigned char *cp = &cpi->frag_coded[fi];
 
   unsigned char *FiltPtr = &cpi->frame[cpi->frag_buffer_index[fi]];
   int qi = cpi->BaseQ; // temporary
