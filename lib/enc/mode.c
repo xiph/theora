@@ -218,50 +218,6 @@ static void oc_mode_set( CP_INSTANCE *cpi,
   }
 }
 
-void oc_mode_unset(CP_INSTANCE *cpi, 
-		   macroblock_t *mb){
-
-  oc_mode_scheme_chooser *chooser = &cpi->chooser;
-  int ri;
-  int si;
-  int mode = mb->mode;
-
-  chooser->mode_counts[mode]--;
-
-  /* Re-order the scheme0 mode list if necessary. */
-  for(ri = chooser->scheme0_ranks[mode]; ri<7; ri++){
-    int pmode;
-    pmode=chooser->scheme0_list[ri+1];
-    if(chooser->mode_counts[pmode] <= chooser->mode_counts[mode])break;
-
-    /* reorder the mode ranking */
-    chooser->scheme0_ranks[pmode]--;
-    chooser->scheme0_list[ri]=pmode;
-
-  }
-  chooser->scheme0_ranks[mode]=ri;
-  chooser->scheme0_list[ri]=mode;
-
-  /* Now remove the bit cost of the mode from each scheme.*/
-  for(si=0;si<8;si++){
-    chooser->scheme_bits[si]-=
-      chooser->mode_bits[si][chooser->mode_ranks[si][mode]];
-  }
-
-  /* Finally, re-order the list of schemes. */
-  for(si=1;si<8;si++){
-    int sj = si;
-    int scheme0 = chooser->scheme_list[si];
-    int bits0 = chooser->scheme_bits[scheme0];
-    do{
-      int scheme1 = chooser->scheme_list[sj-1];
-      if(bits0 >= chooser->scheme_bits[scheme1]) break;
-      chooser->scheme_list[sj] = scheme1;
-    } while(--sj>0);
-    chooser->scheme_list[sj]=scheme0;
-  }
-}
-
 static int BIntraSAD(CP_INSTANCE *cpi, int fi, int plane){
   int sad = 0;
   unsigned char *b = cpi->frame + cpi->frag_buffer_index[fi];
@@ -647,8 +603,8 @@ int PickModes(CP_INSTANCE *cpi){
 
   if(cpi->FrameType != KEY_FRAME){
 
-    if(interbits>intrabits) return 1; /* short circuit */
-
+    //if(interbits>intrabits) return 1; /* short circuit */
+    
     /* finish adding flagging overhead costs to inter bit counts */
     
     if(cpi->MVBits_0 < cpi->MVBits_1)
@@ -658,7 +614,7 @@ int PickModes(CP_INSTANCE *cpi){
     
     interbits+=cpi->chooser.scheme_bits[cpi->chooser.scheme_list[0]];
     
-    if(interbits>intrabits) return 1; /* short circuit */
+    //if(interbits>intrabits) return 1; /* short circuit */
 
     /* The easiest way to count the bits needed for coded/not coded fragments is
        to code them. */
@@ -668,7 +624,7 @@ int PickModes(CP_INSTANCE *cpi){
       interbits += oggpackB_bits(cpi->oggbuffer) - bits;
     }
     
-    if(interbits>intrabits) return 1; 
+    //if(interbits>intrabits) return 1; 
     
   }
 

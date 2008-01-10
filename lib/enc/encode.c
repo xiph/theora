@@ -167,13 +167,8 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
 
       for ( B=0; B<4; B++) {
 	fi = yuv[B];
-	if ( cp[fi] ) {
+	if ( cp[fi] ) 
 	  TransformQuantizeBlock( cpi, mp->mode, fi, mp->mv[B] );
-	  if(!cp[fi] && plane == 0){
-	    mp->coded &= ~(1<<B);
-	    if(!mp->coded) oc_mode_unset(cpi,mp);
-	  }
-	}
       }
     }
     return 0;
@@ -408,10 +403,6 @@ void EncodeData(CP_INSTANCE *cpi){
 
   PredictDC(cpi);
   DPCMTokenize(cpi);
-
-  /* The tree is not needed (implicit) for key frames */
-  if ( cpi->FrameType != KEY_FRAME )
-    PackAndWriteDFArray( cpi );
 
   /* Mode and MV data not needed for key frames. */
   if ( cpi->FrameType != KEY_FRAME ){

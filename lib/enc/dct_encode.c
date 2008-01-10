@@ -562,9 +562,4 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
   quantize (cpi, q, DCTOutput, cpi->frag_dct[fi].data);
   cpi->frag_dc[fi] = cpi->frag_dct[fi].data[0];
 
-  if ( (mode == CODE_INTER_NO_MV) &&
-       ( AllZeroDctData(cpi->frag_dct[fi].data) ) ) {
-    *cp = 0;
-  }
-
 }

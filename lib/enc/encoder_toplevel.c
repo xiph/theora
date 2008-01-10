@@ -68,7 +68,7 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
   WriteFrameHeader(cpi);
 
   /* Select modes and motion vectors for each of the blocks */
-  if(PickModes( cpi ) && cpi->info.keyframe_auto_p){
+  if(PickModes( cpi )){
     /* mode analysis thinks this should have been a keyframe; start over and code as a keyframe instead */
     CompressKeyFrame(cpi);  /* Code a key frame */
     return 0;
