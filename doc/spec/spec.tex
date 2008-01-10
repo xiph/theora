@@ -4138,39 +4138,40 @@ Let \locvar{A}, \locvar{B}, \locvar{C}, and \locvar{D} be the indices in coded
 Thus, \locvar{A} is the index in coded order of the block in the lower left,
  \locvar{B} the lower right, \locvar{C} the upper left, and \locvar{D} the
  upper right. % TODO: as shown in Figure~REF.
+\item If $\bitvar{BCODED}[\locvar{A}]$ is non-zero:
+\begin{enumerate}
+\item Decode a single motion vector into \locvar{MVX} and \locvar{MVY} using
+ the procedure described in Section~\ref{sub:mv-decode}.
+\item Assign $\bitvar{MVECTS}[\locvar{A}]$ the value
+ $(\locvar{MVX},\locvar{MVY})$.
+\end{enumerate}
+\item Otherwise, assign $\bitvar{MVECTS}[\locvar{A}]$ the value $(0,0)$.
+\item If $\bitvar{BCODED}[\locvar{B}]$ is non-zero:
+\begin{enumerate}
+\item Decode a single motion vector into \locvar{MVX} and \locvar{MVY} using
+ the procedure described in Section~\ref{sub:mv-decode}.
+\item Assign $\bitvar{MVECTS}[\locvar{B}]$ the value
+ $(\locvar{MVX},\locvar{MVY})$.
+\end{enumerate}
 \item
-If $\bitvar{BCODED}[\locvar{A}]$ is non-zero, decode a single motion vector
- into \locvar{MVX} and \locvar{MVY} using the procedure described in
- Section~\ref{sub:mv-decode}.
+Otherwise assign $\bitvar{MVECTS}[\locvar{B}]$ the value $(0,0)$.
+\item If $\bitvar{BCODED}[\locvar{C}]$ is non-zero:
+\begin{enumerate}
+\item Decode a single motion vector into \locvar{MVX} and \locvar{MVY} using
+ the procedure described in Section~\ref{sub:mv-decode}.
+\item Assign $\bitvar{MVECTS}[\locvar{C}]$ the value
+ $(\locvar{MVX},\locvar{MVY})$.
+\end{enumerate}
+\item Otherwise assign $\bitvar{MVECTS}[\locvar{C}]$ the value $(0,0)$.
+\item If $\bitvar{BCODED}[\locvar{D}]$ is non-zero:
+\begin{enumerate}
+\item Decode a single motion vector into \locvar{MVX} and \locvar{MVY} using
+ the procedure described in Section~\ref{sub:mv-decode}.
+\item Assign $\bitvar{MVECTS}[\locvar{D}]$ the value
+ $(\locvar{MVX},\locvar{MVY})$.
+\end{enumerate}
 \item
-Otherwise, assign \locvar{MVX} and \locvar{MVY} both the value zero.
-\item
-Assign $\bitvar{MVECTS}[\locvar{A}]$ the value $(\locvar{MVX},\locvar{MVY})$.
-\item
-If $\bitvar{BCODED}[\locvar{B}]$ is non-zero, decode a single motion vector
- into \locvar{MVX} and \locvar{MVY} using the procedure described in
- Section~\ref{sub:mv-decode}.
-\item
-Otherwise, assign \locvar{MVX} and \locvar{MVY} both the value zero.
-\item
-Assign $\bitvar{MVECTS}[\locvar{B}]$ the value $(\locvar{MVX},\locvar{MVY})$.
-\item
-If $\bitvar{BCODED}[\locvar{C}]$ is non-zero, decode a single motion vector
- into \locvar{MVX} and \locvar{MVY} using the procedure described in
- Section~\ref{sub:mv-decode}.
-\item
-Otherwise, assign \locvar{MVX} and \locvar{MVY} both the value zero.
-\item
-Assign $\bitvar{MVECTS}[\locvar{C}]$ the value $(\locvar{MVX},\locvar{MVY})$.
-\item
-If $\bitvar{BCODED}[\locvar{D}]$ is non-zero, decode a single motion vector
- into \locvar{MVX} and \locvar{MVY} using the procedure described in
- Section~\ref{sub:mv-decode}.
-\item
-Otherwise, assign \locvar{MVX} and \locvar{MVY} both the value zero.
-\item
-Assign $\bitvar{MVECTS}[\locvar{D}]$ the value $(\locvar{MVX},\locvar{MVY})$.
-Note that \locvar{MVX} and \locvar{MVY} retain this last value.
+Otherwise, assign $\bitvar{MVECTS}[\locvar{D}]$ the value $(0,0)$.
 \item
 If \bitvar{PF} is 0 (4:2:0):
 \begin{enumerate}
@@ -4245,6 +4246,10 @@ Assign $\bitvar{MVECTS}[\locvar{H}]$ and $\bitvar{MVECTS}[\locvar{L}]$ the
 Assign \locvar{LAST2} the value \locvar{LAST1}.
 \item
 Assign \locvar{LAST1} the value $(\locvar{MVX},\locvar{MVY})$.
+This is the value of the motion vector decoded from the last coded luma block
+ in raster order.
+There must always be at least one, since macro blocks with no coded luma blocks
+ must use mode 0:~INTER\_NOMV.
 \end{enumerate}
 \item
 Otherwise, if $\bitvar{MBMODES}[\locvar{\mbi}]$ is 6 (INTER\_GOLDEN\_MV),
