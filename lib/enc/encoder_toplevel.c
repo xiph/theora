@@ -156,9 +156,6 @@ int theora_encode_init(theora_state *th, theora_info *c){
 
   InitFrameInfo(cpi);
 
-  /* Initialise Motion compensation */
-  InitMotionCompensation(cpi);
-
   /* Initialise the compression process. */
   /* We always start at frame 1 */
   cpi->CurrentFrame = 1;

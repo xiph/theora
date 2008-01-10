@@ -423,7 +423,6 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
   mv_t            best_vec;
   int             best_err;
   mv_t            cand;
-  int             ref_framei;
   int             bi;
   macroblock_t   *mb = &cpi->macro[_mbi];
 
@@ -601,7 +600,7 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
 
   {
 
-    int error=oc_mcenc_ysad_halfpel_mbrefine(cpi,_mcenc,_mbi,&best_vec,best_err,ref_framei);
+    int error=oc_mcenc_ysad_halfpel_mbrefine(cpi,_mcenc,_mbi,&best_vec,best_err,_goldenp);
     if(!_goldenp) mb->aerror = error;
     mb->analysis_mv[0][_goldenp]=best_vec;
 

@@ -160,7 +160,7 @@ typedef ogg_int32_t    iquant_table[64];
 typedef iquant_table   iquant_tables[64];
 
 typedef struct {
-  const int           *mode_bits[8];
+  const unsigned char *mode_bits[8];
   /*Pointers to the a list containing the index of each mode in the mode
     alphabet used by each scheme.
     The first entry points to the dynamic scheme0_ranks, while the remaining
@@ -326,7 +326,12 @@ extern void oc_mode_unset(CP_INSTANCE *cpi,
 			  macroblock_t *mb);
 
 extern void oc_mcenc_start(CP_INSTANCE *cpi,
-                    mc_state *_mcenc);
+			   mc_state *_mcenc);
 
+extern void oc_mcenc_search(CP_INSTANCE *cpi, 
+			    mc_state *_mcenc,
+			    int _mbi,
+			    int _goldenp,
+			    mv_t *_bmvs);
 
 #endif /* ENCODER_INTERNAL_H */
