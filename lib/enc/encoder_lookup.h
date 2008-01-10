@@ -77,13 +77,13 @@ static const ogg_uint32_t MvBits2[(MAX_MV_EXTENT * 2) + 1] = {
   6, 6, 6, 6, 6, 6, 6,
 };
 
-static const ogg_uint32_t ModeBitPatterns[MAX_MODES] = {
+static const unsigned char ModeBitPatterns[MAX_MODES] = {
   0x00, 0x02, 0x06, 0x0E, 0x1E, 0x3E, 0x7E, 0x7F };
 
-static const int ModeBitLengths[MAX_MODES] =  {
+static const unsigned char ModeBitLengths[MAX_MODES] =  {
   1,    2,    3,    4,    5,    6,    7,    7 };
 
-static const int ModeBitLengthsD[MAX_MODES] =  {
+static const unsigned char ModeBitLengthsD[MAX_MODES] =  {
   3,    3,    3,    3,    3,    3,    3,    3 };
 
 static const unsigned char ModeSchemes[MODE_METHODS-1][MAX_MODES] =  {

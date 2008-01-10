@@ -268,9 +268,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 
   /* fill in macroblock neighbor information for MC analysis */
   {
-    int row,col,frag;
-    int scanx[4] = {0,1,0,1};
-    int scany[4] = {0,0,1,1};
+    int row,col;
 
     for(row=0;row<cpi->macro_v;row++){
       for(col=0;col<cpi->macro_h;col++){
@@ -281,11 +279,11 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	if(col)
 	  cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
 	if(col && row)
-	  cpi->macro[macroindex].cneighbors[count++]=macroindex-macro_h-1;
+	  cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h-1;
 	if(row)
-	  cpi->macro[macroindex].cneighbors[count++]=macroindex-macro_h;
-	if(row && col+1<macro_h)
-	  cpi->macro[macroindex].cneighbors[count++]=macroindex-macro_h+1;
+	  cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h;
+	if(row && col+1<cpi->macro_h)
+	  cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h+1;
 	cpi->macro[macroindex].ncneighbors=count;
 
 	/* pneighbors are of the four possible direct neighbors (plus pattern), not the same as cneighbors */
@@ -293,11 +291,11 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	if(col)
 	  cpi->macro[macroindex].pneighbors[count++]=macroindex-1;
 	if(row)
-	  cpi->macro[macroindex].pneighbors[count++]=macroindex-macro_h;
-	if(col+1<macro_h)
+	  cpi->macro[macroindex].pneighbors[count++]=macroindex-cpi->macro_h;
+	if(col+1<cpi->macro_h)
 	  cpi->macro[macroindex].pneighbors[count++]=macroindex+1;
-	if(row+1<macro_v)
-	  cpi->macro[macroindex].pneighbors[count++]=macroindex+macro_h;
+	if(row+1<cpi->macro_v)
+	  cpi->macro[macroindex].pneighbors[count++]=macroindex+cpi->macro_h;
 	cpi->macro[macroindex].npneighbors=count;
       }
     }

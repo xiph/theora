@@ -171,7 +171,7 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
 	  TransformQuantizeBlock( cpi, mp->mode, fi, mp->mv[B] );
 	  if(!cp[fi] && plane == 0){
 	    mp->coded &= ~(1<<B);
-	    if(!mp->coded) oc_unset_mode(cpi,mp);
+	    if(!mp->coded) oc_mode_unset(cpi,mp);
 	  }
 	}
       }
@@ -298,16 +298,16 @@ static void EncodeAcTokenList (CP_INSTANCE *cpi) {
 
 }
 
-static const ogg_uint32_t NoOpModeWords[8] = {0,1,2,3,4,5,6,7};
-static const ogg_int32_t NoOpModeBits[8] = {3,3,3,3,3,3,3,3};
+static const unsigned char NoOpModeWords[8] = {0,1,2,3,4,5,6,7};
+static const unsigned char NoOpModeBits[8] = {3,3,3,3,3,3,3,3};
 static const unsigned char NoOpScheme[8] = {0,1,2,3,4,5,6,7};
 
 static void PackModes (CP_INSTANCE *cpi) {
-  ogg_uint32_t    i,j;
+  ogg_uint32_t    j;
   ogg_uint32_t    BestScheme = cpi->chooser.scheme_list[0];
 
-  const ogg_uint32_t *ModeWords;
-  const ogg_int32_t *ModeBits;
+  const unsigned char *ModeWords;
+  const unsigned char *ModeBits;
   const unsigned char  *ModeScheme;
   int SB,MB;
 
@@ -321,7 +321,7 @@ static void PackModes (CP_INSTANCE *cpi) {
   if ( BestScheme == 0 ) {
     for ( j = 0; j < MAX_MODES; j++ ){
       /* Note that the last two entries are implicit */
-      oggpackB_write( opb, cpi->chooser.scheme0_ranks, (ogg_uint32_t)MODE_BITS );
+      oggpackB_write( opb, cpi->chooser.scheme0_ranks[j], (ogg_uint32_t)MODE_BITS );
     }
     ModeScheme = cpi->chooser.scheme0_ranks;
     ModeWords = ModeBitPatterns;
@@ -397,9 +397,6 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
 }
 
 void EncodeData(CP_INSTANCE *cpi){
-
-  /* reset all coding metadata  */
-  memset(cpi->ModeCount, 0, MAX_MODES*sizeof(*cpi->ModeCount));
 
   dsp_save_fpu (cpi->dsp);
 

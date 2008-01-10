@@ -38,7 +38,8 @@ encoder_sources = \
 	enc/dct_decode.c \
 	enc/frarray.c \
 	enc/frinit.c \
-	enc/mcomp.c \
+	enc/mcenc.c \
+	enc/mode.c \
 	enc/reconstruct.c \
 	enc/dsp.c
 
@@ -103,6 +104,7 @@ noinst_HEADERS = \
 	enc/encoder_huffman.h \
 	enc/hufftables.h \
 	enc/quant_lookup.h \
+	enc/mode_select.h \
 	enc/toplevel_lookup.h \
 	enc/dsp.h \
 	dec/apiwrapper.h \

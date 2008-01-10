@@ -27,6 +27,7 @@
 #include "codec_internal.h"
 
 static void CompressKeyFrame(CP_INSTANCE *cpi){
+  int j;
 
   oggpackB_reset(cpi->oggbuffer);
   cpi->FrameType = KEY_FRAME;
@@ -57,7 +58,7 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
   oggpackB_reset(cpi->oggbuffer);
   cpi->FrameType = DELTA_FRAME;
 
-  for ( i = 0; i < cpi->frag_total; i++, fi++ ) 
+  for ( i = 0; i < cpi->frag_total; i++ ) 
     cpi->frag_coded[i] = 1; /* TEMPORARY */
   
   /* mark as video frame */
@@ -114,18 +115,6 @@ int theora_encode_init(theora_state *th, theora_info *c){
   if(c->quality<0)c->quality=32;
   if(c->target_bitrate<0)c->target_bitrate=0;
   cpi->BaseQ = c->quality;
-
-  cpi->MVChangeFactor    =    14;
-  cpi->FourMvChangeFactor =   8;
-  cpi->MinImprovementForNewMV = 25;
-  cpi->ExhaustiveSearchThresh = 2500;
-  cpi->MinImprovementForFourMV = 100;
-  cpi->FourMVThreshold = 10000;
-  cpi->InterTripOutThresh = 5000;
-  cpi->MVEnabled = 1;
-  cpi->GoldenFrameEnabled = 1;
-  cpi->InterPrediction = 1;
-  cpi->MotionCompensation = 1;
 
   /* Set encoder flags. */
   /* if not AutoKeyframing cpi->ForceKeyFrameEvery = is frequency */

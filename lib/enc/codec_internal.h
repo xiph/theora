@@ -110,6 +110,14 @@ typedef struct{
   ogg_int32_t   y;
 } mv_t;
 
+typedef struct {
+  mv_t               candidates[12];
+  int                setb0;
+  int                ncandidates;
+  ogg_int32_t        mvapw1[2];
+  ogg_int32_t        mvapw2[2];
+} mc_state;
+
 typedef struct macroblock {
   /* the blocks comprising this macroblock */
   int yuv[3][4]; /* [Y,U,V][raster order] */
@@ -151,26 +159,26 @@ typedef quant_table    quant_tables[64];
 typedef ogg_int32_t    iquant_table[64];
 typedef iquant_table   iquant_tables[64];
 
-struct oc_mode_scheme_chooser{
-  const int          *mode_bits[8];
+typedef struct {
+  const int           *mode_bits[8];
   /*Pointers to the a list containing the index of each mode in the mode
     alphabet used by each scheme.
     The first entry points to the dynamic scheme0_ranks, while the remaining
     7 point to the constant entries stored in OC_MODE_SCHEMES.*/
-  const int          *mode_ranks[8];
+  const unsigned char *mode_ranks[8];
   /*The ranks for each mode when coded with scheme 0.
     These are optimized so that the more frequent modes have lower ranks.*/
-  int                 scheme0_ranks[OC_NMODES];
+  unsigned char        scheme0_ranks[OC_NMODES];
   /*The list of modes, sorted in descending order of frequency, that
     corresponds to the ranks above.*/
-  int                 scheme0_list[OC_NMODES];
+  unsigned char        scheme0_list[OC_NMODES];
   /*The number of times each mode has been chosen so far.*/
-  int                 mode_counts[OC_NMODES];
+  int                  mode_counts[OC_NMODES];
   /*The list of mode coding schemes, sorted in ascending order of bit cost.*/
-  int                 scheme_list[8];
+  unsigned char        scheme_list[8];
   /*The number of bits used by each mode coding scheme.*/
-  int                 scheme_bits[8];
-};
+  int                  scheme_bits[8];
+} oc_mode_scheme_chooser;
 
 /* Encoder (Compressor) instance -- installed in a theora_state */
 typedef struct CP_INSTANCE {
@@ -313,5 +321,12 @@ extern int PickModes(CP_INSTANCE *cpi);
 extern void InitFrameInfo(CP_INSTANCE *cpi);
 
 extern void ClearFrameInfo (CP_INSTANCE *cpi);
+
+extern void oc_mode_unset(CP_INSTANCE *cpi, 
+			  macroblock_t *mb);
+
+extern void oc_mcenc_start(CP_INSTANCE *cpi,
+                    mc_state *_mcenc);
+
 
 #endif /* ENCODER_INTERNAL_H */

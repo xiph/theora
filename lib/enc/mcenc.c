@@ -20,14 +20,6 @@
 #include <string.h>
 #include "codec_internal.h"
 
-typedef struct {
-  int                candidates[12][2];
-  int                setb0;
-  int                ncandidates;
-  ogg_int32_t        mvapw1[2];
-  ogg_int32_t        mvapw2[2];
-} mc_state;
-
 /*The maximum Y plane SAD value for accepting the median predictor.*/
 #define OC_YSAD_THRESH1            (256)
 /*The amount to right shift the minimum error by when inflating it for
@@ -127,16 +119,16 @@ static void oc_mcenc_find_candidates(CP_INSTANCE *cpi,
   mv_t          a[3];
   int           ncandidates;
   int           i;
-  emb=_mcenc->enc->mbinfo+_mbi;
+  emb = &cpi->macro[_mbi];
   if(emb->ncneighbors>0){
     /*Fill in the first part of set A: the last motion vectors used and the
        vectors from adjacent blocks.*/
     /*Skip a position to store the median predictor in.*/
     ncandidates=1;
     for(i=0;i<emb->ncneighbors;i++){
-      nemb=cpi->macro[emb->cneighbors[i]];
-      _mcenc->candidates[ncandidates].x=nemb->analysis_mv[0][_which_frame].x;
-      _mcenc->candidates[ncandidates].y=nemb->analysis_mv[0][_which_frame].y;
+      nemb=&cpi->macro[emb->cneighbors[i]];
+      _mcenc->candidates[ncandidates].x = nemb->analysis_mv[0][_which_frame].x;
+      _mcenc->candidates[ncandidates].y = nemb->analysis_mv[0][_which_frame].y;
       ncandidates++;
     }
     /*Add a few additional vectors to set A: the vector used in the previous
@@ -187,7 +179,7 @@ static void oc_mcenc_find_candidates(CP_INSTANCE *cpi,
     _mcenc->candidates[ncandidates].y = OC_CLAMPI(-31,_mcenc->candidates[ncandidates].y,31);
     ncandidates++;
     if(i>=emb->npneighbors)break;
-    nemb=cpi->macro[emb->pneighbors[i]];
+    nemb=&cpi->macro[emb->pneighbors[i]];
   }
   /*Truncate to full-pel positions.*/
   for(i=0;i<ncandidates;i++){
@@ -237,12 +229,12 @@ static int oc_sad16_halfpel(CP_INSTANCE *cpi,
 			    int _mvoffset1,
 			    int _goldenp){
 
-  macroblock_t *mbi = cpi->macro[mbi];
+  macroblock_t *mb = &cpi->macro[mbi];
   int err;
   int i;
   err=0;
   for(i=0;i<4;i++){
-    int fi = mbi->y[i];
+    int fi = mb->yuv[0][i];
     if(fi < cpi->frag_total){ /* last fragment is the 'invalid fragment' */
       ogg_uint32_t base_offset = cpi->frag_buffer_index[fi];
       const unsigned char *cur = cpi->frame + base_offset;
@@ -272,7 +264,7 @@ static int oc_mcenc_ysad_check_mbcandidate_fullpel(CP_INSTANCE *cpi,
   mvoffset=_delta.x+_delta.y*stride;
   err=0;
   for(bi=0;bi<4;bi++){
-    int fi = mbi->y[i];
+    int fi = mb->yuv[0][bi];
     if(fi < cpi->frag_total){ /* last fragment is the 'invalid fragment' */
       ogg_uint32_t base_offset = cpi->frag_buffer_index[fi];
       const unsigned char *cur = cpi->frame + base_offset;
@@ -342,24 +334,24 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,
 					 mc_state *_mcenc,
 					 int _mbi,
 					 int _bi,
-					 mv *_vec,
+					 mv_t *_vec,
 					 int _best_err,
 					 int _goldenp){
-  macroblock_t *mb = &cpi->macro[mbi];
+  macroblock_t *mb = &cpi->macro[_mbi];
   int offset_y[9];
   int stride = cpi->stride[0];
   int mvoffset_base;
   int best_site;
   int sitei;
   int err;
-  int fi = mb->y[bi];
+  int fi = mb->yuv[0][_bi];
 
-  if(fi == frag_total) return _best_err;
+  if(fi == cpi->frag_total) return _best_err;
 
   mvoffset_base=_vec->x+_vec->y*stride;
-  offset_y[0]=offset_y[1]=offset_y[2]=-ref_ystride;
+  offset_y[0]=offset_y[1]=offset_y[2]=-stride;
   offset_y[3]=offset_y[5]=0;
-  offset_y[6]=offset_y[7]=offset_y[8]=ref_ystride;
+  offset_y[6]=offset_y[7]=offset_y[8]=stride;
   err=_best_err;
   best_site=4;
 
@@ -413,7 +405,7 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,
    _mcenc:    The motion compensation context.
    _mbi:      The macro block index.
    _frame:    The frame to search, either OC_FRAME_PREV or OC_FRAME_GOLD.
-   _bmvs:     Returns the individual block motion vectors.
+   _bmvs:     Returns the individual block motion vectors. */
 
 void oc_mcenc_search(CP_INSTANCE *cpi, 
 		     mc_state *_mcenc,
@@ -626,8 +618,8 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
 }
 
 
-static void oc_mcenc_start(CP_INSTANCE *cpi, 
-			  mc_state *_mcenc){
+void oc_mcenc_start(CP_INSTANCE *cpi,
+                    mc_state *mcenc){
 
   ogg_int64_t  nframes;
 
@@ -642,51 +634,3 @@ static void oc_mcenc_start(CP_INSTANCE *cpi,
   mcenc->mvapw2[OC_FRAME_GOLD]=(ogg_int32_t)(nframes!=2?(nframes<<16)/(nframes-2):0);
 
 }
-
-static int oc_mcenc_pipe_process(oc_enc_pipe_stage *_stage,int _y_avail[3]){
-  oc_mcenc_ctx   *mcenc;
-  int             pli;
-  mcenc=_stage->enc->mcenc;
-  /*For now we ignore the chroma planes.*/
-  for(pli=1;pli<3;pli++)_stage->y_procd[pli]=_y_avail[pli];
-  /*Only do motion analysis if there is a previous frame; otherwise every
-     vector has already been initialized to (0,0).*/
-  if(mcenc->enc->state.ref_frame_idx[OC_FRAME_PREV]>=0){
-    int             y_avail;
-    y_avail=_y_avail[0];
-    /*Round to a super-block row, except for the last one, which may be
-       incomplete.*/
-    if(y_avail<(int)mcenc->enc->state.info.frame_height)y_avail&=~31;
-    while(_stage->y_procd[0]<y_avail){
-      oc_mb_enc_info *embs;
-      oc_mb          *mbs;
-      int             mbi;
-      int             mbi_end;
-      mbi=(_stage->y_procd[0]>>4)*mcenc->enc->state.fplanes[0].nhsbs;
-      mbi_end=mbi+mcenc->enc->state.fplanes[0].nhsbs<<1;
-      mbs=mcenc->enc->state.mbs;
-      embs=mcenc->enc->mbinfo;
-      for(;mbi<mbi_end;mbi++)if(mbs[mbi].mode!=OC_MODE_INVALID){
-        oc_mb_enc_info *emb;
-        emb=embs+mbi;
-        oc_mcenc_search(mcenc,mbi,OC_FRAME_PREV,emb->bmvs,&emb->aerror,
-			&emb->aerror4mv);
-      }
-      /*Chain to the next stage.*/
-      _stage->y_procd[0]=OC_MINI(_stage->y_procd[0]+32,y_avail);
-      if(_stage->next!=NULL){
-        int ret;
-        ret=_stage->next->pipe_proc(_stage->next,_stage->y_procd);
-        if(ret<0)return ret;
-      }
-    }
-  }
-  else{
-    _stage->y_procd[0]=_y_avail[0];
-    if(_stage->next!=NULL){
-      return _stage->next->pipe_proc(_stage->next,_stage->y_procd);
-    }
-  }
-  return 0;
-}
-
