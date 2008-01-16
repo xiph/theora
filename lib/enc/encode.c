@@ -203,14 +203,13 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
   }
 }
 
-static void EncodeDcTokenList (CP_INSTANCE *cpi) {
+static void ChooseTokenTables (CP_INSTANCE *cpi, int huff[4]) {
   int i,plane;
   int best;
-  int huff[2];
-  oggpack_buffer *opb=cpi->oggbuffer;
-
-  /* Work out which table options are best for DC */
+  
   for(plane = 0; plane<2; plane++){
+
+    /* Work out which table options are best for DC */
     best = cpi->dc_bits[plane][0];
     huff[plane] = DC_HUFF_OFFSET;
     for ( i = 1; i < DC_HUFF_CHOICES; i++ ) {
@@ -219,77 +218,70 @@ static void EncodeDcTokenList (CP_INSTANCE *cpi) {
 	huff[plane] = i + DC_HUFF_OFFSET;
       }
     }
-    oggpackB_write( opb, huff[plane] - DC_HUFF_OFFSET, DC_HUFF_CHOICE_BITS );
-  }
   
-  /* Encode the token list */
-  for ( i = 0; i < cpi->dct_token_count[0]; i++){
-    int token = cpi->dct_token[0][i];
-    int eb = cpi->dct_token_eb[0][i];
-    int plane = (i >= cpi->dct_token_ycount[0]);
-
-    oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huff[plane]][token],
-                    cpi->HuffCodeLengthArray_VP3x[huff[plane]][token] );
-    
-    if ( cpi->ExtraBitLengths_VP3x[token] > 0 ) 
-      oggpackB_write( opb, eb, cpi->ExtraBitLengths_VP3x[token] );
-  }
-}
-
-static void EncodeAcGroup(CP_INSTANCE *cpi, int group, int huff_offset, int *huffchoice){
-  int i;
-  oggpack_buffer *opb=cpi->oggbuffer;
-  int c = 0;
-  int y = cpi->dct_token_ycount[group];
-  
-  for(i=0; i<cpi->dct_token_count[group]; i++){
-    int token = cpi->dct_token[group][i];
-    int eb = cpi->dct_token_eb[group][i];
-    int plane = (c >= y);
-
-    int hi = huff_offset + huffchoice[plane];
-
-    oggpackB_write( opb, cpi->HuffCodeArray_VP3x[hi][token],
-		    cpi->HuffCodeLengthArray_VP3x[hi][token] );
-    
-    if (cpi->ExtraBitLengths_VP3x[token] > 0) 
-      oggpackB_write( opb, eb,cpi->ExtraBitLengths_VP3x[token] );
-    
-    c++;
-  }
-}
-
-static void EncodeAcTokenList (CP_INSTANCE *cpi) {
-  int i,plane;
-  int best;
-  int huff[2];
-  oggpack_buffer *opb=cpi->oggbuffer;
-
-  /* Work out which table options are best for AC */
-  for(plane = 0; plane<2; plane++){
+    /* Work out which table options are best for AC */
     best = cpi->ac_bits[plane][0];
-    huff[plane] = AC_HUFF_OFFSET;
+    huff[plane+2] = AC_HUFF_OFFSET;
     for ( i = 1; i < AC_HUFF_CHOICES; i++ ) {
       if ( cpi->ac_bits[plane][i] < best ){
 	best = cpi->ac_bits[plane][i];
-	huff[plane] = i + AC_HUFF_OFFSET;
+	huff[plane+2] = i + AC_HUFF_OFFSET;
       }
     }
-    oggpackB_write( opb, huff[plane] - AC_HUFF_OFFSET, AC_HUFF_CHOICE_BITS );
   }
-  
-  /* encode dct tokens, group 1 through group 63 in the four AC ranges */
+}
+
+static void EncodeTokenGroup(CP_INSTANCE *cpi, 
+			     int group, 
+			     int huffY,
+			     int huffC){
+
+  int i;
+  oggpack_buffer *opb=cpi->oggbuffer;
+  int y = cpi->dct_token_ycount[group];
+  unsigned char *token = cpi->dct_token[group];
+  ogg_uint16_t *eb = cpi->dct_token_eb[group];
+ 
+  for(i=0; i<y; i++){
+    oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huffY][token[i]],
+		    cpi->HuffCodeLengthArray_VP3x[huffY][token[i]] );
+    if (cpi->ExtraBitLengths_VP3x[token[i]] > 0) 
+      oggpackB_write( opb, eb[i], cpi->ExtraBitLengths_VP3x[token[i]] );
+  }
+
+  for(; i<cpi->dct_token_count[group]; i++){
+    oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huffC][token[i]],
+		    cpi->HuffCodeLengthArray_VP3x[huffC][token[i]] );
+    if (cpi->ExtraBitLengths_VP3x[token[i]] > 0) 
+      oggpackB_write( opb, eb[i], cpi->ExtraBitLengths_VP3x[token[i]] );
+  }
+}
+
+static void EncodeTokenList (CP_INSTANCE *cpi, int huff[4]) {
+  int i;
+  oggpack_buffer *opb=cpi->oggbuffer;
+
+  /* DC tokens aren't special, they just come first */
+  oggpackB_write( opb, huff[0] - DC_HUFF_OFFSET, DC_HUFF_CHOICE_BITS );
+  oggpackB_write( opb, huff[1] - DC_HUFF_OFFSET, DC_HUFF_CHOICE_BITS );
+
+  EncodeTokenGroup(cpi, 0,  huff[0], huff[1]);
+
+  /* AC tokens */
+  oggpackB_write( opb, huff[2] - AC_HUFF_OFFSET, AC_HUFF_CHOICE_BITS );
+  oggpackB_write( opb, huff[3] - AC_HUFF_OFFSET, AC_HUFF_CHOICE_BITS );
+
   for(i=1;i<=AC_TABLE_2_THRESH;i++)
-    EncodeAcGroup(cpi, i, 0, huff);
+    EncodeTokenGroup(cpi, i,  huff[2], huff[3]);
 
   for(;i<=AC_TABLE_3_THRESH;i++)
-    EncodeAcGroup(cpi, i, AC_HUFF_CHOICES, huff);
+    EncodeTokenGroup(cpi, i,  huff[2]+AC_HUFF_CHOICES, huff[3]+AC_HUFF_CHOICES);
 
   for(;i<=AC_TABLE_4_THRESH;i++)
-    EncodeAcGroup(cpi, i, AC_HUFF_CHOICES*2, huff);
+    EncodeTokenGroup(cpi, i,  huff[2]+AC_HUFF_CHOICES*2, huff[3]+AC_HUFF_CHOICES*2);
 
   for(;i<BLOCK_SIZE;i++)
-    EncodeAcGroup(cpi, i, AC_HUFF_CHOICES*3, huff);
+    EncodeTokenGroup(cpi, i,  huff[2]+AC_HUFF_CHOICES*3, huff[3]+AC_HUFF_CHOICES*3);
 
 }
 
@@ -392,6 +384,7 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
 }
 
 void EncodeData(CP_INSTANCE *cpi){
+  int tokenhuff[4];
 
   dsp_save_fpu (cpi->dsp);
 
@@ -410,8 +403,8 @@ void EncodeData(CP_INSTANCE *cpi){
     PackMotionVectors (cpi);
   }
 
-  EncodeDcTokenList(cpi);
-  EncodeAcTokenList(cpi);
+  ChooseTokenTables(cpi, tokenhuff);
+  EncodeTokenList(cpi, tokenhuff);
 
   ReconRefFrames(cpi);
 

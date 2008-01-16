@@ -31,6 +31,7 @@ static void CompressKeyFrame(CP_INSTANCE *cpi){
 
   oggpackB_reset(cpi->oggbuffer);
   cpi->FrameType = KEY_FRAME;
+  cpi->LastKeyFrame = 0;
 
   /* code all blocks */
   for(j=0;j<cpi->frag_total;j++)
@@ -39,14 +40,13 @@ static void CompressKeyFrame(CP_INSTANCE *cpi){
   /* mark as video frame */
   oggpackB_write(cpi->oggbuffer,0,1);
   
-  /* Write out the frame header information including size. */
   WriteFrameHeader(cpi);
-  
-  /* still need to go through mode selection to do MV/mode analysis that
-     will be used by subsequent inter frames.  Mode will be special-forced to INTRA for each MB. */
+  PickMVs(cpi);
+  /* still need to go through mode selection to do MV/mode analysis
+     that will be used by subsequent inter frames.  Mode will be
+     special-forced to INTRA for each MB. */
   PickModes(cpi);
   
-  /* Encode the data.  */
   EncodeData(cpi);
   
   cpi->LastKeyFrame = 1;
@@ -64,20 +64,15 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
   /* mark as video frame */
   oggpackB_write(cpi->oggbuffer,0,1);
 
-  /* Write out the frame header information including size. */
   WriteFrameHeader(cpi);
-
-  /* Select modes and motion vectors for each of the blocks */
+  PickMVs(cpi);
   if(PickModes( cpi )){
     /* mode analysis thinks this should have been a keyframe; start over and code as a keyframe instead */
     CompressKeyFrame(cpi);  /* Code a key frame */
     return 0;
   }
   
-  /* Increment the frames since last key frame count */
   cpi->LastKeyFrame++;
-  
-  /* Encode the data.  */
   EncodeData(cpi);
   
   return 0;

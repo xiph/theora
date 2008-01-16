@@ -617,7 +617,7 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
 }
 
 
-void oc_mcenc_start(CP_INSTANCE *cpi,
+static void oc_mcenc_start(CP_INSTANCE *cpi,
                     mc_state *mcenc){
 
   ogg_int64_t  nframes;
@@ -633,3 +633,44 @@ void oc_mcenc_start(CP_INSTANCE *cpi,
   mcenc->mvapw2[OC_FRAME_GOLD]=(ogg_int32_t)(nframes!=2?(nframes<<16)/(nframes-2):0);
 
 }
+
+void PickMVs(CP_INSTANCE *cpi){
+  
+  unsigned char *cp = cpi->frag_coded;
+  mc_state mcenc;
+  int mbi, bi;
+
+  oc_mcenc_start(cpi, &mcenc); 
+
+  for(mbi = 0; mbi<cpi->macro_total; mbi++){
+    macroblock_t *mb     = &cpi->macro[mbi];
+
+    /*Move the motion vector predictors back a frame */
+    memmove(mb->analysis_mv+1,mb->analysis_mv,2*sizeof(mb->analysis_mv[0]));
+
+    /* basic 1MV search always done for all macroblocks, coded or not, keyframe or not */
+    oc_mcenc_search(cpi, &mcenc, mbi, 0, mb->mv);
+
+    /* replace the block MVs for not-coded blocks with (0,0).*/    
+    mb->coded = 0;
+    for ( bi=0; bi<4; bi++ ){
+      int fi = mb->yuv[0][bi];
+      if(!cp[fi]) 
+	mb->mv[fi]=(mv_t){0,0};
+      else
+	mb->coded |= (1<<bi);
+    }
+
+    if(mb->coded==0){
+      /* Don't bother to do a MV search against the golden frame.
+	 Just re-use the last vector, which should match well since the
+	 contents of the MB haven't changed much.*/
+      mb->analysis_mv[0][1]=mb->analysis_mv[1][1];
+      continue;
+    }
+
+    /* search golden frame */
+    oc_mcenc_search(cpi, &mcenc, mbi, 1, NULL);
+  }
+}
+
