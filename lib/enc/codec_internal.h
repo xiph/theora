@@ -204,6 +204,7 @@ typedef struct CP_INSTANCE {
   unsigned char   *frag_nonzero;
   ogg_int16_t     *frag_dc;
   dct_t           *frag_dct;
+  ogg_uint32_t    *frag_mbi;
 
   macroblock_t    *macro;
   superblock_t    *super[3];
@@ -255,6 +256,18 @@ typedef struct CP_INSTANCE {
   ogg_uint32_t     MVBits_0; /* count of bits used by MV coding mode 0 */
   ogg_uint32_t     MVBits_1; /* count of bits used by MV coding mode 1 */
 
+  /********************************************************************/
+  /* Fragment SAD->bitrate estimation tracking metrics */
+  int             *frag_sad;
+  int             *dct_token_frag_storage;
+  int             *dct_token_frag[64];
+  int             *dct_eob_fi_storage;
+  int             *dct_eob_fi_stack[64];
+  int              dct_eob_fi_count[64];
+
+  ogg_uint32_t     frag_bitrates[64][3][8][OC_SAD_BINS];
+  ogg_uint32_t     frag_distort[64][3][8][OC_SAD_BINS];
+  ogg_uint32_t     frag_distort_count[64][3][8][OC_SAD_BINS];
 
   /********************************************************************/
   /* Setup */

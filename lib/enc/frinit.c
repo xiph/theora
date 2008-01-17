@@ -58,6 +58,12 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
   if(cpi->frag_dc) _ogg_free(cpi->frag_dc);
   cpi->frag_dc = 0;
 
+  if(cpi->frag_mbi) _ogg_free(cpi->frag_mbi);
+  cpi->frag_mbi = 0;
+
+  if(cpi->frag_sad) _ogg_free(cpi->frag_sad);
+  cpi->frag_sad = 0;
+
   if(cpi->macro) _ogg_free(cpi->macro);
   cpi->macro = 0;
 
@@ -137,6 +143,8 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->frag_nonzero = calloc(cpi->frag_total, sizeof(*cpi->frag_nonzero));
   cpi->frag_dct = calloc(cpi->frag_total, sizeof(*cpi->frag_dct));
   cpi->frag_dc = calloc(cpi->frag_total, sizeof(*cpi->frag_dc));
+  cpi->frag_mbi = calloc(cpi->frag_total+1, sizeof(*cpi->frag_mbi));
+  cpi->frag_sad = calloc(cpi->frag_total, sizeof(*cpi->frag_sad));
 
   /* +1; the last entry is the 'invalid' mb, which contains only 'invalid' frags */
   cpi->macro = calloc(cpi->macro_total+1, sizeof(*cpi->macro));
@@ -241,27 +249,33 @@ void InitFrameInfo(CP_INSTANCE *cpi){
       for(col=0;col<cpi->macro_h;col++){
 	int basecol = col*2;
 	int macroindex = row*cpi->macro_h + col;
+	int fragindex;
 	for(frag=0;frag<4;frag++){
 	  /* translate to fragment index */
 	  int frow = baserow + scany[frag];
 	  int fcol = basecol + scanx[frag];
 	  if(frow<cpi->frag_v[0] && fcol<cpi->frag_h[0]){
-	    int fragindex = frow*cpi->frag_h[0] + fcol;
-	    cpi->macro[macroindex].yuv[0][frag] = fragindex;
+	    fragindex = frow*cpi->frag_h[0] + fcol;	    
+	    cpi->frag_mbi[fragindex] = macroindex;
 	  }else
-	    cpi->macro[macroindex].yuv[0][frag] = cpi->frag_total;
+	    fragindex = cpi->frag_total;
+	  cpi->macro[macroindex].yuv[0][frag] = fragindex;
 	}
 	
-	if(row<cpi->frag_v[1] && col<cpi->frag_h[1])
-	  cpi->macro[macroindex].yuv[1][0] = cpi->frag_n[0] + macroindex;
-	else
-	  cpi->macro[macroindex].yuv[1][0] = cpi->frag_total;
-
-	if(row<cpi->frag_v[2] && col<cpi->frag_h[2])
-	  cpi->macro[macroindex].yuv[2][0] = cpi->frag_n[0] + cpi->frag_n[1] + macroindex; 
-	else
-	  cpi->macro[macroindex].yuv[2][0] = cpi->frag_total;
-
+	if(row<cpi->frag_v[1] && col<cpi->frag_h[1]){
+	  fragindex = cpi->frag_n[0] + macroindex;
+	  cpi->frag_mbi[fragindex] = macroindex;
+	}else
+	  fragindex = cpi->frag_total;
+	cpi->macro[macroindex].yuv[1][0] = fragindex;
+	
+	if(row<cpi->frag_v[2] && col<cpi->frag_h[2]){
+	  fragindex = cpi->frag_n[0] + cpi->frag_n[1] + macroindex; 
+	  cpi->frag_mbi[fragindex] = macroindex;
+	}else
+	  fragindex = cpi->frag_total;
+	cpi->macro[macroindex].yuv[2][0] = fragindex;
+	
       }
     }
   }
@@ -309,6 +323,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	cpi->macro[cpi->macro_total].yuv[p][f] = cpi->frag_total;
     cpi->macro[cpi->macro_total].ncneighbors=0;
     cpi->macro[cpi->macro_total].npneighbors=0;
+    cpi->frag_mbi[cpi->frag_total] = cpi->macro_total;
   }
 
   /* allocate frames */
@@ -318,8 +333,22 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->recon = _ogg_malloc(cpi->frame_size*sizeof(*cpi->recon));
 
   cpi->dct_token_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_storage));
+  cpi->dct_token_frag_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_frag_storage));
   cpi->dct_token_eb_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_eb_storage));
+  cpi->dct_eob_fi_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_eob_fi_storage));
   
+  memset(cpi->frag_bitrates,0,sizeof(cpi->frag_distort));
+  memset(cpi->frag_distort_count,0,sizeof(cpi->frag_distort));
+  {
+    int qi,plane,mode,bin;
+    
+    for(qi=0;i<64;qi++)
+      for(plane=0;plane<3;plane++)
+	for(mode=0;mode<8;mode++)
+	  for(bin=0;bin<OC_SAD_BINS;bin++)
+	    cpi->frag_distort_count[qi][plane][mode][bin]=100;
+  }
+
   /* Re-initialise the pixel index table. */
   {
     ogg_uint32_t plane,row,col;

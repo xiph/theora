@@ -32,10 +32,11 @@ static int acoffset[64]={
 
 /* plane == 0 for Y, 1 for UV */
 static void add_token(CP_INSTANCE *cpi, int plane, int coeff, 
-		      unsigned char token, ogg_uint16_t eb){
+		      unsigned char token, ogg_uint16_t eb, int fi){
 
   cpi->dct_token[coeff][cpi->dct_token_count[coeff]] = token;
   cpi->dct_token_eb[coeff][cpi->dct_token_count[coeff]] = eb;
+  cpi->dct_token_frag[coeff][cpi->dct_token_count[coeff]] = fi;
   cpi->dct_token_count[coeff]++;
 
   if(coeff == 0){
@@ -54,12 +55,14 @@ static void add_token(CP_INSTANCE *cpi, int plane, int coeff,
 }
 
 static void prepend_token(CP_INSTANCE *cpi, int plane, int coeff, 
-			  unsigned char token, ogg_uint16_t eb){
+			  unsigned char token, ogg_uint16_t eb, int fi){
 
   cpi->dct_token[coeff]--;
   cpi->dct_token_eb[coeff]--;
+  cpi->dct_token_frag[coeff]--;
   cpi->dct_token[coeff][0] = token;
   cpi->dct_token_eb[coeff][0] = eb;
+  cpi->dct_token_frag[coeff][0] = fi;
   cpi->dct_token_count[coeff]++;
 
   if(coeff == 0){
@@ -80,23 +83,23 @@ static void prepend_token(CP_INSTANCE *cpi, int plane, int coeff,
 static void emit_eob_run(CP_INSTANCE *cpi, int plane, int pos, int run){
   if ( run <= 3 ) {
     if ( run == 1 ) {
-      add_token(cpi, plane, pos, DCT_EOB_TOKEN, 0);
+      add_token(cpi, plane, pos, DCT_EOB_TOKEN, 0, 0);
     } else if ( run == 2 ) {
-      add_token(cpi, plane, pos, DCT_EOB_PAIR_TOKEN, 0);
+      add_token(cpi, plane, pos, DCT_EOB_PAIR_TOKEN, 0, 0);
     } else {
-      add_token(cpi, plane, pos, DCT_EOB_TRIPLE_TOKEN, 0);
+      add_token(cpi, plane, pos, DCT_EOB_TRIPLE_TOKEN, 0, 0);
     }
     
   } else {
     
     if ( run < 8 ) {
-      add_token(cpi, plane, pos, DCT_REPEAT_RUN_TOKEN, run-4);
+      add_token(cpi, plane, pos, DCT_REPEAT_RUN_TOKEN, run-4, 0);
     } else if ( run < 16 ) {
-      add_token(cpi, plane, pos, DCT_REPEAT_RUN2_TOKEN, run-8);
+      add_token(cpi, plane, pos, DCT_REPEAT_RUN2_TOKEN, run-8, 0);
     } else if ( run < 32 ) {
-      add_token(cpi, plane, pos, DCT_REPEAT_RUN3_TOKEN, run-16);
+      add_token(cpi, plane, pos, DCT_REPEAT_RUN3_TOKEN, run-16, 0);
     } else if ( run < 4096) {
-      add_token(cpi, plane, pos, DCT_REPEAT_RUN4_TOKEN, run);
+      add_token(cpi, plane, pos, DCT_REPEAT_RUN4_TOKEN, run, 0);
     }
   }
 }
@@ -104,23 +107,23 @@ static void emit_eob_run(CP_INSTANCE *cpi, int plane, int pos, int run){
 static void prepend_eob_run(CP_INSTANCE *cpi, int plane, int pos, int run){
   if ( run <= 3 ) {
     if ( run == 1 ) {
-      prepend_token(cpi, plane, pos, DCT_EOB_TOKEN, 0);
+      prepend_token(cpi, plane, pos, DCT_EOB_TOKEN, 0, 0);
     } else if ( run == 2 ) {
-      prepend_token(cpi, plane, pos, DCT_EOB_PAIR_TOKEN, 0);
+      prepend_token(cpi, plane, pos, DCT_EOB_PAIR_TOKEN, 0, 0);
     } else {
-      prepend_token(cpi, plane, pos, DCT_EOB_TRIPLE_TOKEN, 0);
+      prepend_token(cpi, plane, pos, DCT_EOB_TRIPLE_TOKEN, 0, 0);
     }
     
   } else {
     
     if ( run < 8 ) {
-      prepend_token(cpi, plane, pos, DCT_REPEAT_RUN_TOKEN, run-4);
+      prepend_token(cpi, plane, pos, DCT_REPEAT_RUN_TOKEN, run-4, 0);
     } else if ( run < 16 ) {
-      prepend_token(cpi, plane, pos, DCT_REPEAT_RUN2_TOKEN, run-8);
+      prepend_token(cpi, plane, pos, DCT_REPEAT_RUN2_TOKEN, run-8, 0);
     } else if ( run < 32 ) {
-      prepend_token(cpi, plane, pos, DCT_REPEAT_RUN3_TOKEN, run-16);
+      prepend_token(cpi, plane, pos, DCT_REPEAT_RUN3_TOKEN, run-16, 0);
     } else if ( run < 4096) {
-      prepend_token(cpi, plane, pos, DCT_REPEAT_RUN4_TOKEN, run);
+      prepend_token(cpi, plane, pos, DCT_REPEAT_RUN4_TOKEN, run, 0);
     }
   }
 }
@@ -128,46 +131,47 @@ static void prepend_eob_run(CP_INSTANCE *cpi, int plane, int pos, int run){
 static void TokenizeDctValue (CP_INSTANCE *cpi, 
 			      int plane, 
 			      int coeff,
-			      ogg_int16_t DataValue){
+			      ogg_int16_t DataValue,
+			      int fi){
 
   int AbsDataVal = abs(DataValue);
   int neg = (DataValue<0);
 
   if ( AbsDataVal == 1 ){
 
-    add_token(cpi, plane, coeff, (neg ? MINUS_ONE_TOKEN : ONE_TOKEN), 0);
+    add_token(cpi, plane, coeff, (neg ? MINUS_ONE_TOKEN : ONE_TOKEN), 0, fi);
 
   } else if ( AbsDataVal == 2 ) {
 
-    add_token(cpi, plane, coeff, (neg ? MINUS_TWO_TOKEN : TWO_TOKEN), 0);
+    add_token(cpi, plane, coeff, (neg ? MINUS_TWO_TOKEN : TWO_TOKEN), 0, fi);
 
   } else if ( AbsDataVal <= MAX_SINGLE_TOKEN_VALUE ) {
 
-    add_token(cpi, plane, coeff, LOW_VAL_TOKENS + (AbsDataVal - DCT_VAL_CAT2_MIN), neg);
+    add_token(cpi, plane, coeff, LOW_VAL_TOKENS + (AbsDataVal - DCT_VAL_CAT2_MIN), neg, fi);
 
   } else if ( AbsDataVal <= 8 ) {
 
-    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY3, (AbsDataVal - DCT_VAL_CAT3_MIN) + (neg << 1));
+    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY3, (AbsDataVal - DCT_VAL_CAT3_MIN) + (neg << 1), fi);
 
   } else if ( AbsDataVal <= 12 ) {
 
-    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY4, (AbsDataVal - DCT_VAL_CAT4_MIN) + (neg << 2));
+    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY4, (AbsDataVal - DCT_VAL_CAT4_MIN) + (neg << 2), fi);
 
   } else if ( AbsDataVal <= 20 ) {
 
-    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY5, (AbsDataVal - DCT_VAL_CAT5_MIN) + (neg << 3));
+    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY5, (AbsDataVal - DCT_VAL_CAT5_MIN) + (neg << 3), fi);
 
   } else if ( AbsDataVal <= 36 ) {
 
-    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY6, (AbsDataVal - DCT_VAL_CAT6_MIN) + (neg << 4));
+    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY6, (AbsDataVal - DCT_VAL_CAT6_MIN) + (neg << 4), fi);
 
   } else if ( AbsDataVal <= 68 ) {
 
-    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY7, (AbsDataVal - DCT_VAL_CAT7_MIN) + (neg << 5));
+    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY7, (AbsDataVal - DCT_VAL_CAT7_MIN) + (neg << 5), fi);
 
   } else {
 
-    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY8, (AbsDataVal - DCT_VAL_CAT8_MIN) + (neg << 9));
+    add_token(cpi, plane, coeff, DCT_VAL_CATEGORY8, (AbsDataVal - DCT_VAL_CAT8_MIN) + (neg << 9), fi);
 
   } 
 }
@@ -187,19 +191,19 @@ static void TokenizeDctRunValue (CP_INSTANCE *cpi,
   if ( AbsDataVal == 1 ) {
 
     if ( RunLength <= 5 ) 
-      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1 + RunLength - 1, neg);
+      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1 + RunLength - 1, neg, fi);
     else if ( RunLength <= 9 ) 
-      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1B, RunLength - 6 + (neg<<2));
+      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1B, RunLength - 6 + (neg<<2), fi);
     else 
-      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1C, RunLength - 10 + (neg<<3));
+      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY1C, RunLength - 10 + (neg<<3), fi);
 
   } else if ( AbsDataVal <= 3 ) {
 
     if ( RunLength == 1 ) 
-      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY2, AbsDataVal - 2 + (neg<<1));
+      add_token(cpi,plane,coeff, DCT_RUN_CATEGORY2, AbsDataVal - 2 + (neg<<1), fi);
     else
       add_token(cpi,plane,coeff, DCT_RUN_CATEGORY2B, 
-		(neg<<2) + ((AbsDataVal-2)<<1) + RunLength - 2);
+		(neg<<2) + ((AbsDataVal-2)<<1) + RunLength - 2, fi);
 
   }
 }
@@ -240,6 +244,7 @@ static void tokenize_groups(CP_INSTANCE *cpi,
 		eob_ypre[coeff]++;
 	      else
 		eob_uvpre[coeff]++;
+	      cpi->dct_eob_fi_stack[coeff][cpi->dct_eob_fi_count[coeff]++]=fi;
 	    }else{
 	      if(eob_run[coeff] == 4095){
 		emit_eob_run(cpi,eob_plane[coeff],coeff,4095);
@@ -250,6 +255,7 @@ static void tokenize_groups(CP_INSTANCE *cpi,
 		eob_plane[coeff]=plane;
 	      
 	      eob_run[coeff]++;
+	      cpi->dct_eob_fi_stack[coeff][cpi->dct_eob_fi_count[coeff]++]=fi;
 	    }
 	    coeff = BLOCK_SIZE;
 	  }else{
@@ -264,17 +270,17 @@ static void tokenize_groups(CP_INSTANCE *cpi,
 	      ogg_uint32_t absval = abs(val);
 	      if ( ((absval == 1) && (zero_run <= 17)) ||
 		   ((absval <= 3) && (zero_run <= 3)) ) {
-		TokenizeDctRunValue( cpi, plane, coeff, zero_run, val);
+		TokenizeDctRunValue( cpi, plane, coeff, zero_run, val, fi);
 		coeff = i+1;
 	      }else{
 		if ( zero_run <= 8 )
-		  add_token(cpi, plane, coeff, DCT_SHORT_ZRL_TOKEN, zero_run - 1);
+		  add_token(cpi, plane, coeff, DCT_SHORT_ZRL_TOKEN, zero_run - 1, fi);
 		else
-		  add_token(cpi, plane, coeff, DCT_ZRL_TOKEN, zero_run - 1);
+		  add_token(cpi, plane, coeff, DCT_ZRL_TOKEN, zero_run - 1, fi);
 		coeff = i;
 	      }
 	    }else{
-	      TokenizeDctValue( cpi, plane, coeff, val );
+	      TokenizeDctValue(cpi, plane, coeff, val, fi);
 	      coeff = i+1;
 	    }
 	  }
@@ -300,10 +306,13 @@ void DPCMTokenize (CP_INSTANCE *cpi){
   memset(cpi->ac_bits, 0, sizeof(cpi->ac_bits));
   memset(cpi->dct_token_count, 0, sizeof(cpi->dct_token_count));
   memset(cpi->dct_token_ycount, 0, sizeof(cpi->dct_token_ycount));
+  memset(cpi->dct_eob_fi_count, 0, sizeof(cpi->dct_eob_fi_count));
 
   for(i=0;i<BLOCK_SIZE;i++){
     cpi->dct_token[i] = cpi->dct_token_storage+cpi->frag_total*i;
     cpi->dct_token_eb[i] = cpi->dct_token_eb_storage+cpi->frag_total*i;
+    cpi->dct_token_frag[i] = cpi->dct_token_frag_storage+cpi->frag_total*i;
+    cpi->dct_eob_fi_stack[i] = cpi->dct_eob_fi_storage+cpi->frag_total*i;
   }
 
   /* Tokenize the dct data. */
@@ -512,6 +521,25 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
   }
 }
 
+static int blockSAD(ogg_int16_t *b, int interp){
+  int j;
+  int sad = 0;
+
+  if(inter_p){
+    for(j=0;j<64;j++)
+      sad += abs(b[j]);
+  }else{
+    ogg_uint32_t acc = 0;
+    for(j=0;j<64;j++)
+      acc += b[j]; 
+    for(j=0;j<64;j++)
+      sad += abs ((b[j]<<6)-acc); 
+    sad>>=6;
+  }
+  
+  return sad;
+}
+
 void TransformQuantizeBlock (CP_INSTANCE *cpi, 
 			     coding_mode_t mode,
 			     int fi,
@@ -540,7 +568,8 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
      forward DCT */
   BlockUpdateDifference(cpi, FiltPtr, DCTInput, 
 			MvDivisor, fi, cpi->stride[plane], mode, mv);
-  
+  cpi->frag_sad[fi] = blockSAD(DCTInput, inter);
+
   /* Proceed to encode the data into the encode buffer if the encoder
      is enabled. */
   /* Perform a 2D DCT transform on the data. */
