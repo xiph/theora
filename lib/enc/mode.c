@@ -627,92 +627,61 @@ static void UpdateModeEstimation(CP_INSTANCE *cpi){
       }
 }
 
-static int ModeMetricsGroup(CP_INSTANCE *cpi, int group, int huffY, int huffC, int prerun){
+static int ModeMetricsGroup(CP_INSTANCE *cpi, int group, int huffY, int huffC, int *eobcounts){
   int ti,plane;
   int *stack = cpi->dct_eob_fi_stack[group];
   int ty = cpi->dct_token_ycount[group];
+  int *tfi = cpi->dct_token_frag[group];
+  int qi = cpi->BaseQ; /* temporary */
+  unsigned char *sp = cpi->frag_sad;
+  unsigned char *mp = cpi->frag_mbi;
+  int tn = cpi->dct_token_count[group];
 
-  for(ti=0;ti<cpi->dct_token_count[group];ti++){
+  for(ti=0;ti<tn;ti++){
     int huff = (ti<ty?huffY:huffC);
     int token = cpi->dct_token[group][ti];
     int bits = cpi->HuffCodeLengthArray_VP3x[huff][token[i]] + cpi->ExtraBitLengths_VP3x[token[i]];
     
     if(token>DCT_REPEAT_RUN4_TOKEN){
       /* not an EOB run; this token belongs to a single fragment */
-      
-
-
+      int fi = tfi[ti];
+      int bin = OC_MINI(sp[fi] >> OC_SAD_SHIFT, OC_SAD_CLAMP);
+      int plane = (fi < y ? 0 : (fi < u ? 1 : 2));
+      int mode = cpi->macro[mp[fi]].mode;
+      cpi->frag_distort[qi][plane][mode][bin] += bits<<OC_BIT_SCALE;
     }else{
       /* EOB run; its bits should be split up between all the fragments in the run */
       int run = parse_eob_run(token, cpi->dct_token_eb[group][ti]);
       int fracbits = ((bits<<OC_BIT_SCALE) + (run>>1))/run;
-      int eobptr = eobcounts[group];
 
       if(ti+1<n){
-	/* EOB entirely ensconced within this group */
+	/* tokens follow EOB so it must be entirely ensconced within this group */
 	while(run--){
-	  int fi = stack[eobptr++];
+	  int fi = stack[eobcounts[group]++];
 	  int bin = OC_MINI(sp[fi] >> OC_SAD_SHIFT, OC_SAD_CLAMP);
 	  int plane = (fi < y ? 0 : (fi < u ? 1 : 2));
-
-
-
+	  int mode = cpi->macro[mp[fi]].mode;
+	  cpi->frag_distort[qi][plane][mode][bin] += fracbits;
+	}
       }else{
-	/* this EOB is the last token in this group, so it may span into the next group */
+	/* EOB is the last token in this group, so it may span into the next group (or groups) */
 	int n = cpi->dct_eob_fi_count[group];
 
-
-
-	
-	while(run--){
-	  int fi = stack[eobptr++];
-	  int bin = OC_MINI(sp[fi] >> OC_SAD_SHIFT, OC_SAD_CLAMP);
-      int plane = (fi < y ? 0 : (fi < u ? 1 : 2));
-
-	  int eobfi;
-	if(eobptr >= cpi->dct_eob_fi_count[group]){
-	  eobptr = eobcounts[group+1]++;
-	  eobfi = cpi->dct_eob_fi_stack[group+1][eobptr];
-	}else{
-	  eobcounts[group]++;
-	  eobfi = cpi->dct_eob_fi_stack[group][eobptr];
+	while(run){
+	  while(eobcounts[group] < n && run--){
+	    int fi = stack[eobcounts[group]++];
+	    int bin = OC_MINI(sp[fi] >> OC_SAD_SHIFT, OC_SAD_CLAMP);
+	    int plane = (fi < y ? 0 : (fi < u ? 1 : 2));
+	    int mode = cpi->macro[mp[fi]].mode;
+	    cpi->frag_distort[qi][plane][mode][bin] += fracbits;
+	  }
+	  group++;
+	  n = cpi->dct_eob_fi_count[group];
+	  stack = cpi->dct_eob_fi_stack[group];
 	}
-
-	int 
-
-
       }
-
     }
   }
-
-  int i;
-  oggpack_buffer *opb=cpi->oggbuffer;
-  int y = cpi->dct_token_ycount[group];
-  unsigned char *token = cpi->dct_token[group];
-  ogg_uint16_t *eb = cpi->dct_token_eb[group];
- 
-  for(i=0; i<y; i++){
-    oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huffY][token[i]],
-		    cpi->HuffCodeLengthArray_VP3x[huffY][token[i]] );
-    if (cpi->ExtraBitLengths_VP3x[token[i]] > 0) 
-      oggpackB_write( opb, eb[i], cpi->ExtraBitLengths_VP3x[token[i]] );
-  }
-
-  for(; i<cpi->dct_token_count[group]; i++){
-    oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huffC][token[i]],
-		    cpi->HuffCodeLengthArray_VP3x[huffC][token[i]] );
-    if (cpi->ExtraBitLengths_VP3x[token[i]] > 0) 
-      oggpackB_write( opb, eb[i], cpi->ExtraBitLengths_VP3x[token[i]] );
-  }
-}
-
-
-
-
-
-
-
 }
 
 void ModeMetrics(CP_INSTANCE *cpi, int huff[4]){
@@ -752,6 +721,4 @@ void ModeMetrics(CP_INSTANCE *cpi, int huff[4]){
 
   /* update global SAD/rate estimation matrix */
   UpdateModeEstimation(cpi);
-
-
 }
