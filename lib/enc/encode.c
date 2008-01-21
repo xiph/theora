@@ -404,6 +404,7 @@ void EncodeData(CP_INSTANCE *cpi){
   }
 
   ChooseTokenTables(cpi, tokenhuff);
+  ModeMetrics(cpi,tokenhuff);
   EncodeTokenList(cpi, tokenhuff);
 
   ReconRefFrames(cpi);

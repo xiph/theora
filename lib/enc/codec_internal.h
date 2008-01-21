@@ -26,11 +26,12 @@
 #include "encoder_huffman.h"
 #include "dsp.h"
 
-#ifndef LIBOGG2
-#define theora_read(x,y,z) ( *z = oggpackB_read(x,y) )
-#else
+#define OC_SAD_BINS (16)
+#define OC_SAD_CLAMP (OC_SAD_BINS-1)
+#define OC_SAD_SHIFT (6)
+#define OC_BIT_SCALE (7)
+
 #define theora_read(x,y,z) ( oggpackB_read(x,y,z) )
-#endif
 
 #define CURRENT_ENCODE_VERSION   1
 #define HUGE_ERROR              (1<<28)  /*  Out of range test value */
@@ -204,7 +205,6 @@ typedef struct CP_INSTANCE {
   unsigned char   *frag_nonzero;
   ogg_int16_t     *frag_dc;
   dct_t           *frag_dct;
-  ogg_uint32_t    *frag_mbi;
 
   macroblock_t    *macro;
   superblock_t    *super[3];
@@ -258,6 +258,7 @@ typedef struct CP_INSTANCE {
 
   /********************************************************************/
   /* Fragment SAD->bitrate estimation tracking metrics */
+  int             *frag_mbi;
   int             *frag_sad;
   int             *dct_token_frag_storage;
   int             *dct_token_frag[64];
@@ -337,6 +338,6 @@ extern void InitFrameInfo(CP_INSTANCE *cpi);
 
 extern void ClearFrameInfo (CP_INSTANCE *cpi);
 
-
+extern void ModeMetrics(CP_INSTANCE *cpi, int huff[4]);
 
 #endif /* ENCODER_INTERNAL_H */

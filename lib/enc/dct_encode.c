@@ -180,7 +180,8 @@ static void TokenizeDctRunValue (CP_INSTANCE *cpi,
 				 int plane, 
 				 int coeff,
 				 unsigned char RunLength,
-				 ogg_int16_t DataValue){
+				 ogg_int16_t DataValue,
+				 int fi){
 
   ogg_uint32_t AbsDataVal = abs( (ogg_int32_t)DataValue );
   int neg = (DataValue<0);
@@ -521,7 +522,7 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
   }
 }
 
-static int blockSAD(ogg_int16_t *b, int interp){
+static int blockSAD(ogg_int16_t *b, int inter_p){
   int j;
   int sad = 0;
 

@@ -221,7 +221,7 @@ static void oc_mode_set( CP_INSTANCE *cpi,
 static int BIntraSAD(CP_INSTANCE *cpi, int fi, int plane){
   int sad = 0;
   unsigned char *b = cpi->frame + cpi->frag_buffer_index[fi];
-  ogg_uint32_t acc = 0;
+  ogg_int32_t acc = 0;
   int stride = cpi->stride[plane];
   int j;
   
@@ -239,15 +239,14 @@ static int BIntraSAD(CP_INSTANCE *cpi, int fi, int plane){
   
   b = cpi->frame + cpi->frag_buffer_index[fi];
   for(j=0;j<8;j++){
-    sad += abs ((b[0]<<6)-acc); 
     sad += abs ((b[1]<<6)-acc); 
     sad += abs ((b[2]<<6)-acc); 
     sad += abs ((b[3]<<6)-acc); 
     sad += abs ((b[4]<<6)-acc); 
     sad += abs ((b[5]<<6)-acc); 
     sad += abs ((b[6]<<6)-acc); 
-      sad += abs ((b[7]<<6)-acc); 
-      b += stride;
+    sad += abs ((b[7]<<6)-acc); 
+    b += stride;
   }
 
   return sad>>6;
@@ -262,23 +261,23 @@ static int MBIntraCost420(CP_INSTANCE *cpi, int qi, int mbi, int all){
   /* all frags in a macroblock are valid so long as the macroblock itself is valid */
   if(mbi < cpi->macro_total){ 
     if(all || cp[mb->yuv[0][0]])
-      cost += cpi->frag_bitrates[qi][0][OC_MODE_INTRA]
+      cost += cpi->frag_bitrates[qi][0][1]
 	[OC_MINI(BIntraSAD(cpi,mb->yuv[0][0],0)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
     if(all || cp[mb->yuv[0][1]])
-      cost += cpi->frag_bitrates[qi][0][OC_MODE_INTRA]
+      cost += cpi->frag_bitrates[qi][0][1]
 	[OC_MINI(BIntraSAD(cpi,mb->yuv[0][1],0)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
     if(all || cp[mb->yuv[0][2]])
-      cost += cpi->frag_bitrates[qi][0][OC_MODE_INTRA]
+      cost += cpi->frag_bitrates[qi][0][1]
 	[OC_MINI(BIntraSAD(cpi,mb->yuv[0][2],0)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
     if(all || cp[mb->yuv[0][3]])
-      cost += cpi->frag_bitrates[qi][0][OC_MODE_INTRA]
+      cost += cpi->frag_bitrates[qi][0][1]
 	[OC_MINI(BIntraSAD(cpi,mb->yuv[0][3],0)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
     
     if(all || cp[mb->yuv[1][0]])
-      cost += cpi->frag_bitrates[qi][1][OC_MODE_INTRA]
+      cost += cpi->frag_bitrates[qi][1][1]
 	[OC_MINI(BIntraSAD(cpi,mb->yuv[1][0],1)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
     if(all || cp[mb->yuv[2][0]])
-      cost += cpi->frag_bitrates[qi][2][OC_MODE_INTRA]
+      cost += cpi->frag_bitrates[qi][2][1]
 	[OC_MINI(BIntraSAD(cpi,mb->yuv[2][0],2)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
   }
   
@@ -324,56 +323,59 @@ static int BInterSAD(CP_INSTANCE *cpi, int fi, int plane, int goldenp, mv_t mv, 
     unsigned char *r2 = r + my2 * stride + mx2;
     
     for(j=0;j<8;j++){
-      sad += abs (b[0]-((r[0]+r2[0])>>1));
-      sad += abs (b[1]-((r[1]+r2[1])>>1));
-      sad += abs (b[2]-((r[2]+r2[2])>>1));
-      sad += abs (b[3]-((r[3]+r2[3])>>1));
-      sad += abs (b[4]-((r[4]+r2[4])>>1));
-      sad += abs (b[5]-((r[5]+r2[5])>>1));
-      sad += abs (b[6]-((r[6]+r2[6])>>1));
-      sad += abs (b[7]-((r[7]+r2[7])>>1));
+      sad += abs (b[0]-((r[0]+(int)r2[0])>>1));
+      sad += abs (b[1]-((r[1]+(int)r2[1])>>1));
+      sad += abs (b[2]-((r[2]+(int)r2[2])>>1));
+      sad += abs (b[3]-((r[3]+(int)r2[3])>>1));
+      sad += abs (b[4]-((r[4]+(int)r2[4])>>1));
+      sad += abs (b[5]-((r[5]+(int)r2[5])>>1));
+      sad += abs (b[6]-((r[6]+(int)r2[6])>>1));
+      sad += abs (b[7]-((r[7]+(int)r2[7])>>1));
       b += stride;
+      r += stride;
+      r2 += stride;
     }
     
   }else{
     for(j=0;j<8;j++){
-      sad += abs (b[0]-r[0]);
-      sad += abs (b[1]-r[1]);
-      sad += abs (b[2]-r[2]);
-      sad += abs (b[3]-r[3]);
-      sad += abs (b[4]-r[4]);
-      sad += abs (b[5]-r[5]);
-      sad += abs (b[6]-r[6]);
-      sad += abs (b[7]-r[7]);
+      sad += abs (b[0]-(int)r[0]);
+      sad += abs (b[1]-(int)r[1]);
+      sad += abs (b[2]-(int)r[2]);
+      sad += abs (b[3]-(int)r[3]);
+      sad += abs (b[4]-(int)r[4]);
+      sad += abs (b[5]-(int)r[5]);
+      sad += abs (b[6]-(int)r[6]);
+      sad += abs (b[7]-(int)r[7]);
       b += stride;
+      r += stride;
     }
   }
   return sad;
 }
 
-static int MBInterCost420(CP_INSTANCE *cpi, int qi, int modei, int mbi, mv_t mv, int goldenp){
+static int MBInterCost420(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv, int goldenp){
   unsigned char *cp = cpi->frag_coded;
   macroblock_t *mb = &cpi->macro[mbi];
   int cost = 0;
 
   if(cp[mb->yuv[0][0]])
-    cost += cpi->frag_bitrates[qi][0][modei]
+    cost += cpi->frag_bitrates[qi][0][0]
       [OC_MINI(BInterSAD(cpi,mb->yuv[0][0],0,goldenp,mv,0)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
   if(cp[mb->yuv[0][1]])
-    cost += cpi->frag_bitrates[qi][0][modei]
+    cost += cpi->frag_bitrates[qi][0][0]
       [OC_MINI(BInterSAD(cpi,mb->yuv[0][1],0,goldenp,mv,0)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
   if(cp[mb->yuv[0][2]])
-    cost += cpi->frag_bitrates[qi][0][modei]
+    cost += cpi->frag_bitrates[qi][0][0]
       [OC_MINI(BInterSAD(cpi,mb->yuv[0][2],0,goldenp,mv,0)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
   if(cp[mb->yuv[0][3]])
-    cost += cpi->frag_bitrates[qi][0][modei]
+    cost += cpi->frag_bitrates[qi][0][0]
       [OC_MINI(BInterSAD(cpi,mb->yuv[0][3],0,goldenp,mv,0)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
 
   if(cp[mb->yuv[1][0]])
-    cost += cpi->frag_bitrates[qi][1][modei]
+    cost += cpi->frag_bitrates[qi][1][0]
       [OC_MINI(BInterSAD(cpi,mb->yuv[1][0],1,goldenp,mv,1)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
   if(cp[mb->yuv[2][0]])
-    cost += cpi->frag_bitrates[qi][2][modei]
+    cost += cpi->frag_bitrates[qi][2][0]
       [OC_MINI(BInterSAD(cpi,mb->yuv[2][0],2,goldenp,mv,1)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
 
   /* Bit costs are stored in the table with extra precision. Round them down to whole bits.*/
@@ -387,16 +389,16 @@ static int MBInter4Cost420(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv[4], int go
   mv_t ch;
 
   if(cp[mb->yuv[0][0]])
-    cost += cpi->frag_bitrates[qi][0][CODE_INTER_FOURMV]
+    cost += cpi->frag_bitrates[qi][0][0]
       [OC_MINI(BInterSAD(cpi,mb->yuv[0][0],0,goldenp,mv[0],0)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
   if(cp[mb->yuv[0][1]])
-    cost += cpi->frag_bitrates[qi][0][CODE_INTER_FOURMV]
+    cost += cpi->frag_bitrates[qi][0][0]
       [OC_MINI(BInterSAD(cpi,mb->yuv[0][1],0,goldenp,mv[1],0)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
   if(cp[mb->yuv[0][2]])
-    cost += cpi->frag_bitrates[qi][0][CODE_INTER_FOURMV]
+    cost += cpi->frag_bitrates[qi][0][0]
       [OC_MINI(BInterSAD(cpi,mb->yuv[0][2],0,goldenp,mv[2],0)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
   if(cp[mb->yuv[0][3]])
-    cost += cpi->frag_bitrates[qi][0][CODE_INTER_FOURMV]
+    cost += cpi->frag_bitrates[qi][0][0]
       [OC_MINI(BInterSAD(cpi,mb->yuv[0][3],0,goldenp,mv[3],0)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
 
   /* Calculate motion vector as the average of the Y plane ones. */
@@ -408,26 +410,35 @@ static int MBInter4Cost420(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv[4], int go
   ch.y = ( ch.y >= 0 ? (ch.y + 2) / 4 : (ch.y - 2) / 4);
   
   if(cp[mb->yuv[1][0]])
-    cost += cpi->frag_bitrates[qi][1][CODE_INTER_FOURMV]
+    cost += cpi->frag_bitrates[qi][1][0]
       [OC_MINI(BInterSAD(cpi,mb->yuv[1][0],1,goldenp,ch,1)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
   if(cp[mb->yuv[2][0]])
-    cost += cpi->frag_bitrates[qi][2][CODE_INTER_FOURMV]
+    cost += cpi->frag_bitrates[qi][2][0]
       [OC_MINI(BInterSAD(cpi,mb->yuv[2][0],2,goldenp,ch,1)>>OC_SAD_SHIFT,OC_SAD_CLAMP)];
 
   /* Bit costs are stored in the table with extra precision. Round them down to whole bits.*/
   return cost + (1<<OC_BIT_SCALE-1) >> OC_BIT_SCALE;
 }
 
+//static char *modestrings[8]={
+//"Inter","Intra","MV","LastMV","PriorMV","Golden","GoldenMV","4MV"
+//};
+
+#include <stdio.h>
+
 int PickModes(CP_INSTANCE *cpi){
   unsigned char qi = cpi->BaseQ; // temporary
   superblock_t *sb = cpi->super[0];
   superblock_t *sb_end = sb + cpi->super_n[0];
-  int mbi, i;
+  int i,j;
   ogg_uint32_t interbits = 0;
   ogg_uint32_t intrabits = 0;
 
   mv_t last_mv = {0,0};
   mv_t prior_mv = {0,0};
+
+  //int overhead_acc[8]={0,0,0,0,0,0,0,0};
+  //int overhead_n[8]={0,0,0,0,0,0,0,0};
 
   oc_mode_scheme_chooser_init(cpi);
   cpi->MVBits_0 = 0;
@@ -435,9 +446,10 @@ int PickModes(CP_INSTANCE *cpi){
  
   /* Choose modes; must be done in Hilbert order */
   for(; sb<sb_end; sb++){
-    for(mbi = 0; mbi<4; mbi++){ /* mode addressing is through Y plane, always 4 MB per SB */
+    for(j = 0; j<4; j++){ /* mode addressing is through Y plane, always 4 MB per SB */
+      int mbi = sb->m[j];
       ogg_uint32_t  cost[8] = {0,0,0,0, 0,0,0,0};
-      macroblock_t *mb = &cpi->macro[sb->m[mbi]];
+      macroblock_t *mb = &cpi->macro[mbi];
 
       if(cpi->FrameType == KEY_FRAME){
 	mb->mode = CODE_INTRA;
@@ -454,7 +466,7 @@ int PickModes(CP_INSTANCE *cpi){
 
       /* block coding cost is estimated from correlated SAD metrics */
 
-      cost[CODE_INTER_NO_MV] = MBInterCost420(cpi,qi,CODE_INTER_NO_MV,mbi,(mv_t){0,0},0);
+      cost[CODE_INTER_NO_MV] = MBInterCost420(cpi,qi,mbi,(mv_t){0,0},0);
 
       /* 'should this have been a keyframe in retrospect' tracking;
 	 includes none of the rest of the inter-style labelling and
@@ -475,35 +487,44 @@ int PickModes(CP_INSTANCE *cpi){
 	int mode;
 
 	cost[CODE_INTRA] = MBIntraCost420(cpi,qi,mbi,0);
-	cost[CODE_INTER_PLUS_MV] = MBInterCost420(cpi,qi,CODE_INTER_PLUS_MV,mbi,mb->analysis_mv[0][0],0);
-	cost[CODE_INTER_LAST_MV] = MBInterCost420(cpi,qi,CODE_INTER_LAST_MV,mbi,last_mv,0);
-	cost[CODE_INTER_PRIOR_LAST] = MBInterCost420(cpi,qi,CODE_INTER_PRIOR_LAST,mbi,prior_mv,0);
-	cost[CODE_USING_GOLDEN] = MBInterCost420(cpi,qi,CODE_USING_GOLDEN,mbi,(mv_t){0,0},1);
-	cost[CODE_GOLDEN_MV] = MBInterCost420(cpi,qi,CODE_GOLDEN_MV,mbi,mb->analysis_mv[0][1],0);
+	cost[CODE_INTER_PLUS_MV] = MBInterCost420(cpi,qi,mbi,mb->analysis_mv[0][0],0);
+	cost[CODE_INTER_LAST_MV] = MBInterCost420(cpi,qi,mbi,last_mv,0);
+	cost[CODE_INTER_PRIOR_LAST] = MBInterCost420(cpi,qi,mbi,prior_mv,0);
+	cost[CODE_USING_GOLDEN] = MBInterCost420(cpi,qi,mbi,(mv_t){0,0},1);
+	cost[CODE_GOLDEN_MV] = MBInterCost420(cpi,qi,mbi,mb->analysis_mv[0][1],1);
 	cost[CODE_INTER_FOURMV] = MBInter4Cost420(cpi,qi,mbi,mb->mv,0);
 	
 	/* add estimated labelling cost for each mode */
-	for(i = 0; i < 8; i++)
+	for(i = 0; i < 8; i++){
+	  //overhead_acc[i] += cost[i];
+	  //overhead_n[i] ++;
 	  cost[i] += oc_mode_cost(cpi,i);
-	
+	}
+
 	/* Add the motion vector bits for each mode that requires them.*/
-	mb_mv_bits_0  = MvBits[mb->analysis_mv[0][0].x] + MvBits[mb->analysis_mv[0][0].y];
-	mb_gmv_bits_0 = MvBits[mb->analysis_mv[0][1].x] + MvBits[mb->analysis_mv[0][1].y];
+	mb_mv_bits_0  = MvBits[mb->analysis_mv[0][0].x + MAX_MV_EXTENT] + 
+	  MvBits[mb->analysis_mv[0][0].y + MAX_MV_EXTENT];
+	mb_gmv_bits_0 = MvBits[mb->analysis_mv[0][1].x+MAX_MV_EXTENT] + 
+	  MvBits[mb->analysis_mv[0][1].y+MAX_MV_EXTENT];
 	mb_4mv_bits_0 = mb_4mv_bits_1 = 0;
 	if(mb->coded & 1){
-	  mb_4mv_bits_0 += MvBits[mb->mv[0].x] + MvBits[mb->mv[0].y];
+	  mb_4mv_bits_0 += MvBits[mb->mv[0].x + MAX_MV_EXTENT] + 
+	    MvBits[mb->mv[0].y+MAX_MV_EXTENT];
 	  mb_4mv_bits_1 += 12;
 	}
 	if(mb->coded & 2){
-	  mb_4mv_bits_0 += MvBits[mb->mv[1].x] + MvBits[mb->mv[1].y];
+	  mb_4mv_bits_0 += MvBits[mb->mv[1].x+MAX_MV_EXTENT] + 
+	    MvBits[mb->mv[1].y+MAX_MV_EXTENT];
 	  mb_4mv_bits_1 += 12;
 	}
 	if(mb->coded & 4){
-	  mb_4mv_bits_0 += MvBits[mb->mv[2].x] + MvBits[mb->mv[2].y];
+	  mb_4mv_bits_0 += MvBits[mb->mv[2].x+MAX_MV_EXTENT] + 
+	    MvBits[mb->mv[2].y+MAX_MV_EXTENT];
 	  mb_4mv_bits_1 += 12;
 	}
 	if(mb->coded & 8){
-	  mb_4mv_bits_0 += MvBits[mb->mv[3].x] + MvBits[mb->mv[3].y];
+	  mb_4mv_bits_0 += MvBits[mb->mv[3].x+MAX_MV_EXTENT] + 
+	    MvBits[mb->mv[3].y+MAX_MV_EXTENT];
 	  mb_4mv_bits_1 += 12;
 	}
 	
@@ -527,6 +548,9 @@ int PickModes(CP_INSTANCE *cpi){
 	for(i=1;i<8;i++)
 	  if(cost[i]<cost[mode])
 	    mode=i;
+
+	//for(i = 0; i < 8; i++)
+	//overhead_acc[i] += cost[i];
 
 	switch(mode){
 	case CODE_INTER_PLUS_MV:
@@ -567,6 +591,12 @@ int PickModes(CP_INSTANCE *cpi){
     }
   }
 
+  //fprintf(stderr,"\n>>>> FRAME %d overheads:",(int)cpi->CurrentFrame);
+  //for(i=0;i<8;i++)
+  //fprintf(stderr,"\n\t%s: %d", modestrings[i], 
+  //    overhead_n[i]?overhead_acc[i]/overhead_n[i]:-1);
+  //fprintf(stderr,"\n");
+
   if(cpi->FrameType != KEY_FRAME){
 
     if(interbits>intrabits) return 1; /* short circuit */
@@ -605,8 +635,13 @@ static void UpdateModeEstimation(CP_INSTANCE *cpi){
   
   //for(qi=0;i<64;qi++)
   qi = cpi->BaseQ;
+  //fprintf(stderr,"\n>>> Metrics update for frame %d (%s):",
+  //(int)cpi->CurrentFrame,(cpi->FrameType==KEY_FRAME?"I":"P"));
   for(plane=0;plane<3;plane++)
-    for(mode=0;mode<8;mode++)
+    for(mode=0;mode<2;mode++){
+      
+      //  if(plane==0)fprintf(stderr,"\n\tY mode %s: ",modestrings[mode]);
+			  
       for(bin=0;bin<OC_SAD_BINS;bin++){
 	int bits = cpi->frag_distort[qi][plane][mode][bin];
 	int frags = cpi->frag_distort_count[qi][plane][mode][bin];
@@ -620,60 +655,87 @@ static void UpdateModeEstimation(CP_INSTANCE *cpi){
 	  cpi->frag_distort[qi][plane][mode][bin] = bits;
 	  cpi->frag_distort_count[qi][plane][mode][bin] = frags;
 	  cpi->frag_bitrates[qi][plane][mode][bin] = (bits + (frags>>1)) / frags;
-	  
+
+	  //  if(plane==0)fprintf(stderr,"%d(%d),",cpi->frag_bitrates[qi][plane][mode][bin],frags);
 	}else{
 	  cpi->frag_bitrates[qi][plane][mode][bin] = 0;
+	  //if(plane==0)fprintf(stderr,"%d(%d),",0,0);
 	}
       }
+    }
+  //  fprintf(stderr,"\n");
 }
 
-static int ModeMetricsGroup(CP_INSTANCE *cpi, int group, int huffY, int huffC, int *eobcounts){
-  int ti,plane;
+static int parse_eob_run(int token, int eb){
+  switch(token){
+  case DCT_EOB_TOKEN:
+    return 1;
+  case DCT_EOB_PAIR_TOKEN:
+    return 2;
+  case DCT_EOB_TRIPLE_TOKEN:
+    return 3;
+  case DCT_REPEAT_RUN_TOKEN:
+    return eb+4;
+  case DCT_REPEAT_RUN2_TOKEN:
+    return eb+8;
+  case DCT_REPEAT_RUN3_TOKEN:
+    return eb+16;
+  case DCT_REPEAT_RUN4_TOKEN:
+    return eb;
+  default:
+    return 0;
+  }
+}
+
+static void ModeMetricsGroup(CP_INSTANCE *cpi, int group, int huffY, int huffC, int *eobcounts){
+  int ti;
   int *stack = cpi->dct_eob_fi_stack[group];
   int ty = cpi->dct_token_ycount[group];
   int *tfi = cpi->dct_token_frag[group];
   int qi = cpi->BaseQ; /* temporary */
-  unsigned char *sp = cpi->frag_sad;
-  unsigned char *mp = cpi->frag_mbi;
+  int *sp = cpi->frag_sad;
+  int *mp = cpi->frag_mbi;
   int tn = cpi->dct_token_count[group];
+  int y = cpi->frag_n[0];
+  int u = y + cpi->frag_n[1];
 
   for(ti=0;ti<tn;ti++){
     int huff = (ti<ty?huffY:huffC);
     int token = cpi->dct_token[group][ti];
-    int bits = cpi->HuffCodeLengthArray_VP3x[huff][token[i]] + cpi->ExtraBitLengths_VP3x[token[i]];
+    int bits = cpi->HuffCodeLengthArray_VP3x[huff][token] + cpi->ExtraBitLengths_VP3x[token];
     
     if(token>DCT_REPEAT_RUN4_TOKEN){
       /* not an EOB run; this token belongs to a single fragment */
       int fi = tfi[ti];
       int bin = OC_MINI(sp[fi] >> OC_SAD_SHIFT, OC_SAD_CLAMP);
       int plane = (fi < y ? 0 : (fi < u ? 1 : 2));
-      int mode = cpi->macro[mp[fi]].mode;
+      int mode = (cpi->macro[mp[fi]].mode == CODE_INTRA);
       cpi->frag_distort[qi][plane][mode][bin] += bits<<OC_BIT_SCALE;
     }else{
       /* EOB run; its bits should be split up between all the fragments in the run */
       int run = parse_eob_run(token, cpi->dct_token_eb[group][ti]);
       int fracbits = ((bits<<OC_BIT_SCALE) + (run>>1))/run;
 
-      if(ti+1<n){
+      if(ti+1<tn){
 	/* tokens follow EOB so it must be entirely ensconced within this group */
 	while(run--){
 	  int fi = stack[eobcounts[group]++];
 	  int bin = OC_MINI(sp[fi] >> OC_SAD_SHIFT, OC_SAD_CLAMP);
 	  int plane = (fi < y ? 0 : (fi < u ? 1 : 2));
-	  int mode = cpi->macro[mp[fi]].mode;
+	  int mode = (cpi->macro[mp[fi]].mode == CODE_INTRA);
 	  cpi->frag_distort[qi][plane][mode][bin] += fracbits;
 	}
       }else{
 	/* EOB is the last token in this group, so it may span into the next group (or groups) */
 	int n = cpi->dct_eob_fi_count[group];
-
 	while(run){
-	  while(eobcounts[group] < n && run--){
+	  while(eobcounts[group] < n && run){
 	    int fi = stack[eobcounts[group]++];
 	    int bin = OC_MINI(sp[fi] >> OC_SAD_SHIFT, OC_SAD_CLAMP);
 	    int plane = (fi < y ? 0 : (fi < u ? 1 : 2));
-	    int mode = cpi->macro[mp[fi]].mode;
+	    int mode = (cpi->macro[mp[fi]].mode == CODE_INTRA);
 	    cpi->frag_distort[qi][plane][mode][bin] += fracbits;
+	    run--;
 	  }
 	  group++;
 	  n = cpi->dct_eob_fi_count[group];
@@ -685,13 +747,13 @@ static int ModeMetricsGroup(CP_INSTANCE *cpi, int group, int huffY, int huffC, i
 }
 
 void ModeMetrics(CP_INSTANCE *cpi, int huff[4]){
-  int fi,ti,gi,n;
+  int fi,gi;
   int y = cpi->frag_n[0];
   int u = y + cpi->frag_n[1];
-  int v = y + cpi->frag_total;
+  int v = cpi->frag_total;
   unsigned char *cp = cpi->frag_coded;
-  unsigned char *sp = cpi->frag_sad;
-  unsigned char *mp = cpi->frag_mbi;
+  int *sp = cpi->frag_sad;
+  int *mp = cpi->frag_mbi;
   int eobcounts[64];
   int qi = cpi->BaseQ; /* temporary */
 
@@ -700,24 +762,24 @@ void ModeMetrics(CP_INSTANCE *cpi, int huff[4]){
   /* count coded frags by mode and SAD bin */
   for(fi=0;fi<v;fi++)
     if(cp[fi]){
-      macroblock_t *mb = cpi->macro[mp[fi]];
-      int mode = mb->mode;
+      macroblock_t *mb = &cpi->macro[mp[fi]];
+      int mode = (mb->mode == CODE_INTRA);
       int bin = OC_MINI(sp[fi] >> OC_SAD_SHIFT, OC_SAD_CLAMP);
       int plane = (fi < y ? 0 : (fi < u ? 1 : 2));
       cpi->frag_distort_count[qi][plane][mode][bin]++;
     }
 
   /* count bits for tokens */
-  ModeMetricsGroup(cpi, 0, huff[0], huff[1]);
+  ModeMetricsGroup(cpi, 0, huff[0], huff[1], eobcounts);
 
   for(gi=1;gi<=AC_TABLE_2_THRESH;gi++)
-    ModeMetricsGroup(cpi, gi,  huff[2], huff[3]);
+    ModeMetricsGroup(cpi, gi,  huff[2], huff[3], eobcounts);
   for(;gi<=AC_TABLE_3_THRESH;gi++)
-    ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES, huff[3]+AC_HUFF_CHOICES);
+    ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES, huff[3]+AC_HUFF_CHOICES, eobcounts);
   for(;gi<=AC_TABLE_4_THRESH;gi++)
-    ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES*2, huff[3]+AC_HUFF_CHOICES*2);
-  for(;gi<=BLOCK_SIZE;gi++)
-    ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES*3, huff[3]+AC_HUFF_CHOICES*3);
+    ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES*2, huff[3]+AC_HUFF_CHOICES*2, eobcounts);
+  for(;gi<BLOCK_SIZE;gi++)
+    ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES*3, huff[3]+AC_HUFF_CHOICES*3, eobcounts);
 
   /* update global SAD/rate estimation matrix */
   UpdateModeEstimation(cpi);

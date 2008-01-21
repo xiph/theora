@@ -199,7 +199,7 @@ static int oc_sad8_halfpel(const unsigned char *_cur,
   err=0;
   for(i=0;i<8;i++){
     for(j=0;j<8;j++)
-      err+=abs(_cur[j]-(((int)_ref0[j]+_ref1[j])>>1));
+      err+=abs(_cur[j]-((_ref0[j]+(int)_ref1[j])>>1));
     _cur+=_stride;
     _ref0+=_stride;
     _ref1+=_stride;
@@ -268,8 +268,8 @@ static int oc_mcenc_ysad_check_mbcandidate_fullpel(CP_INSTANCE *cpi,
       const unsigned char *cur = cpi->frame + base_offset;
       const unsigned char *ref = (_goldenp ? cpi->golden : cpi->recon) + base_offset;
       
-      _block_err[bi]=oc_sad8_fullpel(cur,ref+mvoffset,stride);
-      err+=_block_err[bi];
+      _block_err[bi] = oc_sad8_fullpel(cur,ref+mvoffset,stride);
+      err += _block_err[bi];
     }
   }
   return err;
@@ -418,10 +418,10 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
   ogg_int32_t     hit_cache[31];
   ogg_int32_t     hitbit;
   int             block_err[4];
-  int             best_block_err[4];
-  mv_t            best_block_vec[4];
   mv_t            best_vec;
   int             best_err;
+  int             best_block_err[4];
+  mv_t            best_block_vec[4];
   mv_t            cand;
   int             bi;
   macroblock_t   *mb = &cpi->macro[_mbi];

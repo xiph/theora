@@ -17,12 +17,6 @@
 
 #include "codec_internal.h"
 
-#define OC_SAD_BINS (16)
-#define OC_SAD_CLAMP (OC_SAD_BINS-1)
-#define OC_SAD_SHIFT (6)
-
-#define OC_BIT_SCALE (7)
-
 /* [qi][plane][mode][sad_bin] */
 ogg_uint16_t OC_RES_BITRATES[64][3][8][16]={
   {

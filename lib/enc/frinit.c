@@ -327,10 +327,10 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   }
 
   /* allocate frames */
-  cpi->frame = _ogg_malloc(cpi->frame_size*sizeof(*cpi->frame));
-  cpi->lastrecon = _ogg_malloc(cpi->frame_size*sizeof(*cpi->lastrecon));
-  cpi->golden = _ogg_malloc(cpi->frame_size*sizeof(*cpi->golden));
-  cpi->recon = _ogg_malloc(cpi->frame_size*sizeof(*cpi->recon));
+  cpi->frame = _ogg_calloc(cpi->frame_size,sizeof(*cpi->frame));
+  cpi->lastrecon = _ogg_calloc(cpi->frame_size,sizeof(*cpi->lastrecon));
+  cpi->golden = _ogg_calloc(cpi->frame_size,sizeof(*cpi->golden));
+  cpi->recon = _ogg_calloc(cpi->frame_size,sizeof(*cpi->recon));
 
   cpi->dct_token_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_storage));
   cpi->dct_token_frag_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_frag_storage));
@@ -342,7 +342,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   {
     int qi,plane,mode,bin;
     
-    for(qi=0;i<64;qi++)
+    for(qi=0;qi<64;qi++)
       for(plane=0;plane<3;plane++)
 	for(mode=0;mode<8;mode++)
 	  for(bin=0;bin<OC_SAD_BINS;bin++)
