@@ -25,6 +25,7 @@ lib_LTLIBRARIES = libtheoradec.la libtheoraenc.la libtheora.la
 
 if THEORA_DISABLE_ENCODE
 encoder_sources = \
+	enc/encapiwrapper.c \
 	enc/encoder_disabled.c
 else
 encoder_sources = \
