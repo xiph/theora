@@ -77,7 +77,7 @@ static void oc_huff_tree_free(oc_huff_node *_node){
     int inext;
     nchildren=1<<_node->nbits;
     for(i=0;i<nchildren;i=inext){
-      inext=i+(1<<_node->nbits-_node->nodes[i]->depth);
+      inext=i+(_node->nodes[i]!=NULL?1<<_node->nbits-_node->nodes[i]->depth:1);
       oc_huff_tree_free(_node->nodes[i]);
     }
   }
@@ -106,6 +106,7 @@ static int oc_huff_tree_unpack(oggpack_buffer *_opb,
     if(ret>=0)ret=oc_huff_tree_unpack(_opb,binode->nodes+1,_depth);
     if(ret<0){
       oc_huff_tree_free(binode);
+      *_binode=NULL;
       return ret;
     }
   }
