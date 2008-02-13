@@ -106,6 +106,7 @@ static int oc_info_unpack(oggpack_buffer *_opb,th_info *_info){
 
 static int oc_comment_unpack(oggpack_buffer *_opb,th_comment *_tc){
   long len;
+  long ncomments;
   /*Read the vendor string.*/
   len=oc_unpack_length(_opb);
   if(len<0||theorapackB_bytes(_opb)+len>_opb->storage)return TH_EBADHEADER;
@@ -113,16 +114,20 @@ static int oc_comment_unpack(oggpack_buffer *_opb,th_comment *_tc){
   oc_unpack_octets(_opb,_tc->vendor,len);
   _tc->vendor[len]='\0';
   /*Read the user comments.*/
-  _tc->comments=oc_unpack_length(_opb);
-  if(_tc->comments>=0){
+  ncomments=oc_unpack_length(_opb);
+  if(ncomments>=0&&theorapackB_bytes(_opb)+(ncomments<<2)<=_opb->storage){
     int i;
+    _tc->comments=(int)ncomments;
     _tc->comment_lengths=(int *)_ogg_malloc(
      _tc->comments*sizeof(_tc->comment_lengths[0]));
     _tc->user_comments=(char **)_ogg_malloc(
      _tc->comments*sizeof(_tc->user_comments[0]));
     for(i=0;i<_tc->comments;i++){
       len=oc_unpack_length(_opb);
-      if(len<0||theorapackB_bytes(_opb)+len>_opb->storage)return TH_EBADHEADER;
+      if(len<0||theorapackB_bytes(_opb)+len>_opb->storage){
+        _tc->comments=i;
+        return TH_EBADHEADER;
+      }
       _tc->comment_lengths[i]=len;
       _tc->user_comments[i]=_ogg_malloc((size_t)len+1);
       oc_unpack_octets(_opb,_tc->user_comments[i],len);
