@@ -189,45 +189,12 @@ static void oc_mcenc_find_candidates(CP_INSTANCE *cpi,
   _mcenc->ncandidates=ncandidates;
 }
 
-static int oc_sad8_halfpel(const unsigned char *_cur,
-			   const unsigned char *_ref0,
-			   const unsigned char *_ref1,
-			   int _stride){
-  int i;
-  int j;
-  int err;
-  err=0;
-  for(i=0;i<8;i++){
-    for(j=0;j<8;j++)
-      err+=abs(_cur[j]-((_ref0[j]+(int)_ref1[j])>>1));
-    _cur+=_stride;
-    _ref0+=_stride;
-    _ref1+=_stride;
-  }
-  return err;
-}
-
-static int oc_sad8_fullpel(const unsigned char *_cur,
-			   const unsigned char *_ref,
-			   int _stride){
-  int i;
-  int j;
-  int err;
-  err=0;
-  for(i=0;i<8;i++){
-    for(j=0;j<8;j++)
-      err+=abs(_cur[j]-(int)_ref[j]);
-    _cur+=_stride;
-    _ref+=_stride;
-  }
-  return err;
-}
-
 static int oc_sad16_halfpel(CP_INSTANCE *cpi, 
 			    int mbi,
 			    int _mvoffset0,
 			    int _mvoffset1,
-			    int _goldenp){
+			    int _goldenp,
+			    int _best_err){
 
   macroblock_t *mb = &cpi->macro[mbi];
   int err;
@@ -239,7 +206,7 @@ static int oc_sad16_halfpel(CP_INSTANCE *cpi,
     const unsigned char *cur = cpi->frame + base_offset;
     const unsigned char *ref = (_goldenp ? cpi->golden : cpi->recon) + base_offset;
     
-    err+=oc_sad8_halfpel(cur, ref+_mvoffset0, ref+_mvoffset1, cpi->stride[0]);
+    err+=  dsp_sad8x8_xy2_thres (cpi->dsp, cur, ref+_mvoffset0, ref+_mvoffset1, cpi->stride[0], _best_err-err);
 
   }
   
@@ -268,7 +235,7 @@ static int oc_mcenc_ysad_check_mbcandidate_fullpel(CP_INSTANCE *cpi,
       const unsigned char *cur = cpi->frame + base_offset;
       const unsigned char *ref = (_goldenp ? cpi->golden : cpi->recon) + base_offset;
       
-      _block_err[bi] = oc_sad8_fullpel(cur,ref+mvoffset,stride);
+      _block_err[bi] = dsp_sad8x8_thres (cpi->dsp, cur, ref+mvoffset,stride,9999999); 
       err += _block_err[bi];
     }
   }
@@ -318,7 +285,7 @@ static int oc_mcenc_ysad_halfpel_mbrefine(CP_INSTANCE *cpi,
     mvoffset0=mvoffset_base+(dx&xmask)+(offset_y[site]&ymask);
     mvoffset1=mvoffset_base+(dx&~xmask)+(offset_y[site]&~ymask);
 
-    err=oc_sad16_halfpel(cpi,_mbi,mvoffset0,mvoffset1,_goldenp);
+    err=oc_sad16_halfpel(cpi,_mbi,mvoffset0,mvoffset1,_goldenp,_best_err);
     if(err<_best_err){
       _best_err=err;
       best_site=site;
@@ -381,7 +348,7 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,
     mvoffset0=mvoffset_base+(dx&xmask)+(offset_y[site]&ymask);
     mvoffset1=mvoffset_base+(dx&~xmask)+(offset_y[site]&~ymask);
 
-    err=oc_sad8_halfpel(cur, ref+mvoffset0, ref+mvoffset1,stride);
+    err=dsp_sad8x8_xy2_thres (cpi->dsp, cur, ref+mvoffset0, ref+mvoffset1, stride, _best_err);
 
     if(err<_best_err){
       _best_err=err;

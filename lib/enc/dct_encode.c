@@ -36,7 +36,9 @@ static void add_token(CP_INSTANCE *cpi, int plane, int coeff,
 
   cpi->dct_token[coeff][cpi->dct_token_count[coeff]] = token;
   cpi->dct_token_eb[coeff][cpi->dct_token_count[coeff]] = eb;
+#ifdef COLLECT_METRICS
   cpi->dct_token_frag[coeff][cpi->dct_token_count[coeff]] = fi;
+#endif
   cpi->dct_token_count[coeff]++;
 
   if(coeff == 0){
@@ -59,10 +61,12 @@ static void prepend_token(CP_INSTANCE *cpi, int plane, int coeff,
 
   cpi->dct_token[coeff]--;
   cpi->dct_token_eb[coeff]--;
+#ifdef COLLECT_METRICS
   cpi->dct_token_frag[coeff]--;
+  cpi->dct_token_frag[coeff][0] = fi;
+#endif
   cpi->dct_token[coeff][0] = token;
   cpi->dct_token_eb[coeff][0] = eb;
-  cpi->dct_token_frag[coeff][0] = fi;
   cpi->dct_token_count[coeff]++;
 
   if(coeff == 0){
@@ -245,7 +249,9 @@ static void tokenize_groups(CP_INSTANCE *cpi,
 		eob_ypre[coeff]++;
 	      else
 		eob_uvpre[coeff]++;
+#ifdef COLLECT_METRICS
 	      cpi->dct_eob_fi_stack[coeff][cpi->dct_eob_fi_count[coeff]++]=fi;
+#endif
 	    }else{
 	      if(eob_run[coeff] == 4095){
 		emit_eob_run(cpi,eob_plane[coeff],coeff,4095);
@@ -256,7 +262,9 @@ static void tokenize_groups(CP_INSTANCE *cpi,
 		eob_plane[coeff]=plane;
 	      
 	      eob_run[coeff]++;
+#ifdef COLLECT_METRICS
 	      cpi->dct_eob_fi_stack[coeff][cpi->dct_eob_fi_count[coeff]++]=fi;
+#endif
 	    }
 	    coeff = BLOCK_SIZE;
 	  }else{
@@ -307,13 +315,17 @@ void DPCMTokenize (CP_INSTANCE *cpi){
   memset(cpi->ac_bits, 0, sizeof(cpi->ac_bits));
   memset(cpi->dct_token_count, 0, sizeof(cpi->dct_token_count));
   memset(cpi->dct_token_ycount, 0, sizeof(cpi->dct_token_ycount));
+#ifdef COLLECT_METRICS
   memset(cpi->dct_eob_fi_count, 0, sizeof(cpi->dct_eob_fi_count));
+#endif
 
   for(i=0;i<BLOCK_SIZE;i++){
     cpi->dct_token[i] = cpi->dct_token_storage+cpi->frag_total*i;
     cpi->dct_token_eb[i] = cpi->dct_token_eb_storage+cpi->frag_total*i;
-    cpi->dct_token_frag[i] = cpi->dct_token_frag_storage+cpi->frag_total*i;
+#ifdef COLLECT_METRICS
     cpi->dct_eob_fi_stack[i] = cpi->dct_eob_fi_storage+cpi->frag_total*i;
+    cpi->dct_token_frag[i] = cpi->dct_token_frag_storage+cpi->frag_total*i;
+#endif
   }
 
   /* Tokenize the dct data. */
@@ -522,24 +534,28 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
   }
 }
 
-static int blockSAD(ogg_int16_t *b, int inter_p){
+#ifdef COLLECT_METRICS
+static int blocksad(ogg_int16_t *b, int inter_p,int plane){
   int j;
   int sad = 0;
 
   if(inter_p){
     for(j=0;j<64;j++)
       sad += abs(b[j]);
+    if(plane)
+      return sad<<2;
+    else
+      return sad;
   }else{
     ogg_uint32_t acc = 0;
     for(j=0;j<64;j++)
       acc += b[j]; 
     for(j=0;j<64;j++)
       sad += abs ((b[j]<<6)-acc); 
-    sad>>=6;
+    return sad>>6;
   }
-  
-  return sad;
 }
+#endif
 
 void TransformQuantizeBlock (CP_INSTANCE *cpi, 
 			     coding_mode_t mode,
@@ -556,7 +572,6 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
   ogg_int16_t DCTOutput[64];
   ogg_int32_t   MvDivisor;      /* Defines MV resolution (2 = 1/2
                                    pixel for Y or 4 = 1/4 for UV) */
-
   /* Set plane specific values */
   if (plane == 0){
     MvDivisor = 2;                  /* 1/2 pixel accuracy in Y */
@@ -569,11 +584,11 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
      forward DCT */
   BlockUpdateDifference(cpi, FiltPtr, DCTInput, 
 			MvDivisor, fi, cpi->stride[plane], mode, mv);
-  cpi->frag_sad[fi] = blockSAD(DCTInput, inter);
 
-  /* Proceed to encode the data into the encode buffer if the encoder
-     is enabled. */
-  /* Perform a 2D DCT transform on the data. */
+#ifdef COLLECT_METRICS
+  cpi->frag_sad[fi] = blocksad(DCTInput, inter, plane);
+#endif
+
   dsp_fdct_short(cpi->dsp, DCTInput, DCTOutput);
 
   /* Quantize that transform data. */

@@ -23,55 +23,25 @@
 void ClearFrameInfo(CP_INSTANCE *cpi){
 
   if(cpi->frame) _ogg_free(cpi->frame);
-  cpi->frame = 0;
-
   if(cpi->lastrecon ) _ogg_free(cpi->lastrecon );
-  cpi->lastrecon = 0;
-
   if(cpi->golden) _ogg_free(cpi->golden);
-  cpi->golden = 0;
-
   if(cpi->recon) _ogg_free(cpi->recon);
-  cpi->recon = 0;
-
   if(cpi->dct_token_storage) _ogg_free(cpi->dct_token_storage);
-  cpi->dct_token_storage = 0;
-
   if(cpi->dct_token_eb_storage) _ogg_free(cpi->dct_token_eb_storage);
-  cpi->dct_token_eb_storage = 0;
-
-  memset(cpi->dct_token,0,sizeof(cpi->dct_token));
-  memset(cpi->dct_token_eb,0,sizeof(cpi->dct_token_eb));
-
   if(cpi->frag_coded) _ogg_free(cpi->frag_coded);
-  cpi->frag_coded = 0;
-
   if(cpi->frag_buffer_index) _ogg_free(cpi->frag_buffer_index);
-  cpi->frag_buffer_index = 0;
-
   if(cpi->frag_nonzero) _ogg_free(cpi->frag_nonzero);
-  cpi->frag_nonzero = 0;
-
   if(cpi->frag_dct) _ogg_free(cpi->frag_dct);
-  cpi->frag_dct = 0;
-
   if(cpi->frag_dc) _ogg_free(cpi->frag_dc);
-  cpi->frag_dc = 0;
-
+#ifdef COLLECT_METRICS
   if(cpi->frag_mbi) _ogg_free(cpi->frag_mbi);
-  cpi->frag_mbi = 0;
-
   if(cpi->frag_sad) _ogg_free(cpi->frag_sad);
-  cpi->frag_sad = 0;
+  if(cpi->dct_token_frag_storage) _ogg_free(cpi->dct_token_frag_storage);
+  if(cpi->dct_eob_fi_storage) _ogg_free(cpi->dct_eob_fi_storage);
+#endif
 
   if(cpi->macro) _ogg_free(cpi->macro);
-  cpi->macro = 0;
-
   if(cpi->super[0]) _ogg_free(cpi->super[0]);
-  cpi->super[0] = 0;
-  cpi->super[1] = 0;
-  cpi->super[2] = 0;
-
 }
 
 /* A note to people reading and wondering why malloc returns aren't
@@ -143,8 +113,6 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->frag_nonzero = calloc(cpi->frag_total, sizeof(*cpi->frag_nonzero));
   cpi->frag_dct = calloc(cpi->frag_total, sizeof(*cpi->frag_dct));
   cpi->frag_dc = calloc(cpi->frag_total, sizeof(*cpi->frag_dc));
-  cpi->frag_mbi = calloc(cpi->frag_total+1, sizeof(*cpi->frag_mbi));
-  cpi->frag_sad = calloc(cpi->frag_total, sizeof(*cpi->frag_sad));
 
   /* +1; the last entry is the 'invalid' mb, which contains only 'invalid' frags */
   cpi->macro = calloc(cpi->macro_total+1, sizeof(*cpi->macro));
@@ -152,6 +120,17 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->super[0] = calloc(cpi->super_total, sizeof(**cpi->super));
   cpi->super[1] = cpi->super[0] + cpi->super_n[0];
   cpi->super[2] = cpi->super[1] + cpi->super_n[1];
+
+  cpi->dct_token_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_storage));
+  cpi->dct_token_eb_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_eb_storage));
+
+#ifdef COLLECT_METRICS
+  cpi->frag_mbi = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->frag_mbi));
+  cpi->frag_sad = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->frag_sad));
+  cpi->dct_token_frag_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_frag_storage));
+  cpi->dct_eob_fi_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_eob_fi_storage));
+#endif
+  
 
   /* fill in superblock fragment pointers; hilbert order */
   {
@@ -256,7 +235,9 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	  int fcol = basecol + scanx[frag];
 	  if(frow<cpi->frag_v[0] && fcol<cpi->frag_h[0]){
 	    fragindex = frow*cpi->frag_h[0] + fcol;	    
+#ifdef COLLECT_METRICS
 	    cpi->frag_mbi[fragindex] = macroindex;
+#endif
 	  }else
 	    fragindex = cpi->frag_total;
 	  cpi->macro[macroindex].yuv[0][frag] = fragindex;
@@ -264,14 +245,18 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	
 	if(row<cpi->frag_v[1] && col<cpi->frag_h[1]){
 	  fragindex = cpi->frag_n[0] + macroindex;
+#ifdef COLLECT_METRICS
 	  cpi->frag_mbi[fragindex] = macroindex;
+#endif
 	}else
 	  fragindex = cpi->frag_total;
 	cpi->macro[macroindex].yuv[1][0] = fragindex;
 	
 	if(row<cpi->frag_v[2] && col<cpi->frag_h[2]){
 	  fragindex = cpi->frag_n[0] + cpi->frag_n[1] + macroindex; 
+#ifdef COLLECT_METRICS
 	  cpi->frag_mbi[fragindex] = macroindex;
+#endif
 	}else
 	  fragindex = cpi->frag_total;
 	cpi->macro[macroindex].yuv[2][0] = fragindex;
@@ -323,7 +308,9 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	cpi->macro[cpi->macro_total].yuv[p][f] = cpi->frag_total;
     cpi->macro[cpi->macro_total].ncneighbors=0;
     cpi->macro[cpi->macro_total].npneighbors=0;
+#ifdef COLLECT_METRICS
     cpi->frag_mbi[cpi->frag_total] = cpi->macro_total;
+#endif
   }
 
   /* allocate frames */
@@ -331,23 +318,6 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->lastrecon = _ogg_calloc(cpi->frame_size,sizeof(*cpi->lastrecon));
   cpi->golden = _ogg_calloc(cpi->frame_size,sizeof(*cpi->golden));
   cpi->recon = _ogg_calloc(cpi->frame_size,sizeof(*cpi->recon));
-
-  cpi->dct_token_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_storage));
-  cpi->dct_token_frag_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_frag_storage));
-  cpi->dct_token_eb_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_eb_storage));
-  cpi->dct_eob_fi_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_eob_fi_storage));
-  
-  memset(cpi->frag_bitrates,0,sizeof(cpi->frag_distort));
-  memset(cpi->frag_distort_count,0,sizeof(cpi->frag_distort));
-  {
-    int qi,plane,mode,bin;
-    
-    for(qi=0;qi<64;qi++)
-      for(plane=0;plane<3;plane++)
-	for(mode=0;mode<8;mode++)
-	  for(bin=0;bin<OC_SAD_BINS;bin++)
-	    cpi->frag_distort_count[qi][plane][mode][bin]=100;
-  }
 
   /* Re-initialise the pixel index table. */
   {

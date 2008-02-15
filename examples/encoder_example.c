@@ -37,7 +37,6 @@
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
-
 #endif
 
 #ifndef _REENTRANT
@@ -660,7 +659,7 @@ int main(int argc,char *const *argv){
   double timebase;
 
 
-  FILE* outfile = stdout;
+  FILE *outfile = stdout;
 
 #ifdef _WIN32 
 # ifdef THEORA_PERF_DATA

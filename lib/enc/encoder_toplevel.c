@@ -27,25 +27,24 @@
 #include "codec_internal.h"
 
 static void CompressKeyFrame(CP_INSTANCE *cpi){
-  int j;
+  int i;
 
   oggpackB_reset(cpi->oggbuffer);
   cpi->FrameType = KEY_FRAME;
   cpi->LastKeyFrame = 0;
 
   /* code all blocks */
-  for(j=0;j<cpi->frag_total;j++)
-    cpi->frag_coded[j]=1;
+  for(i=0;i<cpi->frag_total;i++)
+    cpi->frag_coded[i]=1;
   
   /* mark as video frame */
   oggpackB_write(cpi->oggbuffer,0,1);
   
   WriteFrameHeader(cpi);
   PickMVs(cpi);
-  /* still need to go through mode selection to do MV/mode analysis
-     that will be used by subsequent inter frames.  Mode will be
-     special-forced to INTRA for each MB. */
-  PickModes(cpi);
+
+  for(i=0; i<cpi->macro_total; i++)
+    cpi->macro[i].mode = CODE_INTRA;
   
   EncodeData(cpi);
   
@@ -68,7 +67,28 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
   PickMVs(cpi);
   if(PickModes( cpi )){
     /* mode analysis thinks this should have been a keyframe; start over and code as a keyframe instead */
-    CompressKeyFrame(cpi);  /* Code a key frame */
+
+    oggpackB_reset(cpi->oggbuffer);
+    cpi->FrameType = KEY_FRAME;
+    cpi->LastKeyFrame = 0;
+
+    /* code all blocks */
+    for(i=0;i<cpi->frag_total;i++)
+      cpi->frag_coded[i]=1;
+  
+    /* mark as video frame */
+    oggpackB_write(cpi->oggbuffer,0,1);
+    
+    WriteFrameHeader(cpi);
+
+    /* don't repeat MV or mode selection.  Set to intra */
+    for(i=0; i<cpi->macro_total; i++)
+      cpi->macro[i].mode = CODE_INTRA;
+  
+    EncodeData(cpi);
+    
+    cpi->LastKeyFrame = 1;
+
     return 0;
   }
   
@@ -140,14 +160,8 @@ int theora_encode_init(theora_state *th, theora_info *c){
   th->granulepos=-1;
 
   /* Set up an encode buffer */
-#ifndef LIBOGG2
   cpi->oggbuffer = _ogg_malloc(sizeof(oggpack_buffer));
   oggpackB_writeinit(cpi->oggbuffer);
-#else
-  cpi->oggbuffer = _ogg_malloc(oggpack_buffersize());
-  cpi->oggbufferstate = ogg_buffer_create();
-  oggpackB_writeinit(cpi->oggbuffer, cpi->oggbufferstate);
-#endif 
 
   InitFrameInfo(cpi);
 
@@ -245,11 +259,7 @@ int theora_encode_packetout( theora_state *t, int last_p, ogg_packet *op){
   if(!cpi->packetflag)return(0);
   if(cpi->doneflag)return(-1);
 
-#ifndef LIBOGG2
   op->packet=oggpackB_get_buffer(cpi->oggbuffer);
-#else
-  op->packet=oggpackB_writebuffer(cpi->oggbuffer);
-#endif
   op->bytes=bytes;
   op->b_o_s=0;
   op->e_o_s=last_p;
@@ -258,8 +268,12 @@ int theora_encode_packetout( theora_state *t, int last_p, ogg_packet *op){
   op->granulepos=t->granulepos;
 
   cpi->packetflag=0;
-  if(last_p)cpi->doneflag=1;
-
+  if(last_p){
+    cpi->doneflag=1;
+#ifdef COLLECT_METRICS
+    DumpMetrics(cpi);
+#endif
+  }
   return 1;
 }
 
@@ -284,11 +298,7 @@ int theora_encode_header(theora_state *t, ogg_packet *op){
   CP_INSTANCE *cpi=(CP_INSTANCE *)(t->internal_encode);
   int offset_y;
 
-#ifndef LIBOGG2
   oggpackB_reset(cpi->oggbuffer);
-#else
-  oggpackB_writeinit(cpi->oggbuffer, cpi->oggbufferstate);
-#endif
   oggpackB_write(cpi->oggbuffer,0x80,8);
   _tp_writebuffer(cpi->oggbuffer, "theora", 6);
 
@@ -323,11 +333,7 @@ int theora_encode_header(theora_state *t, ogg_packet *op){
 
   oggpackB_write(cpi->oggbuffer,0,3); /* spare config bits */
 
-#ifndef LIBOGG2
   op->packet=oggpackB_get_buffer(cpi->oggbuffer);
-#else
-  op->packet=oggpackB_writebuffer(cpi->oggbuffer);
-#endif
   op->bytes=oggpackB_bytes(cpi->oggbuffer);
 
   op->b_o_s=1;
@@ -348,13 +354,8 @@ int theora_encode_comment(theora_comment *tc, ogg_packet *op)
   const int vendor_length = strlen(vendor);
   oggpack_buffer *opb;
 
-#ifndef LIBOGG2
   opb = _ogg_malloc(sizeof(oggpack_buffer));
   oggpackB_writeinit(opb);
-#else
-  opb = _ogg_malloc(oggpack_buffersize());
-  oggpackB_writeinit(opb, ogg_buffer_create());
-#endif 
   oggpackB_write(opb, 0x81, 8);
   _tp_writebuffer(opb, "theora", 6);
 
@@ -375,16 +376,10 @@ int theora_encode_comment(theora_comment *tc, ogg_packet *op)
   }
   op->bytes=oggpack_bytes(opb);
 
-#ifndef LIBOGG2
   /* So we're expecting the application will free this? */
   op->packet=_ogg_malloc(oggpack_bytes(opb));
   memcpy(op->packet, oggpack_get_buffer(opb), oggpack_bytes(opb));
   oggpack_writeclear(opb);
-#else
-  op->packet = oggpack_writebuffer(opb);
-  /* When the application puts op->packet into a stream_state object,
-     it becomes the property of libogg2's internal memory management. */
-#endif
 
   _ogg_free(opb);
 
@@ -402,22 +397,14 @@ int theora_encode_comment(theora_comment *tc, ogg_packet *op)
 int theora_encode_tables(theora_state *t, ogg_packet *op){
   CP_INSTANCE *cpi=(CP_INSTANCE *)(t->internal_encode);
 
-#ifndef LIBOGG2
   oggpackB_reset(cpi->oggbuffer);
-#else
-  oggpackB_writeinit(cpi->oggbuffer, cpi->oggbufferstate);
-#endif
   oggpackB_write(cpi->oggbuffer,0x82,8);
   _tp_writebuffer(cpi->oggbuffer,"theora",6);
 
   WriteQTables(cpi,cpi->oggbuffer);
   WriteHuffmanTrees(cpi->HuffRoot_VP3x,cpi->oggbuffer);
 
-#ifndef LIBOGG2
   op->packet=oggpackB_get_buffer(cpi->oggbuffer);
-#else
-  op->packet=oggpackB_writebuffer(cpi->oggbuffer);
-#endif
   op->bytes=oggpackB_bytes(cpi->oggbuffer);
 
   op->b_o_s=0;
@@ -443,6 +430,8 @@ static void theora_encode_clear (theora_state  *th){
 
     oggpackB_writeclear(cpi->oggbuffer);
     _ogg_free(cpi->oggbuffer);
+
+    memset(cpi,0,sizeof(cpi));
     _ogg_free(cpi);
   }
 

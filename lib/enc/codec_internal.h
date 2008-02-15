@@ -22,14 +22,11 @@
 # include "config.h"
 #endif
 
+#undef COLLECT_METRICS 
+
 #include "theora/theora.h"
 #include "encoder_huffman.h"
 #include "dsp.h"
-
-#define OC_SAD_BINS (16)
-#define OC_SAD_CLAMP (OC_SAD_BINS-1)
-#define OC_SAD_SHIFT (6)
-#define OC_BIT_SCALE (7)
 
 #define theora_read(x,y,z) ( oggpackB_read(x,y,z) )
 
@@ -258,6 +255,7 @@ typedef struct CP_INSTANCE {
 
   /********************************************************************/
   /* Fragment SAD->bitrate estimation tracking metrics */
+#ifdef COLLECT_METRICS
   int             *frag_mbi;
   int             *frag_sad;
   int             *dct_token_frag_storage;
@@ -265,10 +263,7 @@ typedef struct CP_INSTANCE {
   int             *dct_eob_fi_storage;
   int             *dct_eob_fi_stack[64];
   int              dct_eob_fi_count[64];
-
-  ogg_uint32_t     frag_bitrates[64][3][8][OC_SAD_BINS];
-  ogg_uint32_t     frag_distort[64][3][8][OC_SAD_BINS];
-  ogg_uint32_t     frag_distort_count[64][3][8][OC_SAD_BINS];
+#endif
 
   /********************************************************************/
   /* Setup */
@@ -338,6 +333,9 @@ extern void InitFrameInfo(CP_INSTANCE *cpi);
 
 extern void ClearFrameInfo (CP_INSTANCE *cpi);
 
+#ifdef COLLECT_METRICS
 extern void ModeMetrics(CP_INSTANCE *cpi, int huff[4]);
+extern void DumpMetrics(CP_INSTANCE *cpi);
+#endif
 
 #endif /* ENCODER_INTERNAL_H */
