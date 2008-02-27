@@ -1442,12 +1442,12 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
                        ogg_uint32_t *InterError, ogg_uint32_t *IntraError) {
   const int num_threads = cpi->numThreads; /* Number of Threads */
 
-  ogg_uint32_t *InterErrors = malloc(num_threads * sizeof(*InterErrors));
-  ogg_uint32_t *IntraErrors = malloc(num_threads * sizeof(*IntraErrors));
-  THREAD_MV_LIST* mvList = malloc(cpi->pb.UnitFragments * sizeof(*mvList));
-  int* thread_SBRows = malloc(num_threads * sizeof(*thread_SBRows));
-  pthread_t *threads = (pthread_t *)malloc(num_threads*sizeof(*threads));
-  THREAD_PARAM *p = (THREAD_PARAM *)malloc(num_threads*sizeof(*p));
+  ogg_uint32_t *InterErrors = NULL;
+  ogg_uint32_t *IntraErrors = NULL;
+  THREAD_MV_LIST* mvList = NULL;
+  int* thread_SBRows = NULL;
+  pthread_t *threads = NULL;
+  THREAD_PARAM *p = NULL;
 
   ogg_uint32_t  SBrow;      /* Super-Block row number */
   int thread_id;
@@ -1465,6 +1465,15 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
   if(!cpi->MotionCompensation)
     return 0;
+
+
+  InterErrors = malloc(num_threads * sizeof(*InterErrors));
+  IntraErrors = malloc(num_threads * sizeof(*IntraErrors));
+  mvList = malloc(cpi->pb.UnitFragments * sizeof(*mvList));
+  thread_SBRows = malloc(num_threads * sizeof(*thread_SBRows));
+  threads = (pthread_t *)malloc(num_threads*sizeof(*threads));
+  p = (THREAD_PARAM *)malloc(num_threads*sizeof(*p));
+
 
   /* change the quatization matrix to the one at best Q to compute the
      new error score */
