@@ -65,6 +65,12 @@ int theorapackB_read(oggpack_buffer *b,int bits,long *_ret){
       fail=-1;
       goto overflow;
     }
+    /* special case to avoid reading b->ptr[0], which might be past the end of
+        the buffer; also skips some useless accounting */
+    else if(!bits){
+      *_ret=0L;
+      return 0;
+    }
   }
   ret=b->ptr[0]<<(24+b->endbit);
   if(bits>8){
