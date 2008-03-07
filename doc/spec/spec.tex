@@ -6376,7 +6376,7 @@ Assign $\locvar{T}[5]$ the value $\locvar{T}[4]-\locvar{T}[5]$.
 Truncate $\locvar{T}[5]$ to a 16-bit representation by dropping any
  higher-order bits.
 \item
-Assign $\locvar{T}[5]$ the value $\locvar{C4}*(-\locvar{T}[5])>>16$.
+Assign $\locvar{T}[5]$ the value $\locvar{C4}*\locvar{T}[5]>>16$.
 \item
 Assign $\locvar{T}[4]$ the value $\locvar{R}$.
 \item
@@ -6451,7 +6451,7 @@ Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
 \item
 Assign $\bitvar{X}[5]$ the value \locvar{R}.
 \item
-Assign \locvar{X} the value $\locvar{T}[1]-\locvar{T}[6]$.
+Assign \locvar{R} the value $\locvar{T}[1]-\locvar{T}[6]$.
 \item
 Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
  bits.
