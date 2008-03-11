@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2008                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -19,7 +19,12 @@
 #include <string.h>
 #include <limits.h>
 #include "apiwrapper.h"
+#include "decint.h"
 #include "theora/theoradec.h"
+
+#ifdef HAVE_CAIRO
+#include <cairo.h>
+#endif
 
 static void th_dec_api_clear(th_api_wrapper *_api){
   if(_api->setup)th_setup_free(_api->setup);
@@ -29,10 +34,6 @@ static void th_dec_api_clear(th_api_wrapper *_api){
 
 static void theora_decode_clear(theora_state *_td){
   if(_td->i!=NULL)theora_info_clear(_td->i);
-#ifdef _TH_DEBUG_
-  fclose(debugout);
-  debugout=NULL;
-#endif
   memset(_td,0,sizeof(*_td));
 }
 
@@ -131,10 +132,6 @@ int theora_decode_header(theora_info *_ci,theora_comment *_cc,ogg_packet *_op){
   th_info         info;
   int             ret;
 
-#ifdef _TH_DEBUG_
-  debugout = fopen("theoradec-debugout.txt","w");
-#endif
-
   api=(th_api_wrapper *)_ci->codec_setup;
   /*Allocate an API wrapper struct on demand, since it will not also include a
      theora_info struct like the ones that are used in a theora_state struct.*/
@@ -170,10 +167,6 @@ int theora_decode_packetin(theora_state *_td,ogg_packet *_op){
   api=(th_api_wrapper *)_td->i->codec_setup;
   ret=th_decode_packetin(api->decode,_op,&gp);
 
-#ifdef _TH_DEBUG_
-  dframe++;
-#endif 
-
   if(ret<0)return OC_BADPACKET;
   _td->granulepos=gp;
   return 0;
@@ -181,11 +174,116 @@ int theora_decode_packetin(theora_state *_td,ogg_packet *_op){
 
 int theora_decode_YUVout(theora_state *_td,yuv_buffer *_yuv){
   th_api_wrapper  *api;
+  th_dec_ctx      *decode;
   th_ycbcr_buffer  buf;
   int              ret;
 
   api=(th_api_wrapper *)_td->i->codec_setup;
-  ret=th_decode_ycbcr_out(api->decode,buf);
+  decode = (th_dec_ctx *)api->decode;
+  ret=th_decode_ycbcr_out(decode,buf);
+
+#ifdef HAVE_CAIRO
+  /* If telemetry ioctls are active, we need to draw to the output
+     buffer.  Stuff the plane into cairo. */
+  if(decode->telemetry){
+    /* 4:2:0 */
+    int w = buf[0].width;
+    int h = buf[0].height;
+    int x, y;
+    cairo_surface_t *cs=
+      cairo_image_surface_create(CAIRO_FORMAT_RGB24,w,h);
+
+    /* lazy data buffer init */
+    if(!decode->telemetry_frame_data)
+      decode->telemetry_frame_data = malloc(w*h*3*sizeof(*decode->telemetry_frame_data));
+
+    /* sadly, no YUV support in Cairo; convert into the RGB buffer */
+    unsigned char *data = cairo_image_surface_get_data(cs);
+    unsigned cstride = cairo_image_surface_get_stride(cs);
+    for(y=0;y<h;y+=2){
+      unsigned char *Ya = buf[0].data + y*buf[0].ystride;
+      unsigned char *Yb = buf[0].data + (y+1)*buf[0].ystride;
+      unsigned char *U  = buf[1].data + (y>>1)*buf[1].ystride;
+      unsigned char *V  = buf[2].data + (y>>1)*buf[2].ystride;
+      unsigned char *Ca = data + y*cstride; 
+      unsigned char *Cb = data + (y+1)*cstride; 
+      for(x=0;x<w*4;x+=8){
+	Ca[x+2] = OC_CLAMP255((Ya[0]*76309 + V[0]*104597 - 14609351)>>16);
+	Ca[x+1] = OC_CLAMP255((Ya[0]*76309 - U[0]*25674  - V[0]*53279 + 8885109)>>16); 
+	Ca[x+0] = OC_CLAMP255((Ya[0]*76309 + U[0]*132201 - 18142724)>>16);
+
+	Ca[x+6] = OC_CLAMP255((Ya[1]*76309 + V[0]*104597 - 14609351)>>16);
+	Ca[x+5] = OC_CLAMP255((Ya[1]*76309 - U[0]*25674  - V[0]*53279 + 8885109)>>16);
+	Ca[x+4] = OC_CLAMP255((Ya[1]*76309 + U[0]*132201 - 18142724)>>16);
+
+	Cb[x+2] = OC_CLAMP255((Yb[0]*76309 + V[0]*104597 - 14609351)>>16);
+	Cb[x+1] = OC_CLAMP255((Yb[0]*76309 - U[0]*25674  - V[0]*53279 + 8885109)>>16);
+	Cb[x+0] = OC_CLAMP255((Yb[0]*76309 + U[0]*132201 - 18142724)>>16);
+
+	Cb[x+6] = OC_CLAMP255((Yb[1]*76309 + V[0]*104597 - 14609351)>>16);
+	Cb[x+5] = OC_CLAMP255((Yb[1]*76309 - U[0]*25674  - V[0]*53279 + 8885109)>>16);
+	Cb[x+4] = OC_CLAMP255((Yb[1]*76309 + U[0]*132201 - 18142724)>>16);
+
+	Ya+=2;
+	Yb+=2;
+	U++;
+	V++;
+      }
+    }
+
+    {
+      cairo_t *c = cairo_create(cs);
+      cairo_set_source_rgba(c,1.,0,0,.5);
+      cairo_rectangle(c,100,100,100,100);
+      cairo_fill(c);
+      cairo_surface_flush(cs);
+      cairo_destroy(c);
+    }
+
+    /* out of the Cairo plane into the telemetry YUV buffer */
+    buf[0].data = decode->telemetry_frame_data;
+    buf[1].data = decode->telemetry_frame_data+h*buf[0].ystride;
+    buf[2].data = decode->telemetry_frame_data+h*buf[0].ystride+h/2*buf[1].ystride;
+
+    for(y=0;y<h;y+=2){
+      unsigned char *Ya = buf[0].data + y*buf[0].ystride;
+      unsigned char *Yb = buf[0].data + (y+1)*buf[0].ystride;
+      unsigned char *U  = buf[1].data + (y>>1)*buf[1].ystride;
+      unsigned char *V  = buf[2].data + (y>>1)*buf[2].ystride;
+      unsigned char *Ca = data + y*cstride; 
+      unsigned char *Cb = data + (y+1)*cstride; 
+      for(x=0;x<w*4;x+=8){
+
+	Ya[0] = ((Ca[2]*16829 + Ca[1]*33039 + Ca[0]*6416)>>16) + 16;
+	Ya[1] = ((Ca[6]*16829 + Ca[5]*33039 + Ca[4]*6416)>>16) + 16;
+	Yb[0] = ((Cb[2]*16829 + Cb[1]*33039 + Cb[0]*6416)>>16) + 16;
+	Yb[1] = ((Cb[6]*16829 + Cb[5]*33039 + Cb[4]*6416)>>16) + 16;
+
+	U[0] = ((-Ca[2]*9714 - Ca[1]*19070 + Ca[0]*28784 +
+		 -Ca[6]*9714 - Ca[5]*19070 + Ca[4]*28784 +
+		 -Cb[2]*9714 - Cb[1]*19070 + Cb[0]*28784 +
+		 -Cb[6]*9714 - Cb[5]*19070 + Cb[4]*28784)>>18) + 128;
+
+	V[0] = ((Ca[2]*28784 - Ca[1]*24103 - Ca[0]*4681 +
+		 Ca[6]*28784 - Ca[5]*24103 - Ca[4]*4681 +
+		 Cb[2]*28784 - Cb[1]*24103 - Cb[0]*4681 +
+		 Cb[6]*28784 - Cb[5]*24103 - Cb[4]*4681)>>18) + 128;
+
+	Ya+=2;
+	Yb+=2;
+	U++;
+	V++;
+	Ca+=8;
+	Cb+=8;
+      }
+    }
+
+
+    /* Finished.  Destroy the surface. */
+    cairo_surface_destroy(cs);
+  }
+#endif
+
   if(ret>=0){
     _yuv->y_width=buf[0].width;
     _yuv->y_height=buf[0].height;

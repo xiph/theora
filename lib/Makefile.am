@@ -1,6 +1,6 @@
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/lib -I$(top_srcdir)/lib/dec -I$(top_srcdir)/lib/enc
-AM_CFLAGS = $(OGG_CFLAGS)
-LIBADD = $(OGG_LIBS)
+AM_CFLAGS = $(OGG_CFLAGS) $(CAIRO_CFLAGS)
+LIBADD = $(OGG_LIBS) 
 
 EXTRA_DIST = \
         enc/x86_32/dct_decode_mmx.c \
@@ -126,7 +126,7 @@ libtheoradec_la_SOURCES = \
   Version_script-dec
 libtheoradec_la_LDFLAGS = \
   -version-info @THDEC_LIB_CURRENT@:@THDEC_LIB_REVISION@:@THDEC_LIB_AGE@ \
-  @THEORADEC_LDFLAGS@
+  @THEORADEC_LDFLAGS@ @CAIRO_LIBS@
 
 libtheoraenc_la_SOURCES = \
   cpu.c \
@@ -146,7 +146,7 @@ libtheora_la_SOURCES = \
   Version_script-old
 libtheora_la_LDFLAGS = \
   -version-info @TH_LIB_CURRENT@:@TH_LIB_REVISION@:@TH_LIB_AGE@ \
-  @THEORA_LDFLAGS@
+  @THEORA_LDFLAGS@ @CAIRO_LIBS@
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@" 

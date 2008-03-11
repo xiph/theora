@@ -84,6 +84,9 @@ extern "C" {
 #define TH_DECCTL_SET_STRIPE_CB (7)
 /*@}*/
 
+#define TH_DECCTL_SET_TELEMETRY_MBMODE (9)
+#define TH_DECCTL_SET_TELEMETRY_MV (11)
+
 
 
 /**A callback function for striped decode.

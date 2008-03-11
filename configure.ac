@@ -307,6 +307,25 @@ fi
 AC_SUBST(PNG_CFLAGS)
 AC_SUBST(PNG_LIBS)
 
+dnl check for libcairo
+HAVE_CAIRO=no
+AC_ARG_ENABLE(telemetry,
+    [  --disable-telemetry           disable debugging output controls ],
+    [ ac_enable_telemetry=$enableval ], [ ac_enable_telemetry=no] )
+
+if test "x${ac_enable_telemetry}" = xyes; then
+   if test "x$HAVE_PKG_CONFIG" = "xyes"
+   then
+     PKG_CHECK_MODULES(CAIRO, cairo, HAVE_CAIRO=yes, HAVE_CAIRO=no)
+     AC_DEFINE([HAVE_CAIRO], [],  [libcairo is available for visual debugging output])  
+   fi
+   if test x$HAVE_CAIRO != xyes; then
+     AC_MSG_WARN([libcairo not found -- not compiling telemetry output support ])
+   fi
+   AC_SUBST(CAIRO_CFLAGS)
+   AC_SUBST(CAIRO_LIBS)
+fi
+
 dnl --------------------------------------------------
 dnl Overall build configuration options
 dnl --------------------------------------------------
@@ -426,6 +445,7 @@ AC_MSG_RESULT([
     Encoding support: ........... ${ac_enable_encode}
     Floating point support: ..... ${ac_enable_float}
     Assembly optimization: ...... ${cpu_optimization}
+    Debugging telemetry: ........ ${ac_enable_telemetry}
     Build example code: ......... ${ac_enable_examples}
     API Documentation: .......... ${doc_build}
     Format Documentation: ....... ${spec_build}

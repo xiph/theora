@@ -43,7 +43,7 @@ extern FILE *debugout;
 # endif
 
 /*This library's version.*/
-# define OC_VENDOR_STRING "Xiph.Org libTheora I 20071025 3 2 1"
+# define OC_VENDOR_STRING "Xiph.Org libThusnelda I 20080310"
 
 /*Theora bitstream version.*/
 # define TH_VERSION_MAJOR (3)

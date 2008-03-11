@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2008                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -255,6 +255,7 @@ static int oc_dec_init(oc_dec_ctx *_dec,const th_info *_info,
   _dec->dc_qis=NULL;
   _dec->variances=NULL;
   _dec->pp_frame_data=NULL;
+  _dec->telemetry_frame_data=NULL;
   _dec->stripe_cb.ctx=NULL;
   _dec->stripe_cb.stripe_decoded=NULL;
   return 0;
@@ -262,6 +263,8 @@ static int oc_dec_init(oc_dec_ctx *_dec,const th_info *_info,
 
 static void oc_dec_clear(oc_dec_ctx *_dec){
   _ogg_free(_dec->pp_frame_data);
+  if(_dec->telemetry_frame_data)
+    _ogg_free(_dec->telemetry_frame_data);
   _ogg_free(_dec->variances);
   _ogg_free(_dec->dc_qis);
   oc_free_2d(_dec->extra_bits);
@@ -2077,44 +2080,56 @@ void th_decode_free(th_dec_ctx *_dec){
 int th_decode_ctl(th_dec_ctx *_dec,int _req,void *_buf,
  size_t _buf_sz){
   switch(_req){
-    case TH_DECCTL_GET_PPLEVEL_MAX:{
-      if(_dec==NULL||_buf==NULL)return TH_EFAULT;
-      if(_buf_sz!=sizeof(int))return TH_EINVAL;
-      (*(int *)_buf)=OC_PP_LEVEL_MAX;
-      return 0;
-    }break;
-    case TH_DECCTL_SET_PPLEVEL:{
-      int pp_level;
-      if(_dec==NULL||_buf==NULL)return TH_EFAULT;
-      if(_buf_sz!=sizeof(int))return TH_EINVAL;
-      pp_level=*(int *)_buf;
-      if(pp_level<0||pp_level>OC_PP_LEVEL_MAX)return TH_EINVAL;
-      _dec->pp_level=pp_level;
-      return 0;
-    }break;
-    case TH_DECCTL_SET_GRANPOS:{
-      ogg_int64_t granpos;
-      if(_dec==NULL||_buf==NULL)return TH_EFAULT;
-      if(_buf_sz!=sizeof(ogg_int64_t))return TH_EINVAL;
-      granpos=*(ogg_int64_t *)_buf;
-      if(granpos<0)return TH_EINVAL;
-      _dec->state.granpos=granpos;
-      _dec->state.keyframe_num=
-       granpos>>_dec->state.info.keyframe_granule_shift;
-      _dec->state.curframe_num=_dec->state.keyframe_num+
-       (granpos&(1<<_dec->state.info.keyframe_granule_shift)-1);
-      return 0;
-    }break;
-    case TH_DECCTL_SET_STRIPE_CB:{
-      th_stripe_callback *cb;
-      if(_dec==NULL||_buf==NULL)return TH_EFAULT;
-      if(_buf_sz!=sizeof(th_stripe_callback))return TH_EINVAL;
-      cb=(th_stripe_callback *)_buf;
-      _dec->stripe_cb.ctx=cb->ctx;
-      _dec->stripe_cb.stripe_decoded=cb->stripe_decoded;
-      return 0;
-    }break;
-    default:return TH_EIMPL;
+  case TH_DECCTL_GET_PPLEVEL_MAX:{
+    if(_dec==NULL||_buf==NULL)return TH_EFAULT;
+    if(_buf_sz!=sizeof(int))return TH_EINVAL;
+    (*(int *)_buf)=OC_PP_LEVEL_MAX;
+    return 0;
+  }break;
+  case TH_DECCTL_SET_PPLEVEL:{
+    int pp_level;
+    if(_dec==NULL||_buf==NULL)return TH_EFAULT;
+    if(_buf_sz!=sizeof(int))return TH_EINVAL;
+    pp_level=*(int *)_buf;
+    if(pp_level<0||pp_level>OC_PP_LEVEL_MAX)return TH_EINVAL;
+    _dec->pp_level=pp_level;
+    return 0;
+  }break;
+  case TH_DECCTL_SET_GRANPOS:{
+    ogg_int64_t granpos;
+    if(_dec==NULL||_buf==NULL)return TH_EFAULT;
+    if(_buf_sz!=sizeof(ogg_int64_t))return TH_EINVAL;
+    granpos=*(ogg_int64_t *)_buf;
+    if(granpos<0)return TH_EINVAL;
+    _dec->state.granpos=granpos;
+    _dec->state.keyframe_num=
+      granpos>>_dec->state.info.keyframe_granule_shift;
+    _dec->state.curframe_num=_dec->state.keyframe_num+
+      (granpos&(1<<_dec->state.info.keyframe_granule_shift)-1);
+    return 0;
+  }break;
+  case TH_DECCTL_SET_STRIPE_CB:{
+    th_stripe_callback *cb;
+    if(_dec==NULL||_buf==NULL)return TH_EFAULT;
+    if(_buf_sz!=sizeof(th_stripe_callback))return TH_EINVAL;
+    cb=(th_stripe_callback *)_buf;
+    _dec->stripe_cb.ctx=cb->ctx;
+    _dec->stripe_cb.stripe_decoded=cb->stripe_decoded;
+    return 0;
+  }break;
+#ifdef HAVE_CAIRO
+  case TH_DECCTL_SET_TELEMETRY_MBMODE:{
+    _dec->telemetry = 1;
+    _dec->telemetry_mbmode = 1;
+    return 0;
+  }break;
+  case TH_DECCTL_SET_TELEMETRY_MV:{
+    _dec->telemetry = 1;
+    _dec->telemetry_mv = 1;
+    return 0;
+  }break;
+#endif
+  default:return TH_EIMPL;
   }
 }
 

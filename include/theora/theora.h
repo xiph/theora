@@ -322,6 +322,8 @@ typedef struct theora_comment{
  */
 #define TH_DECCTL_SET_GRANPOS (5)
 
+#define TH_DECCTL_SET_TELEMETRY_MBMODE (9)
+#define TH_DECCTL_SET_TELEMETRY_MV (11)
 
 /**\anchor encctlcodes
  * These are the available request codes for theora_control()
