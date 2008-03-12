@@ -20,12 +20,6 @@
 #include "codec_internal.h"
 #include "quant_lookup.h"
 
-#ifdef _TH_DEBUG_
-#include <stdio.h>
-extern FILE *debugout;
-extern long dframe;
-#endif
-
 #define OC_QUANT_MAX        (1024<<2)
 //unsigned OC_DC_QUANT_MIN[2]={4<<2,8<<2};
 //unsigned OC_AC_QUANT_MIN[2]={2<<2,4<<2};
@@ -194,82 +188,6 @@ void InitQTables( CP_INSTANCE *cpi ){
       }
     }
   }
-
-#ifdef _TH_DEBUG_
-  int i, j, k, l;
-
-  /* dump the static tables */
-  {
-    int i, j, k, l, m;
-    TH_DEBUG("loop filter limits = {");
-    for(i=0;i<64;){
-      TH_DEBUG("\n        ");
-      for(j=0;j<16;i++,j++)
-	TH_DEBUG("%3d ",qinfo->loop_filter_limits[i]);
-    }
-    TH_DEBUG("\n}\n\n");
-
-    TH_DEBUG("ac scale = {");
-    for(i=0;i<64;){
-      TH_DEBUG("\n        ");
-      for(j=0;j<16;i++,j++)
-	TH_DEBUG("%3d ",qinfo->ac_scale[i]);
-    }
-    TH_DEBUG("\n}\n\n");
-
-    TH_DEBUG("dc scale = {");
-    for(i=0;i<64;){
-      TH_DEBUG("\n        ");
-      for(j=0;j<16;i++,j++)
-	TH_DEBUG("%3d ",qinfo->dc_scale[i]);
-    }
-    TH_DEBUG("\n}\n\n");
-
-    for(k=0;k<2;k++)
-      for(l=0;l<3;l++){
-	char *name[2][3]={
-	  {"intra Y bases","intra U bases", "intra V bases"},
-	  {"inter Y bases","inter U bases", "inter V bases"}
-	};
-
-	th_quant_ranges *r = &qinfo->qi_ranges[k][l];
-	TH_DEBUG("%s = {\n",name[k][l]);
-	TH_DEBUG("        ranges = %d\n",r->nranges);
-	TH_DEBUG("        intervals = { ");
-	for(i=0;i<r->nranges;i++)
-	  TH_DEBUG("%3d ",r->sizes[i]);
-	TH_DEBUG("}\n");
-	TH_DEBUG("\n        matricies = { ");
-	for(m=0;m<r->nranges+1;m++){
-	  TH_DEBUG("\n          { ");
-	  for(i=0;i<64;){
-	    TH_DEBUG("\n            ");
-	    for(j=0;j<8;i++,j++)
-	      TH_DEBUG("%3d ",r->base_matrices[m][i]);
-	  }
-	  TH_DEBUG("\n          }");
-	}
-	TH_DEBUG("\n        }\n");
-      }
-  }
-
-  /* dump the calculated quantizer tables */
-  for(i=0;i<2;i++){
-    for(j=0;j<3;j++){
-      for(k=0;k<64;k++){
-	TH_DEBUG("quantizer table [%s][%s][Q%d] = {",
-		 (i==0?"intra":"inter"),(j==0?"Y":(j==1?"U":"V")),k);
-	for(l=0;l<64;l++){
-	  if((l&7)==0)
-	    TH_DEBUG("\n   ");
-	  TH_DEBUG("%4d ",pbi->quant_tables[i][j][k][l]);
-	}
-	TH_DEBUG("}\n");
-      }
-    }
-  }
-#endif
-
 }
 
 void quantize( CP_INSTANCE *cpi,

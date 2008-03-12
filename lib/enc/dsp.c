@@ -406,7 +406,6 @@ static void nop (void) { /* NOP */ }
 
 void dsp_init(DspFunctions *funcs)
 {
-  /* TH_DEBUG("setting dsp functions to C defaults.\n"); */
   funcs->save_fpu = nop;
   funcs->restore_fpu = nop;
   funcs->set8x8 = set8x8__c;

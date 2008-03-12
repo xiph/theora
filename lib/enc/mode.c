@@ -492,8 +492,8 @@ int PickModes(CP_INSTANCE *cpi){
 	cost[CODE_INTER_FOURMV] = MBInter4Cost420(cpi,qi,mbi,mb->mv,0);
 	
 	/* add estimated labelling cost for each mode */
-	for(i = 0; i < 8; i++)
-	  cost[i] += oc_mode_cost(cpi,i) << OC_BIT_SCALE;
+	//for(i = 0; i < 8; i++)
+	//cost[i] += oc_mode_cost(cpi,i) << OC_BIT_SCALE;
 	
 	/* Add the motion vector bits for each mode that requires them.*/
 	mb_mv_bits_0  = MvBits[mb->analysis_mv[0][0].x + MAX_MV_EXTENT] + 

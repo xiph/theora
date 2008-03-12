@@ -90,13 +90,12 @@ struct th_dec_ctx{
   /*The striped decode callback function.*/
   th_stripe_callback       stripe_cb;
 
-#ifdef HAVE_CAIRO
   /* output metrics for debugging */
   int                      telemetry;
   int                      telemetry_mbmode;
   int                      telemetry_mv;
   unsigned char           *telemetry_frame_data;
-#endif
+
 };
 
 /*Fix-ups for the libogg1 API, which returns -1 when there are insufficient

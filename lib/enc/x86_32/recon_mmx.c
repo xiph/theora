@@ -97,7 +97,6 @@ static void recon8x8__mmx (unsigned char *ReconPtr,
 
 void dsp_mmx_recon_init(DspFunctions *funcs)
 {
-  TH_DEBUG("enabling accelerated x86_32 mmx recon functions.\n");
   funcs->copy8x8 = copy8x8__mmx;
   funcs->recon8x8 = recon8x8__mmx;
 }

@@ -591,8 +591,11 @@ int main(int argc,char *const *argv){
     theora_control(&td,TH_DECCTL_SET_PPLEVEL,&pp_level,sizeof(pp_level));
     pp_inc=0;
 
-    theora_control(&td,TH_DECCTL_SET_TELEMETRY_MBMODE,NULL,0);
-    theora_control(&td,TH_DECCTL_SET_TELEMETRY_MV,NULL,0);
+    {
+      int arg = 0xffff;
+      theora_control(&td,TH_DECCTL_SET_TELEMETRY_MBMODE,&arg,sizeof(arg));
+      theora_control(&td,TH_DECCTL_SET_TELEMETRY_MV,&arg,sizeof(arg));
+    }
   }else{
     /* tear down the partial theora setup */
     theora_info_clear(&ti);

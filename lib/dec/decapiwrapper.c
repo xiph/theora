@@ -233,10 +233,232 @@ int theora_decode_YUVout(theora_state *_td,yuv_buffer *_yuv){
 
     {
       cairo_t *c = cairo_create(cs);
-      cairo_set_source_rgba(c,1.,0,0,.5);
-      cairo_rectangle(c,100,100,100,100);
-      cairo_fill(c);
-      cairo_surface_flush(cs);
+
+      /* draw coded identifier for each macroblock */
+      /* macroblocks stored in Hilbert order */
+      oc_mb *mb=decode->state.mbs;
+      oc_mb *mb_end=mb+decode->state.nmbs;
+      int row2 = 0;
+      int col2 = 0;
+
+      for(;mb<mb_end;mb++){
+	int bi;
+	float y = h - (row2 + (((col2+1)>>1)&1))*16 -16;
+	float x = (col2>>1) * 16;
+	    
+	cairo_set_line_width(c,1.);
+	if(decode->state.frame_type==OC_INTRA_FRAME){
+	  if(decode->telemetry_mbmode&0x02){
+	    cairo_set_source_rgba(c,1.,0,0,.5);
+	    cairo_rectangle(c,x+2.5,y+2.5,11,11);
+	    cairo_stroke_preserve(c);
+	    cairo_set_source_rgba(c,1.,0,0,.25);
+	    cairo_fill(c);
+	  }
+	}else{
+	  oc_fragment *coded = NULL;
+	  for(bi=0;bi<4;bi++){
+	    int fragi=mb->map[0][bi];
+	    if(fragi>=0 && decode->state.frags[fragi].coded){
+	      coded = &decode->state.frags[fragi];
+	      break;
+	    }
+	  }
+	  if(bi<4){
+	    switch(mb->mode){
+	    case OC_MODE_INTRA:
+	      if(decode->telemetry_mbmode&0x02){
+		cairo_set_source_rgba(c,1.,0,0,.5);
+		cairo_rectangle(c,x+2.5,y+2.5,11,11);
+		cairo_stroke_preserve(c);
+		cairo_set_source_rgba(c,1.,0,0,.25);
+		cairo_fill(c);
+	      }
+	      break;
+	    case OC_MODE_INTER_NOMV:
+	      if(decode->telemetry_mbmode&0x01){
+		cairo_set_source_rgba(c,0,0,1.,.5);
+		cairo_rectangle(c,x+2.5,y+2.5,11,11);
+		cairo_stroke_preserve(c);
+		cairo_set_source_rgba(c,0,0,1.,.25);
+		cairo_fill(c);
+	      }
+	      break;
+	    case OC_MODE_INTER_MV:
+	      if(decode->telemetry_mbmode&0x04){
+		cairo_rectangle(c,x+2.5,y+2.5,11,11);
+		cairo_set_source_rgba(c,0,1.,0,.5);
+		cairo_stroke(c);
+	      }
+	      if(decode->telemetry_mv&0x04){
+		cairo_move_to(c,x+8+coded->mv[0],y+8-coded->mv[1]);
+		cairo_set_source_rgba(c,1.,1.,1.,.9);
+		cairo_set_line_width(c,3.);
+		cairo_line_to(c,x+8+coded->mv[0]*.66,y+8-coded->mv[1]*.66);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,2.);
+		cairo_line_to(c,x+8+coded->mv[0]*.33,y+8-coded->mv[1]*.33);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,1.);
+		cairo_line_to(c,x+8,y+8);
+		cairo_stroke(c);
+ 	      }
+	      break;
+	    case OC_MODE_INTER_MV_LAST:
+	      if(decode->telemetry_mbmode&0x08){
+		cairo_rectangle(c,x+2.5,y+2.5,11,11);
+		cairo_set_source_rgba(c,0,1.,0,.5);
+		cairo_move_to(c,x+13.5,y+2.5);
+		cairo_line_to(c,x+2.5,y+8);
+		cairo_line_to(c,x+13.5,y+13.5);
+		cairo_stroke(c);
+	      }
+	      if(decode->telemetry_mv&0x08){
+		cairo_move_to(c,x+8+coded->mv[0],y+8-coded->mv[1]);
+		cairo_set_source_rgba(c,1.,1.,1.,.9);
+		cairo_set_line_width(c,3.);
+		cairo_line_to(c,x+8+coded->mv[0]*.66,y+8-coded->mv[1]*.66);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,2.);
+		cairo_line_to(c,x+8+coded->mv[0]*.33,y+8-coded->mv[1]*.33);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,1.);
+		cairo_line_to(c,x+8,y+8);
+		cairo_stroke(c);
+ 	      }
+	      break;
+	    case OC_MODE_INTER_MV_LAST2:
+	      if(decode->telemetry_mbmode&0x10){
+		cairo_rectangle(c,x+2.5,y+2.5,11,11);
+		cairo_set_source_rgba(c,0,1.,0,.5);
+		cairo_move_to(c,x+8,y+2.5);
+		cairo_line_to(c,x+2.5,y+8);
+		cairo_line_to(c,x+8,y+13.5);
+		cairo_move_to(c,x+13.5,y+2.5);
+		cairo_line_to(c,x+8,y+8);
+		cairo_line_to(c,x+13.5,y+13.5);
+		cairo_stroke(c);
+	      }
+	      if(decode->telemetry_mv&0x10){
+		cairo_move_to(c,x+8+coded->mv[0],y+8-coded->mv[1]);
+		cairo_set_source_rgba(c,1.,1.,1.,.9);
+		cairo_set_line_width(c,3.);
+		cairo_line_to(c,x+8+coded->mv[0]*.66,y+8-coded->mv[1]*.66);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,2.);
+		cairo_line_to(c,x+8+coded->mv[0]*.33,y+8-coded->mv[1]*.33);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,1.);
+		cairo_line_to(c,x+8,y+8);
+		cairo_stroke(c);
+ 	      }
+	      break;
+	    case OC_MODE_GOLDEN_NOMV:
+	      if(decode->telemetry_mbmode&0x20){
+		cairo_set_source_rgba(c,1.,1.,0,.5);
+		cairo_rectangle(c,x+2.5,y+2.5,11,11);
+		cairo_stroke_preserve(c);
+		cairo_set_source_rgba(c,1.,1.,0,.25);
+		cairo_fill(c);
+	      }
+	      break;
+	    case OC_MODE_GOLDEN_MV:
+	      if(decode->telemetry_mbmode&0x40){
+		cairo_rectangle(c,x+2.5,y+2.5,11,11);
+		cairo_set_source_rgba(c,1.,1.,0,.5);
+		cairo_stroke(c);
+	      }
+	      if(decode->telemetry_mv&0x40){
+		cairo_move_to(c,x+8+coded->mv[0],y+8-coded->mv[1]);
+		cairo_set_source_rgba(c,1.,1.,1.,.9);
+		cairo_set_line_width(c,3.);
+		cairo_line_to(c,x+8+coded->mv[0]*.66,y+8-coded->mv[1]*.66);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,2.);
+		cairo_line_to(c,x+8+coded->mv[0]*.33,y+8-coded->mv[1]*.33);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,1.);
+		cairo_line_to(c,x+8,y+8);
+		cairo_stroke(c);
+ 	      }
+	      break;
+	    case OC_MODE_INTER_MV_FOUR:
+	      if(decode->telemetry_mbmode&0x80){
+		cairo_rectangle(c,x+2.5,y+2.5,4,4);
+		cairo_rectangle(c,x+9.5,y+2.5,4,4);
+		cairo_rectangle(c,x+2.5,y+9.5,4,4);
+		cairo_rectangle(c,x+9.5,y+9.5,4,4);
+		cairo_set_source_rgba(c,0,1.,0,.5);
+		cairo_stroke(c);
+	      }
+	      /* 4mv is odd, coded in raster order */
+	      coded=&decode->state.frags[mb->map[0][bi]];
+	      if(coded->coded && decode->telemetry_mv&0x80){
+		cairo_move_to(c,x+4+coded->mv[0],y+12-coded->mv[1]);
+		cairo_set_source_rgba(c,1.,1.,1.,.9);
+		cairo_set_line_width(c,3.);
+		cairo_line_to(c,x+4+coded->mv[0]*.66,y+12-coded->mv[1]*.66);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,2.);
+		cairo_line_to(c,x+4+coded->mv[0]*.33,y+12-coded->mv[1]*.33);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,1.);
+		cairo_line_to(c,x+4,y+12);
+		cairo_stroke(c);
+ 	      }
+	      coded=&decode->state.frags[mb->map[1][bi]];
+	      if(coded->coded && decode->telemetry_mv&0x80){
+		cairo_move_to(c,x+12+coded->mv[0],y+12-coded->mv[1]);
+		cairo_set_source_rgba(c,1.,1.,1.,.9);
+		cairo_set_line_width(c,3.);
+		cairo_line_to(c,x+12+coded->mv[0]*.66,y+12-coded->mv[1]*.66);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,2.);
+		cairo_line_to(c,x+12+coded->mv[0]*.33,y+12-coded->mv[1]*.33);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,1.);
+		cairo_line_to(c,x+12,y+12);
+		cairo_stroke(c);
+ 	      }
+	      coded=&decode->state.frags[mb->map[2][bi]];
+	      if(coded->coded && decode->telemetry_mv&0x80){
+		cairo_move_to(c,x+4+coded->mv[0],y+4-coded->mv[1]);
+		cairo_set_source_rgba(c,1.,1.,1.,.9);
+		cairo_set_line_width(c,3.);
+		cairo_line_to(c,x+4+coded->mv[0]*.66,y+4-coded->mv[1]*.66);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,2.);
+		cairo_line_to(c,x+4+coded->mv[0]*.33,y+4-coded->mv[1]*.33);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,1.);
+		cairo_line_to(c,x+4,y+4);
+		cairo_stroke(c);
+ 	      }
+	      coded=&decode->state.frags[mb->map[1][bi]];
+	      if(coded->coded && decode->telemetry_mv&0x80){
+		cairo_move_to(c,x+12+coded->mv[0],y+4-coded->mv[1]);
+		cairo_set_source_rgba(c,1.,1.,1.,.9);
+		cairo_set_line_width(c,3.);
+		cairo_line_to(c,x+12+coded->mv[0]*.66,y+4-coded->mv[1]*.66);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,2.);
+		cairo_line_to(c,x+12+coded->mv[0]*.33,y+4-coded->mv[1]*.33);
+		cairo_stroke_preserve(c);
+		cairo_set_line_width(c,1.);
+		cairo_line_to(c,x+12,y+4);
+		cairo_stroke(c);
+ 	      }
+	      break;
+	    }
+	  }
+	}
+	col2++;
+	if((col2>>1)>=decode->state.nhmbs){
+	  col2=0;
+	  row2+=2;
+	}
+      }
+
       cairo_destroy(c);
     }
 

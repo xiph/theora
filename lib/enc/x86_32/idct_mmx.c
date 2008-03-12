@@ -1444,7 +1444,6 @@ void IDct3__mmx( ogg_int16_t * InputData,
 /* install our implementation in the function table */
 void dsp_mmx_idct_init(DspFunctions *funcs)
 {
-  TH_DEBUG("enabling accelerated x86_32 mmx idct functions.\n");
   funcs->IDctSlow = IDctSlow__mmx;
   funcs->IDct10 = IDct10__mmx;
   funcs->IDct3 = IDct3__mmx;

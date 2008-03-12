@@ -287,7 +287,6 @@ static void restore_fpu (void)
 
 void dsp_mmx_init(DspFunctions *funcs)
 {
-  TH_DEBUG("setting accelerated x86_64 mmx dsp functions.\n");
   funcs->restore_fpu = restore_fpu;
   funcs->sub8x8 = sub8x8__mmx;
   funcs->sub8x8_128 = sub8x8_128__mmx;

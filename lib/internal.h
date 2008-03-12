@@ -27,16 +27,6 @@
 # include "dec/huffman.h"
 # include "dec/quant.h"
 
-/* debug macros */
-#ifdef _TH_DEBUG_
-#include <stdio.h>
-extern long dframe;
-extern FILE *debugout;
-#define TH_DEBUG(...) fprintf(debugout, __VA_ARGS__)
-#else
-#define TH_DEBUG(...)
-#endif
-
 /*Thank you Microsoft, I know the order of operations.*/
 # if defined(_MSC_VER)
 #  pragma warning(disable:4554)
@@ -234,13 +224,6 @@ typedef struct{
   /*The motion vector used for this fragment.*/
   oc_mv           mv;
 
-#ifdef _TH_DEBUG_
-  int quant[64];
-  int freq[64];
-  int time[64];
-  int recon[64];
-  int loop[64];
-#endif
 }oc_fragment;
 
 

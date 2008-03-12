@@ -704,7 +704,7 @@ int main(int argc,char *const *argv){
       break;
 
     case 'v':
-      video_q=rint(atof(optarg)*6.3);
+      video_q=rint(atof(optarg));
       if(video_q<0 || video_q>63){
         fprintf(stderr,"Illegal video quality (choose 0 through 10)\n");
         exit(1);

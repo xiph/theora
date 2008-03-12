@@ -176,7 +176,6 @@ static void FilterVert__mmx(unsigned char * PixelPtr,
 /* install our implementation in the function table */
 void dsp_mmx_dct_decode_init(DspFunctions *funcs)
 {
-  TH_DEBUG("enabling accelerated x86_32 mmx dct decode functions.\n");
   funcs->FilterVert = FilterVert__mmx;
   funcs->FilterHoriz = FilterHoriz__mmx;
 }

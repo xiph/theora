@@ -130,24 +130,4 @@ void oc_dequant_tables_init(oc_quant_table *_dequant[2][3],
       }
     }
   }
-
-#ifdef _TH_DEBUG_
-  int i, j, k, l;
-  /* dump the calculated quantizer tables */
-  for(i=0;i<2;i++){
-    for(j=0;j<3;j++){
-      for(k=0;k<64;k++){
-	TH_DEBUG("quantizer table [%s][%s][Q%d] = {",
-		 (i==0?"intra":"inter"),(j==0?"Y":(j==1?"U":"V")),k);
-	for(l=0;l<64;l++){
-	  if((l&7)==0)
-	    TH_DEBUG("\n   ");
-	  TH_DEBUG("%4d ",_dequant[i][j][k][l]);
-	}
-	TH_DEBUG("}\n");
-      }
-    }
-  }
-#endif
-
 }
