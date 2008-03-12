@@ -81,18 +81,18 @@ void oc_mode_scheme_chooser_init(CP_INSTANCE *cpi){
   
   chooser->mode_ranks[0] = chooser->scheme0_ranks;
   for(i=1;i<8;i++)
-    chooser->mode_ranks[i] = ModeSchemes[i];
+    chooser->mode_ranks[i] = ModeSchemes[i-1];
 
-  memset(chooser->mode_counts,0,sizeof(chooser->mode_counts));
+  memset(chooser->mode_counts,0,OC_NMODES*sizeof(*chooser->mode_counts));
   
   /* Scheme 0 starts with 24 bits to store the mode list in. */
   chooser->scheme_bits[0] = 24;
-  memset(chooser->scheme_bits+1,0,7*sizeof(chooser->scheme_bits[1]));
+  memset(chooser->scheme_bits+1,0,7*sizeof(*chooser->scheme_bits));
   for(i=0;i<8;i++){
     /* Scheme 7 should always start first, and scheme 0 should always start
        last. */
     chooser->scheme_list[i] = 7-i;
-    chooser->scheme0_list[i] = chooser->scheme0_ranks[i]=i;
+    chooser->scheme0_list[i] = chooser->scheme0_ranks[i] = i;
   }
 }
 
@@ -492,8 +492,8 @@ int PickModes(CP_INSTANCE *cpi){
 	cost[CODE_INTER_FOURMV] = MBInter4Cost420(cpi,qi,mbi,mb->mv,0);
 	
 	/* add estimated labelling cost for each mode */
-	//for(i = 0; i < 8; i++)
-	//cost[i] += oc_mode_cost(cpi,i) << OC_BIT_SCALE;
+	for(i = 0; i < 8; i++)
+	  cost[i] += oc_mode_cost(cpi,i) << OC_BIT_SCALE;
 	
 	/* Add the motion vector bits for each mode that requires them.*/
 	mb_mv_bits_0  = MvBits[mb->analysis_mv[0][0].x + MAX_MV_EXTENT] + 
