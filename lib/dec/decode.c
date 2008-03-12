@@ -256,6 +256,9 @@ static int oc_dec_init(oc_dec_ctx *_dec,const th_info *_info,
   _dec->variances=NULL;
   _dec->pp_frame_data=NULL;
   _dec->telemetry_frame_data=NULL;
+  _dec->telemetry = 0;
+  _dec->telemetry_mv = 0;
+  _dec->telemetry_mbmode = 0;
   _dec->stripe_cb.ctx=NULL;
   _dec->stripe_cb.stripe_decoded=NULL;
   return 0;
