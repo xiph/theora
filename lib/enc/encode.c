@@ -203,6 +203,68 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
   }
 }
 
+static ogg_uint32_t CodeMBPlane ( CP_INSTANCE *cpi, macroblock_t *mp, int plane, int subsample, int key){
+  int B;
+  unsigned char *cp = cpi->frag_coded;
+  int fi;
+  int *yuv = mp->yuv[plane];
+
+  switch(subsample){
+  case 1:
+    {
+      int coded=0;
+    
+      for ( B=0; B<4; B++) {
+	fi = yuv[B];
+	if (cp[fi]) 
+	  cp[fi] = TransformQuantizeBlock( cpi, mp->mode, fi, mp->mv[B],key );
+	if(cp[fi]) coded=1;
+      }
+      
+      return coded;
+    }
+  case 2:
+    /* fill me in when we need to support 4:2:2 */
+    return 1;
+  case 4:
+    fi = yuv[0];
+    if ( cp[fi] ) {
+      
+      if(mp->mode == CODE_INTER_FOURMV){
+	mv_t mv;
+	
+	/* Calculate motion vector as the average of the Y plane ones. */
+	/* Uncoded members are 0,0 and not special-cased */
+	mv.x = mp->mv[0].x + mp->mv[1].x + mp->mv[2].x + mp->mv[3].x;
+	mv.y = mp->mv[0].y + mp->mv[1].y + mp->mv[2].y + mp->mv[3].y;
+	
+	mv.x = ( mv.x >= 0 ? (mv.x + 2) / 4 : (mv.x - 2) / 4);
+	mv.y = ( mv.y >= 0 ? (mv.y + 2) / 4 : (mv.y - 2) / 4);
+	
+	cp[fi] = TransformQuantizeBlock( cpi, mp->mode, fi, mv, key);
+      }else
+	cp[fi] = TransformQuantizeBlock( cpi, mp->mode, fi, mp->mv[0], key);
+      
+    }  
+    if(cp[fi]) return 1;
+  }
+  return 0;
+}
+
+static ogg_uint32_t CodeMB420 ( CP_INSTANCE *cpi, macroblock_t *mp, int key){
+  int coded = 0;
+  if(CodeMBPlane(cpi,mp,0,1,key)){
+    coded  = CodeMBPlane(cpi,mp,1,4,key);
+    coded |= CodeMBPlane(cpi,mp,2,4,key);
+  }
+  
+  if(!coded){
+
+
+  }
+
+}
+
 static void ChooseTokenTables (CP_INSTANCE *cpi, int huff[4]) {
   int i,plane;
   int best;
