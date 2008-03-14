@@ -557,117 +557,10 @@ static int blocksad(ogg_int16_t *b, int inter_p,int plane){
 }
 #endif
 
-void mb_background(CP_INSTANCE *cpi,
-		   coding_mode_t mode,
-		   int fi,
-		   mv_t mv,
-		   ogg_int16_t *block){
-
-  int mv_div = (plane?4:2);
-  unsigned char *frame_ptr = &cpi->frame[cpi->frag_buffer_index[fi]];
-  int stride = cpi->stride[plane];
-
-  if ( ModeUsesMC[mode] ){
-
-  ogg_int32_t MvShift;
-  ogg_int32_t MvModMask;
-  ogg_int32_t  AbsRefOffset;
-  ogg_int32_t  AbsXOffset;
-  ogg_int32_t  AbsYOffset;
-  ogg_int32_t  MVOffset;        /* Baseline motion vector offset */
-  ogg_int32_t  ReconPtr2Offset; /* Offset for second reconstruction in
-                                   half pixel MC */
-  unsigned char  *ReconPtr1;    /* DCT reconstructed image pointers */
-  unsigned char  *ReconPtr2;    /* Pointer used in half pixel MC */
-  int bi = cpi->frag_buffer_index[fi];
-  unsigned char *thisrecon = &cpi->recon[bi];
-
-  if ( ModeUsesMC[mode] ){
-    switch(MvDivisor) {
-    case 2:
-      MvShift = 1;
-      MvModMask = 1;
-      break;
-    case 4:
-      MvShift = 2;
-      MvModMask = 3;
-      break;
-    default:
-      break;
-    }
-    
-    /* Set up the baseline offset for the motion vector. */
-    MVOffset = ((mv.y / MvDivisor) * PixelsPerLine) + (mv.x / MvDivisor);
-    
-    /* Work out the offset of the second reference position for 1/2
-       pixel interpolation.  For the U and V planes the MV specifies 1/4
-       pixel accuracy. This is adjusted to 1/2 pixel as follows ( 0->0,
-       1/4->1/2, 1/2->1/2, 3/4->1/2 ). */
-    ReconPtr2Offset = 0;
-    AbsXOffset = mv.x % MvDivisor;
-    AbsYOffset = mv.y % MvDivisor;
-    
-    if ( AbsXOffset ) {
-      if ( mv.x > 0 )
-	ReconPtr2Offset += 1;
-      else
-	ReconPtr2Offset -= 1;
-    }
-    
-    if ( AbsYOffset ) {
-      if ( mv.y > 0 )
-	ReconPtr2Offset += PixelsPerLine;
-      else
-	ReconPtr2Offset -= PixelsPerLine;
-    }
-    
-    if ( mode==CODE_GOLDEN_MV ) {
-      ReconPtr1 = &cpi->golden[bi];
-    } else {
-      ReconPtr1 = &cpi->lastrecon[bi];
-    }
-    
-    ReconPtr1 += MVOffset;
-    ReconPtr2 =  ReconPtr1 + ReconPtr2Offset;
-    
-    AbsRefOffset = abs((int)(ReconPtr1 - ReconPtr2));
-    
-    /* Is the MV offset exactly pixel alligned */
-    if ( AbsRefOffset == 0 ){
-      dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr, PixelsPerLine);
-      dsp_copy8x8 (cpi->dsp, ReconPtr1, thisrecon, PixelsPerLine);
-    } else {
-      /* Fractional pixel MVs. */
-      /* Note that we only use two pixel values even for the diagonal */
-      dsp_sub8x8avg2(cpi->dsp, FiltPtr, ReconPtr1, ReconPtr2, DctInputPtr, PixelsPerLine);
-      dsp_copy8x8_half (cpi->dsp, ReconPtr1, ReconPtr2, thisrecon, PixelsPerLine);
-    }
-
-  } else { 
-    if ( ( mode==CODE_INTER_NO_MV ) ||
-	 ( mode==CODE_USING_GOLDEN ) ) {
-      if ( mode==CODE_INTER_NO_MV ) {
-	ReconPtr1 = &cpi->lastrecon[bi];
-      } else {
-	ReconPtr1 = &cpi->golden[bi];
-      }
-      
-      dsp_sub8x8(cpi->dsp, FiltPtr, ReconPtr1, DctInputPtr,PixelsPerLine);
-      dsp_copy8x8 (cpi->dsp, ReconPtr1, thisrecon, PixelsPerLine);
-    } else if ( mode==CODE_INTRA ) {
-      dsp_sub8x8_128(cpi->dsp, FiltPtr, DctInputPtr, PixelsPerLine);
-      dsp_set8x8(cpi->dsp, 128, thisrecon, PixelsPerLine);
-    }
-  }
-
-
-}
-
 void TransformQuantizeBlock (CP_INSTANCE *cpi, 
 			     coding_mode_t mode,
 			     int fi,
-			     mv_t mv,
-			     int key){
+			     mv_t mv){
 
   unsigned char *FiltPtr = &cpi->frame[cpi->frag_buffer_index[fi]];
   int qi = cpi->BaseQ; // temporary
@@ -677,9 +570,8 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
   ogg_int32_t *q = cpi->iquant_tables[inter][plane][qi];
   ogg_int16_t DCTInput[64];
   ogg_int16_t DCTOutput[64];
-  ogg_int32_t MvDivisor;      /* Defines MV resolution (2 = 1/2
-				 pixel for Y or 4 = 1/4 for UV) */
-
+  ogg_int32_t   MvDivisor;      /* Defines MV resolution (2 = 1/2
+                                   pixel for Y or 4 = 1/4 for UV) */
   /* Set plane specific values */
   if (plane == 0){
     MvDivisor = 2;                  /* 1/2 pixel accuracy in Y */
