@@ -426,6 +426,55 @@ static int MBInter4Cost420(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv[4], int go
   return cost;
 }
 
+void mb_get_dct_input(CP_INSTANCE *cpi,
+		      coding_mode_t mode,
+		      int fi,
+		      mv_t mv,
+		      ogg_int16_t *block){
+
+  int plane = fi>=cpi->frag_n[0]; /* sets plane to 'Y' or 'Chroma' */
+  int qp = (plane?1:0); 
+  int bi = cpi->frag_buffer_index[fi];
+  unsigned char *frame_ptr = &cpi->frame[bi];
+  unsigned char *recon = ((mode == CODE_USING_GOLDEN || 
+			   mode == CODE_GOLDEN_MV) ? 
+			  cpi->golden : cpi->lastrecon);
+  int stride = cpi->stride[plane];
+  
+  switch(mode){
+  case CODE_INTER_PLUS_MV:
+  case CODE_INTER_LAST_MV:
+  case CODE_INTER_PRIOR_LAST:
+  case CODE_GOLDEN_MV:
+  case CODE_INTER_FOURMV:
+    
+    {    
+      int mx = mvmap[qp][mv.x+31];
+      int my = mvmap[qp][mv.y+31];
+      int mx2 = mvmap2[qp][mv.x+31];
+      int my2 = mvmap2[qp][mv.y+31];
+      
+      unsigned char *r1 = recon + bi+ my * stride + mx;
+      
+      if(mx2 || my2){
+	unsigned char *r2 = r1 + my2 * stride + mx2;
+	dsp_sub8x8avg2(cpi->dsp, frame_ptr, r1, r2, block, stride);
+      }else{
+	dsp_sub8x8(cpi->dsp, frame_ptr, r1, block, stride);
+      }
+    }
+    break;
+
+  case CODE_USING_GOLDEN:
+  case CODE_INTER_NO_MV:
+    dsp_sub8x8(cpi->dsp, frame_ptr, recon+bi, block, stride);
+    break;
+  case CODE_INTRA:
+    dsp_sub8x8_128(cpi->dsp, frame_ptr, block, stride);
+    break;
+  }
+}
+
 int PickModes(CP_INSTANCE *cpi){
   unsigned char qi = cpi->BaseQ; // temporary
   superblock_t *sb = cpi->super[0];
