@@ -201,7 +201,7 @@ static int oc_sad16_halfpel(CP_INSTANCE *cpi,
   int i;
   err=0;
   for(i=0;i<4;i++){
-    int fi = mb->yuv[0][i];
+    int fi = mb->Ryuv[i];
     ogg_uint32_t base_offset = cpi->frag_buffer_index[fi];
     const unsigned char *cur = cpi->frame + base_offset;
     const unsigned char *ref = (_goldenp ? cpi->golden : cpi->recon) + base_offset;
@@ -229,7 +229,7 @@ static int oc_mcenc_ysad_check_mbcandidate_fullpel(CP_INSTANCE *cpi,
   mvoffset=_delta.x+_delta.y*stride;
   err=0;
   for(bi=0;bi<4;bi++){
-    int fi = mb->yuv[0][bi];
+    int fi = mb->Ryuv[bi];
     if(fi < cpi->frag_total){ /* last fragment is the 'invalid fragment' */
       ogg_uint32_t base_offset = cpi->frag_buffer_index[fi];
       const unsigned char *cur = cpi->frame + base_offset;
@@ -311,7 +311,7 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,
   int best_site;
   int sitei;
   int err;
-  int fi = mb->yuv[0][_bi];
+  int fi = mb->Ryuv[_bi];
 
   if(fi == cpi->frag_total) return _best_err;
 
@@ -618,12 +618,12 @@ void PickMVs(CP_INSTANCE *cpi){
     /* basic 1MV search always done for all macroblocks, coded or not, keyframe or not */
     oc_mcenc_search(cpi, &mcenc, mbi, 0, mb->mv);
 
-    /* replace the block MVs for not-coded blocks with (0,0).*/    
+    /* replace the block MVs for not-coded blocks with (0,0).*/   
     mb->coded = 0;
     for ( bi=0; bi<4; bi++ ){
-      int fi = mb->yuv[0][bi];
+      int fi = mb->Ryuv[bi];
       if(!cp[fi]) 
-	mb->mv[fi]=(mv_t){0,0};
+	mb->mv[bi]=(mv_t){0,0};
       else
 	mb->coded |= (1<<bi);
     }

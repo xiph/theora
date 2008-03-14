@@ -163,10 +163,9 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
   switch(subsample){
   case 1:
     for ( ; mp<mp_end; mp++ ) {
-      int *yuv = mp->yuv[plane];
 
       for ( B=0; B<4; B++) {
-	fi = yuv[B];
+	fi = mp->Ryuv[B];
 	if ( cp[fi] ) 
 	  TransformQuantizeBlock( cpi, mp->mode, fi, mp->mv[B] );
       }
@@ -177,7 +176,7 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
     return 1;
   case 4:
     for ( ; mp<mp_end; mp++ ) {
-      int fi = mp->yuv[plane][0];
+      int fi = mp->Hyuv[plane][0];
       if ( cp[fi] ) {
 	
 	if(mp->mode == CODE_INTER_FOURMV){

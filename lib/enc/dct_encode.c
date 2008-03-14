@@ -209,83 +209,74 @@ static void TokenizeDctRunValue (CP_INSTANCE *cpi,
   }
 }
 
-static void tokenize_groups(CP_INSTANCE *cpi, int plane,
-			    int *eob_run, int *eob_plane, 
-			    int *eob_pre){
-  int SB,B;
+static void tokenize_block(CP_INSTANCE *cpi, int fi, int plane,
+			   int *eob_run, int *eob_plane, 
+			   int *eob_pre){
   unsigned char *cp=cpi->frag_coded;
-
-  for ( SB=0; SB<cpi->super_n[plane]; SB++ ){
-    superblock_t *sp = &cpi->super[plane][SB];
-    for ( B=0; B<16; B++ ) {
-      int fi = sp->f[B];
-      if ( cp[fi] ) {
-
-	int coeff = 0;
-	dct_t *dct = &cpi->frag_dct[fi];
-	cpi->frag_nonzero[fi] = 0;
+  if ( cp[fi] ) {
+    int coeff = 0;
+    dct_t *dct = &cpi->frag_dct[fi];
+    cpi->frag_nonzero[fi] = 0;
+    
+    while(coeff < BLOCK_SIZE){
+      ogg_int16_t val = dct->data[coeff];
+      int zero_run;
+      int i = coeff;
+      
+      cpi->frag_nonzero[fi] = coeff;
+      
+      while( !val && (++i < BLOCK_SIZE) )
+	val = dct->data[i];
+	  
+      if ( i == BLOCK_SIZE ){
 	
-	while(coeff < BLOCK_SIZE){
-	  ogg_int16_t val = dct->data[coeff];
-	  int zero_run;
-	  int i = coeff;
-	  
-	  cpi->frag_nonzero[fi] = coeff;
-	  
-	  while( !val && (++i < BLOCK_SIZE) )
-	    val = dct->data[i];
-	  
-	  if ( i == BLOCK_SIZE ){
-	    
-	    /* if there are no other tokens in this group yet, set up to be
-	       prepended later.  Group 0/Plane 0 is the exception (can't be
-	       prepended) */
-	    if(cpi->dct_token_count[plane][coeff] == 0 && (coeff||plane)){
-	      eob_pre[coeff]++;
+	/* if there are no other tokens in this group yet, set up to be
+	   prepended later.  Group 0/Plane 0 is the exception (can't be
+	   prepended) */
+	if(cpi->dct_token_count[plane][coeff] == 0 && (coeff||plane)){
+	  eob_pre[coeff]++;
 #ifdef COLLECT_METRICS
-	      cpi->dct_eob_fi_stack[plane][coeff][cpi->dct_eob_fi_count[plane][coeff]++]=fi;
+	  cpi->dct_eob_fi_stack[plane][coeff][cpi->dct_eob_fi_count[plane][coeff]++]=fi;
 #endif
-	    }else{
-	      if(eob_run[coeff] == 4095){
-		emit_eob_run(cpi,eob_plane[coeff],coeff,4095);
-		eob_run[coeff] = 0;
-	      }
-	      
-	      if(eob_run[coeff]==0)
-		eob_plane[coeff]=plane;
-	      
-	      eob_run[coeff]++;
-#ifdef COLLECT_METRICS
-	      cpi->dct_eob_fi_stack[plane][coeff][cpi->dct_eob_fi_count[plane][coeff]++]=fi;
-#endif
-	    }
-	    coeff = BLOCK_SIZE;
-	  }else{
-	    
-	    if(eob_run[coeff]){
-	      emit_eob_run(cpi,eob_plane[coeff],coeff,eob_run[coeff]);
-	      eob_run[coeff]=0;
-	    }
-	    
-	    zero_run = i-coeff;
-	    if (zero_run){
-	      ogg_uint32_t absval = abs(val);
-	      if ( ((absval == 1) && (zero_run <= 17)) ||
-		   ((absval <= 3) && (zero_run <= 3)) ) {
-		TokenizeDctRunValue( cpi, plane, coeff, zero_run, val, fi);
-		coeff = i+1;
-	      }else{
-		if ( zero_run <= 8 )
-		  add_token(cpi, plane, coeff, DCT_SHORT_ZRL_TOKEN, zero_run - 1, fi);
-		else
-		  add_token(cpi, plane, coeff, DCT_ZRL_TOKEN, zero_run - 1, fi);
-		coeff = i;
-	      }
-	    }else{
-	      TokenizeDctValue(cpi, plane, coeff, val, fi);
-	      coeff = i+1;
-	    }
+	}else{
+	  if(eob_run[coeff] == 4095){
+	    emit_eob_run(cpi,eob_plane[coeff],coeff,4095);
+	    eob_run[coeff] = 0;
 	  }
+	  
+	  if(eob_run[coeff]==0)
+	    eob_plane[coeff]=plane;
+	  
+	  eob_run[coeff]++;
+#ifdef COLLECT_METRICS
+	  cpi->dct_eob_fi_stack[plane][coeff][cpi->dct_eob_fi_count[plane][coeff]++]=fi;
+#endif
+	}
+	coeff = BLOCK_SIZE;
+      }else{
+	
+	if(eob_run[coeff]){
+	  emit_eob_run(cpi,eob_plane[coeff],coeff,eob_run[coeff]);
+	  eob_run[coeff]=0;
+	}
+	
+	zero_run = i-coeff;
+	if (zero_run){
+	  ogg_uint32_t absval = abs(val);
+	  if ( ((absval == 1) && (zero_run <= 17)) ||
+	       ((absval <= 3) && (zero_run <= 3)) ) {
+	    TokenizeDctRunValue( cpi, plane, coeff, zero_run, val, fi);
+	    coeff = i+1;
+	  }else{
+	    if ( zero_run <= 8 )
+	      add_token(cpi, plane, coeff, DCT_SHORT_ZRL_TOKEN, zero_run - 1, fi);
+	    else
+	      add_token(cpi, plane, coeff, DCT_ZRL_TOKEN, zero_run - 1, fi);
+	    coeff = i;
+	  }
+	}else{
+	  TokenizeDctValue(cpi, plane, coeff, val, fi);
+	  coeff = i+1;
 	}
       }
     }
@@ -298,7 +289,7 @@ void DPCMTokenize (CP_INSTANCE *cpi){
 
   int eob_pre[3][64];
   
-  int i,j;
+  int i,j,sbi,mbi;
 
   memset(eob_run, 0, sizeof(eob_run));
   memset(eob_pre, 0, sizeof(eob_pre));
@@ -328,10 +319,36 @@ void DPCMTokenize (CP_INSTANCE *cpi){
 #endif
   }
 
-  /* Tokenize the dct data. */
-  for(i=0;i<3;i++)
-    tokenize_groups (cpi, i, eob_run[i], eob_plane[i], eob_pre[i]);
   
+  for (sbi=0; sbi < cpi->super_n[0]; sbi++ ){
+    superblock_t *sp = &cpi->super[0][sbi];
+    for (mbi=0; mbi < 4; mbi++ ){
+      int bi;
+      macroblock_t *mb = &cpi->macro[sp->m[mbi]];
+      for (bi=0; bi<4; bi++ ) {
+	int fi = mb->Hyuv[0][bi];
+	tokenize_block(cpi, fi, 0, eob_run[0], eob_plane[0], eob_pre[0]);
+      }
+    }
+  }
+  for (sbi=0; sbi < cpi->super_n[1]; sbi++ ){
+    superblock_t *sb = &cpi->super[1][sbi];
+    int bi;
+    for (bi=0; bi<16; bi++ ) {
+      int fi = sb->f[bi];
+      tokenize_block(cpi, fi, 1, eob_run[1], eob_plane[1], eob_pre[1]);
+    }
+  }
+
+  for (sbi=0; sbi < cpi->super_n[2]; sbi++ ){
+    superblock_t *sb = &cpi->super[2][sbi];
+    int bi;
+    for (bi=0; bi<16; bi++ ) {
+      int fi = sb->f[bi];
+      tokenize_block(cpi, fi, 2, eob_run[2], eob_plane[2], eob_pre[2]);
+    }
+  }
+
   /* tie together eob runs at the beginnings/ends of coeff groups */
   {
     int coeff = 0;

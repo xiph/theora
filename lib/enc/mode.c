@@ -257,23 +257,23 @@ static int MBIntraCost420(CP_INSTANCE *cpi, int qi, int mbi, int all){
   int fi;
   /* all frags in a macroblock are valid so long as the macroblock itself is valid */
   if(mbi < cpi->macro_total){ 
-    fi = mb->yuv[0][0];
+    fi = mb->Hyuv[0][0];
     if(all || cp[fi])
       cost += BINMAP(mode_rate[qi][0][1],BIntraSAD(cpi,fi,0));
-    fi = mb->yuv[0][1];
+    fi = mb->Hyuv[0][1];
     if(all || cp[fi])
       cost += BINMAP(mode_rate[qi][0][1],BIntraSAD(cpi,fi,0));
-    fi = mb->yuv[0][2];
+    fi = mb->Hyuv[0][2];
     if(all || cp[fi])
       cost += BINMAP(mode_rate[qi][0][1],BIntraSAD(cpi,fi,0));
-    fi = mb->yuv[0][3];
+    fi = mb->Hyuv[0][3];
     if(all || cp[fi])
       cost += BINMAP(mode_rate[qi][0][1],BIntraSAD(cpi,fi,0));
 
-    fi = mb->yuv[1][0];
+    fi = mb->Hyuv[1][0];
     if(all || cp[fi])
       cost += BINMAP(mode_rate[qi][1][1],BIntraSAD(cpi,fi,1));
-    fi = mb->yuv[2][0];
+    fi = mb->Hyuv[2][0];
     if(all || cp[fi])
       cost += BINMAP(mode_rate[qi][2][1],BIntraSAD(cpi,fi,2));
    
@@ -363,23 +363,23 @@ static int MBInterCost420(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv, int golden
   int cost = 0;
   int fi;
 
-  fi=mb->yuv[0][0];
+  fi=mb->Hyuv[0][0];
   if(cp[fi])
     cost += BINMAP(mode_rate[qi][0][0],BInterSAD(cpi,fi,0,goldenp,mv,0));
-  fi=mb->yuv[0][1];
+  fi=mb->Hyuv[0][1];
   if(cp[fi])
     cost += BINMAP(mode_rate[qi][0][0],BInterSAD(cpi,fi,0,goldenp,mv,0));
-  fi=mb->yuv[0][2];
+  fi=mb->Hyuv[0][2];
   if(cp[fi])
     cost += BINMAP(mode_rate[qi][0][0],BInterSAD(cpi,fi,0,goldenp,mv,0));
-  fi=mb->yuv[0][3];
+  fi=mb->Hyuv[0][3];
   if(cp[fi])
     cost += BINMAP(mode_rate[qi][0][0],BInterSAD(cpi,fi,0,goldenp,mv,0));
 
-  fi=mb->yuv[1][0];
+  fi=mb->Hyuv[1][0];
   if(cp[fi])
     cost += BINMAP(mode_rate[qi][1][0],BInterSAD(cpi,fi,1,goldenp,mv,1));
-  fi=mb->yuv[2][0];
+  fi=mb->Hyuv[2][0];
   if(cp[fi])
     cost += BINMAP(mode_rate[qi][2][0],BInterSAD(cpi,fi,2,goldenp,mv,1));
 
@@ -394,16 +394,16 @@ static int MBInter4Cost420(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv[4], int go
   mv_t ch;
   int fi;
 
-  fi=mb->yuv[0][0];
+  fi=mb->Hyuv[0][0];
   if(cp[fi])
     cost += BINMAP(mode_rate[qi][0][0],BInterSAD(cpi,fi,0,goldenp,mv[0],0));
-  fi=mb->yuv[0][1];
+  fi=mb->Hyuv[0][1];
   if(cp[fi])
     cost += BINMAP(mode_rate[qi][0][0],BInterSAD(cpi,fi,0,goldenp,mv[1],0));
-  fi=mb->yuv[0][2];
+  fi=mb->Hyuv[0][2];
   if(cp[fi])
     cost += BINMAP(mode_rate[qi][0][0],BInterSAD(cpi,fi,0,goldenp,mv[2],0));
-  fi=mb->yuv[0][3];
+  fi=mb->Hyuv[0][3];
   if(cp[fi])
     cost += BINMAP(mode_rate[qi][0][0],BInterSAD(cpi,fi,0,goldenp,mv[3],0));
 
@@ -415,10 +415,10 @@ static int MBInter4Cost420(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv[4], int go
   ch.x = ( ch.x >= 0 ? (ch.x + 2) / 4 : (ch.x - 2) / 4);
   ch.y = ( ch.y >= 0 ? (ch.y + 2) / 4 : (ch.y - 2) / 4);
   
-  fi=mb->yuv[1][0];
+  fi=mb->Hyuv[1][0];
   if(cp[fi])
     cost += BINMAP(mode_rate[qi][1][0],BInterSAD(cpi,fi,1,goldenp,ch,1));
-  fi=mb->yuv[2][0];
+  fi=mb->Hyuv[2][0];
   if(cp[fi])
     cost += BINMAP(mode_rate[qi][2][0],BInterSAD(cpi,fi,2,goldenp,ch,1));
 

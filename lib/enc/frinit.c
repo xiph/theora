@@ -220,19 +220,20 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   /* 4:2:0 only for now */
   {
     int row,col,frag;
-    int scanx[4] = {0,1,0,1};
-    int scany[4] = {0,0,1,1};
+    int scanx[4][4] = { {0,1,1,0}, {1,0,0,1}, {0,0,1,1}, {0,0,1,1} };
+    int scany[4][4] = { {0,0,1,1}, {1,1,0,0}, {0,1,1,0}, {0,1,1,0} };
 
     for(row=0;row<cpi->macro_v;row++){
       int baserow = row*2;
       for(col=0;col<cpi->macro_h;col++){
 	int basecol = col*2;
 	int macroindex = row*cpi->macro_h + col;
+	int hpos = (col&1) + (row&1)*2;
 	int fragindex;
 	for(frag=0;frag<4;frag++){
 	  /* translate to fragment index */
-	  int frow = baserow + scany[frag];
-	  int fcol = basecol + scanx[frag];
+	  int frow = baserow + scany[hpos][frag];
+	  int fcol = basecol + scanx[hpos][frag];
 	  if(frow<cpi->frag_v[0] && fcol<cpi->frag_h[0]){
 	    fragindex = frow*cpi->frag_h[0] + fcol;	    
 #ifdef COLLECT_METRICS
@@ -240,7 +241,8 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 #endif
 	  }else
 	    fragindex = cpi->frag_total;
-	  cpi->macro[macroindex].yuv[0][frag] = fragindex;
+	  cpi->macro[macroindex].Ryuv[frag] = (baserow+((frag&2)>>1))*cpi->frag_h[0]+basecol+(frag&1);
+	  cpi->macro[macroindex].Hyuv[0][frag] = fragindex;
 	}
 	
 	if(row<cpi->frag_v[1] && col<cpi->frag_h[1]){
@@ -250,7 +252,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 #endif
 	}else
 	  fragindex = cpi->frag_total;
-	cpi->macro[macroindex].yuv[1][0] = fragindex;
+	cpi->macro[macroindex].Hyuv[1][0] = fragindex;
 	
 	if(row<cpi->frag_v[2] && col<cpi->frag_h[2]){
 	  fragindex = cpi->frag_n[0] + cpi->frag_n[1] + macroindex; 
@@ -259,7 +261,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 #endif
 	}else
 	  fragindex = cpi->frag_total;
-	cpi->macro[macroindex].yuv[2][0] = fragindex;
+	cpi->macro[macroindex].Hyuv[2][0] = fragindex;
 	
       }
     }
@@ -304,8 +306,10 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   {
     int p,f;
     for(p=0;p<3;p++)
-      for(f=0;f<4;f++)
-	cpi->macro[cpi->macro_total].yuv[p][f] = cpi->frag_total;
+      for(f=0;f<4;f++){
+	cpi->macro[cpi->macro_total].Ryuv[f] = cpi->frag_total;
+	cpi->macro[cpi->macro_total].Hyuv[p][f] = cpi->frag_total;
+      }
     cpi->macro[cpi->macro_total].ncneighbors=0;
     cpi->macro[cpi->macro_total].npneighbors=0;
 #ifdef COLLECT_METRICS
