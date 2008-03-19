@@ -487,6 +487,7 @@ int PickModes(CP_INSTANCE *cpi){
   mv_t prior_mv = {0,0};
 
   oc_mode_scheme_chooser_init(cpi);
+
   cpi->MVBits_0 = 0;
   cpi->MVBits_1 = 0;
  
@@ -547,9 +548,10 @@ int PickModes(CP_INSTANCE *cpi){
 	/* Add the motion vector bits for each mode that requires them.*/
 	mb_mv_bits_0  = MvBits[mb->analysis_mv[0][0].x + MAX_MV_EXTENT] + 
 	  MvBits[mb->analysis_mv[0][0].y + MAX_MV_EXTENT];
-	mb_gmv_bits_0 = MvBits[mb->analysis_mv[0][1].x+MAX_MV_EXTENT] + 
-	  MvBits[mb->analysis_mv[0][1].y+MAX_MV_EXTENT];
+	mb_gmv_bits_0 = MvBits[mb->analysis_mv[0][1].x + MAX_MV_EXTENT] + 
+	  MvBits[mb->analysis_mv[0][1].y + MAX_MV_EXTENT];
 	mb_4mv_bits_0 = mb_4mv_bits_1 = 0;
+
 	if(mb->coded & 1){
 	  mb_4mv_bits_0 += MvBits[mb->mv[0].x + MAX_MV_EXTENT] + 
 	    MvBits[mb->mv[0].y+MAX_MV_EXTENT];
@@ -589,7 +591,6 @@ int PickModes(CP_INSTANCE *cpi){
 	/* train this too... because the bit cost of an MV should be
 	   considered in the context of LAST_MV and PRIOR_LAST. */
 	cost[CODE_INTER_PLUS_MV] -= 384;
-	
 	
 	/* Finally, pick the mode with the cheapest estimated bit cost.*/
 	mode=0;
@@ -748,45 +749,48 @@ static int parse_eob_run(int token, int eb){
   }
 }
 
-static void ModeMetricsGroup(CP_INSTANCE *cpi, int group, int huffY, int huffC, int *eobcounts, int *actual_bits){
+static void ModeMetricsGroup(CP_INSTANCE *cpi, int plane, int group, int huff, int *eobcounts, int *actual_bits){
   int ti;
-  int *stack = cpi->dct_eob_fi_stack[group];
-  int ty = cpi->dct_token_ycount[group];
-  int *tfi = cpi->dct_token_frag[group];
-  int tn = cpi->dct_token_count[group];
-
+  int *stack = cpi->dct_eob_fi_stack[plane][group];
+  int *tfi = cpi->dct_token_frag[plane][group];
+  int tn = cpi->dct_token_count[plane][group];
+  
   for(ti=0;ti<tn;ti++){
-    int huff = (ti<ty?huffY:huffC);
-    int token = cpi->dct_token[group][ti];
+    int token = cpi->dct_token[plane][group][ti];
     int bits = cpi->HuffCodeLengthArray_VP3x[huff][token] + cpi->ExtraBitLengths_VP3x[token];
-    
+      
     if(token>DCT_REPEAT_RUN4_TOKEN){
       /* not an EOB run; this token belongs to a single fragment */
       int fi = tfi[ti];
       actual_bits[fi] += (bits<<OC_BIT_SCALE);
     }else{
       /* EOB run; its bits should be split up between all the fragments in the run */
-      int run = parse_eob_run(token, cpi->dct_token_eb[group][ti]);
+      int run = parse_eob_run(token, cpi->dct_token_eb[plane][group][ti]);
       int fracbits = ((bits<<OC_BIT_SCALE) + (run>>1))/run;
-
+      
       if(ti+1<tn){
-	/* tokens follow EOB so it must be entirely ensconced within this group */
+	/* tokens follow EOB so it must be entirely ensconced within this plane/group */
 	while(run--){
 	  int fi = stack[eobcounts[group]++];
 	  actual_bits[fi]+=fracbits;
 	}
       }else{
-	/* EOB is the last token in this group, so it may span into the next group (or groups) */
-	int n = cpi->dct_eob_fi_count[group];
+	/* EOB is the last token in this plane/group, so it may span into the next plane/group */
+	int n = cpi->dct_eob_fi_count[plane][group];
 	while(run){
 	  while(eobcounts[group] < n && run){
 	    int fi = stack[eobcounts[group]++];
 	    actual_bits[fi]+=fracbits;
 	    run--;
 	  }
-	  group++;
-	  n = cpi->dct_eob_fi_count[group];
-	  stack = cpi->dct_eob_fi_stack[group];
+	  plane++;
+	  if(plane>=3){
+	    group++;
+	    plane=0;
+	  }
+	  n = cpi->dct_eob_fi_count[plane][group];
+	  stack = cpi->dct_eob_fi_stack[plane][group];
+	 
 	}
       }
     }
@@ -801,7 +805,7 @@ void ModeMetrics(CP_INSTANCE *cpi, int huff[4]){
   unsigned char *cp = cpi->frag_coded;
   int *sp = cpi->frag_sad;
   int *mp = cpi->frag_mbi;
-  int eobcounts[64];
+  int eobcounts[3][64];
   int qi = cpi->BaseQ; /* temporary */
   int actual_bits[cpi->frag_total];
   memset(actual_bits,0,sizeof(actual_bits));
@@ -813,15 +817,29 @@ void ModeMetrics(CP_INSTANCE *cpi, int huff[4]){
   }
 
   /* count bits for tokens */
-  ModeMetricsGroup(cpi, 0, huff[0], huff[1], eobcounts, actual_bits);
-  for(gi=1;gi<=AC_TABLE_2_THRESH;gi++)
-    ModeMetricsGroup(cpi, gi,  huff[2], huff[3], eobcounts, actual_bits);
-  for(;gi<=AC_TABLE_3_THRESH;gi++)
-    ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES, huff[3]+AC_HUFF_CHOICES, eobcounts, actual_bits);
-  for(;gi<=AC_TABLE_4_THRESH;gi++)
-    ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES*2, huff[3]+AC_HUFF_CHOICES*2, eobcounts, actual_bits);
-  for(;gi<BLOCK_SIZE;gi++)
-    ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES*3, huff[3]+AC_HUFF_CHOICES*3, eobcounts, actual_bits);
+  ModeMetricsGroup(cpi, 0, 0, huff[0], eobcounts[0], actual_bits);
+  ModeMetricsGroup(cpi, 1, 0, huff[1], eobcounts[1], actual_bits);
+  ModeMetricsGroup(cpi, 2, 0, huff[1], eobcounts[2], actual_bits);
+  for(gi=1;gi<=AC_TABLE_2_THRESH;gi++){
+    ModeMetricsGroup(cpi, 0, gi,  huff[2], eobcounts[0], actual_bits);
+    ModeMetricsGroup(cpi, 1, gi,  huff[3], eobcounts[1], actual_bits);
+    ModeMetricsGroup(cpi, 2, gi,  huff[3], eobcounts[2], actual_bits);
+  }
+  for(;gi<=AC_TABLE_3_THRESH;gi++){
+    ModeMetricsGroup(cpi, 0, gi, huff[2]+AC_HUFF_CHOICES, eobcounts[0], actual_bits);
+    ModeMetricsGroup(cpi, 1, gi, huff[3]+AC_HUFF_CHOICES, eobcounts[1], actual_bits);
+    ModeMetricsGroup(cpi, 2, gi, huff[3]+AC_HUFF_CHOICES, eobcounts[2], actual_bits);
+  }
+  for(;gi<=AC_TABLE_4_THRESH;gi++){
+    ModeMetricsGroup(cpi, 0, gi, huff[2]+AC_HUFF_CHOICES*2, eobcounts[0], actual_bits);
+    ModeMetricsGroup(cpi, 1, gi, huff[3]+AC_HUFF_CHOICES*2, eobcounts[1], actual_bits);
+    ModeMetricsGroup(cpi, 2, gi, huff[3]+AC_HUFF_CHOICES*2, eobcounts[2], actual_bits);
+  }
+  for(;gi<BLOCK_SIZE;gi++){
+    ModeMetricsGroup(cpi, 0, gi, huff[2]+AC_HUFF_CHOICES*3, eobcounts[0], actual_bits);
+    ModeMetricsGroup(cpi, 1, gi, huff[3]+AC_HUFF_CHOICES*3, eobcounts[1], actual_bits);
+    ModeMetricsGroup(cpi, 2, gi, huff[3]+AC_HUFF_CHOICES*3, eobcounts[2], actual_bits);
+  }
 
   /* accumulate */
   for(fi=0;fi<v;fi++)
@@ -872,19 +890,19 @@ void DumpMetrics(CP_INSTANCE *cpi){
 	fprintf(stdout,"        { ");
 	for(bin=0;bin<OC_SAD_BINS;bin++){
 	  if(bin && !(bin&0x3))fprintf(stdout,"\n          ");
-	  fprintf(stdout,"%12lldLL,",mode_metric[qi][plane][mode].bits[bin]);
+	  fprintf(stdout,"%12ldLL,",mode_metric[qi][plane][mode].bits[bin]);
 	}
 	fprintf(stdout," },\n");
 	fprintf(stdout,"        { ");
 	for(bin=0;bin<OC_SAD_BINS;bin++){
 	  if(bin && !(bin&0x3))fprintf(stdout,"\n          ");
-	  fprintf(stdout,"%12lldLL,",mode_metric[qi][plane][mode].frag[bin]);
+	  fprintf(stdout,"%12ldLL,",mode_metric[qi][plane][mode].frag[bin]);
 	}
 	fprintf(stdout," },\n");
 	fprintf(stdout,"        { ");
 	for(bin=0;bin<OC_SAD_BINS;bin++){
 	  if(bin && !(bin&0x3))fprintf(stdout,"\n          ");
-	  fprintf(stdout,"%12lldLL,",mode_metric[qi][plane][mode].sad[bin]);
+	  fprintf(stdout,"%12ldLL,",mode_metric[qi][plane][mode].sad[bin]);
 	}
 	fprintf(stdout," },\n");
 	fprintf(stdout,"      },\n");

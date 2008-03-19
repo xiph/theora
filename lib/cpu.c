@@ -103,18 +103,6 @@ inteltest:
     flags=0;
   }
   
-#ifdef DEBUG
-  if (flags) {
-    TH_DEBUG("vectorized instruction sets supported:");
-    if (flags & OC_CPU_X86_MMX)      TH_DEBUG(" mmx");
-    if (flags & OC_CPU_X86_MMXEXT)   TH_DEBUG(" mmxext");
-    if (flags & OC_CPU_X86_SSE)      TH_DEBUG(" sse");
-    if (flags & OC_CPU_X86_SSE2)     TH_DEBUG(" sse2");
-    if (flags & OC_CPU_X86_3DNOW)    TH_DEBUG(" 3dnow");
-    if (flags & OC_CPU_X86_3DNOWEXT) TH_DEBUG(" 3dnowext");
-    TH_DEBUG("\n");
-  }
-#endif
 #endif
   
   return flags;

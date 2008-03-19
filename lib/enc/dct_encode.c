@@ -45,12 +45,12 @@ static void add_token(CP_INSTANCE *cpi, int plane, int coeff,
     /* DC */
     int i;
     for ( i = 0; i < DC_HUFF_CHOICES; i++)
-      cpi->dc_bits[plane][i] += cpi->HuffCodeLengthArray_VP3x[i][token];
+      cpi->dc_bits[plane>0][i] += cpi->HuffCodeLengthArray_VP3x[i][token];
   }else{
     /* AC */
     int i,offset = acoffset[coeff];
     for ( i = 0; i < AC_HUFF_CHOICES; i++)
-      cpi->ac_bits[plane][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
+      cpi->ac_bits[plane>0][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
   }
 }
 
@@ -71,12 +71,12 @@ static void prepend_token(CP_INSTANCE *cpi, int plane, int coeff,
     /* DC */
     int i;
     for ( i = 0; i < DC_HUFF_CHOICES; i++)
-      cpi->dc_bits[plane][i] += cpi->HuffCodeLengthArray_VP3x[i][token];
+      cpi->dc_bits[plane>0][i] += cpi->HuffCodeLengthArray_VP3x[i][token];
   }else{
     /* AC */
     int i,offset = acoffset[coeff];
     for ( i = 0; i < AC_HUFF_CHOICES; i++)
-      cpi->ac_bits[plane][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
+      cpi->ac_bits[plane>0][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
   }
 }
 

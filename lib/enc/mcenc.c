@@ -207,6 +207,7 @@ static int oc_sad16_halfpel(CP_INSTANCE *cpi,
     const unsigned char *ref = (_goldenp ? cpi->golden : cpi->recon) + base_offset;
     
     err+=  dsp_sad8x8_xy2_thres (cpi->dsp, cur, ref+_mvoffset0, ref+_mvoffset1, cpi->stride[0], _best_err-err);
+    //err+=  dsp_inter8x8_err_xy2 (cpi->dsp, cur, ref+_mvoffset0, ref+_mvoffset1, cpi->stride[0]);
 
   }
   
@@ -236,6 +237,8 @@ static int oc_mcenc_ysad_check_mbcandidate_fullpel(CP_INSTANCE *cpi,
       const unsigned char *ref = (_goldenp ? cpi->golden : cpi->recon) + base_offset;
       
       _block_err[bi] = dsp_sad8x8_thres (cpi->dsp, cur, ref+mvoffset,stride,9999999); 
+      //_block_err[bi] = dsp_inter8x8_err (cpi->dsp, cur, ref+mvoffset,stride); 
+
       err += _block_err[bi];
     }
   }
@@ -349,6 +352,7 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,
     mvoffset1=mvoffset_base+(dx&~xmask)+(offset_y[site]&~ymask);
 
     err=dsp_sad8x8_xy2_thres (cpi->dsp, cur, ref+mvoffset0, ref+mvoffset1, stride, _best_err);
+    //err=dsp_inter8x8_err_xy2 (cpi->dsp, cur, ref+mvoffset0, ref+mvoffset1, stride);
 
     if(err<_best_err){
       _best_err=err;

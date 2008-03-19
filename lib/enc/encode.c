@@ -348,7 +348,7 @@ static void PackModes (CP_INSTANCE *cpi) {
     }
   }
 }
-
+//#include <stdio.h>
 static void PackMotionVectors (CP_INSTANCE *cpi) {
   const ogg_uint32_t * MvPatternPtr;
   const ogg_uint32_t * MvBitsPtr;
@@ -393,8 +393,10 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
   }
 }
 
+//#include <stdio.h>
 void EncodeData(CP_INSTANCE *cpi){
   int tokenhuff[4];
+  //long bits;
 
   dsp_save_fpu (cpi->dsp);
 
@@ -407,10 +409,17 @@ void EncodeData(CP_INSTANCE *cpi){
   PredictDC(cpi);
   DPCMTokenize(cpi);
 
+  //bits = oggpackB_bits(cpi->oggbuffer);
+  //fprintf(stderr,"\nFrame %ld: coded=%ld ", cpi->CurrentFrame, bits);
+
   /* Mode and MV data not needed for key frames. */
   if ( cpi->FrameType != KEY_FRAME ){
     PackModes(cpi);
+    //fprintf(stderr," modes=%ld ",oggpackB_bits(cpi->oggbuffer)-bits);
+    //bits = oggpackB_bits(cpi->oggbuffer);
     PackMotionVectors (cpi);
+    //fprintf(stderr," mvs=%ld ",oggpackB_bits(cpi->oggbuffer)-bits);
+    //bits = oggpackB_bits(cpi->oggbuffer);
   }
 
   ChooseTokenTables(cpi, tokenhuff);
@@ -418,7 +427,9 @@ void EncodeData(CP_INSTANCE *cpi){
   ModeMetrics(cpi,tokenhuff);
 #endif
   EncodeTokenList(cpi, tokenhuff);
-
+  //fprintf(stderr," DCT=%ld\n",oggpackB_bits(cpi->oggbuffer)-bits);
+  //bits = oggpackB_bits(cpi->oggbuffer);
+  
   ReconRefFrames(cpi);
 
   dsp_restore_fpu (cpi->dsp);
