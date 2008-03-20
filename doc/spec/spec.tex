@@ -3750,7 +3750,7 @@ Otherwise, remove the bit at the head of the string \locvar{BITS} and assign it
  block. \\
 \locvar{\bi}       & Integer & 36 & No & The index of the current block in
  coded order. \\
-\locvar{\mi}       & Integer & 32 & No & The index of a Huffman code from
+\locvar{\mi}       & Integer &  3 & No & The index of a Huffman code from
  Table~\ref{tab:mode-codes}, starting from $0$. \\
 \bottomrule\end{tabularx}
 \medskip
@@ -3795,17 +3795,17 @@ Scheme 7 simply codes each mode directly in the bitstream using three bits.
 
 \begin{table}[htbp]
 \begin{center}
-\begin{tabular}{lcccccc}\toprule
-Scheme        & $1$ & $2$ & $3$ & $4$ & $5$ & $6$ \\\cmidrule{2-7}
-Huffman Code  & \multicolumn{6}{c}{Coding Mode}   \\\midrule
-\bin{0}       & $3$ & $3$ & $3$ & $3$ & $0$ & $0$ \\
-\bin{10}      & $4$ & $4$ & $2$ & $2$ & $3$ & $5$ \\
-\bin{110}     & $2$ & $0$ & $4$ & $0$ & $4$ & $3$ \\
-\bin{1110}    & $0$ & $2$ & $0$ & $4$ & $2$ & $4$ \\
-\bin{11110}   & $1$ & $1$ & $1$ & $1$ & $1$ & $2$ \\
-\bin{111110}  & $5$ & $5$ & $5$ & $5$ & $5$ & $1$ \\
-\bin{1111110} & $6$ & $6$ & $6$ & $6$ & $6$ & $6$ \\
-\bin{1111111} & $7$ & $7$ & $7$ & $7$ & $7$ & $7$ \\
+\begin{tabular}{lccccccc}\toprule
+Scheme        & $1$ & $2$ & $3$ & $4$ & $5$ & $6$ & $7$ \\\cmidrule{2-7}
+Huffman Code  & \multicolumn{6}{c}{Coding Mode}   & \locvar{\mi} \\\midrule
+\bin{0}       & $3$ & $3$ & $3$ & $3$ & $0$ & $0$ & $0$ \\
+\bin{10}      & $4$ & $4$ & $2$ & $2$ & $3$ & $5$ & $1$ \\
+\bin{110}     & $2$ & $0$ & $4$ & $0$ & $4$ & $3$ & $2$ \\
+\bin{1110}    & $0$ & $2$ & $0$ & $4$ & $2$ & $4$ & $3$ \\
+\bin{11110}   & $1$ & $1$ & $1$ & $1$ & $1$ & $2$ & $4$ \\
+\bin{111110}  & $5$ & $5$ & $5$ & $5$ & $5$ & $1$ & $5$ \\
+\bin{1111110} & $6$ & $6$ & $6$ & $6$ & $6$ & $6$ & $6$ \\
+\bin{1111111} & $7$ & $7$ & $7$ & $7$ & $7$ & $7$ & $7$ \\
 \bottomrule\end{tabular}
 \end{center}
 \caption{Macro Block Mode Schemes}
@@ -3856,11 +3856,11 @@ If \locvar{MSCHEME} is not 7, read one bit at a time until one of the Huffman
  $\locvar{MALPHABET}[\locvar{\mi}]$, where \locvar{\mi} is the index of the
  Huffman code decoded.
 \item
-Otherwise, if no luma-plane blocks in the macro block are coded, read a 3-bit
- unsigned integer as $\bitvar{MBMODES}[\locvar{\mbi}]$.
+Otherwise, read a 3-bit unsigned integer as $\bitvar{MBMODES}[\locvar{\mbi}]$.
 \end{enumerate}
 \item
-Otherwise, assign $\bitvar{MBMODE}[\locvar{\mbi}]$ the value 0 (INTER\_NOMV).
+Otherwise, if no luma-plane blocks in the macro block are coded, assign
+ $\bitvar{MBMODES}[\locvar{\mbi}]$ the value 0 (INTER\_NOMV).
 \end{enumerate}
 \end{enumerate}
 \end{enumerate}
