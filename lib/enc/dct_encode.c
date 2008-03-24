@@ -30,7 +30,6 @@ static int acoffset[64]={
   64,64,64,64,64,64,64,64,
   64,64,64,64,64,64,64,64};
 
-/* plane == 0 for Y, 1 for UV */
 static void add_token(CP_INSTANCE *cpi, int plane, int coeff, 
 		      unsigned char token, ogg_uint16_t eb, int fi){
 
@@ -210,8 +209,7 @@ static void TokenizeDctRunValue (CP_INSTANCE *cpi,
 }
 
 static void tokenize_block(CP_INSTANCE *cpi, int fi, int plane,
-			   int *eob_run, int *eob_plane, 
-			   int *eob_pre){
+			   int *eob_run, int *eob_pre){
   unsigned char *cp=cpi->frag_coded;
   if ( cp[fi] ) {
     int coeff = 0;
@@ -234,18 +232,28 @@ static void tokenize_block(CP_INSTANCE *cpi, int fi, int plane,
 	   prepended later.  Group 0/Plane 0 is the exception (can't be
 	   prepended) */
 	if(cpi->dct_token_count[plane][coeff] == 0 && (coeff||plane)){
+	  
+	  /* prepending requires space to do so-- save some at front of token stack */
+	  if(eob_pre[coeff]==0 || eob_pre[coeff]&0x8ff){ /* 0xfff is a safe overallocation, 
+	                                                    saves a mod 4095 */
+	    cpi->dct_token[plane][coeff]++;
+	    cpi->dct_token_eb[plane][coeff]++;
+#ifdef COLLECT_METRICS
+	    cpi->dct_token_frag[plane][coeff]++;
+#endif
+	  }
+
+	  /* finally, track pre-run */
 	  eob_pre[coeff]++;
+
 #ifdef COLLECT_METRICS
 	  cpi->dct_eob_fi_stack[plane][coeff][cpi->dct_eob_fi_count[plane][coeff]++]=fi;
 #endif
 	}else{
 	  if(eob_run[coeff] == 4095){
-	    emit_eob_run(cpi,eob_plane[coeff],coeff,4095);
+	    emit_eob_run(cpi,plane,coeff,4095);
 	    eob_run[coeff] = 0;
 	  }
-	  
-	  if(eob_run[coeff]==0)
-	    eob_plane[coeff]=plane;
 	  
 	  eob_run[coeff]++;
 #ifdef COLLECT_METRICS
@@ -256,7 +264,7 @@ static void tokenize_block(CP_INSTANCE *cpi, int fi, int plane,
       }else{
 	
 	if(eob_run[coeff]){
-	  emit_eob_run(cpi,eob_plane[coeff],coeff,eob_run[coeff]);
+	  emit_eob_run(cpi,plane,coeff,eob_run[coeff]);
 	  eob_run[coeff]=0;
 	}
 	
@@ -285,8 +293,6 @@ static void tokenize_block(CP_INSTANCE *cpi, int fi, int plane,
 
 void DPCMTokenize (CP_INSTANCE *cpi){
   int eob_run[3][64];
-  int eob_plane[3][64];
-
   int eob_pre[3][64];
   
   int i,j,sbi,mbi;
@@ -327,7 +333,7 @@ void DPCMTokenize (CP_INSTANCE *cpi){
       macroblock_t *mb = &cpi->macro[sp->m[mbi]];
       for (bi=0; bi<4; bi++ ) {
 	int fi = mb->Hyuv[0][bi];
-	tokenize_block(cpi, fi, 0, eob_run[0], eob_plane[0], eob_pre[0]);
+	tokenize_block(cpi, fi, 0, eob_run[0], eob_pre[0]);
       }
     }
   }
@@ -336,7 +342,7 @@ void DPCMTokenize (CP_INSTANCE *cpi){
     int bi;
     for (bi=0; bi<16; bi++ ) {
       int fi = sb->f[bi];
-      tokenize_block(cpi, fi, 1, eob_run[1], eob_plane[1], eob_pre[1]);
+      tokenize_block(cpi, fi, 1, eob_run[1], eob_pre[1]);
     }
   }
 
@@ -345,7 +351,7 @@ void DPCMTokenize (CP_INSTANCE *cpi){
     int bi;
     for (bi=0; bi<16; bi++ ) {
       int fi = sb->f[bi];
-      tokenize_block(cpi, fi, 2, eob_run[2], eob_plane[2], eob_pre[2]);
+      tokenize_block(cpi, fi, 2, eob_run[2], eob_pre[2]);
     }
   }
 
@@ -353,8 +359,8 @@ void DPCMTokenize (CP_INSTANCE *cpi){
   {
     int coeff = 0;
     int run = 0;
-    int plane = 0; /* not the current plane; plane of next token to
-		      emit, used to track start of eob runs */
+    int plane = 0; /* not the current plane; plane of next run token
+		      to emit */
 
     for(i=0;i<BLOCK_SIZE;i++){
       for(j=0;j<3;j++){
@@ -366,7 +372,7 @@ void DPCMTokenize (CP_INSTANCE *cpi){
 	    eob_pre[j][i] -= 4095-run; 
 	    run = 0;
 	    coeff = i;
-	    plane = (eob_pre[j][i] ? 0 : 1);
+	    plane = j;
 	  }
 	
 	  if(run){
@@ -376,7 +382,7 @@ void DPCMTokenize (CP_INSTANCE *cpi){
 	      eob_pre[j][i] = 0;
 	      run = eob_run[j][i];
 	      coeff = i;
-	      plane = eob_plane[j][i];
+	      plane = j;
 	    }else{
 	      /* group consists entirely of EOB run.  Add, iterate */
 	      run += eob_pre[j][i];
@@ -396,7 +402,7 @@ void DPCMTokenize (CP_INSTANCE *cpi){
 	      }
 	      run = eob_run[j][i];
 	      coeff = i;
-	      plane = eob_plane[j][i];
+	      plane = j;
 	    }else{
 	      /* group consists entirely of EOB run.  Add, flush overs, iterate */
 	      while(eob_pre[j][i] >= 4095){
@@ -416,7 +422,7 @@ void DPCMTokenize (CP_INSTANCE *cpi){
 	  
 	    run = eob_run[j][i];
 	    coeff = i;
-	    plane = eob_plane[j][i];
+	    plane = j;
 	  }
 	}
       }
@@ -554,6 +560,7 @@ static int blocksad(ogg_int16_t *b, int inter_p,int plane){
 }
 #endif
 
+#include<stdio.h>
 void TransformQuantizeBlock (CP_INSTANCE *cpi, 
 			     coding_mode_t mode,
 			     int fi,
@@ -592,4 +599,9 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
   quantize (cpi, q, DCTOutput, cpi->frag_dct[fi].data);
   cpi->frag_dc[fi] = cpi->frag_dct[fi].data[0];
 
+  //int i;
+  //fprintf(stderr,"\nBLOCK %d: ",fi);
+  //for(i=0;i<64;i++)
+  //fprintf(stderr,"%d,",cpi->frag_dct[fi].data[i]);
+  //fprintf(stderr,"\n");
 }

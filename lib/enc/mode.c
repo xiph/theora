@@ -317,20 +317,14 @@ static int BInterSAD(CP_INSTANCE *cpi, int fi, int plane, int goldenp, mv_t mv, 
   int stride = cpi->stride[plane];
   unsigned char *r = (goldenp ? cpi->golden : cpi->recon ) + 
     cpi->frag_buffer_index[fi] + my * stride + mx;
-  int j;
+  int j,k;
   
   if(mx2 || my2){
     unsigned char *r2 = r + my2 * stride + mx2;
     
     for(j=0;j<8;j++){
-      sad += abs (b[0]-AV(0));
-      sad += abs (b[1]-AV(1));
-      sad += abs (b[2]-AV(2));
-      sad += abs (b[3]-AV(3));
-      sad += abs (b[4]-AV(4));
-      sad += abs (b[5]-AV(5));
-      sad += abs (b[6]-AV(6));
-      sad += abs (b[7]-AV(7));
+      for(k=0;k<8;k++)
+	sad += abs(b[k]-AV(k));
       b += stride;
       r += stride;
       r2 += stride;
@@ -338,14 +332,8 @@ static int BInterSAD(CP_INSTANCE *cpi, int fi, int plane, int goldenp, mv_t mv, 
     
   }else{
     for(j=0;j<8;j++){
-      sad += abs (b[0]-(int)r[0]);
-      sad += abs (b[1]-(int)r[1]);
-      sad += abs (b[2]-(int)r[2]);
-      sad += abs (b[3]-(int)r[3]);
-      sad += abs (b[4]-(int)r[4]);
-      sad += abs (b[5]-(int)r[5]);
-      sad += abs (b[6]-(int)r[6]);
-      sad += abs (b[7]-(int)r[7]);
+      for(k=0;k<8;k++)
+	sad += abs (b[k]-(int)r[k]);
       b += stride;
       r += stride;
     }
@@ -749,7 +737,7 @@ static int parse_eob_run(int token, int eb){
   }
 }
 
-static void ModeMetricsGroup(CP_INSTANCE *cpi, int plane, int group, int huff, int *eobcounts, int *actual_bits){
+static void ModeMetricsGroup(CP_INSTANCE *cpi, int plane, int group, int huff, int eobcounts[3][64], int *actual_bits){
   int ti;
   int *stack = cpi->dct_eob_fi_stack[plane][group];
   int *tfi = cpi->dct_token_frag[plane][group];
@@ -771,15 +759,15 @@ static void ModeMetricsGroup(CP_INSTANCE *cpi, int plane, int group, int huff, i
       if(ti+1<tn){
 	/* tokens follow EOB so it must be entirely ensconced within this plane/group */
 	while(run--){
-	  int fi = stack[eobcounts[group]++];
+	  int fi = stack[eobcounts[plane][group]++];
 	  actual_bits[fi]+=fracbits;
 	}
       }else{
 	/* EOB is the last token in this plane/group, so it may span into the next plane/group */
 	int n = cpi->dct_eob_fi_count[plane][group];
 	while(run){
-	  while(eobcounts[group] < n && run){
-	    int fi = stack[eobcounts[group]++];
+	  while(eobcounts[plane][group] < n && run){
+	    int fi = stack[eobcounts[plane][group]++];
 	    actual_bits[fi]+=fracbits;
 	    run--;
 	  }
@@ -817,28 +805,28 @@ void ModeMetrics(CP_INSTANCE *cpi, int huff[4]){
   }
 
   /* count bits for tokens */
-  ModeMetricsGroup(cpi, 0, 0, huff[0], eobcounts[0], actual_bits);
-  ModeMetricsGroup(cpi, 1, 0, huff[1], eobcounts[1], actual_bits);
-  ModeMetricsGroup(cpi, 2, 0, huff[1], eobcounts[2], actual_bits);
+  ModeMetricsGroup(cpi, 0, 0, huff[0], eobcounts, actual_bits);
+  ModeMetricsGroup(cpi, 1, 0, huff[1], eobcounts, actual_bits);
+  ModeMetricsGroup(cpi, 2, 0, huff[1], eobcounts, actual_bits);
   for(gi=1;gi<=AC_TABLE_2_THRESH;gi++){
-    ModeMetricsGroup(cpi, 0, gi,  huff[2], eobcounts[0], actual_bits);
-    ModeMetricsGroup(cpi, 1, gi,  huff[3], eobcounts[1], actual_bits);
-    ModeMetricsGroup(cpi, 2, gi,  huff[3], eobcounts[2], actual_bits);
+    ModeMetricsGroup(cpi, 0, gi,  huff[2], eobcounts, actual_bits);
+    ModeMetricsGroup(cpi, 1, gi,  huff[3], eobcounts, actual_bits);
+    ModeMetricsGroup(cpi, 2, gi,  huff[3], eobcounts, actual_bits);
   }
   for(;gi<=AC_TABLE_3_THRESH;gi++){
-    ModeMetricsGroup(cpi, 0, gi, huff[2]+AC_HUFF_CHOICES, eobcounts[0], actual_bits);
-    ModeMetricsGroup(cpi, 1, gi, huff[3]+AC_HUFF_CHOICES, eobcounts[1], actual_bits);
-    ModeMetricsGroup(cpi, 2, gi, huff[3]+AC_HUFF_CHOICES, eobcounts[2], actual_bits);
+    ModeMetricsGroup(cpi, 0, gi, huff[2]+AC_HUFF_CHOICES, eobcounts, actual_bits);
+    ModeMetricsGroup(cpi, 1, gi, huff[3]+AC_HUFF_CHOICES, eobcounts, actual_bits);
+    ModeMetricsGroup(cpi, 2, gi, huff[3]+AC_HUFF_CHOICES, eobcounts, actual_bits);
   }
   for(;gi<=AC_TABLE_4_THRESH;gi++){
-    ModeMetricsGroup(cpi, 0, gi, huff[2]+AC_HUFF_CHOICES*2, eobcounts[0], actual_bits);
-    ModeMetricsGroup(cpi, 1, gi, huff[3]+AC_HUFF_CHOICES*2, eobcounts[1], actual_bits);
-    ModeMetricsGroup(cpi, 2, gi, huff[3]+AC_HUFF_CHOICES*2, eobcounts[2], actual_bits);
+    ModeMetricsGroup(cpi, 0, gi, huff[2]+AC_HUFF_CHOICES*2, eobcounts, actual_bits);
+    ModeMetricsGroup(cpi, 1, gi, huff[3]+AC_HUFF_CHOICES*2, eobcounts, actual_bits);
+    ModeMetricsGroup(cpi, 2, gi, huff[3]+AC_HUFF_CHOICES*2, eobcounts, actual_bits);
   }
   for(;gi<BLOCK_SIZE;gi++){
-    ModeMetricsGroup(cpi, 0, gi, huff[2]+AC_HUFF_CHOICES*3, eobcounts[0], actual_bits);
-    ModeMetricsGroup(cpi, 1, gi, huff[3]+AC_HUFF_CHOICES*3, eobcounts[1], actual_bits);
-    ModeMetricsGroup(cpi, 2, gi, huff[3]+AC_HUFF_CHOICES*3, eobcounts[2], actual_bits);
+    ModeMetricsGroup(cpi, 0, gi, huff[2]+AC_HUFF_CHOICES*3, eobcounts, actual_bits);
+    ModeMetricsGroup(cpi, 1, gi, huff[3]+AC_HUFF_CHOICES*3, eobcounts, actual_bits);
+    ModeMetricsGroup(cpi, 2, gi, huff[3]+AC_HUFF_CHOICES*3, eobcounts, actual_bits);
   }
 
   /* accumulate */
