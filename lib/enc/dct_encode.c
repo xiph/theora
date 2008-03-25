@@ -232,7 +232,6 @@ static void tokenize_block(CP_INSTANCE *cpi, int fi, int plane,
 	   prepended later.  Group 0/Plane 0 is the exception (can't be
 	   prepended) */
 	if(cpi->dct_token_count[plane][coeff] == 0 && (coeff||plane)){
-	  
 	  /* prepending requires space to do so-- save some at front of token stack */
 	  if(eob_pre[coeff]==0 || eob_pre[coeff]&0x8ff){ /* 0xfff is a safe overallocation, 
 	                                                    saves a mod 4095 */

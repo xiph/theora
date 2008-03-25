@@ -315,7 +315,7 @@ static int BInterSAD(CP_INSTANCE *cpi, int fi, int plane, int goldenp, mv_t mv, 
   int mx2 = mvmap2[qp][mv.x+31];
   int my2 = mvmap2[qp][mv.y+31];
   int stride = cpi->stride[plane];
-  unsigned char *r = (goldenp ? cpi->golden : cpi->recon ) + 
+  unsigned char *r = (goldenp ? cpi->golden : cpi->lastrecon ) + 
     cpi->frag_buffer_index[fi] + my * stride + mx;
   int j,k;
   
@@ -528,11 +528,11 @@ int PickModes(CP_INSTANCE *cpi){
 	cost[CODE_USING_GOLDEN] = MBInterCost420(cpi,qi,mbi,(mv_t){0,0},1);
 	cost[CODE_GOLDEN_MV] = MBInterCost420(cpi,qi,mbi,mb->analysis_mv[0][1],1);
 	cost[CODE_INTER_FOURMV] = MBInter4Cost420(cpi,qi,mbi,mb->mv,0);
-	
+
 	/* add estimated labelling cost for each mode */
 	for(i = 0; i < 8; i++)
 	  cost[i] += oc_mode_cost(cpi,i) << OC_BIT_SCALE;
-	
+
 	/* Add the motion vector bits for each mode that requires them.*/
 	mb_mv_bits_0  = MvBits[mb->analysis_mv[0][0].x + MAX_MV_EXTENT] + 
 	  MvBits[mb->analysis_mv[0][0].y + MAX_MV_EXTENT];
@@ -588,7 +588,7 @@ int PickModes(CP_INSTANCE *cpi){
 
 	/* add back such that inter/intra counting are relatively correct */
 	cost[CODE_INTER_PLUS_MV] += 384;
-
+	
 	switch(mode){
 	case CODE_INTER_PLUS_MV:
 	  cpi->MVBits_0 += mb_mv_bits_0;
