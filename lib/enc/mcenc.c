@@ -204,7 +204,7 @@ static int oc_sad16_halfpel(CP_INSTANCE *cpi,
     int fi = mb->Ryuv[i];
     ogg_uint32_t base_offset = cpi->frag_buffer_index[fi];
     const unsigned char *cur = cpi->frame + base_offset;
-    const unsigned char *ref = (_goldenp ? cpi->golden : cpi->recon) + base_offset;
+    const unsigned char *ref = (_goldenp ? cpi->golden : cpi->lastrecon) + base_offset;
     
     err+=  dsp_sad8x8_xy2_thres (cpi->dsp, cur, ref+_mvoffset0, ref+_mvoffset1, cpi->stride[0], _best_err-err);
     //err+=  dsp_inter8x8_err_xy2 (cpi->dsp, cur, ref+_mvoffset0, ref+_mvoffset1, cpi->stride[0]);
@@ -234,7 +234,7 @@ static int oc_mcenc_ysad_check_mbcandidate_fullpel(CP_INSTANCE *cpi,
     if(fi < cpi->frag_total){ /* last fragment is the 'invalid fragment' */
       ogg_uint32_t base_offset = cpi->frag_buffer_index[fi];
       const unsigned char *cur = cpi->frame + base_offset;
-      const unsigned char *ref = (_goldenp ? cpi->golden : cpi->recon) + base_offset;
+      const unsigned char *ref = (_goldenp ? cpi->golden : cpi->lastrecon) + base_offset;
       
       _block_err[bi] = dsp_sad8x8_thres (cpi->dsp, cur, ref+mvoffset,stride,9999999); 
       //_block_err[bi] = dsp_inter8x8_err (cpi->dsp, cur, ref+mvoffset,stride); 
@@ -336,7 +336,7 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,
 
     ogg_uint32_t base_offset = cpi->frag_buffer_index[fi];
     const unsigned char *cur = cpi->frame + base_offset;
-    const unsigned char *ref = (_goldenp ? cpi->golden : cpi->recon) + base_offset;
+    const unsigned char *ref = (_goldenp ? cpi->golden : cpi->lastrecon) + base_offset;
 
     site=OC_SQUARE_SITES[0][sitei];
     dx=OC_SQUARE_DX[site];
