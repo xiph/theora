@@ -399,6 +399,10 @@ AC_OUTPUT([
   libtheora.spec
   theora.pc
   theora-uninstalled.pc
+  theoradec.pc
+  theoradec-uninstalled.pc
+  theoraenc.pc
+  theoraenc-uninstalled.pc
 ])
 
 AS_AC_EXPAND(LIBDIR, ${libdir})

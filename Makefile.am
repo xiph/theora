@@ -22,7 +22,7 @@ EXTRA_DIST = \
 	theora-uninstalled.pc.in
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = theora.pc
+pkgconfig_DATA = theora.pc theoradec.pc theoraenc.pc
 
 dist-hook:
 	for item in $(EXTRA_DIST); do \
