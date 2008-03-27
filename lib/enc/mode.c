@@ -305,8 +305,6 @@ static signed char mvmap2[2][63] = {
     0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1 }
 };
 
-#define AV(a) ((r[a]+(int)r2[a])>>1)
-
 static int BInterSAD(CP_INSTANCE *cpi, int fi, int plane, int goldenp, mv_t mv, int qp){
   int sad = 0;
   unsigned char *b = cpi->frame + cpi->frag_buffer_index[fi];
@@ -321,22 +319,9 @@ static int BInterSAD(CP_INSTANCE *cpi, int fi, int plane, int goldenp, mv_t mv, 
   
   if(mx2 || my2){
     unsigned char *r2 = r + my2 * stride + mx2;
-    
-    for(j=0;j<8;j++){
-      for(k=0;k<8;k++)
-	sad += abs(b[k]-AV(k));
-      b += stride;
-      r += stride;
-      r2 += stride;
-    }
-    
+    sad =  dsp_sad8x8_xy2_thres (cpi->dsp, b, r, r2, stride, 9999999);
   }else{
-    for(j=0;j<8;j++){
-      for(k=0;k<8;k++)
-	sad += abs (b[k]-(int)r[k]);
-      b += stride;
-      r += stride;
-    }
+    sad =  dsp_sad8x8 (cpi->dsp, b, r, stride);
   }
 
   if(plane)
