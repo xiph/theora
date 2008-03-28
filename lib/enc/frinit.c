@@ -220,8 +220,8 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   /* 4:2:0 only for now */
   {
     int row,col,frag;
-    int scanx[4][4] = { {0,1,1,0}, {1,0,0,1}, {0,0,1,1}, {0,0,1,1} };
-    int scany[4][4] = { {0,0,1,1}, {1,1,0,0}, {0,1,1,0}, {0,1,1,0} };
+    int Hscanx[4][4] = { {0,1,1,0}, {1,0,0,1}, {0,0,1,1}, {0,0,1,1} };
+    int Hscany[4][4] = { {0,0,1,1}, {1,1,0,0}, {0,1,1,0}, {0,1,1,0} };
 
     for(row=0;row<cpi->macro_v;row++){
       int baserow = row*2;
@@ -229,40 +229,59 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	int basecol = col*2;
 	int macroindex = row*cpi->macro_h + col;
 	int hpos = (col&1) + (row&1)*2;
-	int fragindex;
+
+	/* Y */
 	for(frag=0;frag<4;frag++){
-	  /* translate to fragment index */
-	  int frow = baserow + scany[hpos][frag];
-	  int fcol = basecol + scanx[hpos][frag];
-	  if(frow<cpi->frag_v[0] && fcol<cpi->frag_h[0]){
-	    fragindex = frow*cpi->frag_h[0] + fcol;	    
+	  int Hrow = baserow + Hscany[hpos][frag];
+	  int Hcol = basecol + Hscanx[hpos][frag];
+	  int Rrow = baserow + ((frag>>1)&1);
+	  int Rcol = basecol + (frag&1);
+
+	  cpi->macro[macroindex].Hyuv[0][frag] = cpi->frag_total; // default
+	  cpi->macro[macroindex].Ryuv[0][frag] = cpi->frag_total; //default
+	  if(Hrow<cpi->frag_v[0] && Hcol<cpi->frag_h[0]){
+	    cpi->macro[macroindex].Hyuv[0][frag] = Hrow*cpi->frag_h[0] + Hcol;	    
 #ifdef COLLECT_METRICS
 	    cpi->frag_mbi[fragindex] = macroindex;
 #endif
-	  }else
-	    fragindex = cpi->frag_total;
-	  cpi->macro[macroindex].Ryuv[frag] = (baserow+((frag&2)>>1))*cpi->frag_h[0]+basecol+(frag&1);
-	  cpi->macro[macroindex].Hyuv[0][frag] = fragindex;
+	  }
+	  if(Rrow<cpi->frag_v[0] && Rcol<cpi->frag_h[0])
+	    cpi->macro[macroindex].Ryuv[0][frag] = Rrow*cpi->frag_h[0] + Rcol;	    
+	}
+
+	/* U */
+	cpi->macro[macroindex].Ryuv[1][0] = cpi->frag_total;
+	cpi->macro[macroindex].Ryuv[1][1] = cpi->frag_total;
+	cpi->macro[macroindex].Ryuv[1][2] = cpi->frag_total;
+	cpi->macro[macroindex].Ryuv[1][3] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[1][0] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[1][1] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[1][2] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[1][3] = cpi->frag_total;
+	if(row<cpi->frag_v[1] && col<cpi->frag_h[1]){
+	  cpi->macro[macroindex].Hyuv[1][0] = cpi->frag_n[0] + macroindex;
+	  cpi->macro[macroindex].Ryuv[1][0] = cpi->frag_n[0] + macroindex;
+#ifdef COLLECT_METRICS
+	  cpi->frag_mbi[fragindex] = macroindex;
+#endif
 	}
 	
-	if(row<cpi->frag_v[1] && col<cpi->frag_h[1]){
-	  fragindex = cpi->frag_n[0] + macroindex;
-#ifdef COLLECT_METRICS
-	  cpi->frag_mbi[fragindex] = macroindex;
-#endif
-	}else
-	  fragindex = cpi->frag_total;
-	cpi->macro[macroindex].Hyuv[1][0] = fragindex;
-	
+	/* V */
+	cpi->macro[macroindex].Ryuv[2][0] = cpi->frag_total;
+	cpi->macro[macroindex].Ryuv[2][1] = cpi->frag_total;
+	cpi->macro[macroindex].Ryuv[2][2] = cpi->frag_total;
+	cpi->macro[macroindex].Ryuv[2][3] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[2][0] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[2][1] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[2][2] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[2][3] = cpi->frag_total;
 	if(row<cpi->frag_v[2] && col<cpi->frag_h[2]){
-	  fragindex = cpi->frag_n[0] + cpi->frag_n[1] + macroindex; 
+	  cpi->macro[macroindex].Hyuv[2][0] = cpi->frag_n[0] + cpi->frag_n[1] + macroindex;
+	  cpi->macro[macroindex].Ryuv[2][0] = cpi->frag_n[0] + cpi->frag_n[1] + macroindex;
 #ifdef COLLECT_METRICS
 	  cpi->frag_mbi[fragindex] = macroindex;
 #endif
-	}else
-	  fragindex = cpi->frag_total;
-	cpi->macro[macroindex].Hyuv[2][0] = fragindex;
-	
+	}	
       }
     }
   }
@@ -307,7 +326,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
     int p,f;
     for(p=0;p<3;p++)
       for(f=0;f<4;f++){
-	cpi->macro[cpi->macro_total].Ryuv[f] = cpi->frag_total;
+	cpi->macro[cpi->macro_total].Ryuv[p][f] = cpi->frag_total;
 	cpi->macro[cpi->macro_total].Hyuv[p][f] = cpi->frag_total;
       }
     cpi->macro[cpi->macro_total].ncneighbors=0;

@@ -118,7 +118,7 @@ typedef struct {
 
 typedef struct macroblock {
   /* the blocks comprising this macroblock */
-  int Ryuv[4]; /* [Y in raster order] */
+  int Ryuv[3][4]; /* [Y,U,V][raster order] */
   int Hyuv[3][4]; /* [Y,U,V][hilbert order] */
 
   int cneighbors[4];      

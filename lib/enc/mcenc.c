@@ -201,7 +201,7 @@ static int oc_sad16_halfpel(CP_INSTANCE *cpi,
   int i;
   err=0;
   for(i=0;i<4;i++){
-    int fi = mb->Ryuv[i];
+    int fi = mb->Ryuv[0][i];
     ogg_uint32_t base_offset = cpi->frag_buffer_index[fi];
     const unsigned char *cur = cpi->frame + base_offset;
     const unsigned char *ref = (_goldenp ? cpi->golden : cpi->lastrecon) + base_offset;
@@ -230,7 +230,7 @@ static int oc_mcenc_ysad_check_mbcandidate_fullpel(CP_INSTANCE *cpi,
   mvoffset=_delta.x+_delta.y*stride;
   err=0;
   for(bi=0;bi<4;bi++){
-    int fi = mb->Ryuv[bi];
+    int fi = mb->Ryuv[0][bi];
     if(fi < cpi->frag_total){ /* last fragment is the 'invalid fragment' */
       ogg_uint32_t base_offset = cpi->frag_buffer_index[fi];
       const unsigned char *cur = cpi->frame + base_offset;
@@ -314,7 +314,7 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,
   int best_site;
   int sitei;
   int err;
-  int fi = mb->Ryuv[_bi];
+  int fi = mb->Ryuv[0][_bi];
 
   if(fi == cpi->frag_total) return _best_err;
 
@@ -625,7 +625,7 @@ void PickMVs(CP_INSTANCE *cpi){
     /* replace the block MVs for not-coded blocks with (0,0).*/   
     mb->coded = 0;
     for ( bi=0; bi<4; bi++ ){
-      int fi = mb->Ryuv[bi];
+      int fi = mb->Ryuv[0][bi];
       if(!cp[fi]) 
 	mb->mv[bi]=(mv_t){0,0};
       else

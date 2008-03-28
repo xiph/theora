@@ -165,7 +165,7 @@ static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
     for ( ; mp<mp_end; mp++ ) {
 
       for ( B=0; B<4; B++) {
-	fi = mp->Ryuv[B];
+	fi = mp->Ryuv[plane][B];
 	if ( cp[fi] ) 
 	  TransformQuantizeBlock( cpi, mp->mode, fi, mp->mv[B] );
       }
