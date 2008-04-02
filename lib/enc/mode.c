@@ -413,23 +413,27 @@ void mb_get_dct_input(CP_INSTANCE *cpi,
   }
 }
 
-int PickModes(CP_INSTANCE *cpi){
+int PickModes(CP_INSTANCE *cpi, int recode){
   unsigned char qi = cpi->BaseQ; // temporary
   superblock_t *sb = cpi->super[0];
   superblock_t *sb_end = sb + cpi->super_n[0];
   int i,j;
   ogg_uint32_t interbits = 0;
   ogg_uint32_t intrabits = 0;
-
+  mc_state mcenc;
   mv_t last_mv = {0,0};
   mv_t prior_mv = {0,0};
+  unsigned char *cp = cpi->frag_coded;
 
   oc_mode_scheme_chooser_init(cpi);
 
   cpi->MVBits_0 = 0;
   cpi->MVBits_1 = 0;
  
-  /* Choose modes; must be done in Hilbert order */
+  if(!recode)
+    oc_mcenc_start(cpi, &mcenc); 
+  
+  /* Choose mvs, modes; must be done in Hilbert order */
   for(; sb<sb_end; sb++){
     for(j = 0; j<4; j++){ /* mode addressing is through Y plane, always 4 MB per SB */
       int mbi = sb->m[j];
@@ -439,9 +443,33 @@ int PickModes(CP_INSTANCE *cpi){
       int mb_gmv_bits_0;
       int mb_4mv_bits_0;
       int mb_4mv_bits_1;
-      int mode;
+      int mode,bi;
 
       macroblock_t *mb = &cpi->macro[mbi];
+
+      if(!recode){
+	/* Motion estimation */
+
+	/* Move the motion vector predictors back a frame */
+	memmove(mb->analysis_mv+1,mb->analysis_mv,2*sizeof(mb->analysis_mv[0]));
+	
+	/* basic 1MV search always done for all macroblocks, coded or not, keyframe or not */
+	oc_mcenc_search(cpi, &mcenc, mbi, 0, mb->mv);
+	
+	/* replace the block MVs for not-coded blocks with (0,0).*/   
+	mb->coded = 0;
+	for ( bi=0; bi<4; bi++ ){
+	  int fi = mb->Ryuv[0][bi];
+	  if(!cp[fi]) 
+	    mb->mv[bi]=(mv_t){0,0};
+	  else
+	    mb->coded |= (1<<bi);
+	}
+	
+	/* search golden frame */
+	oc_mcenc_search(cpi, &mcenc, mbi, 1, NULL);
+	
+      }
 
       if(cpi->FrameType == KEY_FRAME){
 	mb->mode = CODE_INTRA;

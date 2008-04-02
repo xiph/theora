@@ -295,15 +295,52 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	int macroindex = row*cpi->macro_h + col;
 	int count=0;
 
-	/* cneighbors are of four possible already-filled-in neighbors from the eight-neighbor square */
-	if(col)
-	  cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
-	if(col && row)
-	  cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h-1;
-	if(row)
-	  cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h;
-	if(row && col+1<cpi->macro_h)
-	  cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h+1;
+	/* cneighbors are of four possible already-filled-in neighbors
+	   from the eight-neighbor square for doing ME. The
+	   macroblocks are scanned in Hilbert order and the corner
+	   cases here are annoying, so we precompute. */
+	if(row&1){
+	  if(col&1){
+	    /* 2 */
+	    cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
+	    cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h-1;
+	  }else{
+	    /* 1 */
+	    if(col){
+	      cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
+	      cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h-1;
+	    }
+	    cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h;
+	  }
+	}else{
+	  if(col&1){
+	    /* 3; Could have up to six, fill in at most 4 */
+	    if(row && col+1<cpi->macro_h)
+	      cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h+1;
+	    if(row)
+	      cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h;
+	    if(col && row)
+	      cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h-1;
+	    if(col)
+	      cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
+	    if(col && row+1<cpi->macro_v && count<4)
+	      cpi->macro[macroindex].cneighbors[count++]=macroindex+cpi->macro_h-1;
+	    if(row+1<cpi->macro_v && count<4)
+	      cpi->macro[macroindex].cneighbors[count++]=macroindex+cpi->macro_h;
+	  }else{
+	    /* 0; Could have up to five, fill in at most 4 */
+	    if(row && col+1<cpi->macro_h)
+	      cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h+1;
+	    if(row)
+	      cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h;
+	    if(col && row)
+	      cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h-1;
+	    if(col)
+	      cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
+	    if(col && row+1<cpi->macro_v && count<4)
+	      cpi->macro[macroindex].cneighbors[count++]=macroindex+cpi->macro_h-1;
+	  }
+	}
 	cpi->macro[macroindex].ncneighbors=count;
 
 	/* pneighbors are of the four possible direct neighbors (plus pattern), not the same as cneighbors */

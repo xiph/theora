@@ -41,11 +41,7 @@ static void CompressKeyFrame(CP_INSTANCE *cpi){
   oggpackB_write(cpi->oggbuffer,0,1);
   
   WriteFrameHeader(cpi);
-  PickMVs(cpi);
-
-  for(i=0; i<cpi->macro_total; i++)
-    cpi->macro[i].mode = CODE_INTRA;
-  
+  PickModes(cpi,0);
   EncodeData(cpi);
   
   cpi->LastKeyFrame = 1;
@@ -64,8 +60,7 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
   oggpackB_write(cpi->oggbuffer,0,1);
 
   WriteFrameHeader(cpi);
-  PickMVs(cpi);
-  if(PickModes( cpi )){
+  if(PickModes( cpi,0 )){
     /* mode analysis thinks this should have been a keyframe; start over and code as a keyframe instead */
 
     oggpackB_reset(cpi->oggbuffer);
@@ -81,10 +76,7 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
     
     WriteFrameHeader(cpi);
 
-    /* don't repeat MV or mode selection.  Set to intra */
-    for(i=0; i<cpi->macro_total; i++)
-      cpi->macro[i].mode = CODE_INTRA;
-  
+    PickModes(cpi,1);
     EncodeData(cpi);
     
     cpi->LastKeyFrame = 1;
