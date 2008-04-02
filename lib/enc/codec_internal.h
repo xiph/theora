@@ -328,11 +328,22 @@ extern void EncodeData(CP_INSTANCE *cpi);
 extern void oc_mcenc_start(CP_INSTANCE *cpi,
 			   mc_state *mcenc);
 
-extern void oc_mcenc_search(CP_INSTANCE *cpi, 
-			    mc_state *_mcenc,
-			    int _mbi,
-			    int _goldenp,
-			    mv_t *_bmvs);
+extern int oc_mcenc_search(CP_INSTANCE *cpi, 
+			   mc_state *_mcenc,
+			   int _mbi,
+			   int _goldenp,
+			   mv_t *_bmvs,
+			   int *best_err,
+			   int best_block_err[4]);
+
+extern void oc_mcenc_refine1mv(CP_INSTANCE *cpi, 
+			      int _mbi,
+			      int _goldenp,
+			      int err);
+
+extern void oc_mcenc_refine4mv(CP_INSTANCE *cpi, 
+			      int _mbi,
+			      int err[4]);
 
 extern int PickModes(CP_INSTANCE *cpi, int recode);
 

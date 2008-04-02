@@ -246,7 +246,6 @@ static int oc_mcenc_ysad_check_mbcandidate_fullpel(CP_INSTANCE *cpi,
 }
 
 static int oc_mcenc_ysad_halfpel_mbrefine(CP_INSTANCE *cpi, 
-					  mc_state *_mcenc,
 					  int _mbi,
 					  mv_t *_vec,
 					  int _best_err,
@@ -278,11 +277,7 @@ static int oc_mcenc_ysad_halfpel_mbrefine(CP_INSTANCE *cpi,
     site=OC_SQUARE_SITES[0][sitei];
     dx=OC_SQUARE_DX[site];
     dy=OC_SQUARE_DY[site];
-    /*The following code SHOULD be equivalent to
-      oc_state_get_mv_offsets(&_mcenc->enc.state,&mvoffset0,&mvoffset1,
-       (_vec->x<<1)+dx,(_vec->y<<1)+dy,ref_ystride,0);
-      However, it should also be much faster, as it involves no multiplies and
-       doesn't have to handle chroma vectors.*/
+
     xmask=-((((_vec->x<<1)+dx)^dx)<0);
     ymask=-((((_vec->y<<1)+dy)^dy)<0);
     mvoffset0=mvoffset_base+(dx&xmask)+(offset_y[site]&ymask);
@@ -301,7 +296,6 @@ static int oc_mcenc_ysad_halfpel_mbrefine(CP_INSTANCE *cpi,
 }
 
 static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi, 
-					 mc_state *_mcenc,
 					 int _mbi,
 					 int _bi,
 					 mv_t *_vec,
@@ -341,11 +335,7 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,
     site=OC_SQUARE_SITES[0][sitei];
     dx=OC_SQUARE_DX[site];
     dy=OC_SQUARE_DY[site];
-    /*The following code SHOULD be equivalent to
-      oc_state_get_mv_offsets(&_mcenc->enc.state,&mvoffset0,&mvoffset1,
-       (_vec[0]<<1)+dx,(_vec[1]<<1)+dy,ref_ystride,0);
-      However, it should also be much faster, as it involves no multiplies and
-       doesn't have to handle chroma vectors.*/
+
     xmask=-((((_vec->x<<1)+dx)^dx)<0);
     ymask=-((((_vec->y<<1)+dy)^dy)<0);
     mvoffset0=mvoffset_base+(dx&xmask)+(offset_y[site]&ymask);
@@ -378,11 +368,13 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,
    _frame:    The frame to search, either OC_FRAME_PREV or OC_FRAME_GOLD.
    _bmvs:     Returns the individual block motion vectors. */
 
-void oc_mcenc_search(CP_INSTANCE *cpi, 
-		     mc_state *_mcenc,
-		     int _mbi,
-		     int _goldenp,
-		     mv_t *_bmvs){
+int oc_mcenc_search(CP_INSTANCE *cpi, 
+		    mc_state *_mcenc,
+		    int _mbi,
+		    int _goldenp,
+		    mv_t *_bmvs,
+		    int *best_err,
+		    int best_block_err[4]){
   
   /*TODO: customize error function for speed/(quality+size) tradeoff.*/
 
@@ -390,8 +382,6 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
   ogg_int32_t     hitbit;
   int             block_err[4];
   mv_t            best_vec;
-  int             best_err;
-  int             best_block_err[4];
   mv_t            best_block_vec[4];
   mv_t            cand;
   int             bi;
@@ -407,16 +397,17 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
   /*Start with the median predictor.*/
   cand=_mcenc->candidates[0];
   hit_cache[cand.y+15]|=(ogg_int32_t)1<<cand.x+15;
-  best_err = oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,_mcenc,_mbi,cand,
+  *best_err = oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,_mcenc,_mbi,cand,
 						     _goldenp,block_err);
   best_vec=cand;
-  for(bi=0;bi<4;bi++){
-    best_block_err[bi]=block_err[bi];
-    best_block_vec[bi]=cand;
-  }
-
+  if(_bmvs)
+    for(bi=0;bi<4;bi++){
+      best_block_err[bi]=block_err[bi];
+      best_block_vec[bi]=cand;
+    }
+  
   /*If this predictor fails, move on to set A.*/
-  if(best_err>OC_YSAD_THRESH1){
+  if(*best_err>OC_YSAD_THRESH1){
     int err;
     int ci;
     int ncs;
@@ -438,18 +429,19 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
       if(hit_cache[cand.y+15]&hitbit)continue;
       hit_cache[cand.y+15]|=hitbit;
       err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,_mcenc,_mbi,cand,_goldenp,block_err);
-      if(err<best_err){
-        best_err=err;
+      if(err<*best_err){
+        *best_err=err;
         best_vec=cand;
       }
-      for(bi=0;bi<4;bi++)
-	if(block_err[bi]<best_block_err[bi]){
-	  best_block_err[bi]=block_err[bi];
-	  best_block_vec[bi]=cand;
-	}
+      if(_bmvs)
+	for(bi=0;bi<4;bi++)
+	  if(block_err[bi]<best_block_err[bi]){
+	    best_block_err[bi]=block_err[bi];
+	    best_block_vec[bi]=cand;
+	  }
     }
 
-    if(best_err>t2){
+    if(*best_err>t2){
       /*Examine the candidates in set B.*/
       for(;ci<_mcenc->ncandidates;ci++){
         cand=_mcenc->candidates[ci];
@@ -457,19 +449,20 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
         if(hit_cache[cand.y+15]&hitbit)continue;
         hit_cache[cand.y+15]|=hitbit;
         err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,_mcenc,_mbi,cand,_goldenp,block_err);
-        if(err<best_err){
-          best_err=err;
+        if(err<*best_err){
+          *best_err=err;
           best_vec=cand;
         }
-        for(bi=0;bi<4;bi++)
-	  if(block_err[bi]<best_block_err[bi]){
-	    best_block_err[bi]=block_err[bi];
-	    best_block_vec[bi]=cand;
-	  }
+	if(_bmvs)
+	  for(bi=0;bi<4;bi++)
+	    if(block_err[bi]<best_block_err[bi]){
+	      best_block_err[bi]=block_err[bi];
+	      best_block_vec[bi]=cand;
+	    }
       }
 
       /*Use the same threshold for set B as in set A.*/
-      if(best_err>t2){
+      if(*best_err>t2){
         int best_site;
         int nsites;
         int sitei;
@@ -490,15 +483,16 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
             if(hit_cache[cand.y+15]&hitbit)continue;
             hit_cache[cand.y+15]|=hitbit;
             err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,_mcenc,_mbi,cand,_goldenp,block_err);
-            if(err<best_err){
-              best_err=err;
+            if(err<*best_err){
+              *best_err=err;
               best_site=site;
             }
-            for(bi=0;bi<4;bi++)
-	      if(block_err[bi]<best_block_err[bi]){
-		best_block_err[bi]=block_err[bi];
-		best_block_vec[bi]=cand;
-	      }
+	    if(_bmvs)
+	      for(bi=0;bi<4;bi++)
+		if(block_err[bi]<best_block_err[bi]){
+		  best_block_err[bi]=block_err[bi];
+		  best_block_vec[bi]=cand;
+		}
           }
           if(best_site==4)break;
           best_vec.x+=OC_SQUARE_DX[best_site];
@@ -551,8 +545,8 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
 		  if(hit_cache[cand.y+15]&hitbit)continue;
 		  hit_cache[cand.y+15]|=hitbit;
 		  err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,_mcenc,_mbi,cand,_goldenp,block_err);
-		  if(err<best_err){
-		    best_err=err;
+		  if(err<*best_err){
+		    *best_err=err;
 		    best_vec=cand;
 		    bflag=1;
 		  }
@@ -571,31 +565,49 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
     }
   }
 
-  {
+  if(!_goldenp) 
+    mb->aerror = *best_err;
+  mb->analysis_mv[0][_goldenp].x=best_vec.x<<1;;
+  mb->analysis_mv[0][_goldenp].y=best_vec.y<<1;;
 
-    int error=oc_mcenc_ysad_halfpel_mbrefine(cpi,_mcenc,_mbi,&best_vec,best_err,_goldenp);
-    if(!_goldenp) mb->aerror = error;
-    mb->analysis_mv[0][_goldenp]=best_vec;
-
-    if(_bmvs){
-      if(bflag){
-	for(bi=0;bi<4;bi++){
-	  oc_mcenc_ysad_halfpel_brefine(cpi,_mcenc,_mbi,bi,
-					&best_block_vec[bi],
-					best_block_err[bi],
-					_goldenp);
-	  _bmvs[bi]=best_block_vec[bi];
-	}
-      }else{
-	for(bi=0;bi<4;bi++){
-	  _bmvs[bi].x=best_block_vec[bi].x<<1;
-	  _bmvs[bi].y=best_block_vec[bi].y<<1;
-	}
-      }
+  if(_bmvs && bflag){
+    for(bi=0;bi<4;bi++){
+      _bmvs[bi].x=best_block_vec[bi].x<<1;
+      _bmvs[bi].y=best_block_vec[bi].y<<1;
     }
   }
+
+  return bflag;
 }
 
+
+void oc_mcenc_refine1mv(CP_INSTANCE *cpi, 
+		       int _mbi,
+		       int _goldenp,
+		       int err){
+
+  macroblock_t *mb = &cpi->macro[_mbi];
+  mv_t mv;
+  mv.x = mb->analysis_mv[0][_goldenp].x>>1;
+  mv.y = mb->analysis_mv[0][_goldenp].y>>1;
+  
+  oc_mcenc_ysad_halfpel_mbrefine(cpi,_mbi,&mv,err,_goldenp);
+  mb->analysis_mv[0][_goldenp]=mv;
+}
+
+void oc_mcenc_refine4mv(CP_INSTANCE *cpi, 
+		       int _mbi,
+		       int err[4]){
+  macroblock_t *mb = &cpi->macro[_mbi];
+  int bi;
+  for(bi=0;bi<4;bi++){
+    mv_t mv;
+    mv.x = mb->mv[bi].x>>1;
+    mv.y = mb->mv[bi].y>>1;
+    oc_mcenc_ysad_halfpel_brefine(cpi,_mbi,bi,&mv,err[bi],0);
+    mb->mv[bi]=mv;
+  }
+}
 
 void oc_mcenc_start(CP_INSTANCE *cpi,
                     mc_state *mcenc){

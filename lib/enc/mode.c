@@ -570,6 +570,10 @@ int PickModes(CP_INSTANCE *cpi, int recode){
       int mb_4mv_bits_0;
       int mb_4mv_bits_1;
       int mode,bi;
+      int aerror;
+      int gerror;
+      int block_err[4];
+      int flag4mv=0;
 
       macroblock_t *mb = &cpi->macro[mbi];
 
@@ -580,7 +584,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	memmove(mb->analysis_mv+1,mb->analysis_mv,2*sizeof(mb->analysis_mv[0]));
 	
 	/* basic 1MV search always done for all macroblocks, coded or not, keyframe or not */
-	oc_mcenc_search(cpi, &mcenc, mbi, 0, mb->mv);
+	flag4mv = oc_mcenc_search(cpi, &mcenc, mbi, 0, mb->mv, &aerror, block_err);
 	
 	/* replace the block MVs for not-coded blocks with (0,0).*/   
 	mb->coded = 0;
@@ -593,7 +597,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	}
 	
 	/* search golden frame */
-	oc_mcenc_search(cpi, &mcenc, mbi, 1, NULL);
+	oc_mcenc_search(cpi, &mcenc, mbi, 1, NULL, &gerror, NULL);
 	
       }
 
@@ -619,12 +623,31 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	cost[CODE_INTER_PRIOR_LAST] = cost_inter(cpi, qi, mbi, prior_mv, CODE_INTER_PRIOR_LAST);
 	cost[CODE_USING_GOLDEN] = cost_inter(cpi, qi, mbi, (mv_t){0,0},CODE_USING_GOLDEN);
 	cost[CODE_GOLDEN_MV] = cost_inter1mv(cpi, qi, mbi, 1, &mb_gmv_bits_0);
-	cost[CODE_INTER_FOURMV] = cost_inter4mv(cpi, qi, mbi, &mb_4mv_bits_0, &mb_4mv_bits_1);
+	if(flag4mv)
+	  cost[CODE_INTER_FOURMV] = cost_inter4mv(cpi, qi, mbi, &mb_4mv_bits_0, &mb_4mv_bits_1);
+	else
+	  cost[CODE_INTER_FOURMV] = 99999999;
 	
 	/* train this too... because the bit cost of an MV should be
 	   considered in the context of LAST_MV and PRIOR_LAST. */
 	cost[CODE_INTER_PLUS_MV] -= 384;
 	
+	/* the explicit MV modes (2,6,7) have not yet gone through
+	   halfpel refinement as it's a relatively expensive
+	   operation.  We choose the explicit mv mode that's already
+	   furthest ahead on bits and refine only that one */
+	if(flag4mv && cost[CODE_INTER_FOURMV]<cost[CODE_INTER_PLUS_MV] && cost[CODE_INTER_FOURMV]<cost[CODE_GOLDEN_MV]){
+	  oc_mcenc_refine4mv(cpi, mbi, block_err);
+	  cost[CODE_INTER_FOURMV] = cost_inter4mv(cpi, qi, mbi, &mb_4mv_bits_0, &mb_4mv_bits_1);
+	}else if (cost[CODE_GOLDEN_MV]<cost[CODE_INTER_PLUS_MV]){
+	  oc_mcenc_refine1mv(cpi, mbi, 1, gerror);
+	  cost[CODE_GOLDEN_MV] = cost_inter1mv(cpi, qi, mbi, 1, &mb_gmv_bits_0);
+	}else{
+	  oc_mcenc_refine1mv(cpi, mbi, 0, aerror);
+	  cost[CODE_INTER_PLUS_MV] = cost_inter1mv(cpi, qi, mbi, 0, &mb_mv_bits_0);
+	  cost[CODE_INTER_PLUS_MV] -= 384;
+	}
+
 	/* Finally, pick the mode with the cheapest estimated bit cost.*/
 	mode=0;
 	for(i=1;i<8;i++)
