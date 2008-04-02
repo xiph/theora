@@ -395,6 +395,7 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
   mv_t            best_block_vec[4];
   mv_t            cand;
   int             bi;
+  int             bflag=0;
   macroblock_t   *mb = &cpi->macro[_mbi];
 
   /*Find some candidate motion vectors.*/
@@ -553,6 +554,7 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
 		  if(err<best_err){
 		    best_err=err;
 		    best_vec=cand;
+		    bflag=1;
 		  }
 		  for(bj=0;bj<4;bj++)
 		    if(block_err[bj]<best_block_err[bj]){
@@ -576,12 +578,19 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
     mb->analysis_mv[0][_goldenp]=best_vec;
 
     if(_bmvs){
-      for(bi=0;bi<4;bi++){
-	oc_mcenc_ysad_halfpel_brefine(cpi,_mcenc,_mbi,bi,
-				      &best_block_vec[bi],
-				      best_block_err[bi],
-				      _goldenp);
-	_bmvs[bi]=best_block_vec[bi];
+      if(bflag){
+	for(bi=0;bi<4;bi++){
+	  oc_mcenc_ysad_halfpel_brefine(cpi,_mcenc,_mbi,bi,
+					&best_block_vec[bi],
+					best_block_err[bi],
+					_goldenp);
+	  _bmvs[bi]=best_block_vec[bi];
+	}
+      }else{
+	for(bi=0;bi<4;bi++){
+	  _bmvs[bi].x=best_block_vec[bi].x<<1;
+	  _bmvs[bi].y=best_block_vec[bi].y<<1;
+	}
       }
     }
   }

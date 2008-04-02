@@ -536,30 +536,6 @@ static void BlockUpdateDifference (CP_INSTANCE * cpi,
   }
 }
 
-#ifdef COLLECT_METRICS
-static int blocksad(ogg_int16_t *b, int inter_p,int plane){
-  int j;
-  int sad = 0;
-
-  if(inter_p){
-    for(j=0;j<64;j++)
-      sad += abs(b[j]);
-    if(plane)
-      return sad<<2;
-    else
-      return sad;
-  }else{
-    ogg_uint32_t acc = 0;
-    for(j=0;j<64;j++)
-      acc += b[j]; 
-    for(j=0;j<64;j++)
-      sad += abs ((b[j]<<6)-acc); 
-    return sad>>6;
-  }
-}
-#endif
-
-#include<stdio.h>
 void TransformQuantizeBlock (CP_INSTANCE *cpi, 
 			     coding_mode_t mode,
 			     int fi,
@@ -588,19 +564,10 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi,
   BlockUpdateDifference(cpi, FiltPtr, DCTInput, 
 			MvDivisor, fi, cpi->stride[plane], mode, mv);
 
-#ifdef COLLECT_METRICS
-  cpi->frag_sad[fi] = blocksad(DCTInput, inter, plane);
-#endif
-
   dsp_fdct_short(cpi->dsp, DCTInput, DCTOutput);
 
   /* Quantize that transform data. */
   quantize (cpi, q, DCTOutput, cpi->frag_dct[fi].data);
   cpi->frag_dc[fi] = cpi->frag_dct[fi].data[0];
 
-  //int i;
-  //fprintf(stderr,"\nBLOCK %d: ",fi);
-  //for(i=0;i<64;i++)
-  //fprintf(stderr,"%d,",cpi->frag_dct[fi].data[i]);
-  //fprintf(stderr,"\n");
 }

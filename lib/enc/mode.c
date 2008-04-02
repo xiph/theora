@@ -271,13 +271,10 @@ static signed char mvmap2[2][63] = {
     0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1 }
 };
 
-static int BInterSAD(CP_INSTANCE *cpi, int fi, int plane, int goldenp, mv_t mv, int qp){
+static int BInterSAD(CP_INSTANCE *cpi, int fi, int plane, int goldenp, mv_t mv){
   int sad = 0;
   unsigned char *b = cpi->frame + cpi->frag_buffer_index[fi];
-  //#if 1
-  //mv.x=mv.x/2*2;
-  //mv.y=mv.y/2*2;
-  //#endif
+  int qp = (plane>0);
   int mx = mvmap[qp][mv.x+31];
   int my = mvmap[qp][mv.y+31];
   int mx2 = mvmap2[qp][mv.x+31];
@@ -322,6 +319,134 @@ static void MBCost(CP_INSTANCE *cpi, int qi, int mbi, int cost[8], int sad[8][3]
   }
 }
 
+static int cost_intra(CP_INSTANCE *cpi, int qi, int mbi, ogg_uint32_t *intrabits){
+  unsigned char *cp = cpi->frag_coded;
+  macroblock_t *mb = &cpi->macro[mbi];
+  int i,j;
+  int cost = 0;
+  for(i=0;i<3;i++){
+    for(j=0;j<4;j++){
+      int fi=mb->Ryuv[i][j];
+      if(cp[fi]){
+	int sad = BIntraSAD(cpi,fi,i);
+	cost += BINMAP(mode_rate[qi][i][1],sad);
+      }
+    }
+  }
+  *intrabits+=cost;
+  return cost + (oc_mode_cost(cpi,1) << OC_BIT_SCALE);
+}
+
+static int cost_inter(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv, int mode){
+  unsigned char *cp = cpi->frag_coded;
+  macroblock_t *mb = &cpi->macro[mbi];
+  int i,j;
+  int cost = 0;
+  for(i=0;i<3;i++){
+    for(j=0;j<4;j++){
+      int fi=mb->Ryuv[i][j];
+      if(cp[fi]){
+	int sad = BInterSAD(cpi,fi,i,mode==CODE_USING_GOLDEN,mv);
+	cost += BINMAP(mode_rate[qi][i][0],sad);
+      }
+    }
+  }
+  return cost + (oc_mode_cost(cpi,mode) << OC_BIT_SCALE);
+}
+
+static int cost_inter1mv(CP_INSTANCE *cpi, int qi, int mbi, int golden, int *bits0){
+  unsigned char *cp = cpi->frag_coded;
+  macroblock_t *mb = &cpi->macro[mbi];
+  int i,j;
+  int cost = 0;
+
+  for(i=0;i<3;i++){
+    for(j=0;j<4;j++){
+      int fi=mb->Ryuv[i][j];
+      if(cp[fi]){
+	int sad = BInterSAD(cpi,fi,i,golden,mb->analysis_mv[0][golden]);
+	cost += BINMAP(mode_rate[qi][i][0],sad);
+      }
+    }
+  }
+  cost += oc_mode_cost(cpi,golden?CODE_GOLDEN_MV:CODE_INTER_PLUS_MV) << OC_BIT_SCALE;
+
+  *bits0  = MvBits[mb->analysis_mv[0][golden].x + MAX_MV_EXTENT] + 
+    MvBits[mb->analysis_mv[0][golden].y + MAX_MV_EXTENT];
+  
+  return cost + ((OC_MINI(cpi->MVBits_0 + *bits0, cpi->MVBits_1+12)-
+		  OC_MINI(cpi->MVBits_0, cpi->MVBits_1)) << OC_BIT_SCALE);
+}
+
+static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bits1){
+  unsigned char *cp = cpi->frag_coded;
+  macroblock_t *mb = &cpi->macro[mbi];
+  int j;
+  int cost = 0;
+  mv_t ch;
+
+  /* 4:2:0 specific for now; fill in other modes here (not in encode loop) */
+
+  for(j=0;j<4;j++){
+    int fi=mb->Ryuv[0][j];
+    if(cp[fi]){
+      int sad = BInterSAD(cpi,fi,0,0,mb->mv[j]);
+      cost += BINMAP(mode_rate[qi][0][0],sad);
+    }
+  }
+
+  ch.x = mb->mv[0].x + mb->mv[1].x + mb->mv[2].x + mb->mv[3].x;
+  ch.y = mb->mv[0].y + mb->mv[1].y + mb->mv[2].y + mb->mv[3].y;
+  
+  ch.x = ( ch.x >= 0 ? (ch.x + 2) / 4 : (ch.x - 2) / 4);
+  ch.y = ( ch.y >= 0 ? (ch.y + 2) / 4 : (ch.y - 2) / 4);
+
+  {
+    int fi=mb->Ryuv[1][0];
+    if(cp[fi]){
+      int sad = BInterSAD(cpi,fi,1,0,ch);
+      cost += BINMAP(mode_rate[qi][1][0],sad);
+    }
+  }
+  {
+    int fi=mb->Ryuv[2][0];
+    if(cp[fi]){
+      int sad = BInterSAD(cpi,fi,2,0,ch);
+      cost += BINMAP(mode_rate[qi][2][0],sad);
+    }
+  }
+
+  cost += (oc_mode_cost(cpi,CODE_INTER_FOURMV) << OC_BIT_SCALE);
+
+  *bits0 = *bits1 = 0;
+      
+  if(mb->coded & 1){
+    *bits0 += MvBits[mb->mv[0].x + MAX_MV_EXTENT] + 
+      MvBits[mb->mv[0].y+MAX_MV_EXTENT];
+    *bits1 += 12;
+  }
+  if(mb->coded & 2){
+    *bits0 += MvBits[mb->mv[1].x+MAX_MV_EXTENT] + 
+      MvBits[mb->mv[1].y+MAX_MV_EXTENT];
+    *bits1 += 12;
+  }
+  if(mb->coded & 4){
+    *bits0 += MvBits[mb->mv[2].x+MAX_MV_EXTENT] + 
+      MvBits[mb->mv[2].y+MAX_MV_EXTENT];
+    *bits1 += 12;
+  }
+  if(mb->coded & 8){
+    *bits0 += MvBits[mb->mv[3].x+MAX_MV_EXTENT] + 
+      MvBits[mb->mv[3].y+MAX_MV_EXTENT];
+    *bits1 += 12;
+  }
+      
+  return cost + ((OC_MINI(cpi->MVBits_0 + *bits0, cpi->MVBits_1 + *bits1)-
+		  OC_MINI(cpi->MVBits_0, cpi->MVBits_1)) << OC_BIT_SCALE);
+}
+
+
+
 static void MBSAD420(CP_INSTANCE *cpi, int mbi, mv_t last, mv_t last2,
 			int sad[8][3][4]){
   unsigned char *cp = cpi->frag_coded;
@@ -333,18 +458,18 @@ static void MBSAD420(CP_INSTANCE *cpi, int mbi, mv_t last, mv_t last2,
     for(j=0;j<3;j++){
       fi=mb->Ryuv[j][i];
       if(cp[fi]){
-	sad[0][j][i] = BInterSAD(cpi,fi,j,0,(mv_t){0,0},(j>0));
+	sad[0][j][i] = BInterSAD(cpi,fi,j,0,(mv_t){0,0});
 	sad[1][j][i] = BIntraSAD(cpi,fi,j);
-	sad[2][j][i] = BInterSAD(cpi,fi,j,0,mb->analysis_mv[0][0],(j>0));
-	sad[3][j][i] = BInterSAD(cpi,fi,j,0,last,(j>0));
-	sad[4][j][i] = BInterSAD(cpi,fi,j,0,last2,(j>0));
-	sad[5][j][i] = BInterSAD(cpi,fi,j,1,(mv_t){0,0},(j>0));
-	sad[6][j][i] = BInterSAD(cpi,fi,j,1,mb->analysis_mv[0][1],(j>0));
+	sad[2][j][i] = BInterSAD(cpi,fi,j,0,mb->analysis_mv[0][0]);
+	sad[3][j][i] = BInterSAD(cpi,fi,j,0,last);
+	sad[4][j][i] = BInterSAD(cpi,fi,j,0,last2);
+	sad[5][j][i] = BInterSAD(cpi,fi,j,1,(mv_t){0,0});
+	sad[6][j][i] = BInterSAD(cpi,fi,j,1,mb->analysis_mv[0][1]);
       }
     }
     fi=mb->Ryuv[0][i];
     if(cp[fi])
-      sad[7][0][i] = BInterSAD(cpi,fi,0,0,mb->mv[i],0);
+      sad[7][0][i] = BInterSAD(cpi,fi,0,0,mb->mv[i]);
   }
 
   /* 4:2:0-specific */
@@ -358,10 +483,10 @@ static void MBSAD420(CP_INSTANCE *cpi, int mbi, mv_t last, mv_t last2,
 
   fi=mb->Ryuv[1][0];
   if(cp[fi])
-    sad[7][1][0] = BInterSAD(cpi,fi,1,0,ch,1);
+    sad[7][1][0] = BInterSAD(cpi,fi,1,0,ch);
   fi=mb->Ryuv[2][0];
   if(cp[fi])
-    sad[7][2][0] = BInterSAD(cpi,fi,2,0,ch,1);
+    sad[7][2][0] = BInterSAD(cpi,fi,2,0,ch);
 }
 
 void mb_get_dct_input(CP_INSTANCE *cpi,
@@ -424,7 +549,9 @@ int PickModes(CP_INSTANCE *cpi, int recode){
   mv_t last_mv = {0,0};
   mv_t prior_mv = {0,0};
   unsigned char *cp = cpi->frag_coded;
-
+#ifdef COLLECT_METRICS
+  int sad[8][3][4];
+#endif
   oc_mode_scheme_chooser_init(cpi);
 
   cpi->MVBits_0 = 0;
@@ -438,7 +565,6 @@ int PickModes(CP_INSTANCE *cpi, int recode){
     for(j = 0; j<4; j++){ /* mode addressing is through Y plane, always 4 MB per SB */
       int mbi = sb->m[j];
       int cost[8] = {0,0,0,0, 0,0,0,0};
-      int sad[8][3][4];
       int mb_mv_bits_0;
       int mb_gmv_bits_0;
       int mb_4mv_bits_0;
@@ -473,124 +599,90 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 
       if(cpi->FrameType == KEY_FRAME){
 	mb->mode = CODE_INTRA;
-	continue;
+      }else{
+	
+	/**************************************************************
+           Find the block choice with the lowest estimated coding cost
+
+           NOTE THAT if U or V is coded but no Y from a macro block then
+           the mode will be CODE_INTER_NO_MV as this is the default
+           state to which the mode data structure is initialised in
+           encoder and decoder at the start of each frame. */
+	
+	/* block coding cost is estimated from correlated SAD metrics */
+	/* At this point, all blocks that are in frame are still marked coded */
+
+	cost[CODE_INTER_NO_MV] = cost_inter(cpi, qi, mbi, (mv_t){0,0}, CODE_INTER_NO_MV);
+	cost[CODE_INTRA] = cost_intra(cpi, qi, mbi, &intrabits);
+	cost[CODE_INTER_PLUS_MV] = cost_inter1mv(cpi, qi, mbi, 0, &mb_mv_bits_0);
+	cost[CODE_INTER_LAST_MV] = cost_inter(cpi, qi, mbi, last_mv, CODE_INTER_LAST_MV);
+	cost[CODE_INTER_PRIOR_LAST] = cost_inter(cpi, qi, mbi, prior_mv, CODE_INTER_PRIOR_LAST);
+	cost[CODE_USING_GOLDEN] = cost_inter(cpi, qi, mbi, (mv_t){0,0},CODE_USING_GOLDEN);
+	cost[CODE_GOLDEN_MV] = cost_inter1mv(cpi, qi, mbi, 1, &mb_gmv_bits_0);
+	cost[CODE_INTER_FOURMV] = cost_inter4mv(cpi, qi, mbi, &mb_4mv_bits_0, &mb_4mv_bits_1);
+	
+	/* train this too... because the bit cost of an MV should be
+	   considered in the context of LAST_MV and PRIOR_LAST. */
+	cost[CODE_INTER_PLUS_MV] -= 384;
+	
+	/* Finally, pick the mode with the cheapest estimated bit cost.*/
+	mode=0;
+	for(i=1;i<8;i++)
+	  if(cost[i]<cost[mode])
+	    mode=i;
+	
+	/* add back such that inter/intra counting are relatively correct */
+	cost[CODE_INTER_PLUS_MV] += 384;
+	
+	switch(mode){
+	case CODE_INTER_PLUS_MV:
+	  cpi->MVBits_0 += mb_mv_bits_0;
+	  cpi->MVBits_1 += 12;
+	  prior_mv = last_mv;
+	  last_mv = mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = mb->analysis_mv[0][0];
+	  break;
+	case CODE_INTER_LAST_MV:
+	  mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = last_mv;
+	  break;
+	case CODE_INTER_PRIOR_LAST:
+	  mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = prior_mv;
+	  prior_mv = last_mv;
+	  last_mv = mb->mv[0];
+	  break;
+	case CODE_INTER_FOURMV:
+	  cpi->MVBits_0 += mb_4mv_bits_0;
+	  cpi->MVBits_1 += mb_4mv_bits_1;
+	  prior_mv = last_mv;
+	  last_mv = mb->mv[3]; /* if coded, it is still used forced to 0,0 according to spec */
+	  break;
+	case CODE_GOLDEN_MV:
+	  cpi->MVBits_0 += mb_gmv_bits_0;
+	  cpi->MVBits_1 += 12;
+	  mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = mb->analysis_mv[0][1];
+	  break;
+	default:
+	  mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = (mv_t){0,0};
+	  break;
+	}
+	oc_mode_set(cpi,mb,mode);      
+	
+	interbits += cost[mb->mode];
       }
 
-      /**************************************************************
-       Find the block choice with the lowest estimated coding cost
-
-       NOTE THAT if U or V is coded but no Y from a macro block then
-       the mode will be CODE_INTER_NO_MV as this is the default
-       state to which the mode data structure is initialised in
-       encoder and decoder at the start of each frame. */
-
-      /* block coding cost is estimated from correlated SAD metrics */
-      /* At this point, all blocks that are in frame are still marked coded */
-
+#ifdef COLLECT_METRICS
       MBSAD420(cpi, mbi, last_mv, prior_mv, sad);
-      MBCost(cpi,qi,mbi,cost,sad);
-
-      /* 'should this have been a keyframe in retrospect' tracking;
-	 includes none of the rest of the inter-style labelling and
-	 flagging overhead, but must count 'uncoded' frags within the
-	 frame */
-      intrabits += cost[1];
-
-      /* add estimated labelling cost for each mode */
-      for(i = 0; i < 8; i++)
-	cost[i] += oc_mode_cost(cpi,i) << OC_BIT_SCALE;
       
-      /* Add the motion vector bits for each mode that requires them.*/
-      mb_mv_bits_0  = MvBits[mb->analysis_mv[0][0].x + MAX_MV_EXTENT] + 
-	MvBits[mb->analysis_mv[0][0].y + MAX_MV_EXTENT];
-      mb_gmv_bits_0 = MvBits[mb->analysis_mv[0][1].x + MAX_MV_EXTENT] + 
-	MvBits[mb->analysis_mv[0][1].y + MAX_MV_EXTENT];
-      mb_4mv_bits_0 = mb_4mv_bits_1 = 0;
-      
-      if(mb->coded & 1){
-	mb_4mv_bits_0 += MvBits[mb->mv[0].x + MAX_MV_EXTENT] + 
-	  MvBits[mb->mv[0].y+MAX_MV_EXTENT];
-	mb_4mv_bits_1 += 12;
+      for(i=0;i<4;i++){
+	for(j=0;j<3;j++){
+	  fi=mb->Ryuv[j][i];
+	  if(cp[fi])
+	    cpi->frag_sad[fi]=sad[mb->mode][j][i];
+	}
       }
-      if(mb->coded & 2){
-	mb_4mv_bits_0 += MvBits[mb->mv[1].x+MAX_MV_EXTENT] + 
-	  MvBits[mb->mv[1].y+MAX_MV_EXTENT];
-	mb_4mv_bits_1 += 12;
-      }
-      if(mb->coded & 4){
-	mb_4mv_bits_0 += MvBits[mb->mv[2].x+MAX_MV_EXTENT] + 
-	  MvBits[mb->mv[2].y+MAX_MV_EXTENT];
-	mb_4mv_bits_1 += 12;
-      }
-      if(mb->coded & 8){
-	mb_4mv_bits_0 += MvBits[mb->mv[3].x+MAX_MV_EXTENT] + 
-	  MvBits[mb->mv[3].y+MAX_MV_EXTENT];
-	mb_4mv_bits_1 += 12;
-      }
-      
-      /* We use the same opportunity cost method of estimating the
-	 cost of coding the motion vectors with the two different
-	 schemes as we do for estimating the cost of the mode
-	 labels. However, because there are only two schemes and
-	 they're both pretty simple, this can just be done inline.*/
-      cost[CODE_INTER_PLUS_MV] += 
-	((OC_MINI(cpi->MVBits_0 + mb_mv_bits_0, cpi->MVBits_1+12)-
-	  OC_MINI(cpi->MVBits_0, cpi->MVBits_1)) << OC_BIT_SCALE);
-      cost[CODE_GOLDEN_MV] +=
-	((OC_MINI(cpi->MVBits_0 + mb_gmv_bits_0, cpi->MVBits_1+12)-
-	  OC_MINI(cpi->MVBits_0, cpi->MVBits_1)) << OC_BIT_SCALE);
-      cost[CODE_INTER_FOURMV] +=
-	  ((OC_MINI(cpi->MVBits_0 + mb_4mv_bits_0, cpi->MVBits_1 + mb_4mv_bits_1)-
-	    OC_MINI(cpi->MVBits_0, cpi->MVBits_1)) << OC_BIT_SCALE);
-      
-      /* train this too... because the bit cost of an MV should be
-	 considered in the context of LAST_MV and PRIOR_LAST. */
-      cost[CODE_INTER_PLUS_MV] -= 384;
-      
-      /* Finally, pick the mode with the cheapest estimated bit cost.*/
-      mode=0;
-      for(i=1;i<8;i++)
-	if(cost[i]<cost[mode])
-	  mode=i;
-      
-      /* add back such that inter/intra counting are relatively correct */
-      cost[CODE_INTER_PLUS_MV] += 384;
-      
-      switch(mode){
-      case CODE_INTER_PLUS_MV:
-	cpi->MVBits_0 += mb_mv_bits_0;
-	cpi->MVBits_1 += 12;
-	prior_mv = last_mv;
-	last_mv = mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = mb->analysis_mv[0][0];
-	break;
-      case CODE_INTER_LAST_MV:
-	mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = last_mv;
-	break;
-      case CODE_INTER_PRIOR_LAST:
-	mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = prior_mv;
-	prior_mv = last_mv;
-	last_mv = mb->mv[0];
-	break;
-      case CODE_INTER_FOURMV:
-	cpi->MVBits_0 += mb_4mv_bits_0;
-	cpi->MVBits_1 += mb_4mv_bits_1;
-	prior_mv = last_mv;
-	last_mv = mb->mv[3]; /* if coded, it is still used forced to 0,0 according to spec */
-	break;
-      case CODE_GOLDEN_MV:
-	cpi->MVBits_0 += mb_gmv_bits_0;
-	cpi->MVBits_1 += 12;
-	mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = mb->analysis_mv[0][1];
-	break;
-      default:
-	mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = (mv_t){0,0};
-	break;
-      }
-      oc_mode_set(cpi,mb,mode);      
-
-      interbits += cost[mb->mode];
+#endif
     }
   }
+
 
   if(cpi->FrameType != KEY_FRAME){
 

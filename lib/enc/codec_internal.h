@@ -327,6 +327,7 @@ extern void EncodeData(CP_INSTANCE *cpi);
 
 extern void oc_mcenc_start(CP_INSTANCE *cpi,
 			   mc_state *mcenc);
+
 extern void oc_mcenc_search(CP_INSTANCE *cpi, 
 			    mc_state *_mcenc,
 			    int _mbi,
