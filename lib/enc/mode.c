@@ -633,9 +633,8 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	cost[CODE_INTER_PLUS_MV] -= 384;
 	
 	/* the explicit MV modes (2,6,7) have not yet gone through
-	   halfpel refinement as it's a relatively expensive
-	   operation.  We choose the explicit mv mode that's already
-	   furthest ahead on bits and refine only that one */
+	   halfpel refinement. We choose the explicit mv mode that's
+	   already furthest ahead on bits and refine only that one */
 	if(flag4mv && cost[CODE_INTER_FOURMV]<cost[CODE_INTER_PLUS_MV] && cost[CODE_INTER_FOURMV]<cost[CODE_GOLDEN_MV]){
 	  oc_mcenc_refine4mv(cpi, mbi, block_err);
 	  cost[CODE_INTER_FOURMV] = cost_inter4mv(cpi, qi, mbi, &mb_4mv_bits_0, &mb_4mv_bits_1);

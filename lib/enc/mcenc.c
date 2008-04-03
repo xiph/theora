@@ -24,10 +24,10 @@
 #define OC_YSAD_THRESH1            (256)
 /*The amount to right shift the minimum error by when inflating it for
    computing the second maximum Y plane SAD threshold.*/
-#define OC_YSAD_THRESH2_SCALE_BITS (3)
+#define OC_YSAD_THRESH2_SCALE_BITS (4)
 /*The amount to add to the second maximum Y plane threshold when inflating
    it.*/
-#define OC_YSAD_THRESH2_OFFSET     (128)
+#define OC_YSAD_THRESH2_OFFSET     (64)
 
 /*The vector offsets in the X direction for each search site in the square
    pattern.*/
@@ -566,7 +566,7 @@ int oc_mcenc_search(CP_INSTANCE *cpi,
   }
 
   if(!_goldenp) 
-    mb->aerror = *best_err;
+    mb->aerror = *best_err>>1;
   mb->analysis_mv[0][_goldenp].x=best_vec.x<<1;;
   mb->analysis_mv[0][_goldenp].y=best_vec.y<<1;;
 
@@ -591,8 +591,11 @@ void oc_mcenc_refine1mv(CP_INSTANCE *cpi,
   mv.x = mb->analysis_mv[0][_goldenp].x>>1;
   mv.y = mb->analysis_mv[0][_goldenp].y>>1;
   
-  oc_mcenc_ysad_halfpel_mbrefine(cpi,_mbi,&mv,err,_goldenp);
+  err=oc_mcenc_ysad_halfpel_mbrefine(cpi,_mbi,&mv,err,_goldenp);
   mb->analysis_mv[0][_goldenp]=mv;
+  if(!_goldenp)
+    mb->aerror = err;
+
 }
 
 void oc_mcenc_refine4mv(CP_INSTANCE *cpi, 
