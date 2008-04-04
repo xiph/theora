@@ -432,7 +432,7 @@ static int queue_page(ogg_page *page){
 
 static void usage(void){
   fprintf(stderr,
-          "Usage: player_example <file.ogg>\n"
+          "Usage: player_example <file.ogv>\n"
           "input is read from stdin if no file is passed on the command line\n"
           "\n"
   );

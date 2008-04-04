@@ -122,7 +122,7 @@ static void usage(void){
   fprintf(stderr,
           "Usage: encoder_example [options] [audio_file] video_file\n\n"
           "Options: \n\n"
-          "  -o --output <filename.ogg>     file name for encoded output;\n"
+          "  -o --output <filename.ogv>     file name for encoded output;\n"
           "                                 If this option is not given, the\n"
           "                                 compressed data is sent to stdout.\n\n"
           "  -A --audio-rate-target <n>     bitrate target for Vorbis audio;\n"
