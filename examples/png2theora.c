@@ -80,7 +80,7 @@ static void usage(void){
           "Output is parsed by scanf and represents a list of files, i.e.\n"
           "  file-%%06d.png to look for files file000001.png to file9999999.png \n\n"
           "Options: \n\n"
-          "  -o --output <filename.ogg>     file name for encoded output;\n"
+          "  -o --output <filename.ogv>     file name for encoded output;\n"
           "                                 If this option is not given, the\n"
           "                                 compressed data is sent to stdout.\n\n"
           "  -V --video-rate-target <n>     bitrate target for Theora video\n\n"
