@@ -300,7 +300,7 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
     /* Now code the block flags. */
     for ( i = 0; i < BListIndex; ) {
       run_count = 0;
-      while ( (cpi->BlockCodedFlags[i] == val) && (i < BListIndex) ) {
+      while ( (i < BListIndex) && (cpi->BlockCodedFlags[i] == val) ) {
         i++;
         run_count++;
       }
