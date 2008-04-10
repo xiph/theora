@@ -6211,13 +6211,15 @@ Only the final division by $16$ is rounded, with ties rounded towards positive
 
 All intermediate values are truncated to a 32-bit signed representation by
  discarding any higher-order bits in their two's complement representation.
-The final output of each 1D transform is truncated to 16-bits in the same
- manner.
+The final output of each 1D transform is truncated to a 16-bit signed value in
+ the same manner.
 In practice, if the high word of a $16\times 16$ bit multiplication can be
  obtained directly, 16 bits is sufficient for every calculation except scaling
  by $C4$.
-Here we specify truncating to 16 bits before the multiplication to simplify
- implementations using hardware or common SIMD instruction sets.
+Thus we truncate to 16 bits before that multiplication to allow an
+ implementation entirely in 16-bit registers.
+Implementations using larger registers must sign-extend the 16-bit value to
+ maintain compatibility.
 
 Note that if 16-bit register are used, overflow in the additions and
  subtractions should be handled using \textit{unsaturated} arithmetic.
@@ -6338,7 +6340,7 @@ $\locvar{C7}$  & $\locvar{S1}$ & $12785$ \\
 \item
 Assign $\locvar{T}[0]$ the value $\bitvar{Y}[0]+\bitvar{Y}[4]$.
 \item
-Truncate $\locvar{T}[0]$ to a 16-bit representation by dropping any
+Truncate $\locvar{T}[0]$ to a 16-bit signed representation by dropping any
  higher-order bits.
 \item
 Assign $\locvar{T}[0]$ the value
@@ -6346,7 +6348,7 @@ Assign $\locvar{T}[0]$ the value
 \item
 Assign $\locvar{T}[1]$ the value $\bitvar{Y}[0]-\bitvar{Y}[4]$.
 \item
-Truncate $\locvar{T}[1]$ to a 16-bit representation by dropping any
+Truncate $\locvar{T}[1]$ to a 16-bit signed representation by dropping any
  higher-order bits.
 \item
 Assign $\locvar{T}[1]$ the value $\locvar{C4}*\locvar{T}[1]>>16$.
@@ -6373,7 +6375,7 @@ Assign \locvar{R} the value $\locvar{T}[4]+\locvar{T}[5]$.
 \item
 Assign $\locvar{T}[5]$ the value $\locvar{T}[4]-\locvar{T}[5]$.
 \item
-Truncate $\locvar{T}[5]$ to a 16-bit representation by dropping any
+Truncate $\locvar{T}[5]$ to a 16-bit signed representation by dropping any
  higher-order bits.
 \item
 Assign $\locvar{T}[5]$ the value $\locvar{C4}*\locvar{T}[5]>>16$.
@@ -6384,7 +6386,7 @@ Assign \locvar{R} the value $\locvar{T}[7]+\locvar{T}[6]$.
 \item
 Assign $\locvar{T}[6]$ the value $\locvar{T}[7]-\locvar{T}[6]$.
 \item
-Truncate $\locvar{T}[6]$ to a 16-bit representation by dropping any
+Truncate $\locvar{T}[6]$ to a 16-bit signed representation by dropping any
  higher-order bits.
 \item
 Assign $\locvar{T}[6]$ the value $\locvar{C4}*\locvar{T}[6]>>16$.
@@ -6411,57 +6413,57 @@ Assign $\locvar{T}[6]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[0]+\locvar{T}[7]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[0]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[1]+\locvar{T}[6]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[1]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[2]+\locvar{T}[5]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[2]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[3]+\locvar{T}[4]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[3]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[3]-\locvar{T}[4]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[4]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[2]-\locvar{T}[5]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[5]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[1]-\locvar{T}[6]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[6]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[0]-\locvar{T}[7]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[7]$ the value \locvar{R}.
 \end{enumerate}
@@ -7022,8 +7024,8 @@ Assign \locvar{DC} the value
  (\bitvar{COEFFS}[\bitvar{\bi}][0]*\locvar{QMAT}[0]+15)>>5.
 \end{equation*}
 \item
-Truncate \locvar{DC} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{DC} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 For each value of \locvar{\idx{by}} from 0 to 7, and each value of
  \locvar{\idx{bx}} from 0 to 7, assign
