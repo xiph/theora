@@ -153,55 +153,6 @@ static void PredictDC(CP_INSTANCE *cpi){
   }
 }
 
-static ogg_uint32_t CodePlane ( CP_INSTANCE *cpi, int plane, int subsample){
-  int B;
-  unsigned char *cp = cpi->frag_coded;
-  macroblock_t *mp = cpi->macro;
-  macroblock_t *mp_end = cpi->macro+cpi->macro_total;
-  int fi;
-
-  switch(subsample){
-  case 1:
-    for ( ; mp<mp_end; mp++ ) {
-
-      for ( B=0; B<4; B++) {
-	fi = mp->Ryuv[plane][B];
-	if ( cp[fi] ) 
-	  TransformQuantizeBlock( cpi, mp->mode, fi, mp->mv[B] );
-      }
-    }
-    return 0;
-  case 2:
-    /* fill me in when we need to support 4:2:2 */
-    return 1;
-  case 4:
-    for ( ; mp<mp_end; mp++ ) {
-      int fi = mp->Hyuv[plane][0];
-      if ( cp[fi] ) {
-	
-	if(mp->mode == CODE_INTER_FOURMV){
-	  mv_t mv;
-	  
-	  /* Calculate motion vector as the average of the Y plane ones. */
-	  /* Uncoded members are 0,0 and not special-cased */
-	  mv.x = mp->mv[0].x + mp->mv[1].x + mp->mv[2].x + mp->mv[3].x;
-	  mv.y = mp->mv[0].y + mp->mv[1].y + mp->mv[2].y + mp->mv[3].y;
-	  
-	  mv.x = ( mv.x >= 0 ? (mv.x + 2) / 4 : (mv.x - 2) / 4);
-	  mv.y = ( mv.y >= 0 ? (mv.y + 2) / 4 : (mv.y - 2) / 4);
-
-	  TransformQuantizeBlock( cpi, mp->mode, fi, mv );
-	}else
-	  TransformQuantizeBlock( cpi, mp->mode, fi, mp->mv[0] );
-    
-      }  
-    }
-    return 0;
-  default:
-    return 1;
-  }
-}
-
 static void ChooseTokenTables (CP_INSTANCE *cpi, int huff[4]) {
   int i,plane;
   int best;
@@ -398,12 +349,6 @@ void EncodeData(CP_INSTANCE *cpi){
   long bits;
 
   dsp_save_fpu (cpi->dsp);
-
-  /* Encode and tokenise the Y, U and V components */
-  /* 4:2:0 for now */
-  CodePlane(cpi, 0, 1);
-  CodePlane(cpi, 1, 4);
-  CodePlane(cpi, 2, 4);
 
   PredictDC(cpi);
   DPCMTokenize(cpi);
