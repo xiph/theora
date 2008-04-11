@@ -35,23 +35,45 @@ static void th_info2theora_info(theora_info *_ci,const th_info *_info){
   }
   _ci->target_bitrate=_info->target_bitrate;
   _ci->quality=_info->quality;
+  _ci->codec_setup=NULL;
+  /*Defaults from old encoder_example... eventually most of these should go
+     away when we make the encoder no longer use them.*/
+  _ci->dropframes_p=0;
+  _ci->keyframe_auto_p=1;
+  _ci->keyframe_frequency=1<<_info->keyframe_granule_shift;
   _ci->keyframe_frequency_force=1<<_info->keyframe_granule_shift;
+  _ci->keyframe_data_target_bitrate=
+   _info->target_bitrate+(_info->target_bitrate>>1);
+  _ci->keyframe_auto_threshold=80;
+  _ci->keyframe_mindistance=8;
+  _ci->noise_sensitivity=1;
+  _ci->sharpness=0;
 }
 
+typedef struct th_enc_ctx{
+  /*This is required at the start of the struct for the common functions to
+     work.*/
+  th_info      info;
+  /*The actual encoder.*/
+  theora_state state;
+};
+
+
 th_enc_ctx *th_encode_alloc(const th_info *_info){
-  theora_info   ci;
-  theora_state *te;
+  theora_info  ci;
+  th_enc_ctx  *enc;
   th_info2theora_info(&ci,_info);
-  te=(theora_state *)_ogg_malloc(sizeof(*te));
-  if(theora_encode_init(te,&ci)<0){
-    _ogg_free(te);
-    te=NULL;
+  enc=(th_enc_ctx *)_ogg_malloc(sizeof(*enc));
+  if(theora_encode_init(&enc->state,&ci)<0){
+    _ogg_free(enc);
+    enc=NULL;
   }
-  return (th_enc_ctx *)te;
+  else memcpy(&enc->info,_info,sizeof(enc->info));
+  return enc;
 }
 
 int th_encode_ctl(th_enc_ctx *_enc,int _req,void *_buf,size_t _buf_sz){
-  return theora_control((theora_state *)_enc,_req,_buf,_buf_sz);
+  return theora_control(&_enc->state,_req,_buf,_buf_sz);
 }
 
 int th_encode_flushheader(th_enc_ctx *_enc,th_comment *_comments,
@@ -59,7 +81,7 @@ int th_encode_flushheader(th_enc_ctx *_enc,th_comment *_comments,
   theora_state *te;
   CP_INSTANCE  *cpi;
   if(_enc==NULL||_op==NULL)return OC_FAULT;
-  te=(theora_state *)_enc;
+  te=&_enc->state;
   cpi=(CP_INSTANCE *)te->internal_encode;
   switch(cpi->doneflag){
     case -3:{
@@ -101,7 +123,7 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _ycbcr){
   unsigned char *tmpbuf;
   int            ret;
   if(_enc==NULL||_ycbcr==NULL)return OC_FAULT;
-  te=(theora_state *)_enc;
+  te=&_enc->state;
   /*theora_encode_YUVin() does not bother to check uv_width and uv_height, and
      then uses them.
     This is arguably okay (it will most likely lead to a crash if they're
@@ -158,12 +180,12 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _ycbcr){
 
 int th_encode_packetout(th_enc_ctx *_enc,int _last,ogg_packet *_op){
   if(_enc==NULL)return OC_FAULT;
-  return theora_encode_packetout((theora_state *)_enc,_last,_op);
+  return theora_encode_packetout(&_enc->state,_last,_op);
 }
 
 void th_encode_free(th_enc_ctx *_enc){
   if(_enc!=NULL){
-    theora_clear((theora_state *)_enc);
+    theora_clear(&_enc->state);
     _ogg_free(_enc);
   }
 }
