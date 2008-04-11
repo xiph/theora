@@ -477,7 +477,7 @@ void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
  int _refi,int _pli,int _fragy0,int _fragy_end);
 void oc_restore_fpu_c(void);
 
-/*We need a way to call a few enocder functions without introducing a link-time
+/*We need a way to call a few encoder functions without introducing a link-time
    dependency into the decoder, while still allowing the old alpha API which
    does not distinguish between encoder and decoder objects to be used.
   We do this by placing a function table at the start of the encoder object
