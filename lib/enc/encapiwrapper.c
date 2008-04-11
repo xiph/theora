@@ -50,6 +50,14 @@ static void th_info2theora_info(theora_info *_ci,const th_info *_info){
   _ci->sharpness=0;
 }
 
+static int _ilog(unsigned _v){
+  int ret;
+  for(ret=0;_v;ret++)_v>>=1;
+  return ret;
+}
+
+
+
 typedef struct th_enc_ctx{
   /*This is required at the start of the struct for the common functions to
      work.*/
@@ -68,7 +76,18 @@ th_enc_ctx *th_encode_alloc(const th_info *_info){
     _ogg_free(enc);
     enc=NULL;
   }
-  else memcpy(&enc->info,_info,sizeof(enc->info));
+  else{
+    memcpy(&enc->info,_info,sizeof(enc->info));
+    /*Overwrite values theora_encode_init() can change; don't trust the user.*/
+    enc->info.version_major=ci.version_major;
+    enc->info.version_minor=ci.version_minor;
+    enc->info.version_subminor=ci.version_subminor;
+    enc->info.quality=ci.quality;
+    enc->info.target_bitrate=ci.target_bitrate;
+    enc->info.fps_numerator=ci.fps_numerator;
+    enc->info.fps_denominator=ci.fps_denominator;
+    enc->info.keyframe_granule_shift=_ilog(ci.keyframe_frequency_force-1);
+  }
   return enc;
 }
 
