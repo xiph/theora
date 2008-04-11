@@ -392,9 +392,11 @@ static void LoopFilter(CP_INSTANCE *cpi){
 }
 
 void ReconRefFrames (CP_INSTANCE *cpi){
+  unsigned char *temp = cpi->lastrecon;
 
-  /* this should be a flip, not a copy */
-  memcpy(cpi->lastrecon,cpi->recon,sizeof(*cpi->recon)*cpi->frame_size);
+  /* swap */
+  cpi->lastrecon=cpi->recon;
+  cpi->recon=temp;
 
   /* Apply a loop filter to edge pixels of updated blocks */
   LoopFilter(cpi);
