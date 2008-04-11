@@ -35,38 +35,6 @@ static void SetupBoundingValueArray_Generic(ogg_int16_t *BoundingValuePtr,
   }
 }
 
-static void ExpandBlock ( CP_INSTANCE *cpi, coding_mode_t mode, int fi){
-  int           qi = cpi->BaseQ; // temporary 
-  int           plane = (fi<cpi->frag_n[0] ? 0 : (fi-cpi->frag_n[0]<cpi->frag_n[1] ? 1 : 2));
-  int           inter = (mode != CODE_INTRA);
-  ogg_int16_t   reconstruct[64];
-  ogg_int16_t  *quantizers = cpi->quant_tables[inter][plane][qi];
-  ogg_int16_t  *data = cpi->frag_dct[fi].data;
-  int           bi = cpi->frag_buffer_index[fi];
-
-  data[0] = cpi->frag_dc[fi];
-
-  /* Invert quantisation and DCT to get pixel data. */
-  switch(cpi->frag_nonzero[fi]){
-  case 0:case 1:
-    IDct1( data, quantizers, reconstruct );
-    break;
-  case 2: case 3:
-    dsp_IDct3(cpi->dsp, data, quantizers, reconstruct );
-    break;
-  case 4:case 5:case 6:case 7:case 8: case 9:case 10:
-    dsp_IDct10(cpi->dsp, data, quantizers, reconstruct );
-    break;
-  default:
-    dsp_IDctSlow(cpi->dsp, data, quantizers, reconstruct );
-  }
-  
-  /* Convert fragment number to a pixel offset in a reconstruction buffer. */
-  dsp_recon8x8 (cpi->dsp, &cpi->recon[bi],
-		reconstruct, cpi->stride[plane]);
-
-}
-
 static void UpdateUMV_HBorders( CP_INSTANCE *cpi,
                                 unsigned char *DestReconPtr,
 				int plane){
@@ -424,31 +392,8 @@ static void LoopFilter(CP_INSTANCE *cpi){
 }
 
 void ReconRefFrames (CP_INSTANCE *cpi){
-  int i;
-  unsigned char *cp = cpi->frag_coded;
-  macroblock_t *mp = cpi->macro;
 
-  for (i=0; i<cpi->macro_total; i++, mp++ ) {
-    coding_mode_t mode = mp->mode;
-    int fi = mp->Hyuv[0][0];
-    if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
-
-    fi = mp->Hyuv[0][1];
-    if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
-
-    fi = mp->Hyuv[0][2];
-    if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
-
-    fi = mp->Hyuv[0][3];
-    if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
-
-    fi = mp->Hyuv[1][0];
-    if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
-
-    fi = mp->Hyuv[2][0];
-    if ( cp[fi] ) ExpandBlock( cpi, mode, fi );
-  }
-
+  /* this should be a flip, not a copy */
   memcpy(cpi->lastrecon,cpi->recon,sizeof(*cpi->recon)*cpi->frame_size);
 
   /* Apply a loop filter to edge pixels of updated blocks */

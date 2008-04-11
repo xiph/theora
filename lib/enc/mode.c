@@ -487,75 +487,86 @@ static void MBSAD420(CP_INSTANCE *cpi, int mbi, mv_t last, mv_t last2,
     sad[7][2][0] = BInterSAD(cpi,fi,2,0,ch);
 }
 
-void mb_get_dct_input(CP_INSTANCE *cpi,
-		      coding_mode_t mode,
-		      int fi,
-		      mv_t mv,
-		      ogg_int16_t *block){
-
-  int plane = fi>=cpi->frag_n[0]; /* sets plane to 'Y' or 'Chroma' */
-  int qp = (plane>0); /* 4:2:0 specific for now */
-  int bi = cpi->frag_buffer_index[fi];
-  unsigned char *frame_ptr = &cpi->frame[bi];
-  unsigned char *lastrecon = ((mode == CODE_USING_GOLDEN || 
-			   mode == CODE_GOLDEN_MV) ? 
-			  cpi->golden : cpi->lastrecon)+bi;
-  unsigned char *thisrecon = cpi->recon+bi;
-  int stride = cpi->stride[plane];
-  
-  switch(mode){
-  case CODE_INTER_PLUS_MV:
-  case CODE_INTER_LAST_MV:
-  case CODE_INTER_PRIOR_LAST:
-  case CODE_GOLDEN_MV:
-  case CODE_INTER_FOURMV:
-    
-    {    
-      int mx = mvmap[qp][mv.x+31];
-      int my = mvmap[qp][mv.y+31];
-      int mx2 = mvmap2[qp][mv.x+31];
-      int my2 = mvmap2[qp][mv.y+31];
-      
-      unsigned char *r1 = lastrecon + my * stride + mx;
-      
-      if(mx2 || my2){
-	unsigned char *r2 = r1 + my2 * stride + mx2;
-	dsp_copy8x8_half (cpi->dsp, r1, r2, thisrecon, stride);
-	dsp_sub8x8(cpi->dsp, frame_ptr, thisrecon, block, stride);
-      }else{
-	dsp_copy8x8 (cpi->dsp, r1, thisrecon, stride);
-	dsp_sub8x8(cpi->dsp, frame_ptr, r1, block, stride);
-      }
-    }
-    break;
-
-  case CODE_USING_GOLDEN:
-  case CODE_INTER_NO_MV:
-    dsp_copy8x8 (cpi->dsp, lastrecon, thisrecon, stride);
-    dsp_sub8x8(cpi->dsp, frame_ptr, lastrecon, block, stride);
-    break;
-  case CODE_INTRA:
-    dsp_sub8x8_128(cpi->dsp, frame_ptr, block, stride);
-    dsp_set8x8(cpi->dsp, 128, thisrecon, stride);
-    break;
-  }
-}
-
-static void TQB (CP_INSTANCE *cpi, int mode, int fi, ogg_int32_t *q, mv_t mv){
+static void TQB (CP_INSTANCE *cpi, int mode, int fi, ogg_int32_t *iq, ogg_int16_t *q, mv_t mv, int plane){
   if ( cpi->frag_coded[fi] ) {
-    ogg_int16_t buffer[128];
-    
+    ogg_int16_t buffer[64];
+    ogg_int16_t *data = cpi->frag_dct[fi].data;
+    int bi = cpi->frag_buffer_index[fi];
+    int stride = cpi->stride[plane];
+    int xqp = (plane && cpi->info.pixelformat != OC_PF_444);
+    int yqp = (plane && cpi->info.pixelformat == OC_PF_420);
+    unsigned char *frame_ptr = &cpi->frame[bi];
+    unsigned char *lastrecon = ((mode == CODE_USING_GOLDEN || 
+				 mode == CODE_GOLDEN_MV) ? 
+				cpi->golden : cpi->lastrecon)+bi;
+    unsigned char *thisrecon = cpi->recon+bi;
+    int nonzero=63;
+
     /* motion comp */
-    mb_get_dct_input(cpi,mode,fi,mv,cpi->frag_dct[fi].data);
-    
+    switch(mode){
+    case CODE_INTER_PLUS_MV:
+    case CODE_INTER_LAST_MV:
+    case CODE_INTER_PRIOR_LAST:
+    case CODE_GOLDEN_MV:
+    case CODE_INTER_FOURMV:
+      
+      {    
+	int mx = mvmap[xqp][mv.x+31];
+	int my = mvmap[yqp][mv.y+31];
+	int mx2 = mvmap2[xqp][mv.x+31];
+	int my2 = mvmap2[yqp][mv.y+31];
+	
+	unsigned char *r1 = lastrecon + my * stride + mx;
+	
+	if(mx2 || my2){
+	  unsigned char *r2 = r1 + my2 * stride + mx2;
+	  dsp_copy8x8_half (cpi->dsp, r1, r2, thisrecon, stride);
+	  dsp_sub8x8(cpi->dsp, frame_ptr, thisrecon, data, stride);
+	}else{
+	  dsp_copy8x8 (cpi->dsp, r1, thisrecon, stride);
+	  dsp_sub8x8(cpi->dsp, frame_ptr, r1, data, stride);
+	}
+      }
+      break;
+      
+    case CODE_USING_GOLDEN:
+    case CODE_INTER_NO_MV:
+      dsp_copy8x8 (cpi->dsp, lastrecon, thisrecon, stride);
+      dsp_sub8x8(cpi->dsp, frame_ptr, lastrecon, data, stride);
+      break;
+    case CODE_INTRA:
+      dsp_sub8x8_128(cpi->dsp, frame_ptr, data, stride);
+      dsp_set8x8(cpi->dsp, 128, thisrecon, stride);
+      break;
+    }
+
     /* transform */
-    dsp_fdct_short(cpi->dsp, cpi->frag_dct[fi].data, buffer);
+    dsp_fdct_short(cpi->dsp, data, buffer);
     
     /* collect rho metrics */
     
     /* quantize */
-    quantize (cpi, q, buffer, cpi->frag_dct[fi].data);
+    quantize (cpi, iq, buffer, data);
     cpi->frag_dc[fi] = cpi->frag_dct[fi].data[0];
+
+    /* reconstruct */
+    while(!data[nonzero] && --nonzero);
+    switch(nonzero){
+    case 0:
+      IDct1( data, q, buffer );
+      break;
+    case 1: case 2:
+      dsp_IDct3(cpi->dsp, data, q, buffer );
+      break;
+    case 3:case 4:case 5:case 6:case 7:case 8: case 9:
+      dsp_IDct10(cpi->dsp, data, q, buffer );
+      break;
+    default:
+      dsp_IDctSlow(cpi->dsp, data, q, buffer );
+    }
+    
+    dsp_recon8x8 (cpi->dsp, thisrecon, buffer, stride);
+      
   }
 }
 
@@ -563,11 +574,12 @@ static void TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi){
   int pf = cpi->info.pixelformat;
   int mode = mb->mode;
   int inter = (mode != CODE_INTRA);
-  ogg_int32_t *q = cpi->iquant_tables[inter][0][qi];
+  ogg_int32_t *iq = cpi->iquant_tables[inter][0][qi];
+  ogg_int16_t  *q = cpi->quant_tables[inter][0][qi];
   int i;
 
   for(i=0;i<4;i++)
-    TQB(cpi,mode,mb->Ryuv[0][i],q,mb->mv[i]);
+    TQB(cpi,mode,mb->Ryuv[0][i],iq,q,mb->mv[i],0);
 
   switch(pf){
   case OC_PF_420:
@@ -580,15 +592,19 @@ static void TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi){
       mv.x = ( mv.x >= 0 ? (mv.x + 2) / 4 : (mv.x - 2) / 4);
       mv.y = ( mv.y >= 0 ? (mv.y + 2) / 4 : (mv.y - 2) / 4);
       
-      q = cpi->iquant_tables[inter][1][qi];
-      TQB(cpi,mode,mb->Ryuv[1][0],q,mv);
-      q = cpi->iquant_tables[inter][2][qi];
-      TQB(cpi,mode,mb->Ryuv[2][0],q,mv);
+      iq = cpi->iquant_tables[inter][1][qi];
+      q = cpi->quant_tables[inter][1][qi];
+      TQB(cpi,mode,mb->Ryuv[1][0],iq,q,mv,1);
+      iq = cpi->iquant_tables[inter][2][qi];
+      q = cpi->quant_tables[inter][2][qi];
+      TQB(cpi,mode,mb->Ryuv[2][0],iq,q,mv,2);
     }else{ 
-      q = cpi->iquant_tables[inter][1][qi];
-      TQB(cpi,mode,mb->Ryuv[1][0],q,mb->mv[0]);
-      q = cpi->iquant_tables[inter][2][qi];
-      TQB(cpi,mode,mb->Ryuv[2][0],q,mb->mv[0]);
+      iq = cpi->iquant_tables[inter][1][qi];
+      q = cpi->quant_tables[inter][1][qi];
+      TQB(cpi,mode,mb->Ryuv[1][0],iq,q,mb->mv[0],1);
+      iq = cpi->iquant_tables[inter][2][qi];
+      q = cpi->quant_tables[inter][2][qi];
+      TQB(cpi,mode,mb->Ryuv[2][0],iq,q,mb->mv[0],2);
     }
     break;
 
@@ -606,31 +622,37 @@ static void TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi){
       mvB.x = ( mvB.x >= 0 ? (mvB.x + 1) / 2 : (mvB.x - 1) / 2);
       mvB.y = ( mvB.y >= 0 ? (mvB.y + 1) / 2 : (mvB.y - 1) / 2);
       
-      q = cpi->iquant_tables[inter][1][qi];
-      TQB(cpi,mode,mb->Ryuv[1][0],q,mvA);
-      TQB(cpi,mode,mb->Ryuv[1][1],q,mvB);
+      iq = cpi->iquant_tables[inter][1][qi];
+      q = cpi->quant_tables[inter][1][qi];
+      TQB(cpi,mode,mb->Ryuv[1][0],iq,q,mvA,1);
+      TQB(cpi,mode,mb->Ryuv[1][1],iq,q,mvB,1);
 
-      q = cpi->iquant_tables[inter][2][qi];
-      TQB(cpi,mode,mb->Ryuv[2][0],q,mvA);
-      TQB(cpi,mode,mb->Ryuv[2][1],q,mvB);
+      iq = cpi->iquant_tables[inter][2][qi];
+      q = cpi->quant_tables[inter][2][qi];
+      TQB(cpi,mode,mb->Ryuv[2][0],iq,q,mvA,2);
+      TQB(cpi,mode,mb->Ryuv[2][1],iq,q,mvB,2);
 
     }else{ 
-      q = cpi->iquant_tables[inter][1][qi];
-      TQB(cpi,mode,mb->Ryuv[1][0],q,mb->mv[0]);
-      TQB(cpi,mode,mb->Ryuv[1][1],q,mb->mv[0]);
-      q = cpi->iquant_tables[inter][2][qi];
-      TQB(cpi,mode,mb->Ryuv[2][0],q,mb->mv[0]);
-      TQB(cpi,mode,mb->Ryuv[2][1],q,mb->mv[0]);
+      iq = cpi->iquant_tables[inter][1][qi];
+      q = cpi->quant_tables[inter][1][qi];
+      TQB(cpi,mode,mb->Ryuv[1][0],iq,q,mb->mv[0],1);
+      TQB(cpi,mode,mb->Ryuv[1][1],iq,q,mb->mv[0],1);
+      iq = cpi->iquant_tables[inter][2][qi];
+      q = cpi->quant_tables[inter][2][qi];
+      TQB(cpi,mode,mb->Ryuv[2][0],iq,q,mb->mv[0],2);
+      TQB(cpi,mode,mb->Ryuv[2][1],iq,q,mb->mv[0],2);
     }
     break;
 
   case OC_PF_444:
-    q = cpi->iquant_tables[inter][1][qi];
+    iq = cpi->iquant_tables[inter][1][qi];
+    q = cpi->quant_tables[inter][1][qi];
     for(i=0;i<4;i++)
-      TQB(cpi,mode,mb->Ryuv[1][i],q,mb->mv[i]);
-    q = cpi->iquant_tables[inter][2][qi];
+      TQB(cpi,mode,mb->Ryuv[1][i],iq,q,mb->mv[i],1);
+    iq = cpi->iquant_tables[inter][2][qi];
+    q = cpi->quant_tables[inter][2][qi];
     for(i=0;i<4;i++)
-      TQB(cpi,mode,mb->Ryuv[2][i],q,mb->mv[i]);
+      TQB(cpi,mode,mb->Ryuv[2][i],iq,q,mb->mv[i],2);
     break;
   }
 }
