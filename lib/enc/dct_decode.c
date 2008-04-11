@@ -164,27 +164,6 @@ void UpdateUMVBorder( CP_INSTANCE *cpi,
   UpdateUMV_HBorders( cpi, DestReconPtr, 2);
 }
 
-static void CopyRecon( CP_INSTANCE *cpi, unsigned char * DestReconPtr,
-		       unsigned char * SrcReconPtr ) {
-  ogg_uint32_t  i,plane;
-  unsigned char *cp = cpi->frag_coded;
-  ogg_uint32_t *bi = cpi->frag_buffer_index;
-  int j = 0;
-
-  /* Copy over only updated blocks.*/
-  for(plane=0;plane<3;plane++){  
-    int PlaneLineStep = cpi->stride[plane];
-    for ( i = 0; i < cpi->frag_n[plane]; i++, j++ ) {
-      if ( cp[j] ) {
-	int pi= bi[j];
-	unsigned char *src = &SrcReconPtr[ pi ];
-	unsigned char *dst = &DestReconPtr[ pi ];
-	dsp_copy8x8 (cpi->dsp, src, dst, PlaneLineStep);
-      }
-    }
-  }
-}
-
 static void FilterHoriz__c(unsigned char * PixelPtr,
 			   ogg_int32_t LineLength,
 			   ogg_int16_t *BoundingValuePtr){
@@ -478,13 +457,9 @@ void ReconRefFrames (CP_INSTANCE *cpi){
   /* We may need to update the UMV border */
   UpdateUMVBorder(cpi, cpi->lastrecon);
   
-  /* Reconstruct the golden frame if necessary.
-     For VFW codec only on key frames */
-  if ( cpi->FrameType == KEY_FRAME ){
-    CopyRecon( cpi, cpi->golden, cpi->lastrecon );
-    /* We may need to update the UMV border */
-    UpdateUMVBorder(cpi, cpi->golden);
-  }
+  if ( cpi->FrameType == KEY_FRAME )
+    memcpy(cpi->golden,cpi->lastrecon,sizeof(*cpi->lastrecon)*cpi->frame_size);
+
 }
 
 void dsp_dct_decode_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)
