@@ -902,21 +902,21 @@ int fetch_and_process_audio(FILE *audio,ogg_page *audiopage,
             count+=2;
           }
         }
-        
+
         vorbis_analysis_wrote(vd,sampread);
-        
+
       }
 
       while(vorbis_analysis_blockout(vd,vb)==1){
-        
+
         /* analysis, assume we want to use bitrate management */
         vorbis_analysis(vb,NULL);
         vorbis_bitrate_addblock(vb);
-        
+
         /* weld packets into the bitstream */
         while(vorbis_bitrate_flushpacket(vd,&op))
           ogg_stream_packetin(vo,&op);
-        
+
       }
     }
   }
@@ -1179,7 +1179,7 @@ int main(int argc,char *argv[]){
 
   /* yayness.  Set up Ogg output stream */
   srand(time(NULL));
-  ogg_stream_init(&vo,rand());
+  if(audio)ogg_stream_init(&vo,rand());
   ogg_stream_init(&to,rand()); /* oops, add one ot the above */
 
   /* Set up Theora encoder */
@@ -1369,7 +1369,7 @@ int main(int argc,char *argv[]){
         video_bytesout+=fwrite(videopage.body,1,videopage.body_len,outfile);
         videoflag=0;
         timebase=videotime;
-        
+
       }else{
         /* flush an audio page */
         audio_bytesout+=fwrite(audiopage.header,1,audiopage.header_len,outfile);
@@ -1377,17 +1377,18 @@ int main(int argc,char *argv[]){
         audioflag=0;
         timebase=audiotime;
       }
+      if(timebase > 0)
       {
         int hundredths=(int)(timebase*100-(long)timebase*100);
         int seconds=(long)timebase%60;
         int minutes=((long)timebase/60)%60;
         int hours=(long)timebase/3600;
-        
+
         if(audio_or_video)
           vkbps=(int)rint(video_bytesout*8./timebase*.001);
         else
           akbps=(int)rint(audio_bytesout*8./timebase*.001);
-        
+
         fprintf(stderr,
                 "\r      %d:%02d:%02d.%02d audio: %dkbps video: %dkbps                 ",
                 hours,minutes,seconds,hundredths,akbps,vkbps);
@@ -1404,11 +1405,13 @@ int main(int argc,char *argv[]){
     vorbis_dsp_clear(&vd);
     vorbis_comment_clear(&vc);
     vorbis_info_clear(&vi);
+    if(audio!=stdin)fclose(audio);
   }
   if(video){
     ogg_stream_clear(&to);
     th_encode_free(td);
     th_comment_clear(&tc);
+    if(video!=stdin)fclose(video);
   }
 
   if(outfile && outfile!=stdout)fclose(outfile);
