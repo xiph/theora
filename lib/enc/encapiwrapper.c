@@ -95,9 +95,10 @@ th_enc_ctx *th_encode_alloc(const th_info *_info){
     }
     else{
       if(_info->frame_width>_info->pic_width||
-      _info->frame_height>_info->pic_height){
-       enc->buf=_ogg_malloc((3L*_info->frame_height*_info->frame_width>>1)*
-        sizeof(*enc->buf));
+       _info->frame_height>_info->pic_height){
+        enc->buf=_ogg_malloc((_info->frame_width*_info->frame_height+
+         ((_info->frame_width>>!(_info->pixel_fmt&1))*
+         (_info->frame_height>>!(_info->pixel_fmt&2))<<1))*sizeof(*enc->buf));
       }
       else enc->buf=NULL;
       memcpy(&enc->info,_info,sizeof(enc->info));
