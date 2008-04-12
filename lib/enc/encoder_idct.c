@@ -562,8 +562,11 @@ void dsp_idct_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)
   funcs->IDct10 = IDct10__c;
   funcs->IDct3 = IDct10__c;
 #if defined(USE_ASM)
+  // todo: make mmx encoder idct for MSC one day...
+#if !defined (_MSC_VER)
   if (cpu_flags & OC_CPU_X86_MMX) {
     dsp_mmx_idct_init(funcs);
   }
+#endif
 #endif
 }

@@ -42,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;USE_ASM;DEBUG;"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -129,7 +129,7 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;USE_ASM;"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
@@ -221,7 +221,7 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;USE_ASM"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
@@ -314,7 +314,7 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;USE_ASM"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
@@ -2287,23 +2287,27 @@
 					Name="x86"
 					>
 					<File
-						RelativePath="..\..\..\lib\dec\x86\mmxfrag.c"
+						RelativePath="..\..\..\lib\dec\x86_vc\mmxfrag.c"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\lib\dec\x86\mmxidct.c"
+						RelativePath="..\..\..\lib\dec\x86_vc\mmxloopfilter.c"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\lib\dec\x86\mmxstate.c"
+						RelativePath="..\..\..\lib\dec\x86_vc\mmxidct.c"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\lib\dec\x86\x86int.h"
+						RelativePath="..\..\..\lib\dec\x86_vc\mmxstate.c"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\lib\dec\x86\x86state.c"
+						RelativePath="..\..\..\lib\dec\x86_vc\x86int.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\lib\dec\x86_vc\x86state.c"
 						>
 					</File>
 				</Filter>

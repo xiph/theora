@@ -20,7 +20,11 @@
 #include "../internal.h"
 #include "idct.h"
 #if defined(USE_ASM)
+#if defined(_MSC_VER)
+# include "x86_vc/x86int.h"
+#else
 # include "x86/x86int.h"
+#endif
 #endif
 #if defined(OC_DUMP_IMAGES)
 # include <stdio.h>

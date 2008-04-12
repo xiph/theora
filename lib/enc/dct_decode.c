@@ -1309,8 +1309,11 @@ void dsp_dct_decode_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)
   funcs->FilterVert = FilterVert__c;
   funcs->FilterHoriz = FilterHoriz__c;
 #if defined(USE_ASM)
+  // Todo: Port the dct for MSC one day.
+#if !defined (_MSC_VER)  
   if (cpu_flags & OC_CPU_X86_MMX) {
     dsp_mmx_dct_decode_init(funcs);
   }
+#endif
 #endif
 }
