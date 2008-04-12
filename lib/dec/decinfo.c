@@ -17,6 +17,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include "decint.h"
 
 
@@ -79,10 +80,10 @@ static int oc_info_unpack(oggpack_buffer *_opb,th_info *_info){
   _info->fps_numerator=(ogg_uint32_t)val;
   theorapackB_read(_opb,32,&val);
   _info->fps_denominator=(ogg_uint32_t)val;
-  if(_info->frame_width<=0||_info->frame_height<=0||
+  if(_info->frame_width==0||_info->frame_height==0||
    _info->pic_width+_info->pic_x>_info->frame_width||
    _info->pic_height+_info->pic_y>_info->frame_height||
-   _info->fps_numerator<=0||_info->fps_denominator<=0){
+   _info->fps_numerator==0||_info->fps_denominator==0){
     return TH_EBADHEADER;
   }
   theorapackB_read(_opb,24,&val);
@@ -106,7 +107,7 @@ static int oc_info_unpack(oggpack_buffer *_opb,th_info *_info){
 
 static int oc_comment_unpack(oggpack_buffer *_opb,th_comment *_tc){
   long len;
-  long ncomments;
+  int  i;
   /*Read the vendor string.*/
   len=oc_unpack_length(_opb);
   if(len<0||theorapackB_bytes(_opb)+len>_opb->storage)return TH_EBADHEADER;
@@ -114,25 +115,25 @@ static int oc_comment_unpack(oggpack_buffer *_opb,th_comment *_tc){
   oc_unpack_octets(_opb,_tc->vendor,len);
   _tc->vendor[len]='\0';
   /*Read the user comments.*/
-  ncomments=oc_unpack_length(_opb);
-  if(ncomments>=0&&theorapackB_bytes(_opb)+(ncomments<<2)<=_opb->storage){
-    int i;
-    _tc->comments=(int)ncomments;
-    _tc->comment_lengths=(int *)_ogg_malloc(
-     _tc->comments*sizeof(_tc->comment_lengths[0]));
-    _tc->user_comments=(char **)_ogg_malloc(
-     _tc->comments*sizeof(_tc->user_comments[0]));
-    for(i=0;i<_tc->comments;i++){
-      len=oc_unpack_length(_opb);
-      if(len<0||theorapackB_bytes(_opb)+len>_opb->storage){
-        _tc->comments=i;
-        return TH_EBADHEADER;
-      }
-      _tc->comment_lengths[i]=len;
-      _tc->user_comments[i]=_ogg_malloc((size_t)len+1);
-      oc_unpack_octets(_opb,_tc->user_comments[i],len);
-      _tc->user_comments[i][len]='\0';
+  _tc->comments=(int)oc_unpack_length(_opb);
+  if(_tc->comments<0||_tc->comments>(LONG_MAX>>2)||
+   theorapackB_bytes(_opb)+((long)_tc->comments<<2)<=_opb->storage){
+    return TH_EBADHEADER;
+  }
+  _tc->comment_lengths=(int *)_ogg_malloc(
+   _tc->comments*sizeof(_tc->comment_lengths[0]));
+  _tc->user_comments=(char **)_ogg_malloc(
+   _tc->comments*sizeof(_tc->user_comments[0]));
+  for(i=0;i<_tc->comments;i++){
+    len=oc_unpack_length(_opb);
+    if(len<0||theorapackB_bytes(_opb)+len>_opb->storage){
+      _tc->comments=i;
+      return TH_EBADHEADER;
     }
+    _tc->comment_lengths[i]=len;
+    _tc->user_comments[i]=_ogg_malloc((size_t)len+1);
+    oc_unpack_octets(_opb,_tc->user_comments[i],len);
+    _tc->user_comments[i][len]='\0';
   }
   return theorapackB_read(_opb,0,&len)<0?TH_EBADHEADER:0;
 }
@@ -182,7 +183,7 @@ static int oc_dec_headerin(oggpack_buffer *_opb,th_info *_info,
       if(_tc==NULL)return TH_EFAULT;
       /*We shoud have already decoded the info header, and should not yet have
          decoded the comment header.*/
-      if(_info->frame_width<=0||_tc->vendor!=NULL)return TH_EBADHEADER;
+      if(_info->frame_width==0||_tc->vendor!=NULL)return TH_EBADHEADER;
       ret=oc_comment_unpack(_opb,_tc);
       if(ret<0)th_comment_clear(_tc);
       else ret=2;
@@ -193,7 +194,7 @@ static int oc_dec_headerin(oggpack_buffer *_opb,th_info *_info,
       if(_tc==NULL||_setup==NULL)return TH_EFAULT;
       /*We should have already decoded the info header and the comment header,
          and should not yet have decoded the setup header.*/
-      if(_info->frame_width<=0||_tc->vendor==NULL||*_setup!=NULL){
+      if(_info->frame_width==0||_tc->vendor==NULL||*_setup!=NULL){
         return TH_EBADHEADER;
       }
       setup=(oc_setup_info *)_ogg_calloc(1,sizeof(*setup));
