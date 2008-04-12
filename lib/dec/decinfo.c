@@ -117,7 +117,7 @@ static int oc_comment_unpack(oggpack_buffer *_opb,th_comment *_tc){
   /*Read the user comments.*/
   _tc->comments=(int)oc_unpack_length(_opb);
   if(_tc->comments<0||_tc->comments>(LONG_MAX>>2)||
-   theorapackB_bytes(_opb)+((long)_tc->comments<<2)<=_opb->storage){
+   theorapackB_bytes(_opb)+((long)_tc->comments<<2)>_opb->storage){
     return TH_EBADHEADER;
   }
   _tc->comment_lengths=(int *)_ogg_malloc(
