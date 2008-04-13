@@ -33,10 +33,14 @@
 #endif
 
 #include <stdio.h>
+#if !defined(_WIN32)
+#include <getopt.h>
 #include <unistd.h>
+#else
+#include "getopt.h"
+#endif
 #include <stdlib.h>
 #include <string.h>
-#include <getopt.h>
 #include <time.h>
 #include <math.h>
 #include "theora/theoraenc.h"
