@@ -5,13 +5,13 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2008                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
 
   function:
-    last mod: $Id:
+    last mod: $Id:$
 
  ********************************************************************/
 
@@ -146,19 +146,18 @@ void oc_state_frag_recon_mmx(oc_theora_state *_state,const oc_fragment *_frag,
   else{
     int ref_framei;
     int ref_ystride;
-    int mvoffset0;
-    int mvoffset1;
+    int mvoffsets[2];
     ref_framei=_state->ref_frame_idx[OC_FRAME_FOR_MODE[_frag->mbmode]];
     ref_ystride=_state->ref_frame_bufs[ref_framei][_pli].stride;
-    if(oc_state_get_mv_offsets(_state,&mvoffset0,&mvoffset1,_frag->mv[0],
+    if(oc_state_get_mv_offsets(_state,mvoffsets,_frag->mv[0],
      _frag->mv[1],ref_ystride,_pli)>1){
       oc_frag_recon_inter2_mmx(_frag->buffer[dst_framei],dst_ystride,
-       _frag->buffer[ref_framei]+mvoffset0,ref_ystride,
-       _frag->buffer[ref_framei]+mvoffset1,ref_ystride,res_buf);
+       _frag->buffer[ref_framei]+mvoffset[0],ref_ystride,
+       _frag->buffer[ref_framei]+mvoffset[1],ref_ystride,res_buf);
     }
     else{
 			oc_frag_recon_inter_mmx(_frag->buffer[dst_framei],dst_ystride,
-       _frag->buffer[ref_framei]+mvoffset0,ref_ystride,res_buf);
+       _frag->buffer[ref_framei]+mvoffset[0],ref_ystride,res_buf);
     }
   }
 
