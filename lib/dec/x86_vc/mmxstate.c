@@ -11,7 +11,7 @@
  ********************************************************************
 
   function:
-    last mod: $Id:$
+    last mod: $Id$
 
  ********************************************************************/
 
@@ -152,12 +152,12 @@ void oc_state_frag_recon_mmx(oc_theora_state *_state,const oc_fragment *_frag,
     if(oc_state_get_mv_offsets(_state,mvoffsets,_frag->mv[0],
      _frag->mv[1],ref_ystride,_pli)>1){
       oc_frag_recon_inter2_mmx(_frag->buffer[dst_framei],dst_ystride,
-       _frag->buffer[ref_framei]+mvoffset[0],ref_ystride,
-       _frag->buffer[ref_framei]+mvoffset[1],ref_ystride,res_buf);
+       _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,
+       _frag->buffer[ref_framei]+mvoffsets[1],ref_ystride,res_buf);
     }
     else{
 			oc_frag_recon_inter_mmx(_frag->buffer[dst_framei],dst_ystride,
-       _frag->buffer[ref_framei]+mvoffset[0],ref_ystride,res_buf);
+       _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,res_buf);
     }
   }
 
