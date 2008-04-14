@@ -63,7 +63,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="libogg.lib libvorbis.lib libtheora.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\debug;..\..\..\..\libvorbis\win32\VS2005\debug;..\debug;"
+				AdditionalLibraryDirectories="&quot;..\..\..\..\libogg\win32\VS2005\$(ConfigurationName)&quot;;&quot;..\..\..\..\libvorbis\win32\VS2005\$(ConfigurationName)&quot;;&quot;..\$(ConfigurationName)&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -142,7 +142,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="libogg.lib libvorbis.lib libtheora.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\release;..\..\..\..\libvorbis\win32\VS2005\release;..\release;"
+				AdditionalLibraryDirectories="&quot;..\..\..\..\libogg\win32\VS2005\$(ConfigurationName)&quot;;&quot;..\..\..\..\libvorbis\win32\VS2005\$(ConfigurationName)&quot;;&quot;..\$(ConfigurationName)&quot;"
 				GenerateDebugInformation="false"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -177,6 +177,10 @@
 		</Configuration>
 	</Configurations>
 	<References>
+		<ProjectReference
+			ReferencedProjectIdentifier="{653F3841-3F26-49B9-AFCF-091DB4B67031}"
+			RelativePathToProject=".\libtheora\libtheora.vcproj"
+		/>
 	</References>
 	<Files>
 		<File

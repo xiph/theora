@@ -28,3 +28,15 @@ EXPORTS
 	theora_comment_query
 	theora_comment_query_count
 	theora_comment_clear
+
+	th_comment_init
+	th_comment_clear
+	th_encode_alloc
+	th_encode_ctl
+	th_encode_flushheader
+	th_encode_free
+	th_encode_packetout
+	th_encode_ycbcr_in
+	th_granule_time
+	th_info_clear
+	th_info_init
