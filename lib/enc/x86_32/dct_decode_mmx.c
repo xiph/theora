@@ -75,20 +75,19 @@ static void FilterHoriz__mmx(unsigned char * PixelPtr,
     " packuswb %%mm0,%%mm5\n"   /* mm5 = x x x x newpix1 */             \
     " packuswb %%mm0,%%mm7\n"   /* mm7 = x x x x newpix2 */             \
     " punpcklbw %%mm7,%%mm5\n"  /* 2 1 2 1 2 1 2 1 */                   \
-    " movd %%mm5,%%eax\n"       /* eax = newpix21 */                    \
-    " movw %%ax,1(%0)\n"                                                \
+    " movd %%mm5,%%edi\n"       /* edi = newpix21 */                    \
+    " movw %%di,1(%0)\n"                                                \
     " psrlq $32,%%mm5\n"        /* why is so big stall here ? */        \
-    " shrl $16,%%eax\n"                                                 \
-    " lea 1(%0,%1,2),%%edi\n"                                           \
-    " movw %%ax,1(%0,%1,1)\n"                                           \
-    " movd %%mm5,%%eax\n"       /* eax = newpix21 high part */          \
+    " shrl $16,%%edi\n"                                                 \
+    " movw %%di,1(%0,%1,1)\n"                                           \
+    " movd %%mm5,%%edi\n"       /* eax = newpix21 high part */          \
     " lea (%1,%1,2),%%esi\n"                                            \
-    " movw %%ax,(%%edi)\n"                                              \
-    " shrl $16,%%eax\n"                                                 \
-    " movw %%ax,1(%0,%%esi)\n"                                          \
+    " movw %%di,1(%0,%1,2)\n"                                           \
+    " shrl $16,%%edi\n"                                                 \
+    " movw %%di,1(%0,%%esi)\n"                                          \
     :                                                                   \
     : "r" (PixelPtr), "r" (LineLength), "r" (BoundingValuePtr-256)      \
-    : "esi", "edi" , "memory", "eax"                                    \
+    : "esi", "edi" , "memory"                                           \
     );
 
     OC_LOOP_H_4x4
