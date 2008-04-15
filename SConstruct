@@ -8,6 +8,7 @@ def path(prefix, list): return [join(prefix, x) for x in list]
 
 encoder_sources = """
         enc/dct_encode.c
+        enc/encapiwrapper.c
         enc/encode.c
         enc/encoder_huffman.c
         enc/encoder_idct.c
@@ -29,6 +30,7 @@ encoder_sources = """
 
 decoder_sources = """
         dec/apiwrapper.c \
+	dec/bitwise.c \
         dec/decapiwrapper.c \
         dec/decinfo.c \
         dec/decode.c \
@@ -42,6 +44,8 @@ decoder_sources = """
         dec/state.c
 """
 
+libtheoradec_Sources = Split(decoder_sources + "cpu.c")
+libtheoraenc_Sources = Split(encoder_sources + "cpu.c")
 libtheora_Sources = Split(decoder_sources + encoder_sources + "cpu.c")
 
 env = Environment()
@@ -160,14 +164,27 @@ env = conf.Finish()
 env.Append(CPPPATH=['lib', 'include', 'lib/enc'])
 env.ParseConfig('pkg-config --cflags --libs ogg')
 
-libtheora_a = env.Library('lib/theora', path('lib', libtheora_Sources))
-libtheora_so = env.SharedLibrary('lib/theora', path('lib', libtheora_Sources))
+libtheoradec_a = env.Library('lib/theoradec',
+	path('lib', libtheoradec_Sources))
+libtheoradec_so = env.SharedLibrary('lib/theoradec',
+	path('lib', libtheoradec_Sources))
+
+libtheoraenc_a = env.Library('lib/theoraenc',
+	path('lib', libtheoraenc_Sources))
+libtheoraenc_so = env.SharedLibrary('lib/theoraenc',
+	path('lib', libtheoraenc_Sources))
+
+libtheora_a = env.Library('lib/theora',
+	path('lib', libtheora_Sources))
+libtheora_so = env.SharedLibrary('lib/theora',
+	path('lib', libtheora_Sources))
 
 #installing
 prefix='/usr'
 lib_dir = prefix + '/lib'
 env.Alias('install', prefix)
 env.Install(lib_dir, [libtheora_a, libtheora_so])
+env.Install(lib_dir, [libtheoradec_a, libtheoradec_so])
 
 # example programs
 dump_video = env.Copy()
@@ -177,7 +194,8 @@ dump_video.Program('examples/dump_video', path('examples', dump_video_Sources))
 if have_vorbis:
   encex = dump_video.Copy()
   encex.ParseConfig('pkg-config --cflags --libs vorbisenc vorbis')
-  encex_Sources = Split("""encoder_example.c ../lib/libtheora.a""")
+  encex_Sources = Split("""encoder_example.c
+	../lib/libtheoraenc.a ../lib/libtheoradec.a""")
   encex.Program('examples/encoder_example', path('examples', encex_Sources))
 
   if build_player_example:
