@@ -1,16 +1,20 @@
 libtheora 1.0beta3 (unreleased)
 
  - Build new libtheoradec and libtheoraenc libraries
-   supporting the new API from theora-exp.
+   supporting the new API from theora-exp. This API should
+   not be considered stable yet.
  - Change granule_frame() to return an index as documented.
    This is a change of behaviour from 1.0beta1.
  - Document that granule_time() returns the end of the 
    presentation interval. 
- - Additional MMX improvements by Nils Pipenbrinck.
  - Use a custom copy of the libogg bitpacker in the decoder
    to avoid function call overhead.
+ - MMX code improved and ported to MSVC.
+ - Fix a problem with the MMX code on SELinux 
  - Fix a problem with decoder quantizer initialization.
  - Fix a page queue problem with png2theora.
+ - Improved robustness.
+ - Updated VS2005 project files.
  - Dropped build support for Microsoft VS2003.
  - Dropped build support for the unreleased libogg2.
  - Added the specification to the autotools build.
