@@ -44,7 +44,7 @@ granulepos_test_encode (int frequency, int auto_p)
   ogg_packet op;
   long long int last_granule = -1;
 
-  INFO ("+ Initializing theora_info struct");
+/*  INFO ("+ Initializing theora_info struct"); */
   theora_info_init (&ti);
 
   ti.width = 32;
@@ -76,7 +76,7 @@ granulepos_test_encode (int frequency, int auto_p)
   ti.keyframe_mindistance = MIN(8, frequency);
   ti.noise_sensitivity = 1;
 
-  INFO ("+ Initializing theora_state for encoding");
+/*  INFO ("+ Initializing theora_state for encoding"); */
   result = theora_encode_init (&th, &ti);
   if (result == OC_DISABLED) {
     INFO ("+ Clearing theora_state");
@@ -85,7 +85,7 @@ granulepos_test_encode (int frequency, int auto_p)
     FAIL ("negative return code initializing encoder");
   }
 
-  INFO ("+ Setting up dummy 4:2:0 frame data");
+/*  INFO ("+ Setting up dummy 4:2:0 frame data"); */
   framedata = calloc(ti.height, ti.width);
   yuv.y_width = ti.width;
   yuv.y_height = ti.height;
@@ -112,29 +112,29 @@ granulepos_test_encode (int frequency, int auto_p)
     last_granule = op.granulepos;
     keyframe = op.granulepos >> shift;
     keydist = op.granulepos - (keyframe << shift);
-    if ((keyframe + keydist) != frame + 1)
-      FAIL ("encoder granulepos does not map to the correct frame number");
     tframe = theora_granule_frame (&th, op.granulepos);
-    if (tframe != frame)
-      FAIL ("theora_granule_frame returned incorrect results");
     ttime = theora_granule_time(&th, op.granulepos);
-    if (fabs(rate*(frame+1) - ttime) > 1.0e-6)
-      FAIL ("theora_granule_time returned incorrect results");
 #if DEBUG
     printf("++ frame %d granulepos %lld %d:%d %d %.3lfs\n", 
 	frame, (long long int)op.granulepos, keyframe, keydist,
 	tframe, theora_granule_time (&th, op.granulepos));
 #endif
+    if ((keyframe + keydist) != frame + 1)
+      FAIL ("encoder granulepos does not map to the correct frame number");
+    if (tframe != frame)
+      FAIL ("theora_granule_frame returned incorrect results");
+    if (fabs(rate*(frame+1) - ttime) > 1.0e-6)
+      FAIL ("theora_granule_time returned incorrect results");
   }
 
   /* clean up */
-  INFO ("+ Freeing dummy frame data");
+/*  INFO ("+ Freeing dummy frame data"); */
   free (framedata);
 
-  INFO ("+ Clearing theora_info struct");
+/*  INFO ("+ Clearing theora_info struct"); */
   theora_info_clear (&ti);
 
-  INFO ("+ Clearing theora_state");
+/*  INFO ("+ Clearing theora_state"); */
   theora_clear (&th);
 
   return 0;

@@ -44,7 +44,7 @@ granulepos_test_encode (int frequency)
   ogg_packet op;
   long long int last_granule = -1;
 
-  INFO ("+ Initializing th_info struct");
+/*  INFO ("+ Initializing th_info struct"); */
   th_info_init (&ti);
 
   ti.frame_width = 32;
@@ -62,7 +62,7 @@ granulepos_test_encode (int frequency)
   ti.quality = 16;
   ti.keyframe_granule_shift=ilog(frequency);
 
-  INFO ("+ Allocating encoder context");
+/*  INFO ("+ Allocating encoder context"); */
   te = th_encode_alloc(&ti);
   if (te == NULL) {
     INFO ("+ Clearing th_info");
@@ -70,7 +70,7 @@ granulepos_test_encode (int frequency)
     FAIL ("negative return code initializing encoder");
   }
 
-  INFO ("+ Setting up dummy 4:2:0 frame data");
+/*  INFO ("+ Setting up dummy 4:2:0 frame data"); */
   framedata = calloc(ti.frame_height, ti.frame_width);
   yuv[0].width = ti.frame_width;
   yuv[0].height = ti.frame_height;
@@ -89,7 +89,7 @@ granulepos_test_encode (int frequency)
   shift = ti.keyframe_granule_shift;
   rate = (double)ti.fps_denominator/ti.fps_numerator;
   for (frame = 0; frame < frequency * 2 + 1; frame++) {
-    result = th_encode_ycbcr_in (te, &yuv);
+    result = th_encode_ycbcr_in (te, yuv);
     if (result < 0) {
       printf("th_encode_ycbcr_in() returned %d\n", result);
       FAIL ("negative error code submitting frame for compression");
@@ -100,29 +100,32 @@ granulepos_test_encode (int frequency)
     last_granule = op.granulepos;
     keyframe = op.granulepos >> shift;
     keydist = op.granulepos - (keyframe << shift);
-    if ((keyframe + keydist) != frame + 1)
-      FAIL ("encoder granulepos does not map to the correct frame number");
     tframe = th_granule_frame (te, op.granulepos);
-    if (tframe != frame)
-      FAIL ("th_granule_frame returned incorrect results");
     ttime = th_granule_time(te, op.granulepos);
-    if (fabs(rate*(frame+1) - ttime) > 1.0e-6)
-      FAIL ("th_granule_time returned incorrect results");
 #if DEBUG
     printf("++ frame %d granulepos %lld %d:%d %d %.3lfs\n", 
 	frame, (long long int)op.granulepos, keyframe, keydist,
 	tframe, th_granule_time (te, op.granulepos));
 #endif
+    /* granulepos stores the frame count */
+    if ((keyframe + keydist) != frame + 1)
+      FAIL ("encoder granulepos does not map to the correct frame number");
+    /* th_granule_frame() returns the frame index */
+    if (tframe != frame)
+      FAIL ("th_granule_frame() returned incorrect results");
+    /* th_granule_time() returns the end time */
+    if (fabs(rate*(frame+1) - ttime) > 1.0e-6)
+      FAIL ("th_granule_time() returned incorrect results");
   }
 
   /* clean up */
-  INFO ("+ Freeing dummy frame data");
+/*  INFO ("+ Freeing dummy frame data"); */
   free(framedata);
 
-  INFO ("+ Clearing th_info struct");
+/*  INFO ("+ Clearing th_info struct"); */
   th_info_clear(&ti);
 
-  INFO ("+ Freeing encoder context");
+/*  INFO ("+ Freeing encoder context"); */
   th_encode_free(te);
 
   return 0;
