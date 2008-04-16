@@ -1,4 +1,4 @@
-libtheora 1.0beta3 (unreleased)
+libtheora 1.0beta3 (2008 April 16)
 
  - Build new libtheoradec and libtheoraenc libraries
    supporting the new API from theora-exp. This API should
