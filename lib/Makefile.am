@@ -151,7 +151,7 @@ libtheora_la_SOURCES = \
 	$(decoder_sources) \
 	$(encoder_arch_sources) \
 	$(encoder_sources) \
-  Version_script-old
+  Version_script
 libtheora_la_LDFLAGS = \
   -version-info @TH_LIB_CURRENT@:@TH_LIB_REVISION@:@TH_LIB_AGE@ \
   @THEORA_LDFLAGS@ $(OGG_LIBS)
