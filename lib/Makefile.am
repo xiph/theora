@@ -18,7 +18,8 @@ EXTRA_DIST = \
         enc/x86_32_vs/recon_mmx.c \
         enc/dct_encode.c \
         enc/encode.c \
-        enc/encoder_toplevel.c
+        enc/encoder_toplevel.c \
+        dec/x86_vc
 
 lib_LTLIBRARIES = libtheoradec.la libtheoraenc.la libtheora.la
 
