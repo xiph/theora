@@ -78,6 +78,7 @@ dec/quant.h \
 
 LIBTHEORADEC_CSOURCES = \
 dec/apiwrapper.c \
+dec/bitwise.c \
 dec/decapiwrapper.c \
 dec/decinfo.c \
 dec/decode.c \
@@ -107,11 +108,11 @@ dec/huffdec.h \
 LIBTHEORAENC_CSOURCES = \
 dec/internal.c \
 enc/blockmap.c \
-enc/common.c \
 enc/dct.c \
 enc/dct_decode.c \
 enc/dct_encode.c \
 enc/dsp.c \
+enc/encapiwrapper.c \
 enc/encode.c \
 enc/encoder_huffman.c \
 enc/encoder_idct.c \
