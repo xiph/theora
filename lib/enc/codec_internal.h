@@ -152,10 +152,10 @@ typedef struct superblock {
   int m[16]; // hilbert order; 4 for Y, 4 for UZ in 4:4:4, 8 for UV in 4:2:2, 16 for UV in 4:2:0
 } superblock_t;
 
-typedef ogg_int16_t    quant_table[64];
+typedef ogg_int16_t    quant_table[64]; 
 typedef quant_table    quant_tables[64];
 
-typedef ogg_int32_t    iquant_table[64];
+typedef ogg_int32_t    iquant_table[64];  
 typedef iquant_table   iquant_tables[64];
 
 typedef struct {
@@ -255,6 +255,9 @@ typedef struct CP_INSTANCE {
 
   /********************************************************************/
   /* Fragment SAD->bitrate estimation tracking metrics */
+  unsigned char    rho_lookup[2][3][64][OC_QUANT_MAX>>2];
+  ogg_uint32_t     rho_count[65]; 
+
 #ifdef COLLECT_METRICS
   int             *frag_mbi;
   int             *frag_sad;

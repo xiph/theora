@@ -487,6 +487,186 @@ static void MBSAD420(CP_INSTANCE *cpi, int mbi, mv_t last, mv_t last2,
     sad[7][2][0] = BInterSAD(cpi,fi,2,0,ch);
 }
 
+#include "quant_lookup.h"
+static int find_nonzero_transition(quant_tables *q, int pos, ogg_int16_t val){
+  int i;
+  
+  val = (abs(val)<<1);
+
+  if( val < (*q)[32][pos]){
+    if( val < (*q)[48][pos]){
+      if( val < (*q)[56][pos]){
+	if( val < (*q)[60][pos]){
+	  if( val < (*q)[62][pos]){
+	    if( val < (*q)[63][pos])return 64;
+	    return 63;
+	  }else{
+	    if( val < (*q)[61][pos])return 62;
+	    return 61;
+	  }
+	}else{
+	  if( val < (*q)[58][pos]){
+	    if( val < (*q)[59][pos])return 60;
+	    return 59;
+	  }else{
+	    if( val < (*q)[57][pos])return 58;
+	    return 57;
+	  }
+	}
+      }else{
+	if( val < (*q)[52][pos]){
+	  if( val < (*q)[54][pos]){
+	    if( val < (*q)[55][pos])return 56;
+	    return 55;
+	  }else{
+	    if( val < (*q)[53][pos])return 54;
+	    return 53;
+	  }
+	}else{
+	  if( val < (*q)[50][pos]){
+	    if( val < (*q)[51][pos])return 52;
+	    return 51;
+	  }else{
+	    if( val < (*q)[49][pos])return 50;
+	    return 49;
+	  }
+	}
+      }
+    }else{
+      if( val < (*q)[40][pos]){
+	if( val < (*q)[44][pos]){
+	  if( val < (*q)[46][pos]){
+	    if( val < (*q)[47][pos])return 48;
+	    return 47;
+	  }else{
+	    if( val < (*q)[45][pos])return 46;
+	    return 45;
+	  }
+	}else{
+	  if( val < (*q)[42][pos]){
+	    if( val < (*q)[43][pos])return 44;
+	    return 43;
+	  }else{
+	    if( val < (*q)[41][pos])return 42;
+	    return 41;
+	  }
+	}
+      }else{
+	if( val < (*q)[36][pos]){
+	  if( val < (*q)[38][pos]){
+	    if( val < (*q)[39][pos])return 40;
+	    return 39;
+	  }else{
+	    if( val < (*q)[37][pos])return 38;
+	    return 37;
+	  }
+	}else{
+	  if( val < (*q)[34][pos]){
+	    if( val < (*q)[35][pos])return 36;
+	    return 35;
+	  }else{
+	    if( val < (*q)[33][pos])return 34;
+	    return 33;
+	  }
+	}
+      }
+    }
+  }else{
+    if( val < (*q)[16][pos]){
+      if( val < (*q)[24][pos]){
+	if( val < (*q)[28][pos]){
+	  if( val < (*q)[30][pos]){
+	    if( val < (*q)[31][pos])return 32;
+	    return 31;
+	  }else{
+	    if( val < (*q)[29][pos])return 30;
+	    return 29;
+	  }
+	}else{
+	  if( val < (*q)[26][pos]){
+	    if( val < (*q)[27][pos])return 28;
+	    return 27;
+	  }else{
+	    if( val < (*q)[25][pos])return 26;
+	    return 25;
+	  }
+	}
+      }else{
+	if( val < (*q)[20][pos]){
+	  if( val < (*q)[22][pos]){
+	    if( val < (*q)[23][pos])return 24;
+	    return 23;
+	  }else{
+	    if( val < (*q)[21][pos])return 22;
+	    return 21;
+	  }
+	}else{
+	  if( val < (*q)[18][pos]){
+	    if( val < (*q)[19][pos])return 20;
+	    return 19;
+	  }else{
+	    if( val < (*q)[17][pos])return 18;
+	    return 17;
+	  }
+	}
+      }
+    }else{
+      if( val < (*q)[8][pos]){
+	if( val < (*q)[12][pos]){
+	  if( val < (*q)[14][pos]){
+	    if( val < (*q)[15][pos])return 16;
+	    return 15;
+	  }else{
+	    if( val < (*q)[13][pos])return 14;
+	    return 13;
+	  }
+	}else{
+	  if( val < (*q)[10][pos]){
+	    if( val < (*q)[11][pos])return 12;
+	    return 11;
+	  }else{
+	    if( val < (*q)[9][pos])return 10;
+	    return 9;
+	  }
+	}
+      }else{
+	if( val < (*q)[4][pos]){
+	  if( val < (*q)[6][pos]){
+	    if( val < (*q)[7][pos])return 8;
+	    return 7;
+	  }else{
+	    if( val < (*q)[5][pos])return 6;
+	    return 5;
+	  }
+	}else{
+	  if( val < (*q)[2][pos]){
+	    if( val < (*q)[3][pos])return 4;
+	    return 3;
+	  }else{
+	    if( val < (*q)[1][pos])return 2;
+	    if( val < (*q)[0][pos])return 1;
+	  }
+	}
+      }
+    }
+  }
+
+  return 0;
+}
+
+/* rho computation and quant/dequant should be in bed together.  They're not... yet */
+static void collect_rho(CP_INSTANCE *cpi, int mode, int plane, ogg_int16_t *buffer){
+  int pos[64];
+  int i;
+  int interp = (mode != CODE_INTRA);
+  quant_tables *q = &cpi->quant_tables[interp][plane];
+
+  for(i=0;i<64;i++){
+    int ii = zigzag_index[i];
+    pos[ii] = find_nonzero_transition(q,ii,buffer[i]);
+  }
+}
+
 static void TQB (CP_INSTANCE *cpi, int mode, int fi, ogg_int32_t *iq, ogg_int16_t *q, mv_t mv, int plane){
   if ( cpi->frag_coded[fi] ) {
     ogg_int16_t buffer[64];
@@ -544,7 +724,8 @@ static void TQB (CP_INSTANCE *cpi, int mode, int fi, ogg_int32_t *iq, ogg_int16_
     dsp_fdct_short(cpi->dsp, data, buffer);
     
     /* collect rho metrics */
-    
+    collect_rho(cpi, mode, plane, buffer);
+
     /* quantize */
     quantize (cpi, iq, buffer, data);
     cpi->frag_dc[fi] = cpi->frag_dct[fi].data[0];
