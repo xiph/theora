@@ -218,20 +218,24 @@ static void EncodeTokenGroup(CP_INSTANCE *cpi,
   }
 }
 
-static void EncodeTokenList (CP_INSTANCE *cpi, int huff[4]) {
+static long EncodeTokenList (CP_INSTANCE *cpi, int huff[4]) {
   int i;
   oggpack_buffer *opb=cpi->oggbuffer;
+  long bits0,bits1;
 
   /* DC tokens aren't special, they just come first */
   oggpackB_write( opb, huff[0] - DC_HUFF_OFFSET, DC_HUFF_CHOICE_BITS );
   oggpackB_write( opb, huff[1] - DC_HUFF_OFFSET, DC_HUFF_CHOICE_BITS );
 
+  bits0 = oggpackB_bits(opb);
   EncodeTokenGroup(cpi, 0,  huff[0], huff[1]);
+  bits0 = oggpackB_bits(opb)-bits0;
 
   /* AC tokens */
   oggpackB_write( opb, huff[2] - AC_HUFF_OFFSET, AC_HUFF_CHOICE_BITS );
   oggpackB_write( opb, huff[3] - AC_HUFF_OFFSET, AC_HUFF_CHOICE_BITS );
 
+  bits1 = oggpackB_bits(opb);
   for(i=1;i<=AC_TABLE_2_THRESH;i++)
     EncodeTokenGroup(cpi, i,  huff[2], huff[3]);
 
@@ -243,7 +247,9 @@ static void EncodeTokenList (CP_INSTANCE *cpi, int huff[4]) {
 
   for(;i<BLOCK_SIZE;i++)
     EncodeTokenGroup(cpi, i,  huff[2]+AC_HUFF_CHOICES*3, huff[3]+AC_HUFF_CHOICES*3);
+  bits1 = oggpackB_bits(opb)-bits1;
 
+  return bits1;
 }
 
 static const unsigned char NoOpModeWords[8] = {0,1,2,3,4,5,6,7};
@@ -367,7 +373,7 @@ void EncodeData(CP_INSTANCE *cpi){
 #ifdef COLLECT_METRICS
   ModeMetrics(cpi,tokenhuff);
 #endif
-  EncodeTokenList(cpi, tokenhuff);
+  long bitsDCT = EncodeTokenList(cpi, tokenhuff);
   bits = oggpackB_bits(cpi->oggbuffer);
   
   ReconRefFrames(cpi);
