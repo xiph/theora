@@ -153,10 +153,10 @@ typedef struct superblock {
 } superblock_t;
 
 typedef ogg_int16_t    quant_table[64]; 
-typedef quant_table    quant_tables[64];
+typedef quant_table    quant_tables[64]; /* [zigzag][qi] */
 
 typedef ogg_int32_t    iquant_table[64];  
-typedef iquant_table   iquant_tables[64];
+typedef iquant_table   iquant_tables[64]; /* [qi][coeff] */
 
 typedef struct {
   const unsigned char *mode_bits[8];
@@ -255,7 +255,6 @@ typedef struct CP_INSTANCE {
 
   /********************************************************************/
   /* Fragment SAD->bitrate estimation tracking metrics */
-  unsigned char    rho_lookup[2][3][64][OC_QUANT_MAX>>2];
   ogg_uint32_t     rho_count[65]; 
 
 #ifdef COLLECT_METRICS
@@ -299,11 +298,6 @@ extern void IDct1( ogg_int16_t *InputData,
                    ogg_int16_t *OutputData );
 
 extern void ReconRefFrames (CP_INSTANCE *cpi);
-
-extern void quantize( CP_INSTANCE *cpi,
-		      ogg_int32_t *iquant_table,
-                      ogg_int16_t *DCT_block,
-                      ogg_int16_t *quantized_list);
 
 extern void fdct_short ( ogg_int16_t *InputData, ogg_int16_t *OutputData );
 

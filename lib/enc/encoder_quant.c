@@ -163,14 +163,14 @@ void InitQTables( CP_INSTANCE *cpi ){
 	  /*Scale DC the coefficient from the proper table.*/
 	  q=((ogg_uint32_t)qinfo->dc_scale[qi]*base[0]/100)<<2;
 	  q=OC_CLAMPI(OC_DC_QUANT_MIN[qti],q,OC_QUANT_MAX);
-	  cpi->quant_tables[qti][pli][qi][0]=(ogg_uint16_t)q;
+	  cpi->quant_tables[qti][pli][0][qi]=(ogg_uint16_t)q;
 	  cpi->iquant_tables[qti][pli][qi][0]=(ogg_int32_t)(((1<<31))/q+1);
 
 	  /*Now scale AC coefficients from the proper table.*/
 	  for(ci=1;ci<64;ci++){
 	    q=((ogg_uint32_t)qinfo->ac_scale[qi]*base[ci]/100)<<2;
 	    q=OC_CLAMPI(OC_AC_QUANT_MIN[qti],q,OC_QUANT_MAX);
-	    cpi->quant_tables[qti][pli][qi][zigzag_index[ci]]=(ogg_uint16_t)q;
+	    cpi->quant_tables[qti][pli][zigzag_index[ci]][qi]=(ogg_uint16_t)q;
 	    cpi->iquant_tables[qti][pli][qi][ci]=(ogg_int32_t)(((1<<31))/q+1);
 	  }
 	  
@@ -186,31 +186,6 @@ void InitQTables( CP_INSTANCE *cpi ){
 	  }
 	}
       }
-    }
-  }
-}
-
-void quantize( CP_INSTANCE *cpi,
-	       ogg_int32_t *q,
-               ogg_int16_t *in,
-               ogg_int16_t *out){
-  int i;
-
-  /* Set the quantized_list to default to 0 */
-  memset(out, 0, 64 * sizeof(*out) );
-  
-  /* Note that we add half divisor to effect rounding on positive number */
-  for( i = 0; i < 64; i++) {
-    // the extra precision version to perfectly match dequant and thus rho metrics.  It's about a 2% speed penalty. 
-    int val = (((q[i]>>15)*in[i]) + (1<<15) + (((q[i]&0x7fff)*in[i])>>15)) >>16;
-    if(val==0){
-	out[zigzag_index[i]] = 0;
-    }else if(val>511){
-      out[zigzag_index[i]] = 511;
-    }else if (val<-511){
-      out[zigzag_index[i]] = -511;
-    }else{
-      out[zigzag_index[i]] = val;
     }
   }
 }

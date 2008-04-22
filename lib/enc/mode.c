@@ -249,7 +249,7 @@ static int BINMAP(ogg_int32_t *lookup,int sad){
   return y[0] + ((ydel*xdel)>>OC_SAD_SHIFT);
 }
 
-static signed char mvmap[2][63] = {
+static const int mvmap[2][63] = {
   {     -15,-15,-14, -14,-13,-13,-12, -12,-11,-11,-10, -10, -9, -9, -8,
      -8, -7, -7, -6,  -6, -5, -5, -4,  -4, -3, -3, -2,  -2, -1, -1,  0,
       0,  0,  1,  1,   2,  2,  3,  3,   4,  4,  5,  5,   6,  6,  7,  7, 
@@ -260,7 +260,7 @@ static signed char mvmap[2][63] = {
       4,  4,  4,  4,   5,  5,  5,  5,   6,  6,  6,  6,   7,  7,  7,  7 }
 };
 
-static signed char mvmap2[2][63] = {
+static const int mvmap2[2][63] = {
   {   -1, 0,-1,  0,-1, 0,-1,  0,-1, 0,-1,  0,-1, 0,-1,
     0,-1, 0,-1,  0,-1, 0,-1,  0,-1, 0,-1,  0,-1, 0,-1,
     0, 1, 0, 1,  0, 1, 0, 1,  0, 1, 0, 1,  0, 1, 0, 1,
@@ -488,187 +488,19 @@ static void MBSAD420(CP_INSTANCE *cpi, int mbi, mv_t last, mv_t last2,
 }
 
 #include "quant_lookup.h"
-static int find_nonzero_transition(quant_tables *q, int pos, ogg_int16_t val){
+static int find_nonzero_transition(ogg_int16_t *q, ogg_int16_t in){
   int i;
-  
-  val = (abs(val)<<1);
-
-  if( val < (*q)[32][pos]){
-    if( val < (*q)[48][pos]){
-      if( val < (*q)[56][pos]){
-	if( val < (*q)[60][pos]){
-	  if( val < (*q)[62][pos]){
-	    if( val < (*q)[63][pos])return 64;
-	    return 63;
-	  }else{
-	    if( val < (*q)[61][pos])return 62;
-	    return 61;
-	  }
-	}else{
-	  if( val < (*q)[58][pos]){
-	    if( val < (*q)[59][pos])return 60;
-	    return 59;
-	  }else{
-	    if( val < (*q)[57][pos])return 58;
-	    return 57;
-	  }
-	}
-      }else{
-	if( val < (*q)[52][pos]){
-	  if( val < (*q)[54][pos]){
-	    if( val < (*q)[55][pos])return 56;
-	    return 55;
-	  }else{
-	    if( val < (*q)[53][pos])return 54;
-	    return 53;
-	  }
-	}else{
-	  if( val < (*q)[50][pos]){
-	    if( val < (*q)[51][pos])return 52;
-	    return 51;
-	  }else{
-	    if( val < (*q)[49][pos])return 50;
-	    return 49;
-	  }
-	}
-      }
-    }else{
-      if( val < (*q)[40][pos]){
-	if( val < (*q)[44][pos]){
-	  if( val < (*q)[46][pos]){
-	    if( val < (*q)[47][pos])return 48;
-	    return 47;
-	  }else{
-	    if( val < (*q)[45][pos])return 46;
-	    return 45;
-	  }
-	}else{
-	  if( val < (*q)[42][pos]){
-	    if( val < (*q)[43][pos])return 44;
-	    return 43;
-	  }else{
-	    if( val < (*q)[41][pos])return 42;
-	    return 41;
-	  }
-	}
-      }else{
-	if( val < (*q)[36][pos]){
-	  if( val < (*q)[38][pos]){
-	    if( val < (*q)[39][pos])return 40;
-	    return 39;
-	  }else{
-	    if( val < (*q)[37][pos])return 38;
-	    return 37;
-	  }
-	}else{
-	  if( val < (*q)[34][pos]){
-	    if( val < (*q)[35][pos])return 36;
-	    return 35;
-	  }else{
-	    if( val < (*q)[33][pos])return 34;
-	    return 33;
-	  }
-	}
-      }
-    }
-  }else{
-    if( val < (*q)[16][pos]){
-      if( val < (*q)[24][pos]){
-	if( val < (*q)[28][pos]){
-	  if( val < (*q)[30][pos]){
-	    if( val < (*q)[31][pos])return 32;
-	    return 31;
-	  }else{
-	    if( val < (*q)[29][pos])return 30;
-	    return 29;
-	  }
-	}else{
-	  if( val < (*q)[26][pos]){
-	    if( val < (*q)[27][pos])return 28;
-	    return 27;
-	  }else{
-	    if( val < (*q)[25][pos])return 26;
-	    return 25;
-	  }
-	}
-      }else{
-	if( val < (*q)[20][pos]){
-	  if( val < (*q)[22][pos]){
-	    if( val < (*q)[23][pos])return 24;
-	    return 23;
-	  }else{
-	    if( val < (*q)[21][pos])return 22;
-	    return 21;
-	  }
-	}else{
-	  if( val < (*q)[18][pos]){
-	    if( val < (*q)[19][pos])return 20;
-	    return 19;
-	  }else{
-	    if( val < (*q)[17][pos])return 18;
-	    return 17;
-	  }
-	}
-      }
-    }else{
-      if( val < (*q)[8][pos]){
-	if( val < (*q)[12][pos]){
-	  if( val < (*q)[14][pos]){
-	    if( val < (*q)[15][pos])return 16;
-	    return 15;
-	  }else{
-	    if( val < (*q)[13][pos])return 14;
-	    return 13;
-	  }
-	}else{
-	  if( val < (*q)[10][pos]){
-	    if( val < (*q)[11][pos])return 12;
-	    return 11;
-	  }else{
-	    if( val < (*q)[9][pos])return 10;
-	    return 9;
-	  }
-	}
-      }else{
-	if( val < (*q)[4][pos]){
-	  if( val < (*q)[6][pos]){
-	    if( val < (*q)[7][pos])return 8;
-	    return 7;
-	  }else{
-	    if( val < (*q)[5][pos])return 6;
-	    return 5;
-	  }
-	}else{
-	  if( val < (*q)[2][pos]){
-	    if( val < (*q)[3][pos])return 4;
-	    return 3;
-	  }else{
-	    if( val < (*q)[1][pos])return 2;
-	    if( val < (*q)[0][pos])return 1;
-	  }
-	}
-      }
-    }
-  }
-
-  return 0;
+  int val = (abs((int)in)<<1);
+  for(i=63;i>=0;i--)
+    if( val < q[i])break;
+  return i+1;
 }
 
-/* rho computation and quant/dequant should be in bed together.  They're not... yet */
-static void collect_rho(CP_INSTANCE *cpi, int mode, int plane, ogg_int16_t *buffer){
-  int pos[64];
-  int i;
-  int interp = (mode != CODE_INTRA);
-  quant_tables *q = &cpi->quant_tables[interp][plane];
-
-  for(i=0;i<64;i++){
-    int ii = zigzag_index[i];
-    pos[ii] = find_nonzero_transition(q,ii,buffer[i]);
-  }
-}
-
-static void TQB (CP_INSTANCE *cpi, int mode, int fi, ogg_int32_t *iq, ogg_int16_t *q, mv_t mv, int plane){
+static void TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int16_t re_q[2][3][64], int *rho_count){
   if ( cpi->frag_coded[fi] ) {
+    int qi = cpi->BaseQ; /* temporary */;
+    int inter = (mode != CODE_INTRA);
+    ogg_int32_t *iq = cpi->iquant_tables[inter][plane][qi];
     ogg_int16_t buffer[64];
     ogg_int16_t *data = cpi->frag_dct[fi].data;
     int bi = cpi->frag_buffer_index[fi];
@@ -723,27 +555,39 @@ static void TQB (CP_INSTANCE *cpi, int mode, int fi, ogg_int32_t *iq, ogg_int16_
     /* transform */
     dsp_fdct_short(cpi->dsp, data, buffer);
     
-    /* collect rho metrics */
-    collect_rho(cpi, mode, plane, buffer);
+    /* collect rho metrics, quantize */
+    {
+      int i;
+      for(i=0;i<64;i++){
+	int ii = zigzag_index[i];
+	int pos = find_nonzero_transition(cpi->quant_tables[inter][plane][ii],buffer[i]);
+	rho_count[pos]++;
+	
+	if(qi<pos){
+	  data[ii] = 0;
+	}else{
+	  int val = (((iq[i]>>15)*buffer[i]) + (1<<15) + (((iq[i]&0x7fff)*buffer[i])>>15)) >>16;
+	  data[ii] = (val>511?511:(val<-511?-511:val));
+	}
+      }
+    }
 
-    /* quantize */
-    quantize (cpi, iq, buffer, data);
-    cpi->frag_dc[fi] = cpi->frag_dct[fi].data[0];
+    cpi->frag_dc[fi] = data[0];
 
     /* reconstruct */
     while(!data[nonzero] && --nonzero);
     switch(nonzero){
     case 0:
-      IDct1( data, q, buffer );
+      IDct1( data, re_q[inter][plane], buffer );
       break;
     case 1: case 2:
-      dsp_IDct3(cpi->dsp, data, q, buffer );
+      dsp_IDct3(cpi->dsp, data, re_q[inter][plane], buffer );
       break;
     case 3:case 4:case 5:case 6:case 7:case 8: case 9:
-      dsp_IDct10(cpi->dsp, data, q, buffer );
+      dsp_IDct10(cpi->dsp, data, re_q[inter][plane], buffer );
       break;
     default:
-      dsp_IDctSlow(cpi->dsp, data, q, buffer );
+      dsp_IDctSlow(cpi->dsp, data, re_q[inter][plane], buffer );
     }
     
     dsp_recon8x8 (cpi->dsp, thisrecon, buffer, stride);
@@ -751,16 +595,13 @@ static void TQB (CP_INSTANCE *cpi, int mode, int fi, ogg_int32_t *iq, ogg_int16_
   }
 }
 
-static void TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi){
+static void TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi, ogg_int16_t req[2][3][64], int *rc){
   int pf = cpi->info.pixelformat;
   int mode = mb->mode;
-  int inter = (mode != CODE_INTRA);
-  ogg_int32_t *iq = cpi->iquant_tables[inter][0][qi];
-  ogg_int16_t  *q = cpi->quant_tables[inter][0][qi];
   int i;
 
   for(i=0;i<4;i++)
-    TQB(cpi,mode,mb->Ryuv[0][i],iq,q,mb->mv[i],0);
+    TQB(cpi,mode,mb->Ryuv[0][i],mb->mv[i],0,req,rc);
 
   switch(pf){
   case OC_PF_420:
@@ -773,19 +614,11 @@ static void TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi){
       mv.x = ( mv.x >= 0 ? (mv.x + 2) / 4 : (mv.x - 2) / 4);
       mv.y = ( mv.y >= 0 ? (mv.y + 2) / 4 : (mv.y - 2) / 4);
       
-      iq = cpi->iquant_tables[inter][1][qi];
-      q = cpi->quant_tables[inter][1][qi];
-      TQB(cpi,mode,mb->Ryuv[1][0],iq,q,mv,1);
-      iq = cpi->iquant_tables[inter][2][qi];
-      q = cpi->quant_tables[inter][2][qi];
-      TQB(cpi,mode,mb->Ryuv[2][0],iq,q,mv,2);
+      TQB(cpi,mode,mb->Ryuv[1][0],mv,1,req,rc);
+      TQB(cpi,mode,mb->Ryuv[2][0],mv,2,req,rc);
     }else{ 
-      iq = cpi->iquant_tables[inter][1][qi];
-      q = cpi->quant_tables[inter][1][qi];
-      TQB(cpi,mode,mb->Ryuv[1][0],iq,q,mb->mv[0],1);
-      iq = cpi->iquant_tables[inter][2][qi];
-      q = cpi->quant_tables[inter][2][qi];
-      TQB(cpi,mode,mb->Ryuv[2][0],iq,q,mb->mv[0],2);
+      TQB(cpi,mode,mb->Ryuv[1][0],mb->mv[0],1,req,rc);
+      TQB(cpi,mode,mb->Ryuv[2][0],mb->mv[0],2,req,rc);
     }
     break;
 
@@ -803,37 +636,24 @@ static void TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi){
       mvB.x = ( mvB.x >= 0 ? (mvB.x + 1) / 2 : (mvB.x - 1) / 2);
       mvB.y = ( mvB.y >= 0 ? (mvB.y + 1) / 2 : (mvB.y - 1) / 2);
       
-      iq = cpi->iquant_tables[inter][1][qi];
-      q = cpi->quant_tables[inter][1][qi];
-      TQB(cpi,mode,mb->Ryuv[1][0],iq,q,mvA,1);
-      TQB(cpi,mode,mb->Ryuv[1][1],iq,q,mvB,1);
-
-      iq = cpi->iquant_tables[inter][2][qi];
-      q = cpi->quant_tables[inter][2][qi];
-      TQB(cpi,mode,mb->Ryuv[2][0],iq,q,mvA,2);
-      TQB(cpi,mode,mb->Ryuv[2][1],iq,q,mvB,2);
+      TQB(cpi,mode,mb->Ryuv[1][0],mvA,1,req,rc);
+      TQB(cpi,mode,mb->Ryuv[1][1],mvB,1,req,rc);
+      TQB(cpi,mode,mb->Ryuv[2][0],mvA,2,req,rc);
+      TQB(cpi,mode,mb->Ryuv[2][1],mvB,2,req,rc);
 
     }else{ 
-      iq = cpi->iquant_tables[inter][1][qi];
-      q = cpi->quant_tables[inter][1][qi];
-      TQB(cpi,mode,mb->Ryuv[1][0],iq,q,mb->mv[0],1);
-      TQB(cpi,mode,mb->Ryuv[1][1],iq,q,mb->mv[0],1);
-      iq = cpi->iquant_tables[inter][2][qi];
-      q = cpi->quant_tables[inter][2][qi];
-      TQB(cpi,mode,mb->Ryuv[2][0],iq,q,mb->mv[0],2);
-      TQB(cpi,mode,mb->Ryuv[2][1],iq,q,mb->mv[0],2);
+      TQB(cpi,mode,mb->Ryuv[1][0],mb->mv[0],1,req,rc);
+      TQB(cpi,mode,mb->Ryuv[1][1],mb->mv[0],1,req,rc);
+      TQB(cpi,mode,mb->Ryuv[2][0],mb->mv[0],2,req,rc);
+      TQB(cpi,mode,mb->Ryuv[2][1],mb->mv[0],2,req,rc);
     }
     break;
-
+    
   case OC_PF_444:
-    iq = cpi->iquant_tables[inter][1][qi];
-    q = cpi->quant_tables[inter][1][qi];
     for(i=0;i<4;i++)
-      TQB(cpi,mode,mb->Ryuv[1][i],iq,q,mb->mv[i],1);
-    iq = cpi->iquant_tables[inter][2][qi];
-    q = cpi->quant_tables[inter][2][qi];
+      TQB(cpi,mode,mb->Ryuv[1][i],mb->mv[i],1,req,rc);
     for(i=0;i<4;i++)
-      TQB(cpi,mode,mb->Ryuv[2][i],iq,q,mb->mv[i],2);
+      TQB(cpi,mode,mb->Ryuv[2][i],mb->mv[i],2,req,rc);
     break;
   }
 }
@@ -842,17 +662,25 @@ int PickModes(CP_INSTANCE *cpi, int recode){
   unsigned char qi = cpi->BaseQ; // temporary
   superblock_t *sb = cpi->super[0];
   superblock_t *sb_end = sb + cpi->super_n[0];
-  int i,j;
+  int i,j,k;
   ogg_uint32_t interbits = 0;
   ogg_uint32_t intrabits = 0;
   mc_state mcenc;
   mv_t last_mv = {0,0};
   mv_t prior_mv = {0,0};
   unsigned char *cp = cpi->frag_coded;
+  ogg_int16_t req[2][3][64];
+  int rho_count[65];
 #ifdef COLLECT_METRICS
   int sad[8][3][4];
 #endif
   oc_mode_scheme_chooser_init(cpi);
+  memset(rho_count,0,sizeof(rho_count));
+
+  for(i=0;i<2;i++)
+    for(j=0;j<3;j++)
+      for(k=0;k<64;k++)
+	req[i][j][k]=cpi->quant_tables[i][j][k][qi];
 
   cpi->MVBits_0 = 0;
   cpi->MVBits_1 = 0;
@@ -1004,7 +832,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 #endif
 
       /* Transform, quantize, collect rho metrics */
-      TQMB(cpi, mb, qi);
+      TQMB(cpi, mb, qi, req, rho_count);
 
     }
   }
