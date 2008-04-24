@@ -495,9 +495,51 @@ static int find_nonzero_transition(ogg_int16_t *q, ogg_int16_t in){
     if( val < q[i])break;
   return i+1;
 }
+/* Don't use it... it is tripping a GCC bug */
+#include<stdio.h>
+int find_nonzero_transition(ogg_int16_t *q, ogg_int16_t in){
+  int ret;
+  __asm__ (
+	   ".balign 16 \n"
+	   "mov       $64,%[ret]\n"
+	   "movd      %[in],%%mm0\n"
+	   "punpcklwd %%mm0,%%mm0\n"
+	   "punpcklwd %%mm0,%%mm0\n"
+	   "jmp       %=2f\n"
+	   
+	   "%=1:\n"
+	   "sub      $8,%[quant]\n"
+	   "sub      $4,%[ret]\n"
+	   "jz       %=3f\n"
+	   
+	   "%=2:\n"
+	   "movq     (%[quant]),%%mm1\n"
+	   "pcmpgtw  %%mm0,%%mm1\n"
+	   "packsswb %%mm1,%%mm1\n"
+	   "movd     %%mm1,%%ecx\n"
+	   "jecxz    %=1b\n"                  
+	   
+	   "not      %%ecx\n"
+	   "jecxz    %=3f\n"                  
+	   "dec      %[ret]\n"
+	   "shl      $8,%%ecx\n"
+	   "jecxz    %=3f\n"                  
+	   "dec      %[ret]\n"
+	   "shl      $8,%%ecx\n"
+	   "jecxz    %=3f\n"                  
+	   "dec      %[ret]\n"              
+	   
+	   "%=3:\n"
+	   "emms\n"
+	   :[ret]"=&r"(ret)
+	   :[quant]"r"(q+60),[in]"r"(abs(in)<<1)
+	   :"%ecx"
+	   );
 
-static void TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int16_t re_q[2][3][64], 
-		 long *rho_count, long *mrho_count){
+    return ret;
+}
+*/
+static void TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int16_t re_q[2][3][64], long *rho_count){
   if ( cpi->frag_coded[fi] ) {
     int qi = cpi->BaseQ; /* temporary */;
     int inter = (mode != CODE_INTRA);
@@ -564,18 +606,14 @@ static void TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int
 	   NXZ; adds one nonzero token; +1
 	   NXN; replaces a zero run with a nonzero; +0  */
       int i;
-      int lastpos = 0;
       
       for(i=0;i<64;i++){
 	int ii = dezigzag_index[i];
 	int pos = find_nonzero_transition(cpi->quant_tables[inter][plane][i],buffer[ii]);
 	
-	/* basic rho-domain tracking */
+	/* rho-domain distribution */
 	rho_count[pos]++;
-	/* modified rho count */
-	//mrho_count[pos]++;
-	if(pos<lastpos)mrho_count[pos]++;
-	lastpos = pos;
+
 
 	if(qi<pos){
 	  data[i] = 0;
@@ -609,13 +647,13 @@ static void TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int
   }
 }
 
-static void TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi, ogg_int16_t req[2][3][64], long *rc, long *mc){
+static void TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi, ogg_int16_t req[2][3][64], long *rc){
   int pf = cpi->info.pixelformat;
   int mode = mb->mode;
   int i;
 
   for(i=0;i<4;i++)
-    TQB(cpi,mode,mb->Ryuv[0][i],mb->mv[i],0,req,rc,mc);
+    TQB(cpi,mode,mb->Ryuv[0][i],mb->mv[i],0,req,rc);
 
   switch(pf){
   case OC_PF_420:
@@ -628,11 +666,11 @@ static void TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi, ogg_int16_t req[2
       mv.x = ( mv.x >= 0 ? (mv.x + 2) / 4 : (mv.x - 2) / 4);
       mv.y = ( mv.y >= 0 ? (mv.y + 2) / 4 : (mv.y - 2) / 4);
       
-      TQB(cpi,mode,mb->Ryuv[1][0],mv,1,req,rc,mc);
-      TQB(cpi,mode,mb->Ryuv[2][0],mv,2,req,rc,mc);
+      TQB(cpi,mode,mb->Ryuv[1][0],mv,1,req,rc);
+      TQB(cpi,mode,mb->Ryuv[2][0],mv,2,req,rc);
     }else{ 
-      TQB(cpi,mode,mb->Ryuv[1][0],mb->mv[0],1,req,rc,mc);
-      TQB(cpi,mode,mb->Ryuv[2][0],mb->mv[0],2,req,rc,mc);
+      TQB(cpi,mode,mb->Ryuv[1][0],mb->mv[0],1,req,rc);
+      TQB(cpi,mode,mb->Ryuv[2][0],mb->mv[0],2,req,rc);
     }
     break;
 
@@ -650,24 +688,24 @@ static void TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi, ogg_int16_t req[2
       mvB.x = ( mvB.x >= 0 ? (mvB.x + 1) / 2 : (mvB.x - 1) / 2);
       mvB.y = ( mvB.y >= 0 ? (mvB.y + 1) / 2 : (mvB.y - 1) / 2);
       
-      TQB(cpi,mode,mb->Ryuv[1][0],mvA,1,req,rc,mc);
-      TQB(cpi,mode,mb->Ryuv[1][1],mvB,1,req,rc,mc);
-      TQB(cpi,mode,mb->Ryuv[2][0],mvA,2,req,rc,mc);
-      TQB(cpi,mode,mb->Ryuv[2][1],mvB,2,req,rc,mc);
+      TQB(cpi,mode,mb->Ryuv[1][0],mvA,1,req,rc);
+      TQB(cpi,mode,mb->Ryuv[1][1],mvB,1,req,rc);
+      TQB(cpi,mode,mb->Ryuv[2][0],mvA,2,req,rc);
+      TQB(cpi,mode,mb->Ryuv[2][1],mvB,2,req,rc);
 
     }else{ 
-      TQB(cpi,mode,mb->Ryuv[1][0],mb->mv[0],1,req,rc,mc);
-      TQB(cpi,mode,mb->Ryuv[1][1],mb->mv[0],1,req,rc,mc);
-      TQB(cpi,mode,mb->Ryuv[2][0],mb->mv[0],2,req,rc,mc);
-      TQB(cpi,mode,mb->Ryuv[2][1],mb->mv[0],2,req,rc,mc);
+      TQB(cpi,mode,mb->Ryuv[1][0],mb->mv[0],1,req,rc);
+      TQB(cpi,mode,mb->Ryuv[1][1],mb->mv[0],1,req,rc);
+      TQB(cpi,mode,mb->Ryuv[2][0],mb->mv[0],2,req,rc);
+      TQB(cpi,mode,mb->Ryuv[2][1],mb->mv[0],2,req,rc);
     }
     break;
     
   case OC_PF_444:
     for(i=0;i<4;i++)
-      TQB(cpi,mode,mb->Ryuv[1][i],mb->mv[i],1,req,rc,mc);
+      TQB(cpi,mode,mb->Ryuv[1][i],mb->mv[i],1,req,rc);
     for(i=0;i<4;i++)
-      TQB(cpi,mode,mb->Ryuv[2][i],mb->mv[i],2,req,rc,mc);
+      TQB(cpi,mode,mb->Ryuv[2][i],mb->mv[i],2,req,rc);
     break;
   }
 }
@@ -685,13 +723,11 @@ int PickModes(CP_INSTANCE *cpi, int recode){
   unsigned char *cp = cpi->frag_coded;
   ogg_int16_t req[2][3][64];
   long rho_count[65];
-  long mrho_count[65];
 #ifdef COLLECT_METRICS
   int sad[8][3][4];
 #endif
   oc_mode_scheme_chooser_init(cpi);
   memset(rho_count,0,sizeof(rho_count));
-  memset(mrho_count,0,sizeof(mrho_count));
 
   for(i=0;i<2;i++)
     for(j=0;j<3;j++)
@@ -848,19 +884,15 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 #endif
 
       /* Transform, quantize, collect rho metrics */
-      TQMB(cpi, mb, qi, req, rho_count, mrho_count);
+      TQMB(cpi, mb, qi, req, rho_count);
 
     }
   }
 
-  for(i=1;i<65;i++){
+  for(i=1;i<65;i++)
     rho_count[i]+=rho_count[i-1];
-    mrho_count[i]+=mrho_count[i-1];
-  }
-
 
   memcpy(cpi->rho_count,rho_count,sizeof(rho_count));
-  memcpy(cpi->mrho_count,mrho_count,sizeof(mrho_count));
 
   if(cpi->FrameType != KEY_FRAME){
     

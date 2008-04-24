@@ -256,7 +256,6 @@ typedef struct CP_INSTANCE {
   /********************************************************************/
   /* Fragment SAD->bitrate estimation tracking metrics */
   long             rho_count[65]; 
-  long             mrho_count[65]; 
 
 #ifdef COLLECT_METRICS
   int             *frag_mbi;
