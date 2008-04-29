@@ -90,8 +90,8 @@ static void oc_detect_cpuid_helper(ogg_uint32_t *_eax,ogg_uint32_t *_ebx){
     pushfd
     pop eax
     popfd
-    mov *_eax,eax
-    mov *_ebx,ebx
+    mov [_eax],eax
+    mov [_ebx],ebx
   }
 }
 # endif
@@ -121,7 +121,7 @@ ogg_uint32_t oc_cpu_flags_get(void){
    :"cc"
   );
 #  else
-  oc_cpuid_detect_helper(&eax,&ebx);
+  oc_detect_cpuid_helper(&eax,&ebx);
 #  endif
   /*No cpuid.*/
   if(eax==ebx)return 0;
@@ -158,7 +158,7 @@ ogg_uint32_t oc_cpu_flags_get(void){
     else{
       cpuid(0x80000001,eax,ebx,ecx,edx);
       /*If there isn't even MMX, give up.*/
-      if((edx&0x00800000)==0)return 0;
+      if(!(edx&0x00800000))return 0;
       flags=OC_CPU_X86_MMX;
       if(edx&0x80000000)flags|=OC_CPU_X86_3DNOW;
       if(edx&0x40000000)flags|=OC_CPU_X86_3DNOWEXT;
@@ -186,10 +186,10 @@ ogg_uint32_t oc_cpu_flags_get(void){
       /*The (non-Nehemiah) C3 processors support AMD-like cpuid info.*/
       /*How about earlier chips?*/
       cpuid(0x80000001,eax,ebx,ecx,edx);
-      if(edx&0x00800000){
-        flags=OC_CPU_X86_MMX;
-        if(edx&0x80000000)flags|=OC_CPU_X86_3DNOW;
-      }
+      /*If there isn't even MMX, give up.*/
+      if(!(edx&0x00800000))return 0;
+      flags=OC_CPU_X86_MMX;
+      if(edx&0x80000000)flags|=OC_CPU_X86_3DNOW;
     }
   }
   else{
