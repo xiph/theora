@@ -116,8 +116,10 @@ ogg_uint32_t oc_cpu_flags_get(void){
 # endif /* GCC, x86_32 */
 
   cpuid(0,eax,ebx,ecx,edx);
-  if(ebx==0x756e6547&&edx==0x49656e69&&ecx==0x6c65746e){
+  if(ebx==0x756e6547&&edx==0x49656e69&&ecx==0x6c65746e ||
+     ebx==0x756e6547&&edx==0x54656e69&&ecx==0x3638784d) {
     /*Intel:*/
+    /*Transmeta (tested with Crusoe TM5800): */
 inteltest:
     cpuid(1,eax,ebx,ecx,edx);
     if((edx&0x00800000)==0)return 0;
@@ -137,6 +139,25 @@ inteltest:
     if(edx&0x80000000)flags|=OC_CPU_X86_3DNOW;
     if(edx&0x40000000)flags|=OC_CPU_X86_3DNOWEXT;
     if(edx&0x00400000)flags|=OC_CPU_X86_MMXEXT;
+  } else if (ebx == 0x746e6543&&edx==0x48727561&&ecx==0x736c7561) {
+    /* VIA: */
+
+    /* VIA C7 supports Intel-like cpuid info */
+    cpuid(1,eax,ebx,ecx,edx);
+    if((edx&0x00800000)) {
+      flags=OC_CPU_X86_MMX;
+      if(edx&0x02000000)flags|=OC_CPU_X86_MMXEXT|OC_CPU_X86_SSE;
+      if(edx&0x04000000)flags|=OC_CPU_X86_SSE2;
+    }
+
+    /* VIA C3 (Samuel, without PadLock) has AMD-like cpuid info */
+    cpuid(0x80000001,eax,ebx,ecx,edx);
+    if((edx&0x00800000)) {
+      flags=OC_CPU_X86_MMX;
+      if(edx&0x80000000) flags|=OC_CPU_X86_3DNOW;
+    }
+
+    /* What about C3-2 ? don't own one :( */
   }
   else{
     /*Implement me.*/
