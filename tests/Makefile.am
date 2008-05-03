@@ -50,13 +50,13 @@ comment_theora_LDADD = $(THEORA_LIBS)
 comment_theora_CFLAGS = $(OGG_CFLAGS)
 
 granulepos_SOURCES = granulepos.c
-granulepos_LDADD = $(THEORAENC_LIBS)
+granulepos_LDADD = $(THEORAENC_LIBS) -lm
 granulepos_CFLAGS = $(OGG_CFLAGS)
 
 granulepos_theoraenc_SOURCES = granulepos_theora.c
-granulepos_theoraenc_LDADD = $(THEORAENC_LIBS)
+granulepos_theoraenc_LDADD = $(THEORAENC_LIBS) -lm
 granulepos_theoraenc_CFLAGS = $(OGG_CFLAGS)
 
 granulepos_theora_SOURCES = granulepos_theora.c
-granulepos_theora_LDADD = $(THEORA_LIBS)
+granulepos_theora_LDADD = $(THEORA_LIBS) -lm
 granulepos_theora_CFLAGS = $(OGG_CFLAGS)
