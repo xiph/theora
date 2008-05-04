@@ -182,15 +182,14 @@ ogg_uint32_t oc_cpu_flags_get(void){
       if(edx&0x04000000)flags|=OC_CPU_X86_SSE2;
       if(ecx&0x00000001)flags|=OC_CPU_X86_PNI;
     }
-    else{
-      /*The (non-Nehemiah) C3 processors support AMD-like cpuid info.*/
-      /*How about earlier chips?*/
-      cpuid(0x80000001,eax,ebx,ecx,edx);
-      /*If there isn't even MMX, give up.*/
-      if(!(edx&0x00800000))return 0;
-      flags=OC_CPU_X86_MMX;
-      if(edx&0x80000000)flags|=OC_CPU_X86_3DNOW;
-    }
+    else flags=0;
+    /*The (non-Nehemiah) C3 processors support AMD-like cpuid info.
+      We need to check this even if the Intel test succeeds to pick up 3dnow!
+       support on these processors.*/
+    /*TODO: How about earlier chips?*/
+    cpuid(0x80000001,eax,ebx,ecx,edx);
+    if(edx&0x00800000)flags|=OC_CPU_X86_MMX;
+    if(edx&0x80000000)flags|=OC_CPU_X86_3DNOW;
   }
   else{
     /*Implement me.*/
