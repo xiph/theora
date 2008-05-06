@@ -24,6 +24,7 @@
 #define OC_CPU_X86_MMXEXT (1<<3)
 #define OC_CPU_X86_SSE    (1<<4)
 #define OC_CPU_X86_SSE2   (1<<5)
+#define OC_CPU_X86_PNI    (1<<6)
 
 ogg_uint32_t oc_cpu_flags_get(void);
 

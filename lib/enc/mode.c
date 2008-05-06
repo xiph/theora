@@ -488,57 +488,7 @@ static void MBSAD420(CP_INSTANCE *cpi, int mbi, mv_t last, mv_t last2,
 }
 
 #include "quant_lookup.h"
-static int find_nonzero_transition(ogg_int16_t *q, ogg_int16_t in){
-  int i;
-  int val = (abs((int)in)<<1);
-  for(i=63;i>=0;i--)
-    if( val < q[i])break;
-  return i+1;
-}
-/* Don't use it... it is tripping a GCC bug */
-#include<stdio.h>
-int find_nonzero_transition(ogg_int16_t *q, ogg_int16_t in){
-  int ret;
-  __asm__ (
-	   ".balign 16 \n"
-	   "mov       $64,%[ret]\n"
-	   "movd      %[in],%%mm0\n"
-	   "punpcklwd %%mm0,%%mm0\n"
-	   "punpcklwd %%mm0,%%mm0\n"
-	   "jmp       %=2f\n"
-	   
-	   "%=1:\n"
-	   "sub      $8,%[quant]\n"
-	   "sub      $4,%[ret]\n"
-	   "jz       %=3f\n"
-	   
-	   "%=2:\n"
-	   "movq     (%[quant]),%%mm1\n"
-	   "pcmpgtw  %%mm0,%%mm1\n"
-	   "packsswb %%mm1,%%mm1\n"
-	   "movd     %%mm1,%%ecx\n"
-	   "jecxz    %=1b\n"                  
-	   
-	   "not      %%ecx\n"
-	   "jecxz    %=3f\n"                  
-	   "dec      %[ret]\n"
-	   "shl      $8,%%ecx\n"
-	   "jecxz    %=3f\n"                  
-	   "dec      %[ret]\n"
-	   "shl      $8,%%ecx\n"
-	   "jecxz    %=3f\n"                  
-	   "dec      %[ret]\n"              
-	   
-	   "%=3:\n"
-	   "emms\n"
-	   :[ret]"=&r"(ret)
-	   :[quant]"r"(q+60),[in]"r"(abs(in)<<1)
-	   :"%ecx"
-	   );
 
-    return ret;
-}
-*/
 static void TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int16_t re_q[2][3][64], long *rho_count){
   if ( cpi->frag_coded[fi] ) {
     int qi = cpi->BaseQ; /* temporary */;
@@ -606,14 +556,18 @@ static void TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int
 	   NXZ; adds one nonzero token; +1
 	   NXN; replaces a zero run with a nonzero; +0  */
       int i;
-      
+      quant_tables *qq = &(cpi->quant_tables[inter][plane]);
+
       for(i=0;i<64;i++){
 	int ii = dezigzag_index[i];
-	int pos = find_nonzero_transition(cpi->quant_tables[inter][plane][i],buffer[ii]);
+	int pos;
+	int val = abs(buffer[ii])<<1;
+	ogg_int16_t *qqq = (*qq)[i];
+	for(pos=64;pos>0;pos--)
+	  if(val < qqq[pos-1])break;
 	
 	/* rho-domain distribution */
 	rho_count[pos]++;
-
 
 	if(qi<pos){
 	  data[i] = 0;
