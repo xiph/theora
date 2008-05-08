@@ -25,7 +25,6 @@ ogg_uint32_t oc_cpu_flags_get(void){
   return 0;
 }
 #else
-
 # if !defined(_MSC_VER)
 #  if defined(__amd64__)||defined(__x86_64__)
 /*On x86-64, gcc seems to be able to figure out how to save %rbx for us when
@@ -72,10 +71,10 @@ static void oc_cpuid_helper(ogg_uint32_t _cpu_info[4],ogg_uint32_t _op){
   do{ \
     ogg_uint32_t cpu_info[4]; \
     oc_cpuid_helper(cpu_info,_op); \
-    (_eax) = cpu_info[0]; \
-    (_ebx) = cpu_info[1]; \
-    (_ecx) = cpu_info[2]; \
-    (_edx) = cpu_info[3]; \
+    (_eax)=cpu_info[0]; \
+    (_ebx)=cpu_info[1]; \
+    (_ecx)=cpu_info[2]; \
+    (_edx)=cpu_info[3]; \
   }while(0)
 
 static void oc_detect_cpuid_helper(ogg_uint32_t *_eax,ogg_uint32_t *_ebx){
@@ -95,6 +94,33 @@ static void oc_detect_cpuid_helper(ogg_uint32_t *_eax,ogg_uint32_t *_ebx){
   }
 }
 # endif
+
+static ogg_uint32_t oc_parse_intel_flags(ogg_uint32_t _edx,ogg_uint32_t _ecx){
+  ogg_uint32_t flags;
+  /*If there isn't even MMX, give up.*/
+  if(!(_edx&0x00800000))return 0;
+  flags=OC_CPU_X86_MMX;
+  if(_edx&0x02000000)flags|=OC_CPU_X86_MMXEXT|OC_CPU_X86_SSE;
+  if(_edx&0x04000000)flags|=OC_CPU_X86_SSE2;
+  if(_ecx&0x00000001)flags|=OC_CPU_X86_PNI;
+  if(_ecx&0x00000100)flags|=OC_CPU_X86_SSSE3;
+  if(_ecx&0x00080000)flags|=OC_CPU_X86_SSE4_1;
+  if(_ecx&0x00100000)flags|=OC_CPU_X86_SSE4_2;
+  return flags;
+}
+
+static ogg_uint32_t oc_parse_amd_flags(ogg_uint32_t _edx,ogg_uint32_t _ecx){
+  ogg_uint32_t flags;
+  /*If there isn't even MMX, give up.*/
+  if(!(_edx&0x00800000))return 0;
+  flags=OC_CPU_X86_MMX;
+  if(_edx&0x00400000)flags|=OC_CPU_X86_MMXEXT;
+  if(_edx&0x80000000)flags|=OC_CPU_X86_3DNOW;
+  if(_edx&0x40000000)flags|=OC_CPU_X86_3DNOWEXT;
+  if(_ecx&0x00000040)flags|=OC_CPU_X86_SSE4A;
+  if(_ecx&0x00000800)flags|=OC_CPU_X86_SSE5;
+  return flags;
+}
 
 ogg_uint32_t oc_cpu_flags_get(void){
   ogg_uint32_t flags;
@@ -133,63 +159,62 @@ ogg_uint32_t oc_cpu_flags_get(void){
    ecx==0x3638784D&&edx==0x54656E69&&ebx==0x756E6547){
     /*Intel, Transmeta (tested with Crusoe TM5800):*/
     cpuid(1,eax,ebx,ecx,edx);
-    /*If there isn't even MMX, give up.*/
-    if(!(edx&0x00800000))return 0;
-    flags=OC_CPU_X86_MMX;
-    if(edx&0x02000000)flags|=OC_CPU_X86_MMXEXT|OC_CPU_X86_SSE;
-    if(edx&0x04000000)flags|=OC_CPU_X86_SSE2;
-    if(ecx&0x00000001)flags|=OC_CPU_X86_PNI;
+    flags=oc_parse_intel_flags(edx,ecx);
   }
   /*              D M A c          i t n e          h t u A*/
   else if(ecx==0x444D4163&&edx==0x69746E65&&ebx==0x68747541||
    /*      C S N            y b   e          d o e G*/
-   ecx==0x43534e20&&edx==0x79622065&&ebx==0x646f6547){
+   ecx==0x43534E20&&edx==0x79622065&&ebx==0x646F6547){
     /*AMD, Geode:*/
     cpuid(0x80000000,eax,ebx,ecx,edx);
-    if(eax<0x80000001){
-      /*No extended functions supported.
-        Use normal cpuid flags.*/
-      cpuid(1,eax,ebx,ecx,edx);
-      /*If there isn't even MMX, give up.*/
-      if(!(edx&0x00800000))return 0;
-      flags=OC_CPU_X86_MMX;
-      if(edx&0x02000000)flags|=OC_CPU_X86_MMXEXT|OC_CPU_X86_SSE;
-    }
+    if(eax<0x80000001)flags=0;
     else{
       cpuid(0x80000001,eax,ebx,ecx,edx);
-      /*If there isn't even MMX, give up.*/
-      if(!(edx&0x00800000))return 0;
-      flags=OC_CPU_X86_MMX;
-      if(edx&0x80000000)flags|=OC_CPU_X86_3DNOW;
-      if(edx&0x40000000)flags|=OC_CPU_X86_3DNOWEXT;
-      if(edx&0x00400000)flags|=OC_CPU_X86_MMXEXT;
-      /*Also check for SSE.*/
-      cpuid(1,eax,ebx,ecx,edx);
-      if(edx&0x02000000)flags|=OC_CPU_X86_SSE;
+      flags=oc_parse_amd_flags(edx,ecx);
     }
-    if(edx&0x04000000)flags|=OC_CPU_X86_SSE2;
-    if(ecx&0x00000001)flags|=OC_CPU_X86_PNI;
+    /*Also check for SSE.*/
+    cpuid(1,eax,ebx,ecx,edx);
+    flags|=oc_parse_intel_flags(edx,ecx);
   }
+  /*Technically some VIA chips can be configured in the BIOS to return any
+     string here the user wants.
+    There is a special detection method that can be used to identify such
+     processors, but in my opinion, if the user really wants to change it, they
+     deserve what they get.*/
   /*              s l u a          H r u a          t n e C*/
   else if(ecx==0x736C7561&&edx==0x48727561&&ebx==0x746E6543){
     /*VIA:*/
-    /*The C7 (and later?) processors support Intel-like cpuid info.*/
-    /*The C3-2 (Nehemiah) cores appear to, as well.*/
+    /*I only have documentation for the C7 (Esther) and Isaiah (forthcoming)
+       chips (thanks to the engineers from Centaur Technology who provided it).
+      These chips support Intel-like cpuid info.
+      The C3-2 (Nehemiah) cores appear to, as well.*/
     cpuid(1,eax,ebx,ecx,edx);
-    if(edx&0x00800000){
-      flags=OC_CPU_X86_MMX;
-      if(edx&0x02000000)flags|=OC_CPU_X86_MMXEXT|OC_CPU_X86_SSE;
-      if(edx&0x04000000)flags|=OC_CPU_X86_SSE2;
-      if(ecx&0x00000001)flags|=OC_CPU_X86_PNI;
+    flags=oc_parse_intel_flags(edx,ecx);
+    cpuid(0x80000000,eax,ebx,ecx,edx);
+    if(eax>=0x80000001){
+      /*The (non-Nehemiah) C3 processors support AMD-like cpuid info.
+        We need to check this even if the Intel test succeeds to pick up 3DNow!
+         support on these processors.
+        Unlike actual AMD processors, we cannot _rely_ on this info, since
+         some cores (e.g., the 693 stepping of the Nehemiah) claim to support
+         this function, yet return edx=0, despite the Intel test indicating
+         MMX support.
+        Therefore the features detected here are strictly added to those
+         detected by the Intel test.*/
+      /*TODO: How about earlier chips?*/
+      cpuid(0x80000001,eax,ebx,ecx,edx);
+      /*Note: As of the C7, this function returns Intel-style extended feature
+         flags, not AMD-style.
+        Currently, this only defines bits 11, 20, and 29 (0x20100800), which
+         do not conflict with any of the AMD flags we inspect.
+        For the remaining bits, Intel tells us, "Do not count on their value",
+         but VIA assures us that they will all be zero (at least on the C7 and
+         Isaiah chips).
+        In the (unlikely) event a future processor uses bits 18, 19, 30, or 31
+         (0xC0C00000) for something else, we will have to add code to detect
+         the model to decide when it is appropriate to inspect them.*/
+      flags|=oc_parse_amd_flags(edx,ecx);
     }
-    else flags=0;
-    /*The (non-Nehemiah) C3 processors support AMD-like cpuid info.
-      We need to check this even if the Intel test succeeds to pick up 3dnow!
-       support on these processors.*/
-    /*TODO: How about earlier chips?*/
-    cpuid(0x80000001,eax,ebx,ecx,edx);
-    if(edx&0x00800000)flags|=OC_CPU_X86_MMX;
-    if(edx&0x80000000)flags|=OC_CPU_X86_3DNOW;
   }
   else{
     /*Implement me.*/
@@ -204,6 +229,12 @@ ogg_uint32_t oc_cpu_flags_get(void){
     if(flags&OC_CPU_X86_SSE2)TH_DEBUG(" sse2");
     if(flags&OC_CPU_X86_3DNOW)TH_DEBUG(" 3dnow");
     if(flags&OC_CPU_X86_3DNOWEXT)TH_DEBUG(" 3dnowext");
+    if(flags&OC_CPU_X86_PNI)TH_DEBUG(" pni");
+    if(flags&OC_CPU_X86_SSSE3)TH_DEBUG(" ssse3");
+    if(flags&OC_CPU_X86_SSE4_1)TH_DEBUG(" sse4_1");
+    if(flags&OC_CPU_X86_SSE4_2)TH_DEBUG(" sse4_2");
+    if(flags&OC_CPU_X86_SSE4A)TH_DEBUG(" sse4a");
+    if(flags&OC_CPU_X86_SSE5)TH_DEBUG(" sse5");
     TH_DEBUG("\n");
   }
 # endif
