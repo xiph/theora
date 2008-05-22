@@ -588,8 +588,8 @@ void oc_mcenc_refine1mv(CP_INSTANCE *cpi,
 
   macroblock_t *mb = &cpi->macro[_mbi];
   mv_t mv;
-  mv.x = mb->analysis_mv[0][_goldenp].x>>1;
-  mv.y = mb->analysis_mv[0][_goldenp].y>>1;
+  mv.x = mb->analysis_mv[0][_goldenp].x/2;
+  mv.y = mb->analysis_mv[0][_goldenp].y/2;
   
   err=oc_mcenc_ysad_halfpel_mbrefine(cpi,_mbi,&mv,err,_goldenp);
   mb->analysis_mv[0][_goldenp]=mv;
@@ -605,8 +605,8 @@ void oc_mcenc_refine4mv(CP_INSTANCE *cpi,
   int bi;
   for(bi=0;bi<4;bi++){
     mv_t mv;
-    mv.x = mb->mv[bi].x>>1;
-    mv.y = mb->mv[bi].y>>1;
+    mv.x = mb->mv[bi].x/2;
+    mv.y = mb->mv[bi].y/2;
     oc_mcenc_ysad_halfpel_brefine(cpi,_mbi,bi,&mv,err[bi],0);
     mb->mv[bi]=mv;
   }
