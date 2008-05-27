@@ -520,7 +520,7 @@ int isPlaying = 0;
 PaError err;
 
 /* Ogg and codec state for demux/decode */
-ogg_sync_state   oy; 
+ogg_sync_state   oy;
 ogg_page         og;
 ogg_stream_state vo;
 ogg_stream_state to;
@@ -645,16 +645,16 @@ static void open_video(void){
   
   screen = SDL_SetVideoMode(ti.frame_width, ti.frame_height, 0, SDL_SWSURFACE);
   if ( screen == NULL ) {
-    printf("Unable to set %dx%d video mode: %s\n", 
+    printf("Unable to set %dx%d video mode: %s\n",
            ti.frame_width,ti.frame_height,SDL_GetError());
     exit(1);
   }
-  
+
   yuv_overlay = SDL_CreateYUVOverlay(ti.frame_width, ti.frame_height,
 				     SDL_YV12_OVERLAY,
 				     screen);
   if ( yuv_overlay == NULL ) {
-    printf("SDL: Couldn't create SDL_yuv_overlay: %s\n", 
+    printf("SDL: Couldn't create SDL_yuv_overlay: %s\n",
 	   SDL_GetError());
     exit(1);
   }
@@ -672,29 +672,29 @@ static void video_write(void){
   yuv_buffer yuv;
   int crop_offset;
   theora_decode_YUVout(&td,&yuv);
-  
+
   /* Lock SDL_yuv_overlay */
   if ( SDL_MUSTLOCK(screen) ) {
     if ( SDL_LockSurface(screen) < 0 ) return;
   }
   if (SDL_LockYUVOverlay(yuv_overlay) < 0) return;
-  
+
   /* let's draw the data (*yuv[3]) on a SDL screen (*screen) */
   /* deal with border stride */
   /* reverse u and v for SDL */
   /* and crop input properly, respecting the encoded frame rect */
   crop_offset=ti.offset_x+yuv.y_stride*ti.offset_y;
   for(i=0;i<yuv_overlay->h;i++)
-    memcpy(yuv_overlay->pixels[0]+yuv_overlay->pitches[0]*i, 
-	   yuv.y+crop_offset+yuv.y_stride*i, 
+    memcpy(yuv_overlay->pixels[0]+yuv_overlay->pitches[0]*i,
+	   yuv.y+crop_offset+yuv.y_stride*i,
 	   yuv_overlay->w);
   crop_offset=(ti.offset_x/2)+(yuv.uv_stride)*(ti.offset_y/2);
   for(i=0;i<yuv_overlay->h/2;i++){
-    memcpy(yuv_overlay->pixels[1]+yuv_overlay->pitches[1]*i, 
-	   yuv.v+crop_offset+yuv.uv_stride*i, 
+    memcpy(yuv_overlay->pixels[1]+yuv_overlay->pitches[1]*i,
+	   yuv.v+crop_offset+yuv.uv_stride*i,
 	   yuv_overlay->w/2);
-    memcpy(yuv_overlay->pixels[2]+yuv_overlay->pitches[2]*i, 
-	   yuv.u+crop_offset+yuv.uv_stride*i, 
+    memcpy(yuv_overlay->pixels[2]+yuv_overlay->pitches[2]*i,
+	   yuv.u+crop_offset+yuv.uv_stride*i,
 	   yuv_overlay->w/2);
   }
 
@@ -705,12 +705,12 @@ static void video_write(void){
   }
 
   /* Show, baby, show! */
-  SDL_DisplayYUVOverlay(yuv_overlay, &rect);  
+  SDL_DisplayYUVOverlay(yuv_overlay, &rect);
 }
 
 static void usage(void){
   printf("Usage: splayer <ogg_file>\n"
-#ifdef WIN32  
+#ifdef WIN32
     "\n"
     "or drag and drop an ogg file over the .exe\n\n"
 #endif
@@ -721,7 +721,7 @@ static void usage(void){
 static int dump_comments(theora_comment *tc){
   int i, len;
   char *value;
-  
+
   printf("Encoded by %s\n",tc->vendor);
   if(tc->comments){
     printf("theora comment header:\n");
@@ -778,7 +778,7 @@ static int queue_page(ogg_page *page){
   if(theora_p)ogg_stream_pagein(&to,page);
   if(vorbis_p)ogg_stream_pagein(&vo,page);
   return 0;
-}                                   
+}
 
 void parseHeaders(){
   /* extracted from player_sample.c test file for theora alpha */
@@ -790,7 +790,7 @@ void parseHeaders(){
     if(ret==0)break;
     while(ogg_sync_pageout(&oy,&og)>0){
       ogg_stream_state test;
-      
+
       /* is this a mandated initial header? If not, stop parsing */
       if(!ogg_page_bos(&og)){
 	/* don't leak the page; get it into the appropriate stream */
@@ -798,11 +798,11 @@ void parseHeaders(){
 	stateflag=1;
 	break;
       }
-      
+
       ogg_stream_init(&test,ogg_page_serialno(&og));
       ogg_stream_pagein(&test,&og);
       ogg_stream_packetout(&test,&op);
-      
+
       /* identify the codec: try theora */
       if(!theora_p && theora_decode_header(&ti,&tc,&op)>=0){
 	/* it is theora */
@@ -837,7 +837,7 @@ void parseHeaders(){
       if(theora_p==3)break;
     }
 
-    /* look for more vorbis header packets */  
+    /* look for more vorbis header packets */
     while(vorbis_p && (vorbis_p<3) && (ret=ogg_stream_packetout(&vo,&op))){
       if(ret<0){
 	printf("Error parsing Vorbis stream headers; corrupt stream?\n");
@@ -853,7 +853,7 @@ void parseHeaders(){
 
     /* The header pages/packets will arrive before anything else we
        care about, or the stream is not obeying spec */
-    
+
     if(ogg_sync_pageout(&oy,&og)>0){
       queue_page(&og); /* demux into the appropriate stream */
     }else{
@@ -922,7 +922,7 @@ int main( int argc, char* argv[] ){
   }
   if(vorbis_p){
     vorbis_synthesis_init(&vd,&vi);
-    vorbis_block_init(&vd,&vb);  
+    vorbis_block_init(&vd,&vb);
     printf("Ogg logical stream %x is Vorbis %d channel %d Hz audio.\n",
 	   vo.serialno,vi.channels,vi.rate);
   }else{
@@ -934,7 +934,7 @@ int main( int argc, char* argv[] ){
   if(vorbis_p)open_audio();
   /* open video */
   if(theora_p)open_video();
-  
+
   /* our main loop */
   while(!playbackdone){
 
@@ -984,7 +984,7 @@ int main( int argc, char* argv[] ){
 	  audiobuf_granulepos+=i;
 
       }else{
-	
+
 	/* no pending audio; is there a pending packet to decode? */
 	if(ogg_stream_packetout(&vo,&op)>0){
 	  if(vorbis_synthesis(&vb,&op)==0) /* test for success! */
@@ -997,7 +997,7 @@ int main( int argc, char* argv[] ){
     while(theora_p && !videobuf_ready){
       /* get one video packet... */
       if(ogg_stream_packetout(&to,&op)>0){
-      
+
         theora_decode_packetin(&td,&op);
 
 	  videobuf_granulepos=td.granulepos;
@@ -1033,13 +1033,13 @@ int main( int argc, char* argv[] ){
     }
 
     /* if we're set for the next frame, sleep */
-    if((!theora_p || videobuf_ready) && 
+    if((!theora_p || videobuf_ready) &&
        (!vorbis_p || audiobuf_ready)){
         int ticks = 1.0e3*(videobuf_time-get_time());
 	if(ticks>0)
           SDL_Delay(ticks);
     }
- 
+
     if(videobuf_ready){
       /* time to write our cached frame */
       video_write();
@@ -1063,7 +1063,7 @@ int main( int argc, char* argv[] ){
         printf("Ogg buffering stopped, end of file reached.\n");
       }
     }
-    
+
     if (ogg_sync_pageout(&oy,&og)>0){
       queue_page(&og);
     }
@@ -1087,7 +1087,7 @@ int main( int argc, char* argv[] ){
     vorbis_block_clear(&vb);
     vorbis_dsp_clear(&vd);
     vorbis_comment_clear(&vc);
-    vorbis_info_clear(&vi); 
+    vorbis_info_clear(&vi);
   }
   if(theora_p){
     ogg_stream_clear(&to);
@@ -1099,7 +1099,7 @@ int main( int argc, char* argv[] ){
 
   printf("\r                                                              "
 	 "\nDone.\n");
-	 
+
   SDL_Quit();
 
   return(0);

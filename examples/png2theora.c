@@ -14,7 +14,7 @@
             file from a sequence of png images
   last mod: $Id$
              based on code from Vegard Nossum
-  
+
  ********************************************************************/
 
 #define _FILE_OFFSET_BITS 64
@@ -174,7 +174,7 @@ theora_write_frame(unsigned long w, unsigned long h, unsigned char *yuv)
 
   unsigned int x;
   unsigned int y;
-  
+
   /* Must hold: yuv_w >= w */
   yuv_w = (w + 15) & ~15;
 
@@ -264,14 +264,14 @@ theora_close(void)
       fwrite(og.header, og.header_len, 1, ogg_fp);
       fwrite(og.body, og.body_len, 1, ogg_fp);
     }
-  
+
     theora_info_clear(&theora_ti);
     theora_clear(&theora_td);
-  
+
     fflush(ogg_fp);
     fclose(ogg_fp);
   }
-  
+
   ogg_stream_clear(&ogg_os);
 }
 
@@ -409,7 +409,7 @@ main(int argc, char *argv[])
   char *input_directory;
   char *scratch;
   struct dirent **png_files;
-  
+
   while(1) {
 
     c=getopt_long(argc,argv,optstring,options,&long_option_index);
@@ -449,7 +449,7 @@ main(int argc, char *argv[])
        video_fps_numerator=rint(atof(optarg));
        break;
      case 'F':
-       video_fps_denominator=rint(atof(optarg));   
+       video_fps_denominator=rint(atof(optarg));
      default:
         usage();
         break;
@@ -481,13 +481,13 @@ main(int argc, char *argv[])
     char input_png[1024];
 
     sprintf(input_png, "%s/%s", input_directory, png_files[i]->d_name);
-    
+
     if(png_read(input_png, &w, &h, &yuv)) {
       fprintf(stderr, "could not read %s\n", input_png);
       theora_close();
       exit(1);
     }
-    
+
     if(!theora_initialized) {
       theora_info_init(&theora_ti);
 
