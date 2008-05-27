@@ -159,7 +159,7 @@ theora_open(const char *pathname)
 }
 
 static int
-theora_write_frame(unsigned long w, unsigned long h, unsigned char *yuv)
+theora_write_frame(unsigned long w, unsigned long h, unsigned char *yuv, int last)
 {
   yuv_buffer yuv_buf;
   ogg_packet op;
@@ -229,7 +229,7 @@ theora_write_frame(unsigned long w, unsigned long h, unsigned char *yuv)
     return 1;
   }
 
-  if(!theora_encode_packetout(&theora_td, 0, &op)) {
+  if(!theora_encode_packetout(&theora_td, last, &op)) {
     fprintf(stderr, "%s: error: could not read packets\n",
       option_output);
     return 1;
@@ -474,11 +474,12 @@ main(int argc, char *argv[])
 	input_directory, input_filter);
 #endif
   n = scandir (input_directory, &png_files, include_files, alphasort);
-  for(i=0;i< n;i++) {
+  for(i=0;i<n;i++) {
     unsigned int w;
     unsigned int h;
     unsigned char *yuv;
     char input_png[1024];
+    int last = 0;
 
     sprintf(input_png, "%s/%s", input_directory, png_files[i]->d_name);
 
@@ -523,7 +524,8 @@ main(int argc, char *argv[])
       theora_initialized = 1;
     }
 
-    if(theora_write_frame(w, h, yuv)) {
+    if(i >= n-1) last = 1;
+    if(theora_write_frame(w, h, yuv, last)) {
       theora_close();
       free(input_directory);
       free(input_filter);
