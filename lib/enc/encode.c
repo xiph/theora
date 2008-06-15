@@ -335,8 +335,14 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
 
       if(mbp->mode==CODE_INTER_PLUS_MV || mbp->mode==CODE_GOLDEN_MV){
 	/* One MV for the macroblock */
-	oggpackB_write( opb, MvPatternPtr[mbp->mv[0].x], MvBitsPtr[mbp->mv[0].x] );
-	oggpackB_write( opb, MvPatternPtr[mbp->mv[0].y], MvBitsPtr[mbp->mv[0].y] );
+	for(B=0; B<4; B++ ){
+	  if(mbp->coded & (1<<B)){
+	    oggpackB_write( opb, MvPatternPtr[mbp->mv[B].x], MvBitsPtr[mbp->mv[B].x] );
+	    oggpackB_write( opb, MvPatternPtr[mbp->mv[B].y], MvBitsPtr[mbp->mv[B].y] );
+	    break;
+	  }
+	}
+
       }else if (mbp->mode == CODE_INTER_FOURMV){
 	/* MV for each codedblock */
 	for(B=0; B<4; B++ ){

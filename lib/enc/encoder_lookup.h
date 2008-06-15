@@ -158,3 +158,4 @@ static const ogg_int16_t Mode2Frame[] = {
   2,  /* CODE_GOLDEN_MV       6 => Encoded diff from included MV MB golden frame */
   1   /* CODE_INTER_FOUR_MV   7 => Encoded diff from included 4 separate MV blocks */
 };
+

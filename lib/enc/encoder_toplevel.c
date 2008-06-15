@@ -123,6 +123,10 @@ int theora_encode_init(theora_state *th, theora_info *c){
   if(c->target_bitrate<0)c->target_bitrate=0;
   cpi->BaseQ = c->quality;
 
+  /* temporary while the RD code is only partially complete */
+  cpi->skip_lambda=64;
+  cpi->mv_lambda=0;
+
   /* Set encoder flags. */
   /* if not AutoKeyframing cpi->ForceKeyFrameEvery = is frequency */
   if(!c->keyframe_auto_p)

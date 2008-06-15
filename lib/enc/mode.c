@@ -181,7 +181,6 @@ static void oc_mode_set( CP_INSTANCE *cpi,
   int ri;
   int si;
 
-  mb->mode = _mode;
   chooser->mode_counts[_mode]++;
 
   /* Re-order the scheme0 mode list if necessary. */
@@ -354,6 +353,28 @@ static int cost_inter(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv, int mode){
   return cost + (oc_mode_cost(cpi,mode) << OC_BIT_SCALE);
 }
 
+static int cost_inter_nomv(CP_INSTANCE *cpi, int qi, int mbi){
+  unsigned char *cp = cpi->frag_coded;
+  macroblock_t *mb = &cpi->macro[mbi];
+  int i,j;
+  int cost = 0;
+  for(i=0;i<3;i++){
+    for(j=0;j<4;j++){
+      int fi=mb->Ryuv[i][j];
+      if(cp[fi]){
+	int bi = cpi->frag_buffer_index[fi];
+	int stride = cpi->stride[i];  
+	int sad =  dsp_sad8x8 (cpi->dsp, cpi->frame+bi, cpi->lastrecon+bi, stride);
+
+	if(i)sad<<=2;
+	cost += BINMAP(mode_rate[qi][i][0],sad);
+	
+      }
+    }
+  }
+  return cost + (oc_mode_cost(cpi,CODE_INTER_NO_MV) << OC_BIT_SCALE);
+}
+
 static int cost_inter1mv(CP_INSTANCE *cpi, int qi, int mbi, int golden, int *bits0){
   unsigned char *cp = cpi->frag_coded;
   macroblock_t *mb = &cpi->macro[mbi];
@@ -419,27 +440,19 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
   cost += (oc_mode_cost(cpi,CODE_INTER_FOURMV) << OC_BIT_SCALE);
 
   *bits0 = *bits1 = 0;
-      
-  if(mb->coded & 1){
-    *bits0 += MvBits[mb->mv[0].x + MAX_MV_EXTENT] + 
-      MvBits[mb->mv[0].y+MAX_MV_EXTENT];
-    *bits1 += 12;
-  }
-  if(mb->coded & 2){
-    *bits0 += MvBits[mb->mv[1].x+MAX_MV_EXTENT] + 
-      MvBits[mb->mv[1].y+MAX_MV_EXTENT];
-    *bits1 += 12;
-  }
-  if(mb->coded & 4){
-    *bits0 += MvBits[mb->mv[2].x+MAX_MV_EXTENT] + 
-      MvBits[mb->mv[2].y+MAX_MV_EXTENT];
-    *bits1 += 12;
-  }
-  if(mb->coded & 8){
-    *bits0 += MvBits[mb->mv[3].x+MAX_MV_EXTENT] + 
-      MvBits[mb->mv[3].y+MAX_MV_EXTENT];
-    *bits1 += 12;
-  }
+
+  *bits0 += MvBits[mb->mv[0].x + MAX_MV_EXTENT] + 
+    MvBits[mb->mv[0].y+MAX_MV_EXTENT];
+  *bits1 += 12;
+  *bits0 += MvBits[mb->mv[1].x+MAX_MV_EXTENT] + 
+    MvBits[mb->mv[1].y+MAX_MV_EXTENT];
+  *bits1 += 12;
+  *bits0 += MvBits[mb->mv[2].x+MAX_MV_EXTENT] + 
+    MvBits[mb->mv[2].y+MAX_MV_EXTENT];
+  *bits1 += 12;
+  *bits0 += MvBits[mb->mv[3].x+MAX_MV_EXTENT] + 
+    MvBits[mb->mv[3].y+MAX_MV_EXTENT];
+  *bits1 += 12;
       
   return cost + ((OC_MINI(cpi->MVBits_0 + *bits0, cpi->MVBits_1 + *bits1)-
 		  OC_MINI(cpi->MVBits_0, cpi->MVBits_1)) << OC_BIT_SCALE);
@@ -489,125 +502,191 @@ static void MBSAD420(CP_INSTANCE *cpi, int mbi, mv_t last, mv_t last2,
 
 #include "quant_lookup.h"
 
-static void TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int16_t re_q[2][3][64], long *rho_count){
-  if ( cpi->frag_coded[fi] ) {
-    int qi = cpi->BaseQ; /* temporary */;
-    int inter = (mode != CODE_INTRA);
-    ogg_int32_t *iq = cpi->iquant_tables[inter][plane][qi];
-    ogg_int16_t buffer[64];
-    ogg_int16_t *data = cpi->frag_dct[fi].data;
-    int bi = cpi->frag_buffer_index[fi];
-    int stride = cpi->stride[plane];
-    int xqp = (plane && cpi->info.pixelformat != OC_PF_444);
-    int yqp = (plane && cpi->info.pixelformat == OC_PF_420);
-    unsigned char *frame_ptr = &cpi->frame[bi];
-    unsigned char *lastrecon = ((mode == CODE_USING_GOLDEN || 
-				 mode == CODE_GOLDEN_MV) ? 
-				cpi->golden : cpi->lastrecon)+bi;
-    unsigned char *thisrecon = cpi->recon+bi;
-    int nonzero=63;
+#include <stdio.h>
 
-    /* motion comp */
-    switch(mode){
-    case CODE_INTER_PLUS_MV:
-    case CODE_INTER_LAST_MV:
-    case CODE_INTER_PRIOR_LAST:
-    case CODE_GOLDEN_MV:
-    case CODE_INTER_FOURMV:
-      
-      {    
-	int mx = mvmap[xqp][mv.x+31];
-	int my = mvmap[yqp][mv.y+31];
-	int mx2 = mvmap2[xqp][mv.x+31];
-	int my2 = mvmap2[yqp][mv.y+31];
-	
-	unsigned char *r1 = lastrecon + my * stride + mx;
-	
-	if(mx2 || my2){
-	  unsigned char *r2 = r1 + my2 * stride + mx2;
-	  dsp_copy8x8_half (cpi->dsp, r1, r2, thisrecon, stride);
-	  dsp_sub8x8(cpi->dsp, frame_ptr, thisrecon, data, stride);
-	}else{
-	  dsp_copy8x8 (cpi->dsp, r1, thisrecon, stride);
-	  dsp_sub8x8(cpi->dsp, frame_ptr, r1, data, stride);
-	}
-      }
-      break;
-      
-    case CODE_USING_GOLDEN:
-    case CODE_INTER_NO_MV:
-      dsp_copy8x8 (cpi->dsp, lastrecon, thisrecon, stride);
-      dsp_sub8x8(cpi->dsp, frame_ptr, lastrecon, data, stride);
-      break;
-    case CODE_INTRA:
-      dsp_sub8x8_128(cpi->dsp, frame_ptr, data, stride);
-      dsp_set8x8(cpi->dsp, 128, thisrecon, stride);
-      break;
-    }
 
-    /* transform */
-    dsp_fdct_short(cpi->dsp, data, buffer);
+static int TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int16_t re_q[2][3][64], 
+		 long *rho_count, int keyframe){
+
+  int qi = cpi->BaseQ; /* temporary */;
+  int inter = (mode != CODE_INTRA);
+  ogg_int32_t *iq = cpi->iquant_tables[inter][plane][qi];
+  ogg_int16_t buffer[64];
+  ogg_int16_t *data = cpi->frag_dct[fi].data;
+  int bi = cpi->frag_buffer_index[fi];
+  int stride = cpi->stride[plane];
+  int xqp = (plane && cpi->info.pixelformat != OC_PF_444);
+  int yqp = (plane && cpi->info.pixelformat == OC_PF_420);
+  unsigned char *frame_ptr = &cpi->frame[bi];
+  unsigned char *lastrecon = ((mode == CODE_USING_GOLDEN || 
+			       mode == CODE_GOLDEN_MV) ? 
+			      cpi->golden : cpi->lastrecon)+bi;
+  unsigned char *thisrecon = cpi->recon+bi;
+  int nonzero=63;
+  ogg_int16_t *dequant = re_q[inter][plane];
+  int uncoded_ssd=0,coded_ssd=0,sad=0;
+
+  /* motion comp */
+  switch(mode){
+  case CODE_INTER_PLUS_MV:
+  case CODE_INTER_LAST_MV:
+  case CODE_INTER_PRIOR_LAST:
+  case CODE_GOLDEN_MV:
+  case CODE_INTER_FOURMV:
     
-    /* collect rho metrics, quantize */
-    {
-      /* modified rho-domain (track zero-runs as well) */
-	/* ZXZ; splits one zero run into two zero runs and a nonzero; +2
-	   ZXN; adds one nonzero token; +1
-	   NXZ; adds one nonzero token; +1
-	   NXN; replaces a zero run with a nonzero; +0  */
-      int i;
-      quant_tables *qq = &(cpi->quant_tables[inter][plane]);
-
-      for(i=0;i<64;i++){
-	int ii = dezigzag_index[i];
-	int pos;
-	int val = abs(buffer[ii])<<1;
-	ogg_int16_t *qqq = (*qq)[i];
-	for(pos=64;pos>0;pos--)
-	  if(val < qqq[pos-1])break;
-	
-	/* rho-domain distribution */
-	rho_count[pos]++;
-
-	if(qi<pos){
-	  data[i] = 0;
-	}else{
-	  int val = (((iq[ii]>>15)*buffer[ii]) + (1<<15) + (((iq[ii]&0x7fff)*buffer[ii])>>15)) >>16;
-	  data[i] = (val>511?511:(val<-511?-511:val));
-	}
+    {    
+      int mx = mvmap[xqp][mv.x+31];
+      int my = mvmap[yqp][mv.y+31];
+      int mx2 = mvmap2[xqp][mv.x+31];
+      int my2 = mvmap2[yqp][mv.y+31];
+      
+      unsigned char *r1 = lastrecon + my * stride + mx;
+      
+      if(mx2 || my2){
+	unsigned char *r2 = r1 + my2 * stride + mx2;
+	dsp_copy8x8_half (cpi->dsp, r1, r2, thisrecon, stride);
+	dsp_sub8x8(cpi->dsp, frame_ptr, thisrecon, data, stride);
+      }else{
+	dsp_copy8x8 (cpi->dsp, r1, thisrecon, stride);
+	dsp_sub8x8(cpi->dsp, frame_ptr, r1, data, stride);
       }
     }
-
-    cpi->frag_dc[fi] = data[0];
-
-    /* reconstruct */
-    while(!data[nonzero] && --nonzero);
-    switch(nonzero){
-    case 0:
-      IDct1( data, re_q[inter][plane], buffer );
-      break;
-    case 1: case 2:
-      dsp_IDct3(cpi->dsp, data, re_q[inter][plane], buffer );
-      break;
-    case 3:case 4:case 5:case 6:case 7:case 8: case 9:
-      dsp_IDct10(cpi->dsp, data, re_q[inter][plane], buffer );
-      break;
-    default:
-      dsp_IDctSlow(cpi->dsp, data, re_q[inter][plane], buffer );
-    }
+    break;
     
-    dsp_recon8x8 (cpi->dsp, thisrecon, buffer, stride);
-      
+  case CODE_USING_GOLDEN:
+  case CODE_INTER_NO_MV:
+    dsp_copy8x8 (cpi->dsp, lastrecon, thisrecon, stride);
+    dsp_sub8x8(cpi->dsp, frame_ptr, lastrecon, data, stride);
+    break;
+  case CODE_INTRA:
+    dsp_sub8x8_128(cpi->dsp, frame_ptr, data, stride);
+    dsp_set8x8(cpi->dsp, 128, thisrecon, stride);
+    break;
   }
+
+  if(!keyframe){
+    int i;
+    if(mode==CODE_INTER_NO_MV){
+      for(i=0;i<64;i++)
+	uncoded_ssd += data[i]*data[i];
+    }else{
+      dsp_sub8x8(cpi->dsp, frame_ptr, cpi->lastrecon+bi, buffer, stride);
+      for(i=0;i<64;i++)
+	uncoded_ssd += buffer[i]*buffer[i];
+    }
+
+    for(i=0;i<64;i++)
+      sad += abs(data[i]);
+
+    if(mode==CODE_INTRA){
+      sad >>=6;
+    }else{
+      if(plane)sad<<=2;
+    }
+  }
+
+  /* transform */
+  dsp_fdct_short(cpi->dsp, data, buffer);
+  
+  /* collect rho metrics, quantize */
+  {
+    int i;
+    quant_tables *qq = &(cpi->quant_tables[inter][plane]);
+    
+    for(i=0;i<64;i++){
+      int ii = dezigzag_index[i];
+      int pos;
+      int val = abs(buffer[ii])<<1;
+      ogg_int16_t *qqq = (*qq)[i];
+      for(pos=64;pos>0;pos--)
+	if(val < qqq[pos-1])break;
+      
+      /* rho-domain distribution */
+      rho_count[pos]++;
+
+      if(qi<pos){
+	data[i] = 0;
+      }else{
+	int val = (((iq[ii]>>15)*buffer[ii]) + (1<<15) + (((iq[ii]&0x7fff)*buffer[ii])>>15)) >>16;
+	data[i] = (val>511?511:(val<-511?-511:val));
+      }
+    }
+  }
+  
+  cpi->frag_dc[fi] = data[0];
+  
+  /* reconstruct */
+  while(!data[nonzero] && --nonzero);
+  switch(nonzero){
+  case 0:
+    IDct1( data, dequant, buffer );
+    break;
+  case 1: case 2:
+    dsp_IDct3(cpi->dsp, data, dequant, buffer );
+    break;
+  case 3:case 4:case 5:case 6:case 7:case 8: case 9:
+    dsp_IDct10(cpi->dsp, data, dequant, buffer );
+    break;
+  default:
+    dsp_IDctSlow(cpi->dsp, data, dequant, buffer );
+  }
+  
+  dsp_recon8x8 (cpi->dsp, thisrecon, buffer, stride);
+
+  if(!keyframe){
+    int i;
+    int cost = BINMAP(mode_rate[qi][plane][mode==CODE_INTRA],sad);
+    if(cost<0)cost=0; /* some of the trained fits can return a negative cost for zero entropy */
+
+    /* in retrospect, should we have skipped this block? */
+    /* we are free to apply any distortion measure we like as we have
+       the full original block and fully reconstructed block with
+       which to do so.*/
+    /* for now, straight up SSD */
+    dsp_sub8x8(cpi->dsp, frame_ptr, thisrecon, buffer, stride);    
+    for(i=0;i<64;i++)
+      coded_ssd += buffer[i]*buffer[i];
+
+    if(plane){
+      coded_ssd*=4;
+      uncoded_ssd*=4;
+    }
+    
+    if(uncoded_ssd <= coded_ssd+((cpi->skip_lambda*cost)>>(OC_BIT_SCALE))){ 
+      /* mark uncoded */
+      cpi->frag_coded[fi]=0;
+      
+      /* replace reconstruction with a block copy */
+      dsp_copy8x8 (cpi->dsp, cpi->lastrecon+bi, thisrecon, stride);
+      
+      return 0;
+    }
+  }
+    
+
+  return 1;
 }
 
-static void TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi, ogg_int16_t req[2][3][64], long *rc){
+static int TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi, ogg_int16_t req[2][3][64], 
+		  long *rc, int keyframe){
   int pf = cpi->info.pixelformat;
   int mode = mb->mode;
   int i;
-
+  int coded=0;
+  
   for(i=0;i<4;i++)
-    TQB(cpi,mode,mb->Ryuv[0][i],mb->mv[i],0,req,rc);
+    if(TQB(cpi,mode,mb->Ryuv[0][i],mb->mv[i],0,req,rc,keyframe))
+      coded++;
+    else{
+      if(mode == CODE_INTER_FOURMV) 
+	mb->mv[i]=(mv_t){0,0};
+    }
+
+  if(coded==0){
+    mode = mb->mode = CODE_INTER_NO_MV; /* No luma blocks coded, mode is forced */
+    mb->coded = 0;
+    mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = (mv_t){0,0};
+  }
 
   switch(pf){
   case OC_PF_420:
@@ -620,11 +699,11 @@ static void TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi, ogg_int16_t req[2
       mv.x = ( mv.x >= 0 ? (mv.x + 2) / 4 : (mv.x - 2) / 4);
       mv.y = ( mv.y >= 0 ? (mv.y + 2) / 4 : (mv.y - 2) / 4);
       
-      TQB(cpi,mode,mb->Ryuv[1][0],mv,1,req,rc);
-      TQB(cpi,mode,mb->Ryuv[2][0],mv,2,req,rc);
+      coded+=TQB(cpi,mode,mb->Ryuv[1][0],mv,1,req,rc,keyframe);
+      coded+=TQB(cpi,mode,mb->Ryuv[2][0],mv,2,req,rc,keyframe);
     }else{ 
-      TQB(cpi,mode,mb->Ryuv[1][0],mb->mv[0],1,req,rc);
-      TQB(cpi,mode,mb->Ryuv[2][0],mb->mv[0],2,req,rc);
+      coded+=TQB(cpi,mode,mb->Ryuv[1][0],mb->mv[0],1,req,rc,keyframe);
+      coded+=TQB(cpi,mode,mb->Ryuv[2][0],mb->mv[0],2,req,rc,keyframe);
     }
     break;
 
@@ -642,26 +721,29 @@ static void TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi, ogg_int16_t req[2
       mvB.x = ( mvB.x >= 0 ? (mvB.x + 1) / 2 : (mvB.x - 1) / 2);
       mvB.y = ( mvB.y >= 0 ? (mvB.y + 1) / 2 : (mvB.y - 1) / 2);
       
-      TQB(cpi,mode,mb->Ryuv[1][0],mvA,1,req,rc);
-      TQB(cpi,mode,mb->Ryuv[1][1],mvB,1,req,rc);
-      TQB(cpi,mode,mb->Ryuv[2][0],mvA,2,req,rc);
-      TQB(cpi,mode,mb->Ryuv[2][1],mvB,2,req,rc);
+      coded+=TQB(cpi,mode,mb->Ryuv[1][0],mvA,1,req,rc,keyframe);
+      coded+=TQB(cpi,mode,mb->Ryuv[1][1],mvB,1,req,rc,keyframe);
+      coded+=TQB(cpi,mode,mb->Ryuv[2][0],mvA,2,req,rc,keyframe);
+      coded+=TQB(cpi,mode,mb->Ryuv[2][1],mvB,2,req,rc,keyframe);
 
     }else{ 
-      TQB(cpi,mode,mb->Ryuv[1][0],mb->mv[0],1,req,rc);
-      TQB(cpi,mode,mb->Ryuv[1][1],mb->mv[0],1,req,rc);
-      TQB(cpi,mode,mb->Ryuv[2][0],mb->mv[0],2,req,rc);
-      TQB(cpi,mode,mb->Ryuv[2][1],mb->mv[0],2,req,rc);
+      coded+=TQB(cpi,mode,mb->Ryuv[1][0],mb->mv[0],1,req,rc,keyframe);
+      coded+=TQB(cpi,mode,mb->Ryuv[1][1],mb->mv[0],1,req,rc,keyframe);
+      coded+=TQB(cpi,mode,mb->Ryuv[2][0],mb->mv[0],2,req,rc,keyframe);
+      coded+=TQB(cpi,mode,mb->Ryuv[2][1],mb->mv[0],2,req,rc,keyframe);
     }
     break;
     
   case OC_PF_444:
     for(i=0;i<4;i++)
-      TQB(cpi,mode,mb->Ryuv[1][i],mb->mv[i],1,req,rc);
+      coded+=TQB(cpi,mode,mb->Ryuv[1][i],mb->mv[i],1,req,rc,keyframe);
     for(i=0;i<4;i++)
-      TQB(cpi,mode,mb->Ryuv[2][i],mb->mv[i],2,req,rc);
+      coded+=TQB(cpi,mode,mb->Ryuv[2][i],mb->mv[i],2,req,rc,keyframe);
     break;
   }
+
+  return coded;
+
 }
 
 int PickModes(CP_INSTANCE *cpi, int recode){
@@ -698,6 +780,9 @@ int PickModes(CP_INSTANCE *cpi, int recode){
   for(; sb<sb_end; sb++){
     for(j = 0; j<4; j++){ /* mode addressing is through Y plane, always 4 MB per SB */
       int mbi = sb->m[j];
+
+      if(mbi >= cpi->macro_total) continue;
+
       int cost[8] = {0,0,0,0, 0,0,0,0};
       int mb_mv_bits_0;
       int mb_gmv_bits_0;
@@ -707,7 +792,6 @@ int PickModes(CP_INSTANCE *cpi, int recode){
       int aerror;
       int gerror;
       int block_err[4];
-      int flag4mv=0;
 
       macroblock_t *mb = &cpi->macro[mbi];
 
@@ -718,17 +802,17 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	memmove(mb->analysis_mv+1,mb->analysis_mv,2*sizeof(mb->analysis_mv[0]));
 	
 	/* basic 1MV search always done for all macroblocks, coded or not, keyframe or not */
-	flag4mv = oc_mcenc_search(cpi, &mcenc, mbi, 0, mb->mv, &aerror, block_err);
+	oc_mcenc_search(cpi, &mcenc, mbi, 0, mb->mv, &aerror, block_err);
 	
 	/* replace the block MVs for not-coded blocks with (0,0).*/   
-	mb->coded = 0;
+	/*mb->coded = 0;
 	for ( bi=0; bi<4; bi++ ){
 	  int fi = mb->Ryuv[0][bi];
 	  if(!cp[fi]) 
 	    mb->mv[bi]=(mv_t){0,0};
 	  else
 	    mb->coded |= (1<<bi);
-	}
+	    }*/
 	
 	/* search golden frame */
 	oc_mcenc_search(cpi, &mcenc, mbi, 1, NULL, &gerror, NULL);
@@ -737,8 +821,11 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 
       if(cpi->FrameType == KEY_FRAME){
 	mb->mode = CODE_INTRA;
-      }else{
+	/* Transform, quantize, collect rho metrics */
+	TQMB(cpi, mb, qi, req, rho_count, 1);
 	
+      }else{
+
 	/**************************************************************
            Find the block choice with the lowest estimated coding cost
 
@@ -750,17 +837,14 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	/* block coding cost is estimated from correlated SAD metrics */
 	/* At this point, all blocks that are in frame are still marked coded */
 
-	cost[CODE_INTER_NO_MV] = cost_inter(cpi, qi, mbi, (mv_t){0,0}, CODE_INTER_NO_MV);
+	cost[CODE_INTER_NO_MV] = cost_inter_nomv(cpi, qi, mbi);
 	cost[CODE_INTRA] = cost_intra(cpi, qi, mbi, &intrabits);
 	cost[CODE_INTER_PLUS_MV] = cost_inter1mv(cpi, qi, mbi, 0, &mb_mv_bits_0);
 	cost[CODE_INTER_LAST_MV] = cost_inter(cpi, qi, mbi, last_mv, CODE_INTER_LAST_MV);
 	cost[CODE_INTER_PRIOR_LAST] = cost_inter(cpi, qi, mbi, prior_mv, CODE_INTER_PRIOR_LAST);
 	cost[CODE_USING_GOLDEN] = cost_inter(cpi, qi, mbi, (mv_t){0,0},CODE_USING_GOLDEN);
 	cost[CODE_GOLDEN_MV] = cost_inter1mv(cpi, qi, mbi, 1, &mb_gmv_bits_0);
-	if(flag4mv)
-	  cost[CODE_INTER_FOURMV] = cost_inter4mv(cpi, qi, mbi, &mb_4mv_bits_0, &mb_4mv_bits_1);
-	else
-	  cost[CODE_INTER_FOURMV] = 99999999;
+	cost[CODE_INTER_FOURMV] = cost_inter4mv(cpi, qi, mbi, &mb_4mv_bits_0, &mb_4mv_bits_1);
 	
 	/* train this too... because the bit cost of an MV should be
 	   considered in the context of LAST_MV and PRIOR_LAST. */
@@ -769,7 +853,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	/* the explicit MV modes (2,6,7) have not yet gone through
 	   halfpel refinement. We choose the explicit mv mode that's
 	   already furthest ahead on bits and refine only that one */
-	if(flag4mv && cost[CODE_INTER_FOURMV]<cost[CODE_INTER_PLUS_MV] && cost[CODE_INTER_FOURMV]<cost[CODE_GOLDEN_MV]){
+	if(cost[CODE_INTER_FOURMV]<cost[CODE_INTER_PLUS_MV] && cost[CODE_INTER_FOURMV]<cost[CODE_GOLDEN_MV]){
 	  oc_mcenc_refine4mv(cpi, mbi, block_err);
 	  cost[CODE_INTER_FOURMV] = cost_inter4mv(cpi, qi, mbi, &mb_4mv_bits_0, &mb_4mv_bits_1);
 	}else if (cost[CODE_GOLDEN_MV]<cost[CODE_INTER_PLUS_MV]){
@@ -786,7 +870,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	for(i=1;i<8;i++)
 	  if(cost[i]<cost[mode])
 	    mode=i;
-	
+
 	/* add back such that inter/intra counting are relatively correct */
 	cost[CODE_INTER_PLUS_MV] += 384;
 	
@@ -794,22 +878,17 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	case CODE_INTER_PLUS_MV:
 	  cpi->MVBits_0 += mb_mv_bits_0;
 	  cpi->MVBits_1 += 12;
-	  prior_mv = last_mv;
-	  last_mv = mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = mb->analysis_mv[0][0];
+	  mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = mb->analysis_mv[0][0];
 	  break;
 	case CODE_INTER_LAST_MV:
 	  mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = last_mv;
 	  break;
 	case CODE_INTER_PRIOR_LAST:
 	  mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = prior_mv;
-	  prior_mv = last_mv;
-	  last_mv = mb->mv[0];
 	  break;
 	case CODE_INTER_FOURMV:
 	  cpi->MVBits_0 += mb_4mv_bits_0;
 	  cpi->MVBits_1 += mb_4mv_bits_1;
-	  prior_mv = last_mv;
-	  last_mv = mb->mv[3]; /* if coded, it is still used forced to 0,0 according to spec */
 	  break;
 	case CODE_GOLDEN_MV:
 	  cpi->MVBits_0 += mb_gmv_bits_0;
@@ -820,9 +899,56 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	  mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = (mv_t){0,0};
 	  break;
 	}
-	oc_mode_set(cpi,mb,mode);      
+	mb->mode = mode;
 	
-	interbits += cost[mb->mode];
+	/* Transform, quantize, collect rho metrics */
+	if(!TQMB(cpi, mb, qi, req, rho_count, 0)){
+
+	  /* ended up not coding the macroblock at all */
+	  mb->coded = 0;
+	  mb->mode = CODE_INTER_NO_MV;
+
+	}else{
+
+	  /* still coding the MB */
+
+	  /* replace the block MVs for not-coded blocks with (0,0).*/   
+	  mb->coded = 0;
+	  for ( bi=0; bi<4; bi++ ){
+	    int fi = mb->Ryuv[0][bi];
+	    if(cp[fi]) 
+	      mb->coded |= (1<<bi);
+	  }
+
+	  switch(mb->mode){
+	  case CODE_INTER_PLUS_MV:
+	    prior_mv = last_mv;
+	    last_mv = mb->analysis_mv[0][0];
+	    break;
+	  case CODE_INTER_PRIOR_LAST:
+	    {
+	      mv_t temp = prior_mv;
+	      prior_mv = last_mv;
+	      last_mv = temp;
+	    }
+	    break;
+	  case CODE_INTER_FOURMV:
+	    prior_mv = last_mv;
+	    if(mb->coded & 0x8)
+	      last_mv = mb->mv[3];
+	    else if(mb->coded & 0x4)
+	      last_mv = mb->mv[2];
+	    else if(mb->coded & 0x2)
+	      last_mv = mb->mv[1];
+	    else 
+	      last_mv = mb->mv[0];
+	    break;
+	  }
+	  
+	  oc_mode_set(cpi,mb,mb->mode);      
+	  
+	  interbits += cost[mb->mode];
+	}
       }
 
 #ifdef COLLECT_METRICS
@@ -836,10 +962,6 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	}
       }
 #endif
-
-      /* Transform, quantize, collect rho metrics */
-      TQMB(cpi, mb, qi, req, rho_count);
-
     }
   }
 

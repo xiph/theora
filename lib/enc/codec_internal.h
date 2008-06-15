@@ -129,6 +129,7 @@ typedef struct macroblock {
   coding_mode_t mode;
 
   /* per-block final motion vectors */
+  /* raster order */
   mv_t mv[4];
 
   /* Motion vectors for a macro block for the current frame and the
@@ -270,6 +271,8 @@ typedef struct CP_INSTANCE {
   /********************************************************************/
   /* Setup */
   int              keyframe_granule_shift;
+  int              skip_lambda;
+  int              mv_lambda;
   int              BaseQ;
   int              GoldenFrameEnabled;
   int              InterPrediction;
@@ -325,13 +328,13 @@ extern void EncodeData(CP_INSTANCE *cpi);
 extern void oc_mcenc_start(CP_INSTANCE *cpi,
 			   mc_state *mcenc);
 
-extern int oc_mcenc_search(CP_INSTANCE *cpi, 
-			   mc_state *_mcenc,
-			   int _mbi,
-			   int _goldenp,
-			   mv_t *_bmvs,
-			   int *best_err,
-			   int best_block_err[4]);
+extern void oc_mcenc_search(CP_INSTANCE *cpi, 
+			    mc_state *_mcenc,
+			    int _mbi,
+			    int _goldenp,
+			    mv_t *_bmvs,
+			    int *best_err,
+			    int best_block_err[4]);
 
 extern void oc_mcenc_refine1mv(CP_INSTANCE *cpi, 
 			      int _mbi,
