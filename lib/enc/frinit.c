@@ -131,8 +131,8 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->dct_eob_fi_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_eob_fi_storage));
 #endif
   
-
   /* fill in superblock fragment pointers; hilbert order */
+  /* fill in macroblock superblock backpointers */
   {
     int row,col,frag,mb;
     int fhilbertx[16] = {0,1,1,0,0,0,1,1,2,2,3,3,3,2,2,3};
@@ -173,9 +173,9 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	  if(mrow<cpi->macro_v && mcol<cpi->macro_h){
 	    int macroindex = mrow*cpi->macro_h + mcol;
 	    cpi->super[0][superindex].m[mb] = macroindex;
+	    cpi->macro[macroindex].ysb = superindex;
 	  }else
 	    cpi->super[0][superindex].m[mb] = cpi->macro_total;
-
 	}
       }
     }
@@ -191,6 +191,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	  if(mrow<cpi->macro_v && mcol<cpi->macro_h){
 	    int macroindex = mrow*cpi->macro_h + mcol;
 	    cpi->super[1][superindex].m[mb] = macroindex;
+	    cpi->macro[macroindex].usb = superindex + cpi->super_n[0];
 	  }else
 	    cpi->super[1][superindex].m[mb] = cpi->macro_total;
 	}
@@ -208,6 +209,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	  if(mrow<cpi->macro_v && mcol<cpi->macro_h){
 	    int macroindex = mrow*cpi->macro_h + mcol;
 	    cpi->super[2][superindex].m[mb] = macroindex;
+	    cpi->macro[macroindex].vsb = superindex + cpi->super_n[0] + cpi->super_n[1];
 	  }else
 	    cpi->super[2][superindex].m[mb] = cpi->macro_total;
 	}

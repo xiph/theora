@@ -120,7 +120,10 @@ typedef struct macroblock {
   /* the blocks comprising this macroblock */
   int Ryuv[3][4]; /* [Y,U,V][raster order] */
   int Hyuv[3][4]; /* [Y,U,V][hilbert order] */
-
+  int ysb;
+  int usb;
+  int vsb;
+    
   int cneighbors[4];      
   int ncneighbors;
   int pneighbors[4];
@@ -151,6 +154,9 @@ typedef struct macroblock {
 typedef struct superblock {
   int f[16]; // hilbert order
   int m[16]; // hilbert order; 4 for Y, 4 for UZ in 4:4:4, 8 for UV in 4:2:2, 16 for UV in 4:2:0
+
+  int partial;
+  int coded;
 } superblock_t;
 
 typedef ogg_int16_t    quant_table[64]; 

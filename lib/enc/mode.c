@@ -667,20 +667,26 @@ static int TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int1
   return 1;
 }
 
-static int TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi, ogg_int16_t req[2][3][64], 
-		  long *rc, int keyframe){
+static int TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, 
+		  int qi, ogg_int16_t req[2][3][64], long *rc, int keyframe){
   int pf = cpi->info.pixelformat;
   int mode = mb->mode;
   int i;
   int coded=0;
-  
-  for(i=0;i<4;i++)
-    if(TQB(cpi,mode,mb->Ryuv[0][i],mb->mv[i],0,req,rc,keyframe))
+  superblock_t *ysb = &cpi->super[0][mb->ysb];
+  superblock_t *usb = &cpi->super[0][mb->usb];
+  superblock_t *vsb = &cpi->super[0][mb->vsb];
+
+  for(i=0;i<4;i++){
+    if(TQB(cpi,mode,mb->Ryuv[0][i],mb->mv[i],0,req,rc,keyframe)){
+      ysb->coded=1;
       coded++;
-    else{
+    }else{
+      ysb->partial=1;
       if(mode == CODE_INTER_FOURMV) 
 	mb->mv[i]=(mv_t){0,0};
     }
+  }
 
   if(coded==0){
     mode = mb->mode = CODE_INTER_NO_MV; /* No luma blocks coded, mode is forced */
@@ -690,66 +696,94 @@ static int TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int qi, ogg_int16_t req[2]
 
   switch(pf){
   case OC_PF_420:
-    if(mode == CODE_INTER_FOURMV){
+    {
       mv_t mv;
-	  
-      mv.x = mb->mv[0].x + mb->mv[1].x + mb->mv[2].x + mb->mv[3].x;
-      mv.y = mb->mv[0].y + mb->mv[1].y + mb->mv[2].y + mb->mv[3].y;
-      
-      mv.x = ( mv.x >= 0 ? (mv.x + 2) / 4 : (mv.x - 2) / 4);
-      mv.y = ( mv.y >= 0 ? (mv.y + 2) / 4 : (mv.y - 2) / 4);
-      
-      coded+=TQB(cpi,mode,mb->Ryuv[1][0],mv,1,req,rc,keyframe);
-      coded+=TQB(cpi,mode,mb->Ryuv[2][0],mv,2,req,rc,keyframe);
-    }else{ 
-      coded+=TQB(cpi,mode,mb->Ryuv[1][0],mb->mv[0],1,req,rc,keyframe);
-      coded+=TQB(cpi,mode,mb->Ryuv[2][0],mb->mv[0],2,req,rc,keyframe);
+      if(mode == CODE_INTER_FOURMV){
+	
+	mv.x = mb->mv[0].x + mb->mv[1].x + mb->mv[2].x + mb->mv[3].x;
+	mv.y = mb->mv[0].y + mb->mv[1].y + mb->mv[2].y + mb->mv[3].y;
+	
+	mv.x = ( mv.x >= 0 ? (mv.x + 2) / 4 : (mv.x - 2) / 4);
+	mv.y = ( mv.y >= 0 ? (mv.y + 2) / 4 : (mv.y - 2) / 4);
+      }else{
+	mv = mb->mv[0];
+      }
+      if(TQB(cpi,mode,mb->Ryuv[1][0],mv,1,req,rc,keyframe)){
+	usb->coded=1;
+	coded++;
+      }else{
+	usb->partial=1;
+      }
+      if(TQB(cpi,mode,mb->Ryuv[2][0],mv,2,req,rc,keyframe)){
+	vsb->coded=1;
+	coded++;
+      }else{
+	vsb->partial=1;
+      }
     }
     break;
-
   case OC_PF_422:
-    if(mode == CODE_INTER_FOURMV){
-      mv_t mvA;
-      mv_t mvB;
-	  
-      mvA.x = mb->mv[0].x + mb->mv[1].x;
-      mvA.y = mb->mv[0].y + mb->mv[1].y;
-      mvA.x = ( mvA.x >= 0 ? (mvA.x + 1) / 2 : (mvA.x - 1) / 2);
-      mvA.y = ( mvA.y >= 0 ? (mvA.y + 1) / 2 : (mvA.y - 1) / 2);
-      mvB.x = mb->mv[0].x + mb->mv[1].x;
-      mvB.y = mb->mv[0].y + mb->mv[1].y;
-      mvB.x = ( mvB.x >= 0 ? (mvB.x + 1) / 2 : (mvB.x - 1) / 2);
-      mvB.y = ( mvB.y >= 0 ? (mvB.y + 1) / 2 : (mvB.y - 1) / 2);
+    {
+      mv_t mv[2];
       
-      coded+=TQB(cpi,mode,mb->Ryuv[1][0],mvA,1,req,rc,keyframe);
-      coded+=TQB(cpi,mode,mb->Ryuv[1][1],mvB,1,req,rc,keyframe);
-      coded+=TQB(cpi,mode,mb->Ryuv[2][0],mvA,2,req,rc,keyframe);
-      coded+=TQB(cpi,mode,mb->Ryuv[2][1],mvB,2,req,rc,keyframe);
+      if(mode == CODE_INTER_FOURMV){
+	
+	for(i=0;i<2;i++){
+	  mv[i].x = mb->mv[0].x + mb->mv[1].x;
+	  mv[i].y = mb->mv[0].y + mb->mv[1].y;
+	  mv[i].x = ( mv[i].x >= 0 ? (mv[i].x + 1) / 2 : (mv[i].x - 1) / 2);
+	  mv[i].y = ( mv[i].y >= 0 ? (mv[i].y + 1) / 2 : (mv[i].y - 1) / 2);
+	}
+      }else{
+	mv[0] = mv[1] =  mb->mv[0];
+      }
 
-    }else{ 
-      coded+=TQB(cpi,mode,mb->Ryuv[1][0],mb->mv[0],1,req,rc,keyframe);
-      coded+=TQB(cpi,mode,mb->Ryuv[1][1],mb->mv[0],1,req,rc,keyframe);
-      coded+=TQB(cpi,mode,mb->Ryuv[2][0],mb->mv[0],2,req,rc,keyframe);
-      coded+=TQB(cpi,mode,mb->Ryuv[2][1],mb->mv[0],2,req,rc,keyframe);
+      for(i=0;i<2;i++)
+	if(TQB(cpi,mode,mb->Ryuv[1][i],mv[i],1,req,rc,keyframe)){
+	  usb->coded=1;
+	  coded++;
+	}else{
+	  usb->partial=1;
+	}
+
+      for(i=0;i<2;i++)
+	if(TQB(cpi,mode,mb->Ryuv[2][i],mv[i],2,req,rc,keyframe)){
+	  vsb->coded=1;
+	  coded++;
+	}else{
+	  vsb->partial=1;
+	}
     }
     break;
     
   case OC_PF_444:
     for(i=0;i<4;i++)
-      coded+=TQB(cpi,mode,mb->Ryuv[1][i],mb->mv[i],1,req,rc,keyframe);
+      if(TQB(cpi,mode,mb->Ryuv[1][i],mb->mv[i],1,req,rc,keyframe)){
+	usb->coded=1;
+	coded++;
+      }else{
+	usb->partial=1;
+      }
+
     for(i=0;i<4;i++)
-      coded+=TQB(cpi,mode,mb->Ryuv[2][i],mb->mv[i],2,req,rc,keyframe);
+      if(TQB(cpi,mode,mb->Ryuv[2][i],mb->mv[i],2,req,rc,keyframe)){
+	vsb->coded=1;
+	coded++;
+      }else{
+	vsb->partial=1;
+      }
+    
     break;
   }
-
+  
   return coded;
-
+  
 }
 
 int PickModes(CP_INSTANCE *cpi, int recode){
   unsigned char qi = cpi->BaseQ; // temporary
   superblock_t *sb = cpi->super[0];
-  superblock_t *sb_end = sb + cpi->super_n[0];
+  superblock_t *sb_end;
   int i,j,k;
   ogg_uint32_t interbits = 0;
   ogg_uint32_t intrabits = 0;
@@ -775,9 +809,19 @@ int PickModes(CP_INSTANCE *cpi, int recode){
  
   if(!recode)
     oc_mcenc_start(cpi, &mcenc); 
-  
-  /* Choose mvs, modes; must be done in Hilbert order */
+
+  /* clear flags to initial state */
+  sb_end = sb + cpi->super_total;
   for(; sb<sb_end; sb++){
+    sb->partial = 0;
+    sb->coded = 0;
+  }
+   
+  /* Choose mvs, modes; must be done in Hilbert order */
+  sb = cpi->super[0];
+  sb_end = sb + cpi->super_n[0];
+  for(; sb<sb_end; sb++){
+    
     for(j = 0; j<4; j++){ /* mode addressing is through Y plane, always 4 MB per SB */
       int mbi = sb->m[j];
 
@@ -803,16 +847,6 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	
 	/* basic 1MV search always done for all macroblocks, coded or not, keyframe or not */
 	oc_mcenc_search(cpi, &mcenc, mbi, 0, mb->mv, &aerror, block_err);
-	
-	/* replace the block MVs for not-coded blocks with (0,0).*/   
-	/*mb->coded = 0;
-	for ( bi=0; bi<4; bi++ ){
-	  int fi = mb->Ryuv[0][bi];
-	  if(!cp[fi]) 
-	    mb->mv[bi]=(mv_t){0,0};
-	  else
-	    mb->coded |= (1<<bi);
-	    }*/
 	
 	/* search golden frame */
 	oc_mcenc_search(cpi, &mcenc, mbi, 1, NULL, &gerror, NULL);
