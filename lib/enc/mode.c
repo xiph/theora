@@ -245,7 +245,8 @@ static int BINMAP(ogg_int32_t *lookup,int sad){
   ogg_int32_t *y = lookup + bin;
   int xdel = sad - (bin<<OC_SAD_SHIFT);
   int ydel = y[1] - y[0];
-  return y[0] + ((ydel*xdel)>>OC_SAD_SHIFT);
+  int ret = y[0] + ((ydel*xdel)>>OC_SAD_SHIFT);
+  return ret;
 }
 
 static const int mvmap[2][63] = {
@@ -318,7 +319,7 @@ static void MBCost(CP_INSTANCE *cpi, int qi, int mbi, int cost[8], int sad[8][3]
   }
 }
 
-static int cost_intra(CP_INSTANCE *cpi, int qi, int mbi, ogg_uint32_t *intrabits){
+static int cost_intra(CP_INSTANCE *cpi, int qi, int mbi, ogg_uint32_t *intrabits, int *overhead){
   unsigned char *cp = cpi->frag_coded;
   macroblock_t *mb = &cpi->macro[mbi];
   int i,j;
@@ -333,10 +334,11 @@ static int cost_intra(CP_INSTANCE *cpi, int qi, int mbi, ogg_uint32_t *intrabits
     }
   }
   *intrabits+=cost;
-  return cost + (oc_mode_cost(cpi,1) << OC_BIT_SCALE);
+  *overhead = (oc_mode_cost(cpi,1) << OC_BIT_SCALE);
+  return cost + *overhead;
 }
 
-static int cost_inter(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv, int mode){
+static int cost_inter(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv, int mode, int *overhead){
   unsigned char *cp = cpi->frag_coded;
   macroblock_t *mb = &cpi->macro[mbi];
   int i,j;
@@ -350,10 +352,11 @@ static int cost_inter(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv, int mode){
       }
     }
   }
-  return cost + (oc_mode_cost(cpi,mode) << OC_BIT_SCALE);
+  *overhead = (oc_mode_cost(cpi,mode) << OC_BIT_SCALE);
+  return cost + *overhead;
 }
 
-static int cost_inter_nomv(CP_INSTANCE *cpi, int qi, int mbi){
+static int cost_inter_nomv(CP_INSTANCE *cpi, int qi, int mbi, int *overhead){
   unsigned char *cp = cpi->frag_coded;
   macroblock_t *mb = &cpi->macro[mbi];
   int i,j;
@@ -372,10 +375,11 @@ static int cost_inter_nomv(CP_INSTANCE *cpi, int qi, int mbi){
       }
     }
   }
-  return cost + (oc_mode_cost(cpi,CODE_INTER_NO_MV) << OC_BIT_SCALE);
+  *overhead = (oc_mode_cost(cpi,CODE_INTER_NO_MV) << OC_BIT_SCALE);
+  return cost + *overhead;
 }
 
-static int cost_inter1mv(CP_INSTANCE *cpi, int qi, int mbi, int golden, int *bits0){
+static int cost_inter1mv(CP_INSTANCE *cpi, int qi, int mbi, int golden, int *bits0, int *overhead){
   unsigned char *cp = cpi->frag_coded;
   macroblock_t *mb = &cpi->macro[mbi];
   int i,j;
@@ -390,16 +394,18 @@ static int cost_inter1mv(CP_INSTANCE *cpi, int qi, int mbi, int golden, int *bit
       }
     }
   }
-  cost += oc_mode_cost(cpi,golden?CODE_GOLDEN_MV:CODE_INTER_PLUS_MV) << OC_BIT_SCALE;
-
+  
   *bits0  = MvBits[mb->analysis_mv[0][golden].x + MAX_MV_EXTENT] + 
     MvBits[mb->analysis_mv[0][golden].y + MAX_MV_EXTENT];
   
-  return cost + ((OC_MINI(cpi->MVBits_0 + *bits0, cpi->MVBits_1+12)-
-		  OC_MINI(cpi->MVBits_0, cpi->MVBits_1)) << OC_BIT_SCALE);
+  *overhead = (oc_mode_cost(cpi,golden?CODE_GOLDEN_MV:CODE_INTER_PLUS_MV) +
+	       (OC_MINI(cpi->MVBits_0 + *bits0, cpi->MVBits_1+12)-
+		OC_MINI(cpi->MVBits_0, cpi->MVBits_1))) << OC_BIT_SCALE;
+  
+  return cost + *overhead;
 }
 
-static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bits1){
+static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bits1, int *overhead){
   unsigned char *cp = cpi->frag_coded;
   macroblock_t *mb = &cpi->macro[mbi];
   int j;
@@ -437,7 +443,6 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
     }
   }
 
-  cost += (oc_mode_cost(cpi,CODE_INTER_FOURMV) << OC_BIT_SCALE);
 
   *bits0 = *bits1 = 0;
 
@@ -453,9 +458,11 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
   *bits0 += MvBits[mb->mv[3].x+MAX_MV_EXTENT] + 
     MvBits[mb->mv[3].y+MAX_MV_EXTENT];
   *bits1 += 12;
-      
-  return cost + ((OC_MINI(cpi->MVBits_0 + *bits0, cpi->MVBits_1 + *bits1)-
-		  OC_MINI(cpi->MVBits_0, cpi->MVBits_1)) << OC_BIT_SCALE);
+
+  *overhead = (oc_mode_cost(cpi,CODE_INTER_FOURMV) +
+	       (OC_MINI(cpi->MVBits_0 + *bits0, cpi->MVBits_1 + *bits1)-
+		OC_MINI(cpi->MVBits_0, cpi->MVBits_1))) << OC_BIT_SCALE;
+  return cost + *overhead;
 }
 
 static void MBSAD420(CP_INSTANCE *cpi, int mbi, mv_t last, mv_t last2,
@@ -502,11 +509,16 @@ static void MBSAD420(CP_INSTANCE *cpi, int mbi, mv_t last, mv_t last2,
 
 #include "quant_lookup.h"
 
-#include <stdio.h>
+static void uncode_frag(CP_INSTANCE *cpi, int fi, int plane){
+  int bi = cpi->frag_buffer_index[fi];
+  int stride = cpi->stride[plane];
 
+  cpi->frag_coded[fi]=0;
+  dsp_copy8x8 (cpi->dsp, cpi->lastrecon+bi, cpi->recon+bi, stride);
+}      
 
 static int TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int16_t re_q[2][3][64], 
-		 long *rho_count, int keyframe){
+		 long *rho_count, int keyframe, int *uncoded_ssd_acc, int *coded_ssd_acc, int *cost_acc){
 
   int qi = cpi->BaseQ; /* temporary */;
   int inter = (mode != CODE_INTRA);
@@ -653,36 +665,53 @@ static int TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int1
     }
     
     if(uncoded_ssd <= coded_ssd+((cpi->skip_lambda*cost)>>(OC_BIT_SCALE))){ 
-      /* mark uncoded */
-      cpi->frag_coded[fi]=0;
-      
-      /* replace reconstruction with a block copy */
-      dsp_copy8x8 (cpi->dsp, cpi->lastrecon+bi, thisrecon, stride);
-      
+      uncode_frag(cpi,fi,plane);
       return 0;
     }
+
+    *uncoded_ssd_acc+=uncoded_ssd;
+    *coded_ssd_acc+=coded_ssd;
+    *cost_acc+=cost;
+
   }
     
-
   return 1;
 }
 
-static int TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, 
-		  int qi, ogg_int16_t req[2][3][64], long *rc, int keyframe){
+static int TQMB ( CP_INSTANCE *cpi, macroblock_t *mb, int mbphase,
+		  int qi, ogg_int16_t req[2][3][64], long *rc, int keyframe, int overhead){
   int pf = cpi->info.pixelformat;
   int mode = mb->mode;
   int i;
   int coded=0;
+  int coded_ssd=0;
+  int uncoded_ssd=0;
+  int coded_cost=0;
+
+  int ysb_coded = 0;
+  int ysb_partial = 0;
+  int usb_coded = 0;
+  int usb_partial = 0;
+  int vsb_coded = 0;
+  int vsb_partial = 0;
+
   superblock_t *ysb = &cpi->super[0][mb->ysb];
   superblock_t *usb = &cpi->super[0][mb->usb];
   superblock_t *vsb = &cpi->super[0][mb->vsb];
 
+  /* It's exceptionally difficult in the current Theora coding
+     structure to take the global superblock coding runs into account
+     when computing relative bitcosts in block coding decisions, but
+     this is a relatively exceedingly minor cost consideration.  We do
+     account for the local coding costs of skip blocks within the
+     superblock, a more significant contribution to consider. */
+
   for(i=0;i<4;i++){
-    if(TQB(cpi,mode,mb->Ryuv[0][i],mb->mv[i],0,req,rc,keyframe)){
-      ysb->coded=1;
+    if(TQB(cpi,mode,mb->Ryuv[0][i],mb->mv[i],0,req,rc,keyframe, &uncoded_ssd, &coded_ssd, &coded_cost)){
+      ysb_coded=1;
       coded++;
     }else{
-      ysb->partial=1;
+      ysb_partial=1;
       if(mode == CODE_INTER_FOURMV) 
 	mb->mv[i]=(mv_t){0,0};
     }
@@ -708,17 +737,17 @@ static int TQMB ( CP_INSTANCE *cpi, macroblock_t *mb,
       }else{
 	mv = mb->mv[0];
       }
-      if(TQB(cpi,mode,mb->Ryuv[1][0],mv,1,req,rc,keyframe)){
-	usb->coded=1;
+      if(TQB(cpi,mode,mb->Ryuv[1][0],mv,1,req,rc,keyframe, &uncoded_ssd, &coded_ssd, &coded_cost)){
+	usb_coded=1;
 	coded++;
       }else{
-	usb->partial=1;
+	usb_partial=1;
       }
-      if(TQB(cpi,mode,mb->Ryuv[2][0],mv,2,req,rc,keyframe)){
-	vsb->coded=1;
+      if(TQB(cpi,mode,mb->Ryuv[2][0],mv,2,req,rc,keyframe, &uncoded_ssd, &coded_ssd, &coded_cost)){
+	vsb_coded=1;
 	coded++;
       }else{
-	vsb->partial=1;
+	vsb_partial=1;
       }
     }
     break;
@@ -739,43 +768,75 @@ static int TQMB ( CP_INSTANCE *cpi, macroblock_t *mb,
       }
 
       for(i=0;i<2;i++)
-	if(TQB(cpi,mode,mb->Ryuv[1][i],mv[i],1,req,rc,keyframe)){
-	  usb->coded=1;
+	if(TQB(cpi,mode,mb->Ryuv[1][i],mv[i],1,req,rc,keyframe, &uncoded_ssd, &coded_ssd, &coded_cost)){
+	  usb_coded=1;
 	  coded++;
 	}else{
-	  usb->partial=1;
+	  usb_partial=1;
 	}
 
       for(i=0;i<2;i++)
-	if(TQB(cpi,mode,mb->Ryuv[2][i],mv[i],2,req,rc,keyframe)){
-	  vsb->coded=1;
+	if(TQB(cpi,mode,mb->Ryuv[2][i],mv[i],2,req,rc,keyframe, &uncoded_ssd, &coded_ssd, &coded_cost)){
+	  vsb_coded=1;
 	  coded++;
 	}else{
-	  vsb->partial=1;
+	  vsb_partial=1;
 	}
     }
     break;
     
   case OC_PF_444:
     for(i=0;i<4;i++)
-      if(TQB(cpi,mode,mb->Ryuv[1][i],mb->mv[i],1,req,rc,keyframe)){
-	usb->coded=1;
+      if(TQB(cpi,mode,mb->Ryuv[1][i],mb->mv[i],1,req,rc,keyframe, &uncoded_ssd, &coded_ssd, &coded_cost)){
+	usb_coded=1;
 	coded++;
       }else{
-	usb->partial=1;
+	usb_partial=1;
       }
 
     for(i=0;i<4;i++)
-      if(TQB(cpi,mode,mb->Ryuv[2][i],mb->mv[i],2,req,rc,keyframe)){
-	vsb->coded=1;
+      if(TQB(cpi,mode,mb->Ryuv[2][i],mb->mv[i],2,req,rc,keyframe, &uncoded_ssd, &coded_ssd, &coded_cost)){
+	vsb_coded=1;
 	coded++;
       }else{
-	vsb->partial=1;
+	vsb_partial=1;
       }
     
     break;
   }
+
+  if(coded && !keyframe){
+    /* block by block, still coding the MB.  Now consider the
+       macroblock coding cost as a whole (mode and MV) */ 
+    if(uncoded_ssd <= coded_ssd+((cpi->skip_lambda*(coded_cost+overhead))>>(OC_BIT_SCALE))){     
+      /* taking macroblock overhead into account, it is not worth coding this MB */
+      int j;
+      for(j=0;j<3;j++){
+	for(i=0;i<4;i++){
+	  int fi = mb->Ryuv[j][i];
+	  if(cpi->frag_coded[fi])
+	    uncode_frag(cpi,fi,j);
+	}
+      }
+
+      mb->mode = CODE_INTER_NO_MV; 
+      mb->coded = 0;
+      mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = (mv_t){0,0};
+
+      ysb->partial = 1;
+      usb->partial = 1;
+      vsb->partial = 1;
+
+      return 0;
+    }
+  }
   
+  ysb->coded |= ysb_coded;
+  ysb->partial |= ysb_partial;
+  usb->coded |= usb_coded;
+  usb->partial |= usb_partial;
+  vsb->coded |= vsb_coded;
+  vsb->partial |= vsb_partial;
   return coded;
   
 }
@@ -828,6 +889,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
       if(mbi >= cpi->macro_total) continue;
 
       int cost[8] = {0,0,0,0, 0,0,0,0};
+      int overhead[8] = {0,0,0,0, 0,0,0,0};
       int mb_mv_bits_0;
       int mb_gmv_bits_0;
       int mb_4mv_bits_0;
@@ -856,7 +918,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
       if(cpi->FrameType == KEY_FRAME){
 	mb->mode = CODE_INTRA;
 	/* Transform, quantize, collect rho metrics */
-	TQMB(cpi, mb, qi, req, rho_count, 1);
+	TQMB(cpi, mb, j, qi, req, rho_count, 1, 0);
 	
       }else{
 
@@ -871,14 +933,22 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	/* block coding cost is estimated from correlated SAD metrics */
 	/* At this point, all blocks that are in frame are still marked coded */
 
-	cost[CODE_INTER_NO_MV] = cost_inter_nomv(cpi, qi, mbi);
-	cost[CODE_INTRA] = cost_intra(cpi, qi, mbi, &intrabits);
-	cost[CODE_INTER_PLUS_MV] = cost_inter1mv(cpi, qi, mbi, 0, &mb_mv_bits_0);
-	cost[CODE_INTER_LAST_MV] = cost_inter(cpi, qi, mbi, last_mv, CODE_INTER_LAST_MV);
-	cost[CODE_INTER_PRIOR_LAST] = cost_inter(cpi, qi, mbi, prior_mv, CODE_INTER_PRIOR_LAST);
-	cost[CODE_USING_GOLDEN] = cost_inter(cpi, qi, mbi, (mv_t){0,0},CODE_USING_GOLDEN);
-	cost[CODE_GOLDEN_MV] = cost_inter1mv(cpi, qi, mbi, 1, &mb_gmv_bits_0);
-	cost[CODE_INTER_FOURMV] = cost_inter4mv(cpi, qi, mbi, &mb_4mv_bits_0, &mb_4mv_bits_1);
+	cost[CODE_INTER_NO_MV] = 
+	  cost_inter_nomv(cpi, qi, mbi, &overhead[CODE_INTER_NO_MV]);
+	cost[CODE_INTRA] = 
+	  cost_intra(cpi, qi, mbi, &intrabits, &overhead[CODE_INTRA]);
+	cost[CODE_INTER_PLUS_MV] = 
+	  cost_inter1mv(cpi, qi, mbi, 0, &mb_mv_bits_0, &overhead[CODE_INTER_PLUS_MV]);
+	cost[CODE_INTER_LAST_MV] = 
+	  cost_inter(cpi, qi, mbi, last_mv, CODE_INTER_LAST_MV, &overhead[CODE_INTER_LAST_MV]);
+	cost[CODE_INTER_PRIOR_LAST] = 
+	  cost_inter(cpi, qi, mbi, prior_mv, CODE_INTER_PRIOR_LAST, &overhead[CODE_INTER_PRIOR_LAST]);
+	cost[CODE_USING_GOLDEN] = 
+	  cost_inter(cpi, qi, mbi, (mv_t){0,0},CODE_USING_GOLDEN, &overhead[CODE_USING_GOLDEN]);
+	cost[CODE_GOLDEN_MV] = 
+	  cost_inter1mv(cpi, qi, mbi, 1, &mb_gmv_bits_0, &overhead[CODE_GOLDEN_MV]);
+	cost[CODE_INTER_FOURMV] = 
+	  cost_inter4mv(cpi, qi, mbi, &mb_4mv_bits_0, &mb_4mv_bits_1, &overhead[CODE_INTER_FOURMV]);
 	
 	/* train this too... because the bit cost of an MV should be
 	   considered in the context of LAST_MV and PRIOR_LAST. */
@@ -889,13 +959,16 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	   already furthest ahead on bits and refine only that one */
 	if(cost[CODE_INTER_FOURMV]<cost[CODE_INTER_PLUS_MV] && cost[CODE_INTER_FOURMV]<cost[CODE_GOLDEN_MV]){
 	  oc_mcenc_refine4mv(cpi, mbi, block_err);
-	  cost[CODE_INTER_FOURMV] = cost_inter4mv(cpi, qi, mbi, &mb_4mv_bits_0, &mb_4mv_bits_1);
+	  cost[CODE_INTER_FOURMV] = 
+	    cost_inter4mv(cpi, qi, mbi, &mb_4mv_bits_0, &mb_4mv_bits_1, &overhead[CODE_INTER_FOURMV]);
 	}else if (cost[CODE_GOLDEN_MV]<cost[CODE_INTER_PLUS_MV]){
 	  oc_mcenc_refine1mv(cpi, mbi, 1, gerror);
-	  cost[CODE_GOLDEN_MV] = cost_inter1mv(cpi, qi, mbi, 1, &mb_gmv_bits_0);
+	  cost[CODE_GOLDEN_MV] = 
+	    cost_inter1mv(cpi, qi, mbi, 1, &mb_gmv_bits_0, &overhead[CODE_GOLDEN_MV]);
 	}else{
 	  oc_mcenc_refine1mv(cpi, mbi, 0, aerror);
-	  cost[CODE_INTER_PLUS_MV] = cost_inter1mv(cpi, qi, mbi, 0, &mb_mv_bits_0);
+	  cost[CODE_INTER_PLUS_MV] = 
+	    cost_inter1mv(cpi, qi, mbi, 0, &mb_mv_bits_0, &overhead[CODE_INTER_PLUS_MV]);
 	  cost[CODE_INTER_PLUS_MV] -= 384;
 	}
 
@@ -936,15 +1009,13 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	mb->mode = mode;
 	
 	/* Transform, quantize, collect rho metrics */
-	if(!TQMB(cpi, mb, qi, req, rho_count, 0)){
+	if(!TQMB(cpi, mb, j, qi, req, rho_count, 0, overhead[mode])){
 
 	  /* ended up not coding the macroblock at all */
 	  mb->coded = 0;
 	  mb->mode = CODE_INTER_NO_MV;
 
 	}else{
-
-	  /* still coding the MB */
 
 	  /* replace the block MVs for not-coded blocks with (0,0).*/   
 	  mb->coded = 0;
