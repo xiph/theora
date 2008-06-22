@@ -79,8 +79,7 @@ typedef struct
                      unsigned char *RefDataPtr1,
                unsigned char *RefDataPtr2, ogg_uint32_t RefStride);
                
-  void (*FilterHoriz) (unsigned char * PixelPtr,
-                ogg_int32_t LineLength, ogg_int16_t *BoundingValuePtr);
+  void (*LoopFilter) (PB_INSTANCE *pbi, int FLimit);
 
   void (*FilterVert) (unsigned char * PixelPtr,
                  ogg_int32_t LineLength, ogg_int16_t *BoundingValuePtr);
@@ -152,11 +151,8 @@ extern void dsp_mmx_idct_init(DspFunctions *funcs);
 #define dsp_inter8x8_err_xy2(funcs,ptr1,str1,ptr2,ptr3,str2) \
   (funcs.inter8x8_err_xy2 (ptr1,str1,ptr2,ptr3,str2))
 
-#define dsp_FilterHoriz(funcs, ptr1, ptr2, ptr3) \
-  (funcs.FilterHoriz(ptr1, ptr2, ptr3))
-
-#define dsp_FilterVert(funcs, ptr1, ptr2, ptr3) \
-  (funcs.FilterVert(ptr1, ptr2, ptr3))
+#define dsp_LoopFilter(funcs, ptr1, i) \
+  (funcs.LoopFilter(ptr1, i))
 
 #define dsp_IDctSlow(funcs, ptr1, ptr2, ptr3) \
     (funcs.IDctSlow(ptr1, ptr2, ptr3))

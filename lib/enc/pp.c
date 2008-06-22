@@ -901,9 +901,6 @@ static void DeblockFrame(PB_INSTANCE *pbi, unsigned char *SourceBuffer,
 
   UpdateFragQIndex(pbi);
 
-
-  SetupLoopFilter(pbi);
-
   /* Y */
   DeblockPlane( pbi, SourceBuffer, DestinationBuffer, 0);
 

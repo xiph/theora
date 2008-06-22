@@ -22,9 +22,11 @@
 # include "config.h"
 #endif
 
+typedef struct PB_INSTANCE PB_INSTANCE;
+#include "dsp.h"
+
 #include "theora/theora.h"
 #include "encoder_huffman.h"
-#include "dsp.h"
 
 #define theora_read(x,y,z) ( *z = oggpackB_read(x,y) )
 
@@ -279,11 +281,10 @@ typedef struct codec_setup_info {
 
   HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES];
 
-  unsigned char LoopFilterLimitValues[Q_TABLE_SIZE];
 } codec_setup_info;
 
 /** Decoder (Playback) instance -- installed in a theora_state */
-typedef struct PB_INSTANCE {
+struct PB_INSTANCE {
   oggpack_buffer *opb;
   theora_info     info;
   
@@ -526,7 +527,7 @@ typedef struct PB_INSTANCE {
                                                Array Pointers */
 #endif
 
-} PB_INSTANCE;
+};
 
 /* Encoder (Compressor) instance -- installed in a theora_state */
 typedef struct CP_INSTANCE {

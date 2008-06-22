@@ -31,43 +31,19 @@
 
 static const int ModeUsesMC[MAX_MODES] = { 0, 0, 1, 1, 1, 0, 1, 1 };
 
-static void SetupBoundingValueArray_Generic(PB_INSTANCE *pbi,
+static void SetupBoundingValueArray_Generic(ogg_int16_t *BoundingValuePtr,
                                             ogg_int32_t FLimit){
 
-  ogg_int16_t * BoundingValuePtr = pbi->FiltBoundingValue+127;
   ogg_int32_t i;
 
   /* Set up the bounding value array. */
-  memset ( pbi->FiltBoundingValue, 0, (256*sizeof(*pbi->FiltBoundingValue)) );
+  memset ( BoundingValuePtr, 0, (256*sizeof(*BoundingValuePtr)) );
   for ( i = 0; i < FLimit; i++ ){
-    BoundingValuePtr[-i-FLimit] = (-FLimit+i);
-    BoundingValuePtr[-i] = -i;
-    BoundingValuePtr[i] = i;
-    BoundingValuePtr[i+FLimit] = FLimit-i;
+    BoundingValuePtr[127-i-FLimit] = (-FLimit+i);
+    BoundingValuePtr[127-i] = -i;
+    BoundingValuePtr[127+i] = i;
+    BoundingValuePtr[127+i+FLimit] = FLimit-i;
   }
-}
-
-/* handle the in-loop filter limit value table */
-
-int ReadFilterTables(codec_setup_info *ci, oggpack_buffer *opb){
-  int i;
-  int bits, value;
-
-  theora_read(opb, 3, &bits);
-  for(i=0;i<Q_TABLE_SIZE;i++){
-    theora_read(opb,bits,&value);
-    ci->LoopFilterLimitValues[i]=value;
-  }
-  if(bits<0)return OC_BADHEADER;
-
-  return 0;
-}
-
-void SetupLoopFilter(PB_INSTANCE *pbi){
-  ogg_int32_t FLimit;
-
-  FLimit = pbi->quant_info.loop_filter_limits[pbi->FrameQIndex];
-  SetupBoundingValueArray_Generic(pbi, FLimit);
 }
 
 static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
@@ -669,11 +645,12 @@ void ClearDownQFragData(PB_INSTANCE *pbi){
   }
 }
 
-static void FilterHoriz__c(unsigned char * PixelPtr,
-                        ogg_int32_t LineLength,
-                        ogg_int16_t *BoundingValuePtr){
+static void loop_filter_h(unsigned char * PixelPtr,
+			  ogg_int32_t LineLength,
+			  ogg_int16_t *BoundingValuePtr){
   ogg_int32_t j;
   ogg_int32_t FiltVal;
+  PixelPtr-=2;
 
   for ( j = 0; j < 8; j++ ){
     FiltVal =
@@ -691,15 +668,12 @@ static void FilterHoriz__c(unsigned char * PixelPtr,
   }
 }
 
-static void FilterVert__c(unsigned char * PixelPtr,
-                ogg_int32_t LineLength,
-                ogg_int16_t *BoundingValuePtr){
+static void loop_filter_v(unsigned char * PixelPtr,
+			  ogg_int32_t LineLength,
+			  ogg_int16_t *BoundingValuePtr){
   ogg_int32_t j;
   ogg_int32_t FiltVal;
   PixelPtr -= 2*LineLength;
-  /* the math was correct, but negative array indicies are forbidden
-     by ANSI/C99 and will break optimization on several modern
-     compilers */
 
   for ( j = 0; j < 8; j++ ) {
     FiltVal = ( (ogg_int32_t)PixelPtr[0] ) -
@@ -716,281 +690,54 @@ static void FilterVert__c(unsigned char * PixelPtr,
   }
 }
 
-void LoopFilter(PB_INSTANCE *pbi){
-  ogg_int32_t i;
+static void LoopFilter__c(PB_INSTANCE *pbi, int FLimit){
 
-  ogg_int16_t * BoundingValuePtr=pbi->FiltBoundingValue+127;
-  int FragsAcross=pbi->HFragments;
-  int FromFragment,ToFragment;
-  int FragsDown = pbi->VFragments;
-  ogg_int32_t LineFragments;
-  ogg_int32_t LineLength;
-  ogg_int32_t FLimit;
-  int QIndex;
-  int j,m,n;
+  int j;
+  ogg_int16_t BoundingValues[256];
+  ogg_int16_t *bvp = BoundingValues+127;
+  unsigned char *cp = pbi->display_fragments;
+  ogg_uint32_t *bp = pbi->recon_pixel_index_table;
 
-  /* Set the limit value for the loop filter based upon the current
-     quantizer. */
-  QIndex = Q_TABLE_SIZE - 1;
-  while ( QIndex >= 0 ) {
-    if ( (QIndex == 0) ||
-         ( pbi->quant_info.ac_scale[QIndex] >= pbi->ThisFrameQualityValue) )
-      break;
-    QIndex --;
-  }
-
-  FLimit = pbi->quant_info.loop_filter_limits[QIndex];
   if ( FLimit == 0 ) return;
-  SetupBoundingValueArray_Generic(pbi, FLimit);
+  SetupBoundingValueArray_Generic(BoundingValues, FLimit);
 
   for ( j = 0; j < 3 ; j++){
+    ogg_uint32_t *bp_begin = bp; 
+    ogg_uint32_t *bp_end;
+    int stride;
+    int h;
+
     switch(j) {
     case 0: /* y */
-      FromFragment = 0;
-      ToFragment = pbi->YPlaneFragments;
-      FragsAcross = pbi->HFragments;
-      FragsDown = pbi->VFragments;
-      LineLength = pbi->YStride;
-      LineFragments = pbi->HFragments;
+      bp_end = bp + pbi->YPlaneFragments;
+      h = pbi->HFragments;
+      stride = pbi->YStride;
       break;
-    case 1: /* u */
-      FromFragment = pbi->YPlaneFragments;
-      ToFragment = pbi->YPlaneFragments + pbi->UVPlaneFragments ;
-      FragsAcross = pbi->HFragments >> 1;
-      FragsDown = pbi->VFragments >> 1;
-      LineLength = pbi->UVStride;
-      LineFragments = pbi->HFragments / 2;
-      break;
-    /*case 2:  v */
-    default:
-      FromFragment = pbi->YPlaneFragments + pbi->UVPlaneFragments;
-      ToFragment = pbi->YPlaneFragments + (2 * pbi->UVPlaneFragments) ;
-      FragsAcross = pbi->HFragments >> 1;
-      FragsDown = pbi->VFragments >> 1;
-      LineLength = pbi->UVStride;
-      LineFragments = pbi->HFragments / 2;
+    default: /* u,v, 4:20 specific */
+      bp_end = bp + pbi->UVPlaneFragments;
+      h = pbi->HFragments >> 1;
+      stride = pbi->UVStride;
       break;
     }
-
-    i=FromFragment;
-
-    /**************************************************************
-     First Row
-    **************************************************************/
-    /* first column conditions */
-    /* only do 2 prediction if fragment coded and on non intra or if
-       all fragments are intra */
-    if( pbi->display_fragments[i]){
-      /* Filter right hand border only if the block to the right is
-         not coded */
-      if ( !pbi->display_fragments[ i + 1 ] ){
-        dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                    pbi->recon_pixel_index_table[i]+6,
-                    LineLength,BoundingValuePtr);
-      }
-
-      /* Bottom done if next row set */
-      if( !pbi->display_fragments[ i + LineFragments] ){
-        dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                   pbi->recon_pixel_index_table[i+LineFragments],
-                   LineLength, BoundingValuePtr);
+    
+    while(bp<bp_end){
+      ogg_uint32_t *bp_left = bp;
+      ogg_uint32_t *bp_right = bp + h;
+      while(bp<bp_right){
+	if(cp[0]){
+	  if(bp>bp_left)
+	    loop_filter_h(&pbi->LastFrameRecon[bp[0]],stride,bvp);
+	  if(bp_left>bp_begin)
+	    loop_filter_v(&pbi->LastFrameRecon[bp[0]],stride,bvp);
+	  if(bp+1<bp_right && !cp[1])
+	    loop_filter_h(&pbi->LastFrameRecon[bp[0]]+8,stride,bvp);
+	  if(bp+stride<bp_end && !cp[stride])
+	    loop_filter_v(&pbi->LastFrameRecon[bp[h]]+8,stride,bvp);
+	}
+	bp++;
+	cp++;
       }
     }
-    i++;
-
-    /***************************************************************/
-    /* middle columns  */
-    for ( n = 1 ; n < FragsAcross - 1 ; n++, i++) {
-      if( pbi->display_fragments[i]){
-        /* Filter Left edge always */
-        dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                    pbi->recon_pixel_index_table[i]-2,
-                    LineLength, BoundingValuePtr);
-
-        /* Filter right hand border only if the block to the right is
-           not coded */
-        if ( !pbi->display_fragments[ i + 1 ] ){
-          dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                      pbi->recon_pixel_index_table[i]+6,
-                      LineLength, BoundingValuePtr);
-        }
-
-        /* Bottom done if next row set */
-        if( !pbi->display_fragments[ i + LineFragments] ){
-          dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                     pbi->recon_pixel_index_table[i + LineFragments],
-                     LineLength, BoundingValuePtr);
-        }
-
-      }
-    }
-
-    /***************************************************************/
-    /* Last Column */
-    if( pbi->display_fragments[i]){
-      /* Filter Left edge always */
-      dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                  pbi->recon_pixel_index_table[i] - 2 ,
-                  LineLength, BoundingValuePtr);
-
-      /* Bottom done if next row set */
-      if( !pbi->display_fragments[ i + LineFragments] ){
-        dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                   pbi->recon_pixel_index_table[i + LineFragments],
-                   LineLength, BoundingValuePtr);
-      }
-    }
-    i++;
-
-    /***************************************************************/
-    /* Middle Rows */
-    /***************************************************************/
-    for ( m = 1 ; m < FragsDown-1 ; m++) {
-
-      /*****************************************************************/
-      /* first column conditions */
-      /* only do 2 prediction if fragment coded and on non intra or if
-         all fragments are intra */
-      if( pbi->display_fragments[i]){
-        /* TopRow is always done */
-        dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                   pbi->recon_pixel_index_table[i],
-                   LineLength, BoundingValuePtr);
-
-        /* Filter right hand border only if the block to the right is
-           not coded */
-        if ( !pbi->display_fragments[ i + 1 ] ){
-          dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                      pbi->recon_pixel_index_table[i] + 6,
-                      LineLength, BoundingValuePtr);
-        }
-
-        /* Bottom done if next row set */
-        if( !pbi->display_fragments[ i + LineFragments] ){
-          dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                     pbi->recon_pixel_index_table[i + LineFragments],
-                     LineLength, BoundingValuePtr);
-        }
-      }
-      i++;
-
-      /*****************************************************************/
-      /* middle columns  */
-      for ( n = 1 ; n < FragsAcross - 1 ; n++, i++){
-        if( pbi->display_fragments[i]){
-          /* Filter Left edge always */
-          dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                      pbi->recon_pixel_index_table[i] - 2,
-                      LineLength, BoundingValuePtr);
-
-          /* TopRow is always done */
-          dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                     pbi->recon_pixel_index_table[i],
-                     LineLength, BoundingValuePtr);
-
-          /* Filter right hand border only if the block to the right
-             is not coded */
-          if ( !pbi->display_fragments[ i + 1 ] ){
-            dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                        pbi->recon_pixel_index_table[i] + 6,
-                        LineLength, BoundingValuePtr);
-          }
-
-          /* Bottom done if next row set */
-          if( !pbi->display_fragments[ i + LineFragments] ){
-            dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                       pbi->recon_pixel_index_table[i + LineFragments],
-                       LineLength, BoundingValuePtr);
-          }
-        }
-      }
-
-      /******************************************************************/
-      /* Last Column */
-      if( pbi->display_fragments[i]){
-        /* Filter Left edge always*/
-        dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                    pbi->recon_pixel_index_table[i] - 2,
-                    LineLength, BoundingValuePtr);
-
-        /* TopRow is always done */
-        dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                   pbi->recon_pixel_index_table[i],
-                   LineLength, BoundingValuePtr);
-
-        /* Bottom done if next row set */
-        if( !pbi->display_fragments[ i + LineFragments] ){
-          dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                     pbi->recon_pixel_index_table[i + LineFragments],
-                     LineLength, BoundingValuePtr);
-        }
-      }
-      i++;
-
-    }
-
-    /*******************************************************************/
-    /* Last Row  */
-
-    /* first column conditions */
-    /* only do 2 prediction if fragment coded and on non intra or if
-       all fragments are intra */
-    if( pbi->display_fragments[i]){
-
-      /* TopRow is always done */
-      dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                 pbi->recon_pixel_index_table[i],
-                 LineLength, BoundingValuePtr);
-
-      /* Filter right hand border only if the block to the right is
-         not coded */
-      if ( !pbi->display_fragments[ i + 1 ] ){
-        dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                    pbi->recon_pixel_index_table[i] + 6,
-                    LineLength, BoundingValuePtr);
-      }
-    }
-    i++;
-
-    /******************************************************************/
-    /* middle columns  */
-    for ( n = 1 ; n < FragsAcross - 1 ; n++, i++){
-      if( pbi->display_fragments[i]){
-        /* Filter Left edge always */
-        dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                    pbi->recon_pixel_index_table[i] - 2,
-                    LineLength, BoundingValuePtr);
-
-        /* TopRow is always done */
-        dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                   pbi->recon_pixel_index_table[i],
-                   LineLength, BoundingValuePtr);
-
-        /* Filter right hand border only if the block to the right is
-           not coded */
-        if ( !pbi->display_fragments[ i + 1 ] ){
-          dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                      pbi->recon_pixel_index_table[i] + 6,
-                      LineLength, BoundingValuePtr);
-        }
-      }
-    }
-
-    /******************************************************************/
-    /* Last Column */
-    if( pbi->display_fragments[i]){
-      /* Filter Left edge always */
-      dsp_FilterHoriz(pbi->dsp,pbi->LastFrameRecon+
-                  pbi->recon_pixel_index_table[i] - 2,
-                  LineLength, BoundingValuePtr);
-
-      /* TopRow is always done */
-      dsp_FilterVert(pbi->dsp,pbi->LastFrameRecon+
-                 pbi->recon_pixel_index_table[i],
-                 LineLength, BoundingValuePtr);
-
-    }
-    i++;
   }
 }
 
@@ -1077,8 +824,6 @@ void ReconRefFrames (PB_INSTANCE *pbi){
     ExpandBlockA=ExpandKFBlock;
   else
     ExpandBlockA=ExpandBlock;
-
-  SetupLoopFilter(pbi);
 
   /* for y,u,v */
   for ( j = 0; j < 3 ; j++) {
@@ -1202,7 +947,7 @@ void ReconRefFrames (PB_INSTANCE *pbi){
   }
 
   /* Apply a loop filter to edge pixels of updated blocks */
-  LoopFilter(pbi);
+  dsp_LoopFilter(pbi->dsp, pbi, pbi->quant_info.loop_filter_limits[pbi->FrameQIndex]);
 
 #ifdef _TH_DEBUG_
     {
@@ -1306,8 +1051,7 @@ void ReconRefFrames (PB_INSTANCE *pbi){
 
 void dsp_dct_decode_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)
 {
-  funcs->FilterVert = FilterVert__c;
-  funcs->FilterHoriz = FilterHoriz__c;
+  funcs->LoopFilter = LoopFilter__c;
 #if defined(USE_ASM)
   // Todo: Port the dct for MSC one day.
 #if !defined (_MSC_VER)  
