@@ -73,8 +73,7 @@ typedef struct
   ogg_uint32_t (*inter8x8_err_xy2)(unsigned char *SrcData, unsigned char *RefDataPtr1,
 				   unsigned char *RefDataPtr2, ogg_uint32_t stride);
                
-  void (*FilterHoriz)             (unsigned char * PixelPtr,
-				   ogg_int32_t LineLength, ogg_int16_t *BoundingValuePtr);
+  void (*LoopFilter)              (void *cpi, int FLimit);
 
   void (*FilterVert)              (unsigned char * PixelPtr,
 				   ogg_int32_t LineLength, ogg_int16_t *BoundingValuePtr);
@@ -144,11 +143,8 @@ extern void dsp_mmx_idct_init(DspFunctions *funcs);
 #define dsp_inter8x8_err_xy2(funcs,ptr1,ptr2,ptr3,str) \
   (funcs.inter8x8_err_xy2 (ptr1,ptr2,ptr3,str))
 
-#define dsp_FilterHoriz(funcs, ptr1, ptr2, ptr3) \
-  (funcs.FilterHoriz(ptr1, ptr2, ptr3))
-
-#define dsp_FilterVert(funcs, ptr1, ptr2, ptr3) \
-  (funcs.FilterVert(ptr1, ptr2, ptr3))
+#define dsp_LoopFilter(funcs, ptr1, i) \
+  (funcs.LoopFilter(ptr1, i))
 
 #define dsp_IDctSlow(funcs, ptr1, ptr2, ptr3) \
     (funcs.IDctSlow(ptr1, ptr2, ptr3))
