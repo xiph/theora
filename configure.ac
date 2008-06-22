@@ -57,6 +57,7 @@ AC_PROG_CPP
 CFLAGS="$cflags_save"
 
 AM_PROG_CC_C_O
+AC_LIBTOOL_WIN32_DLL
 AM_PROG_LIBTOOL
 
 dnl Add parameters for aclocal
@@ -204,6 +205,14 @@ THENC_VERSION_ARG=""
 TH_VERSION_ARG=""
 if test "x$lt_cv_prog_gnu_ld" = "xyes"; then
  case "$target_os" in
+  *mingw*)
+    THEORA_LDFLAGS="$THEORA_LDFLAGS -no-undefined"
+    THDEC_VERSION_ARG="-export-symbols \$(top_srcdir)/win32/xmingw32/libtheoradec-all.def"
+    THENC_VERSION_ARG="-export-symbols \$(top_srcdir)/win32/xmingw32/libtheoraenc-all.def"
+    THENC_VERSION_ARG="$THENC_VERSION_ARG -ltheoradec"
+    THC_VERSION_ARG="-export-symbols \$(top_srcdir)/win32/libtheora.def"
+    AC_MSG_RESULT([no])
+    ;;
   linux* | solaris* )
     THDEC_VERSION_ARG='-Wl,--version-script=$(srcdir)/Version_script-dec'
     THENC_VERSION_ARG='-Wl,--version-script=$(srcdir)/Version_script-enc'
