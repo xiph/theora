@@ -35,7 +35,11 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
   if(cpi->frag_dc) _ogg_free(cpi->frag_dc);
 #ifdef COLLECT_METRICS
   if(cpi->frag_mbi) _ogg_free(cpi->frag_mbi);
-  if(cpi->frag_sad) _ogg_free(cpi->frag_sad);
+  {
+    int i;
+    for(i=0;i<8;i++)
+      if(cpi->frag_sad[i]) _ogg_free(cpi->frag_sad[i]);
+  }
   if(cpi->dct_token_frag_storage) _ogg_free(cpi->dct_token_frag_storage);
   if(cpi->dct_eob_fi_storage) _ogg_free(cpi->dct_eob_fi_storage);
 #endif
@@ -126,7 +130,8 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 
 #ifdef COLLECT_METRICS
   cpi->frag_mbi = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->frag_mbi));
-  cpi->frag_sad = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->frag_sad));
+  for(i=0;i<8;i++)
+    cpi->frag_sad[i] = _ogg_calloc(cpi->frag_total+1, sizeof(**cpi->frag_sad));
   cpi->dct_token_frag_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_frag_storage));
   cpi->dct_eob_fi_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_eob_fi_storage));
 #endif

@@ -153,7 +153,7 @@ typedef struct macroblock {
 #define SB_MB_BLFRAG(sb,mbnum) ((sb).f[ ((mbnum)<2? ((mbnum)==0?0:4) : ((mbnum)==2?8:14)) ])
 typedef struct superblock {
   int f[16]; // hilbert order
-  int m[16]; // hilbert order; 4 for Y, 4 for UZ in 4:4:4, 8 for UV in 4:2:2, 16 for UV in 4:2:0
+  int m[16]; // hilbert order: only 4 for luma, but 16 for U/V (to match f) */
 
   int partial;
   int coded;
@@ -266,7 +266,7 @@ typedef struct CP_INSTANCE {
 
 #ifdef COLLECT_METRICS
   int             *frag_mbi;
-  int             *frag_sad;
+  int             *frag_sad[8];
   int             *dct_token_frag_storage;
   int             *dct_token_frag[3][64];
   int             *dct_eob_fi_storage;
