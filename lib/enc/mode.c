@@ -674,6 +674,7 @@ static int macroblock_phase_Y[4][4] = {{0,1,3,2},{0,2,3,1},{0,2,3,1},{3,2,0,1}};
 
 static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, int qi, 
 		    ogg_int16_t req[2][3][64], long *rc, int keyframe, int overhead){
+  unsigned char *cp=cpi->frag_coded;
   int mode = mb->mode;
   int i;
   int coded=0;
@@ -709,15 +710,32 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, int qi,
     }
   }
 
-  if(coded==0){
-    mode = mb->mode = CODE_INTER_NO_MV; /* No luma blocks coded, mode is forced */
-    mb->coded = 0;
-    mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = (mv_t){0,0};
-  }else{
+  if(!keyframe){
+    if(coded){
+      /* block by block, still coding the MB.  Now consider the
+	 macroblock coding cost as a whole (mode and MV) */ 
+      if(uncoded_ssd <= coded_ssd+((cpi->skip_lambda*(coded_cost+overhead))>>(OC_BIT_SCALE))){     
+	/* taking macroblock overhead into account, it is not worth coding this MB */
+	for(i=0;i<4;i++){
+	  int fi = mb->Ryuv[0][i];
+	  if(cp[fi])
+	    uncode_frag(cpi,fi,0);
+	}
+	coded=0;
+      }
+    }
+
+    if(coded==0){
+      mb->mode = CODE_INTER_NO_MV; /* No luma blocks coded, mode is forced */
+      mb->coded = 0;
+      mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = (mv_t){0,0};
+      ysb->partial = 1;
+      return 0; 
+
+    }
 
     /* assume that a 1mv with a single coded block is always cheaper than a 4mv with a single coded block */
     if(coded==1 && mode==CODE_INTER_FOURMV){
-      unsigned char *cp=cpi->frag_coded;
       mode = mb->mode = CODE_INTER_PLUS_MV;
       if(cp[mb->Ryuv[0][0]])
 	mb->mv[1] = mb->mv[2] = mb->mv[3] = mb->mv[0];
@@ -728,28 +746,16 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, int qi,
       else
 	mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3];
     }
-  }
-
-  if(coded && !keyframe){
-    /* block by block, still coding the MB.  Now consider the
-       macroblock coding cost as a whole (mode and MV) */ 
-    if(uncoded_ssd <= coded_ssd+((cpi->skip_lambda*(coded_cost+overhead))>>(OC_BIT_SCALE))){     
-      /* taking macroblock overhead into account, it is not worth coding this MB */
-      for(i=0;i<4;i++){
-	int fi = mb->Ryuv[0][i];
-	if(cpi->frag_coded[fi])
-	  uncode_frag(cpi,fi,0);
-      }
-      
-      mb->mode = CODE_INTER_NO_MV; 
-      mb->coded = 0;
-      mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = (mv_t){0,0};
-      
-      ysb->partial = 1;
-      
-      return 0;
+    
+    /* replace the block MVs for not-coded blocks with (0,0).*/   
+    mb->coded = 0;
+    for ( i=0; i<4; i++ ){
+      int fi = mb->Ryuv[0][i];
+      if(cp[fi]) 
+	mb->coded |= (1<<i);
     }
   }
+  
   
   ysb->coded |= ysb_coded;
   ysb->partial |= ysb_partial;
@@ -863,7 +869,6 @@ int PickModes(CP_INSTANCE *cpi, int recode){
   mc_state mcenc;
   mv_t last_mv = {0,0};
   mv_t prior_mv = {0,0};
-  unsigned char *cp = cpi->frag_coded;
   ogg_int16_t req[2][3][64];
   long rho_count[65];
 #ifdef COLLECT_METRICS
@@ -902,7 +907,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
       int mb_gmv_bits_0;
       int mb_4mv_bits_0;
       int mb_4mv_bits_1;
-      int mode,bi;
+      int mode;
       int aerror;
       int gerror;
       int block_err[4];
@@ -1017,21 +1022,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	mb->mode = mode;
 	
 	/* Transform, quantize, collect rho metrics */
-	if(!TQMB_Y(cpi, mb, j, qi, req, rho_count, 0, overhead[mode])){
-
-	  /* ended up not coding the macroblock at all */
-	  mb->coded = 0;
-	  mb->mode = CODE_INTER_NO_MV;
-
-	}else{
-
-	  /* replace the block MVs for not-coded blocks with (0,0).*/   
-	  mb->coded = 0;
-	  for ( bi=0; bi<4; bi++ ){
-	    int fi = mb->Ryuv[0][bi];
-	    if(cp[fi]) 
-	      mb->coded |= (1<<bi);
-	  }
+	if(TQMB_Y(cpi, mb, j, qi, req, rho_count, 0, overhead[mode])){
 
 	  switch(mb->mode){
 	  case CODE_INTER_PLUS_MV:
