@@ -509,26 +509,68 @@ static void uncode_frag(CP_INSTANCE *cpi, int fi, int plane){
   dsp_copy8x8 (cpi->dsp, cpi->lastrecon+bi, cpi->recon+bi, stride);
 }      
 
-static int TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int16_t re_q[2][3][64], 
-		 long *rho_count, int keyframe, int *uncoded_ssd_acc, int *coded_ssd_acc, int *cost_acc){
+typedef struct{
+  int uncoded_ssd;
+  int uncoded_cost;
+  int ssd;
+  int cost;
+} rd_metric_t;
 
+typedef struct{
+  int plane;
+  int qi;
+  ogg_int16_t re_q[2][3][64];
+  ogg_int32_t *iq[2];
+  quant_tables *qq[2];
+  ogg_int32_t *mode_rate[2];
+  int xqp;
+  int yqp;
+  int ssdmul;
+} plane_state_t;
+
+static void ps_setup_frame(CP_INSTANCE *cpi, plane_state_t *ps){
+  int i,j,k;
   int qi = cpi->BaseQ; /* temporary */;
-  int inter = (mode != CODE_INTRA);
-  ogg_int32_t *iq = cpi->iquant_tables[inter][plane][qi];
+
+  ps->qi = qi;
+  for(i=0;i<2;i++)
+    for(j=0;j<3;j++)
+      for(k=0;k<64;k++)
+	ps->re_q[i][j][k]=cpi->quant_tables[i][j][k][qi];
+}
+
+static void ps_setup_plane(CP_INSTANCE *cpi, plane_state_t *ps, int plane){
+  ps->plane = plane;
+  ps->iq[0] = cpi->iquant_tables[0][plane][ps->qi];
+  ps->iq[1] = cpi->iquant_tables[1][plane][ps->qi];
+  ps->qq[0] = &(cpi->quant_tables[0][plane]);
+  ps->qq[1] = &(cpi->quant_tables[1][plane]);
+  ps->mode_rate[0] = mode_rate[ps->qi][plane][0];
+  ps->mode_rate[1] = mode_rate[ps->qi][plane][1];
+  ps->xqp = (plane && cpi->info.pixelformat != OC_PF_444);
+  ps->yqp = (plane && cpi->info.pixelformat == OC_PF_420);
+  ps->ssdmul = (ps->xqp+1)*(ps->yqp+1);
+}
+
+static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv, 
+		int uncoded_overhead, int coded_overhead, rd_metric_t *mo, long *rho_count){
+  
+  int keyframe = (cpi->FrameType == KEY_FRAME);
+  int qi = ps->qi;
+  ogg_int32_t *iq = ps->iq[mode != CODE_INTRA];
   ogg_int16_t buffer[64];
   ogg_int16_t *data = cpi->frag_dct[fi].data;
   int bi = cpi->frag_buffer_index[fi];
-  int stride = cpi->stride[plane];
-  int xqp = (plane && cpi->info.pixelformat != OC_PF_444);
-  int yqp = (plane && cpi->info.pixelformat == OC_PF_420);
+  int stride = cpi->stride[ps->plane];
   unsigned char *frame_ptr = &cpi->frame[bi];
   unsigned char *lastrecon = ((mode == CODE_USING_GOLDEN || 
 			       mode == CODE_GOLDEN_MV) ? 
 			      cpi->golden : cpi->lastrecon)+bi;
   unsigned char *thisrecon = cpi->recon+bi;
   int nonzero=63;
-  ogg_int16_t *dequant = re_q[inter][plane];
+  ogg_int16_t *dequant = ps->re_q[mode != CODE_INTRA][ps->plane];
   int uncoded_ssd=0,coded_ssd=0,sad=0;
+  int lambda = cpi->skip_lambda;
 
   /* motion comp */
   switch(mode){
@@ -539,10 +581,10 @@ static int TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int1
   case CODE_INTER_FOURMV:
     
     {    
-      int mx = mvmap[xqp][mv.x+31];
-      int my = mvmap[yqp][mv.y+31];
-      int mx2 = mvmap2[xqp][mv.x+31];
-      int my2 = mvmap2[yqp][mv.y+31];
+      int mx = mvmap[ps->xqp][mv.x+31];
+      int my = mvmap[ps->yqp][mv.y+31];
+      int mx2 = mvmap2[ps->xqp][mv.x+31];
+      int my2 = mvmap2[ps->yqp][mv.y+31];
       
       unsigned char *r1 = lastrecon + my * stride + mx;
       
@@ -585,7 +627,7 @@ static int TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int1
     if(mode==CODE_INTRA){
       sad >>=6;
     }else{
-      if(plane)sad<<=2;
+      if(ps->plane)sad<<=2;
     }
   }
 
@@ -595,7 +637,7 @@ static int TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int1
   /* collect rho metrics, quantize */
   {
     int i;
-    quant_tables *qq = &(cpi->quant_tables[inter][plane]);
+    quant_tables *qq = ps->qq[mode != CODE_INTRA];
     
     for(i=0;i<64;i++){
       int ii = dezigzag_index[i];
@@ -639,7 +681,7 @@ static int TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int1
 
   if(!keyframe){
     int i;
-    int cost = BINMAP(mode_rate[qi][plane][mode==CODE_INTRA],sad);
+    int cost = BINMAP(mode_rate[qi][ps->plane][mode==CODE_INTRA],sad);
     if(cost<0)cost=0; /* some of the trained fits can return a negative cost for zero entropy */
 
     /* in retrospect, should we have skipped this block? */
@@ -651,20 +693,25 @@ static int TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int1
     for(i=0;i<64;i++)
       coded_ssd += buffer[i]*buffer[i];
 
-    if(plane){
-      coded_ssd*=4;
-      uncoded_ssd*=4;
-    }
+    /* for undersampled planes */
+    coded_ssd*=ps->ssdmul;
+    uncoded_ssd*=ps->ssdmul;
     
-    if(uncoded_ssd <= coded_ssd+((cpi->skip_lambda*cost)>>(OC_BIT_SCALE))){ 
-      uncode_frag(cpi,fi,plane);
+    mo->uncoded_ssd+=uncoded_ssd;
+    mo->uncoded_cost+=(uncoded_overhead<<OC_BIT_SCALE);
+
+    if(uncoded_ssd+uncoded_overhead*lambda <= coded_ssd+coded_overhead*lambda+((cost*lambda)>>OC_BIT_SCALE)){ 
+      uncode_frag(cpi,fi,ps->plane);
+
+      mo->ssd+=uncoded_ssd;
+      mo->cost+=(uncoded_overhead<<OC_BIT_SCALE);
+
       return 0;
+    }else{
+
+      mo->ssd+=coded_ssd;
+      mo->cost+=cost+(coded_overhead<<OC_BIT_SCALE);
     }
-
-    *uncoded_ssd_acc+=uncoded_ssd;
-    *coded_ssd_acc+=coded_ssd;
-    *cost_acc+=cost;
-
   }
     
   return 1;
@@ -672,27 +719,18 @@ static int TQB (CP_INSTANCE *cpi, int mode, int fi, mv_t mv, int plane, ogg_int1
 
 static int macroblock_phase_Y[4][4] = {{0,1,3,2},{0,2,3,1},{0,2,3,1},{3,2,0,1}};
 
-static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, int qi, 
-		    ogg_int16_t req[2][3][64], long *rc, int keyframe, int overhead){
+static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_state_t *ps, long *rc, 
+		    int mode_overhead, fr_state_t *fr){
   unsigned char *cp=cpi->frag_coded;
   int mode = mb->mode;
+  int coded = 0;
   int i;
-  int coded=0;
-  int coded_ssd=0;
-  int uncoded_ssd=0;
-  int coded_cost=0;
-  
-  int ysb_coded = 0;
-  int ysb_partial = 0;
+  fr_state_t fr_checkpoint;
 
-  superblock_t *ysb = &cpi->super[0][mb->ysb];
+  rd_metric_t mo;
+  memset(&mo,0,sizeof(mo));
 
-  /* It's exceptionally difficult in the current Theora coding
-     structure to take the global superblock coding runs into account
-     when computing relative bitcosts in block coding decisions, but
-     this is a relatively exceedingly minor cost consideration.  We do
-     account for the local coding costs of skip blocks within the
-     superblock, a more significant contribution to consider. */
+  memcpy(&fr_checkpoint,fr,sizeof(fr_checkpoint));
 
   for(i=0;i<4;i++){
     /* Blocks must be handled in Hilbert order which is defined by MB
@@ -700,28 +738,34 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, int qi,
        raster order just to make it more difficult. */
     int bi = macroblock_phase_Y[mb_phase][i];
     int fi = mb->Ryuv[0][bi];
-    if(TQB(cpi,mode,fi,mb->mv[bi],0,req,rc,keyframe, &uncoded_ssd, &coded_ssd, &coded_cost)){
-      ysb_coded=1;
+    if(TQB(cpi,ps,mode,fi,mb->mv[bi],0,0,&mo,rc)){
+      fr_codeblock(cpi,fr);
       coded++;
     }else{
-      ysb_partial=1;
+      fr_skipblock(cpi,fr);
       if(mode == CODE_INTER_FOURMV) 
 	mb->mv[bi]=(mv_t){0,0};
     }
   }
 
-  if(!keyframe){
+
+  if(cpi->FrameType != KEY_FRAME){
     if(coded){
       /* block by block, still coding the MB.  Now consider the
 	 macroblock coding cost as a whole (mode and MV) */ 
-      if(uncoded_ssd <= coded_ssd+((cpi->skip_lambda*(coded_cost+overhead))>>(OC_BIT_SCALE))){     
+      if(mo.uncoded_ssd+((cpi->skip_lambda*mo.uncoded_cost)>>OC_BIT_SCALE) <= 
+	 mo.ssd+((cpi->skip_lambda*(mo.cost+mode_overhead))>>(OC_BIT_SCALE))){     
 	/* taking macroblock overhead into account, it is not worth coding this MB */
+
+	memcpy(fr,&fr_checkpoint,sizeof(fr_checkpoint));
 	for(i=0;i<4;i++){
 	  int fi = mb->Ryuv[0][i];
+	  fr_skipblock(cpi,fr);
 	  if(cp[fi])
 	    uncode_frag(cpi,fi,0);
 	}
 	coded=0;
+
       }
     }
 
@@ -729,7 +773,6 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, int qi,
       mb->mode = CODE_INTER_NO_MV; /* No luma blocks coded, mode is forced */
       mb->coded = 0;
       mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = (mv_t){0,0};
-      ysb->partial = 1;
       return 0; 
 
     }
@@ -756,132 +799,91 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, int qi,
     }
   }
   
-  
-  ysb->coded |= ysb_coded;
-  ysb->partial |= ysb_partial;
   return coded;  
 }
 
 static int macroblock_phase_422[16] = {0,0,2,2,0,2,2,0,0,2,2,0,2,2,0,0};
 static int macroblock_phase_444[16] = {0,1,3,2,0,2,3,1,0,2,3,1,3,2,0,1};
 
-static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, int plane,
-		     int qi, ogg_int16_t req[2][3][64], long *rc, int keyframe){
+static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long *rc, fr_state_t *fr){
   int pf = cpi->info.pixelformat;
   int i;
-  int coded=0;
-  int coded_ssd=0;
-  int uncoded_ssd=0;
-  int coded_cost=0;
-
-  int sb_coded = 0;
-  int sb_partial = 0;
+  int coded = 0;
   unsigned char *cp=cpi->frag_coded;
+  rd_metric_t mo;
+  memset(&mo,0,sizeof(mo));
 
-  switch(pf){
-  case OC_PF_420:
-    /* sixteen blocks/macroblocks per chroma superblock */
-    for(i=0;i<16;i++){
-      int fi = sb->f[i];
-      if(cp[fi]){
-	macroblock_t *mb = &cpi->macro[sb->m[i]];
-	mv_t mv;
-	if(mb->mode == CODE_INTER_FOURMV){
+  for(i=0;i<16;i++){
+    int fi = sb->f[i];
+    int mb_phase;
+    if(cp[fi]){
+      macroblock_t *mb = &cpi->macro[sb->m[i]];
+      mv_t mv;
+      if(mb->mode == CODE_INTER_FOURMV){
+
+	switch(pf){
+	case OC_PF_420:
+	  /* sixteen blocks/macroblocks per chroma superblock */
 	  
 	  mv.x = mb->mv[0].x + mb->mv[1].x + mb->mv[2].x + mb->mv[3].x;
 	  mv.y = mb->mv[0].y + mb->mv[1].y + mb->mv[2].y + mb->mv[3].y;
 	  
 	  mv.x = ( mv.x >= 0 ? (mv.x + 2) / 4 : (mv.x - 2) / 4);
 	  mv.y = ( mv.y >= 0 ? (mv.y + 2) / 4 : (mv.y - 2) / 4);
-	}else{
-	  mv = mb->mv[0];
-	}
-	if(TQB(cpi,mb->mode,fi,mv,plane,req,rc,keyframe,&uncoded_ssd,&coded_ssd,&coded_cost)){
-	  sb_coded=1;
-	  coded++;
-	}else{
-	  sb_partial=1;
-	}
-      }
-    }
-    break;
-  case OC_PF_422:
-    /* sixteen blocks / eight macroblocks per chroma superblock */
-    for(i=0;i<16;i++){
-      int fi = sb->f[i];
-      if(cp[fi]){
-	macroblock_t *mb = &cpi->macro[sb->m[i]];
-	int mb_phase = macroblock_phase_422[i];
-	mv_t mv;
-	
-	if(mb->mode == CODE_INTER_FOURMV){
+	  break;
+
+	case OC_PF_422:
+	  /* sixteen blocks / eight macroblocks per chroma superblock */
+	  mb_phase = macroblock_phase_422[i];
 	  mv.x = mb->mv[mb_phase].x + mb->mv[mb_phase+1].x;
 	  mv.y = mb->mv[mb_phase].y + mb->mv[mb_phase+1].y;
 	  mv.x = ( mv.x >= 0 ? (mv.x + 1) / 2 : (mv.x - 1) / 2);
 	  mv.y = ( mv.y >= 0 ? (mv.y + 1) / 2 : (mv.y - 1) / 2);
-	}else{
-	  mv = mb->mv[0];
+	  break;
+	default: /*case OC_PF_444: */
+	  /* sixteen blocks / eight macroblocks per chroma superblock */
+	  mb_phase = macroblock_phase_444[i];
+	  mv = mb->mv[mb_phase];
+	  break;
 	}
+      }else
+	mv = mb->mv[0];
 	
-	if(TQB(cpi,mb->mode,fi,mv,plane,req,rc,keyframe,&uncoded_ssd,&coded_ssd,&coded_cost)){
-	  sb_coded=1;
-	  coded++;
-	}else{
-	  sb_partial=1;
-	}
+      if(TQB(cpi,ps,mb->mode,fi,mv,0,0,&mo,rc)){
+	fr_codeblock(cpi,fr);
+	coded++;
+      }else{
+	fr_skipblock(cpi,fr);
       }
     }
-    break;
-    
-  case OC_PF_444:
-    /* sixteen blocks / four macroblocks per chroma superblock */
-    for(i=0;i<16;i++){
-      int fi = sb->f[i];
-      if(cp[fi]){
-	macroblock_t *mb = &cpi->macro[sb->m[i]];
-	int mb_phase = macroblock_phase_444[i];
-	
-	if(TQB(cpi,mb->mode,fi,mb->mv[mb_phase],plane,req,rc,keyframe,&uncoded_ssd,&coded_ssd,&coded_cost)){
-	  sb_coded=1;
-	  coded++;
-	}else{
-	  sb_partial=1;
-	}
-      }
-    }
-    
-    break;
   }
 
-  sb->coded = sb_coded;
-  sb->partial = sb_partial;
-  return coded;
-  
+  return coded;  
 }
 
 int PickModes(CP_INSTANCE *cpi, int recode){
   unsigned char qi = cpi->BaseQ; // temporary
   superblock_t *sb = cpi->super[0];
   superblock_t *sb_end;
-  int i,j,k;
+  int i,j;
   ogg_uint32_t interbits = 0;
   ogg_uint32_t intrabits = 0;
   mc_state mcenc;
   mv_t last_mv = {0,0};
   mv_t prior_mv = {0,0};
-  ogg_int16_t req[2][3][64];
   long rho_count[65];
+  plane_state_t ps;
+  fr_state_t fr;
+
 #ifdef COLLECT_METRICS
   int sad[8][3][4];
 #endif
   oc_mode_scheme_chooser_init(cpi);
+  ps_setup_frame(cpi,&ps);
+  ps_setup_plane(cpi,&ps,0);
+  fr_clear(cpi,&fr);
+
   memset(rho_count,0,sizeof(rho_count));
-
-  for(i=0;i<2;i++)
-    for(j=0;j<3;j++)
-      for(k=0;k<64;k++)
-	req[i][j][k]=cpi->quant_tables[i][j][k][qi];
-
   cpi->MVBits_0 = 0;
   cpi->MVBits_1 = 0;
  
@@ -893,8 +895,6 @@ int PickModes(CP_INSTANCE *cpi, int recode){
   sb = cpi->super[0];
   sb_end = sb + cpi->super_n[0];
   for(; sb<sb_end; sb++){
-    sb->coded=0;
-    sb->partial=0;
 
     for(j = 0; j<4; j++){ /* mode addressing is through Y plane, always 4 MB per SB */
       int mbi = sb->m[j];
@@ -931,7 +931,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
       if(cpi->FrameType == KEY_FRAME){
 	mb->mode = CODE_INTRA;
 	/* Transform, quantize, collect rho metrics */
-	TQMB_Y(cpi, mb, j, qi, req, rho_count, 1, 0);
+	TQMB_Y(cpi, mb, j, &ps, rho_count, 0, &fr);
 	
       }else{
 
@@ -1022,7 +1022,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	mb->mode = mode;
 	
 	/* Transform, quantize, collect rho metrics */
-	if(TQMB_Y(cpi, mb, j, qi, req, rho_count, 0, overhead[mode])){
+	if(TQMB_Y(cpi, mb, j, &ps, rho_count, overhead[mode], &fr)){
 
 	  switch(mb->mode){
 	  case CODE_INTER_PLUS_MV:
@@ -1047,6 +1047,8 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	    else 
 	      last_mv = mb->mv[0];
 	    break;
+	  default:
+	    break;
 	  }
 	  
 	  oc_mode_set(cpi,mb,mb->mode);      
@@ -1055,19 +1057,26 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	}
       }
     }
+    fr_finishsb(cpi,&fr);
   }
 
   /* code chroma U */
   sb = cpi->super[1];
   sb_end = sb + cpi->super_n[1];
-  for(; sb<sb_end; sb++)
-    TQSB_UV(cpi, sb, 1, qi, req, rho_count, cpi->FrameType == KEY_FRAME);
+  ps_setup_plane(cpi,&ps,1);
+  for(; sb<sb_end; sb++){
+    TQSB_UV(cpi, sb, &ps, rho_count, &fr);
+    fr_finishsb(cpi,&fr);
+  }
 
   /* code chroma V */
   sb = cpi->super[2];
   sb_end = sb + cpi->super_n[2];
-  for(; sb<sb_end; sb++)
-    TQSB_UV(cpi, sb, 2, qi, req, rho_count, cpi->FrameType == KEY_FRAME);
+  ps_setup_plane(cpi,&ps,2);
+  for(; sb<sb_end; sb++){
+    TQSB_UV(cpi, sb, &ps, rho_count, &fr);
+    fr_finishsb(cpi,&fr);
+  }
 
   for(i=1;i<65;i++)
     rho_count[i]+=rho_count[i-1];
@@ -1093,7 +1102,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
        to code them. */
     {
       ogg_uint32_t bits = oggpackB_bits(cpi->oggbuffer);
-      PackAndWriteDFArray(cpi);
+      fr_write(cpi,&fr);
       interbits += ((oggpackB_bits(cpi->oggbuffer) - bits) << OC_BIT_SCALE);
     }
     

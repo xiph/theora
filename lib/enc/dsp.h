@@ -73,7 +73,7 @@ typedef struct
   ogg_uint32_t (*inter8x8_err_xy2)(unsigned char *SrcData, unsigned char *RefDataPtr1,
 				   unsigned char *RefDataPtr2, ogg_uint32_t stride);
                
-  void (*LoopFilter)              (void *cpi, int FLimit);
+  void (*LoopFilter)              (CP_INSTANCE *cpi, int FLimit);
 
   void (*FilterVert)              (unsigned char * PixelPtr,
 				   ogg_int32_t LineLength, ogg_int16_t *BoundingValuePtr);

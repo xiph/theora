@@ -19,10 +19,146 @@
 #include "codec_internal.h"
 #include <stdio.h>
 
-/* Long run bit string coding */
-static ogg_uint32_t FrArrayCodeSBRun( CP_INSTANCE *cpi, ogg_uint32_t value){
-  ogg_uint32_t CodedVal = 0;
-  ogg_uint32_t CodedBits = 0;
+void fr_clear(CP_INSTANCE *cpi, fr_state_t *fr){
+  fr->sb_partial_last = -1;
+  fr->sb_partial_count = 0;
+  fr->sb_partial_break = 0;
+
+  fr->sb_full_last = -1;
+  fr->sb_full_count = 0;
+  fr->sb_full_break = 0;
+
+  fr->b_last = -1;
+  fr->b_count = 0;
+  fr->b_pend = 0;
+
+  fr->sb_partial=0;
+  fr->sb_coded=0;
+
+  fr->cpi_partial_count=0;
+  fr->cpi_full_count=0;
+  fr->cpi_block_count=0;
+}
+
+static int Brun( ogg_uint32_t value, ogg_int16_t *token) {
+  
+  /* Coding scheme:
+     Codeword                                RunLength
+     0x                                      1-2
+     10x                                     3-4
+     110x                                    5-6
+     1110xx                                  7-10
+     11110xx                                 11-14
+     11111xxxx                               15-30 */
+
+  if ( value <= 2 ) {
+    *token = value - 1;
+    return 2;
+  } else if ( value <= 4 ) {
+    *token = 0x0004 + (value - 3);
+    return 3;
+  } else if ( value <= 6 ) {
+    *token = 0x000C + (value - 5);
+    return 4;
+  } else if ( value <= 10 ) {
+    *token = 0x0038 + (value - 7);
+    return 6;
+  } else if ( value <= 14 ) {
+    *token = 0x0078 + (value - 11);
+    return 7;
+  } else {
+    *token = 0x01F0 + (value - 15);
+    return 9;
+ }
+}
+
+void fr_skipblock(CP_INSTANCE *cpi, fr_state_t *fr){
+  if(fr->sb_coded){
+    if(!fr->sb_partial){
+
+      /* superblock was previously fully coded */
+
+      if(fr->b_last==-1){
+	/* first run of the frame */
+	cpi->fr_block[fr->cpi_block_count]=1;
+	cpi->fr_block_bits[fr->cpi_block_count]=1;
+	fr->cpi_block_count++;
+	fr->b_last = 1;
+      }
+
+      if(fr->b_last==1){
+	/* in-progress run also a coded run */
+	fr->b_count += fr->b_pend;
+      }else{
+	/* in-progress run an uncoded run; flush */
+	cpi->fr_block_bits[fr->cpi_block_count] = 
+	  Brun(fr->b_count, cpi->fr_block+fr->cpi_block_count);
+	fr->cpi_block_count++;
+	fr->b_count=fr->b_pend;
+	fr->b_last = 1;
+      }
+    }
+
+    /* add a skip block */
+    if(fr->b_last == 0){
+      fr->b_count++;
+    }else{
+      cpi->fr_block_bits[fr->cpi_block_count] = 
+	Brun(fr->b_count, cpi->fr_block+fr->cpi_block_count);
+      fr->cpi_block_count++;
+      fr->b_count = 1;
+      fr->b_last = 0;
+    }
+  }
+   
+  fr->b_pend++;
+  fr->sb_partial=1;
+}
+
+void fr_codeblock(CP_INSTANCE *cpi, fr_state_t *fr){
+  if(fr->sb_partial){
+    if(!fr->sb_coded){
+
+      /* superblock was previously completely uncoded */
+
+      if(fr->b_last==-1){
+	/* first run of the frame */
+	cpi->fr_block[fr->cpi_block_count]=0;
+	cpi->fr_block_bits[fr->cpi_block_count]=1;
+	fr->cpi_block_count++;
+	fr->b_last = 0;
+      }
+
+      if(fr->b_last==0){
+	/* in-progress run also an uncoded run */
+	fr->b_count += fr->b_pend;
+      }else{
+	/* in-progress run a coded run; flush */
+	cpi->fr_block_bits[fr->cpi_block_count] = 
+	  Brun(fr->b_count, cpi->fr_block+fr->cpi_block_count);
+	fr->cpi_block_count++;
+	fr->b_count=fr->b_pend;
+	fr->b_last = 0;
+      }
+    }
+
+    /* add a coded block */
+    if(fr->b_last == 1){
+      fr->b_count++;
+    }else{
+      cpi->fr_block_bits[fr->cpi_block_count] = 
+	Brun(fr->b_count, cpi->fr_block+fr->cpi_block_count);
+      fr->cpi_block_count++;
+      fr->b_count = 1;
+      fr->b_last = 1;
+    }
+  }
+   
+  fr->b_pend++;
+  fr->sb_coded=1;
+}
+
+static int SBRun(ogg_uint32_t value, int *token){
 
   /* Coding scheme:
         Codeword              RunLength
@@ -35,173 +171,135 @@ static ogg_uint32_t FrArrayCodeSBRun( CP_INSTANCE *cpi, ogg_uint32_t value){
       111111xxxxxxxxxxxx      34-4129 */
 
   if ( value == 1 ){
-    CodedVal = 0;
-    CodedBits = 1;
+    *token = 0;
+    return 1;
   } else if ( value <= 3 ) {
-    CodedVal = 0x0004 + (value - 2);
-    CodedBits = 3;
+    *token = 0x0004 + (value - 2);
+    return 3;
   } else if ( value <= 5 ) {
-    CodedVal = 0x000C + (value - 4);
-    CodedBits = 4;
+    *token = 0x000C + (value - 4);
+    return 4;
   } else if ( value <= 9 ) {
-    CodedVal = 0x0038 + (value - 6);
-    CodedBits = 6;
+    *token = 0x0038 + (value - 6);
+    return 6;
   } else if ( value <= 17 ) {
-    CodedVal = 0x00F0 + (value - 10);
-    CodedBits = 8;
+    *token = 0x00F0 + (value - 10);
+    return 8;
   } else if ( value <= 33 ) {
-    CodedVal = 0x03E0 + (value - 18);
-    CodedBits = 10;
+    *token = 0x03E0 + (value - 18);
+    return 10;
   } else {
-    CodedVal = 0x3F000 + (value - 34);
-    CodedBits = 18;
+    *token = 0x3F000 + (value - 34);
+    return 18;
   }
-
-  /* Add the bits to the encode holding buffer. */
-  oggpackB_write( cpi->oggbuffer, CodedVal, CodedBits );
-
-  return CodedBits;
 }
 
-/* Short run bit string coding */
-static ogg_uint32_t FrArrayCodeBlockRun( CP_INSTANCE *cpi,
-                                         ogg_uint32_t value ) {
-  ogg_uint32_t CodedVal = 0;
-  ogg_uint32_t CodedBits = 0;
-
-  /* Coding scheme:
-        Codeword                                RunLength
-        0x                                      1-2
-        10x                                     3-4
-        110x                                    5-6
-        1110xx                                  7-10
-        11110xx                                 11-14
-        11111xxxx                               15-30 */
-
-  if ( value <= 2 ) {
-    CodedVal = value - 1;
-    CodedBits = 2;
-  } else if ( value <= 4 ) {
-    CodedVal = 0x0004 + (value - 3);
-    CodedBits = 3;
-
-  } else if ( value <= 6 ) {
-    CodedVal = 0x000C + (value - 5);
-    CodedBits = 4;
-
-  } else if ( value <= 10 ) {
-    CodedVal = 0x0038 + (value - 7);
-    CodedBits = 6;
-
-  } else if ( value <= 14 ) {
-    CodedVal = 0x0078 + (value - 11);
-    CodedBits = 7;
-  } else {
-    CodedVal = 0x01F0 + (value - 15);
-    CodedBits = 9;
- }
-
-  /* Add the bits to the encode holding buffer. */
-  oggpackB_write( cpi->oggbuffer, CodedVal, CodedBits );
-
-  return CodedBits;
-}
-
-void PackAndWriteDFArray( CP_INSTANCE *cpi ){
-  ogg_uint32_t  SB, B;
-  int run_last = -1;
-  int run_count = 0;
-  int run_break = 0;
-  int invalid_fi = cpi->frag_total;
-  unsigned char *cp = cpi->frag_coded;
-
-  /* code the partially coded SB flags */
-  for( SB = 0; SB < cpi->super_total; SB++ ) {
-    superblock_t *sb = &cpi->super[0][SB];
-    int partial = (sb->partial & sb->coded); 
-
-    if(run_last == -1){
-      oggpackB_write( cpi->oggbuffer, partial, 1);      
-      run_last = partial;
-    }
+void fr_finishsb(CP_INSTANCE *cpi, fr_state_t *fr){
+  /* update partial state */
+  int partial = (fr->sb_partial & fr->sb_coded); 
+  if(fr->sb_partial_last == -1){
+    cpi->fr_partial[fr->cpi_partial_count] = partial;
+    cpi->fr_partial_bits[fr->cpi_partial_count] = 1;
+    fr->cpi_partial_count++;
+    fr->sb_partial_last = partial;
+  }
     
-    if(run_last == partial && run_count < 4129){
-      run_count++;
-    }else{
-      if(run_break)
-	oggpackB_write( cpi->oggbuffer, partial, 1);
+  if(fr->sb_partial_last == partial && fr->sb_partial_count < 4129){
+    fr->sb_partial_count++;
+  }else{
+    if(fr->sb_partial_break){
+      cpi->fr_partial[fr->cpi_partial_count] = partial;
+      cpi->fr_partial_bits[fr->cpi_partial_count] = 1;
+      fr->cpi_partial_count++;
+    }
       
-      run_break=0;
-      FrArrayCodeSBRun( cpi, run_count );      
-      if(run_count >= 4129) run_break = 1;
-      run_count=1;
-    }
-    run_last=partial;
+    fr->sb_partial_break=0;
+    cpi->fr_partial_bits[fr->cpi_partial_count] = 
+      SBRun( fr->sb_partial_count, cpi->fr_partial+fr->cpi_partial_count);
+    fr->cpi_partial_count++;
+    
+    if(fr->sb_partial_count >= 4129) fr->sb_partial_break = 1;
+    fr->sb_partial_count=1;
   }
-  if(run_break)
-    oggpackB_write( cpi->oggbuffer, run_last, 1);
-  if(run_count)
-    FrArrayCodeSBRun(cpi, run_count);      
+  fr->sb_partial_last=partial;
 
-  /* code the fully coded/uncoded SB flags */
-  run_last = -1;
-  run_count = 0;
-  run_break = 0;
-  for( SB = 0; SB < cpi->super_total; SB++ ) {
-    superblock_t *sb = &cpi->super[0][SB];
+  /* fully coded/uncoded state */
+  if(!fr->sb_partial || !fr->sb_coded){
     
-    if(sb->partial && sb->coded) continue;
-    
-    if(run_last == -1){
-      oggpackB_write( cpi->oggbuffer, sb->coded, 1);      
-      run_last = sb->coded;
+    if(fr->sb_full_last == -1){
+      cpi->fr_full[fr->cpi_full_count] = fr->sb_coded;
+      cpi->fr_full_bits[fr->cpi_full_count] = 1;
+      fr->cpi_full_count++;
+      fr->sb_full_last = fr->sb_coded;
     }
     
-    if(run_last == sb->coded && run_count < 4129){
-      run_count++;
+    if(fr->sb_full_last == fr->sb_coded && fr->sb_full_count < 4129){
+      fr->sb_full_count++;
     }else{
-      if(run_break)
-	oggpackB_write( cpi->oggbuffer, sb->coded, 1);
-      run_break=0;
-      FrArrayCodeSBRun( cpi, run_count );      
-      if(run_count >= 4129) run_break = 1;
-      run_count=1;
-    }
-    run_last=sb->coded;
-  }
-  if(run_break)
-    oggpackB_write( cpi->oggbuffer, run_last, 1);
-
-  if(run_count)
-    FrArrayCodeSBRun(cpi, run_count);      
-
-  /* code the block flags */
-  run_last = -1;
-  run_count = 0;
-  for( SB = 0; SB < cpi->super_total; SB++ ) {
-    superblock_t *sb = &cpi->super[0][SB];
-
-    if(!sb->coded || !sb->partial) continue;
-
-    for ( B=0; B<16; B++ ) {
-      int fi = sb->f[B];      
-      if(fi != invalid_fi){
-	if(run_last == -1){
-	  oggpackB_write( cpi->oggbuffer, cp[fi], 1);      
-	  run_last = cp[fi];
-	}
-	
-	if(run_last == cp[fi]){
-	  run_count++;
-	}else{
-	  FrArrayCodeBlockRun( cpi, run_count );
-	  run_count=1;
-	}
-	run_last=cp[fi];
+      if(fr->sb_full_break){
+	cpi->fr_full[fr->cpi_full_count] = fr->sb_coded;
+	cpi->fr_full_bits[fr->cpi_full_count] = 1;
+	fr->cpi_full_count++;
       }
-    }
-  }
-  if(run_count)
-    FrArrayCodeBlockRun( cpi, run_count );
 
+      fr->sb_full_break=0;
+      cpi->fr_full_bits[fr->cpi_full_count] = 
+	SBRun( fr->sb_full_count, cpi->fr_full+fr->cpi_full_count);
+      fr->cpi_full_count++;
+      if(fr->sb_full_count >= 4129) fr->sb_full_break = 1;
+      fr->sb_full_count=1;
+    }
+    fr->sb_full_last=fr->sb_coded;
+
+  }
+
+  fr->b_pend=0;
+  fr->sb_partial=0;
+  fr->sb_coded=0;
+}
+
+static void fr_flush(CP_INSTANCE *cpi, fr_state_t *fr){
+  /* flush any pending partial run */
+  if(fr->sb_partial_break){
+    cpi->fr_partial[fr->cpi_partial_count] = fr->sb_partial_last;
+    cpi->fr_partial_bits[fr->cpi_partial_count] = 1;
+    fr->cpi_partial_count++;
+  }
+  if(fr->sb_partial_count){
+    cpi->fr_partial_bits[fr->cpi_partial_count] = 
+      SBRun( fr->sb_partial_count, cpi->fr_partial+fr->cpi_partial_count);
+    fr->cpi_partial_count++;
+  }
+
+  /* flush any pending full run */
+  if(fr->sb_full_break){
+    cpi->fr_full[fr->cpi_full_count] = fr->sb_full_last;
+    cpi->fr_full_bits[fr->cpi_full_count] = 1;
+    fr->cpi_full_count++;
+  }
+  if(fr->sb_full_count){
+    cpi->fr_full_bits[fr->cpi_full_count] = 
+      SBRun( fr->sb_full_count, cpi->fr_full+fr->cpi_full_count);
+    fr->cpi_full_count++;
+  }
+
+  /* flush any pending block run */
+  if(fr->b_count){
+    cpi->fr_block_bits[fr->cpi_block_count] = 
+      Brun(fr->b_count, cpi->fr_block+fr->cpi_block_count);
+    fr->cpi_block_count++;
+  }
+}
+
+void fr_write(CP_INSTANCE *cpi, fr_state_t *fr){
+  int i;
+
+  fr_flush(cpi,fr);
+
+  for(i=0;i<fr->cpi_partial_count;i++)
+    oggpackB_write( cpi->oggbuffer, cpi->fr_partial[i], cpi->fr_partial_bits[i]);      
+  for(i=0;i<fr->cpi_full_count;i++)
+    oggpackB_write( cpi->oggbuffer, cpi->fr_full[i], cpi->fr_full_bits[i]);      
+  for(i=0;i<fr->cpi_block_count;i++)
+    oggpackB_write( cpi->oggbuffer, cpi->fr_block[i], cpi->fr_block_bits[i]);      
 }

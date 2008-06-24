@@ -26,6 +26,7 @@
 
 #include "theora/theora.h"
 #include "encoder_huffman.h"
+typedef struct CP_INSTANCE CP_INSTANCE;
 #include "dsp.h"
 
 #define theora_read(x,y,z) ( oggpackB_read(x,y,z) )
@@ -154,9 +155,6 @@ typedef struct macroblock {
 typedef struct superblock {
   int f[16]; // hilbert order
   int m[16]; // hilbert order: only 4 for luma, but 16 for U/V (to match f) */
-
-  int partial;
-  int coded;
 } superblock_t;
 
 typedef ogg_int16_t    quant_table[64]; 
@@ -187,7 +185,7 @@ typedef struct {
 } oc_mode_scheme_chooser;
 
 /* Encoder (Compressor) instance -- installed in a theora_state */
-typedef struct CP_INSTANCE {
+struct CP_INSTANCE {
   /*This structure must be first.
     It contains entry points accessed by the decoder library's API wrapper, and
      is the only assumption that library makes about our internal format.*/
@@ -244,6 +242,12 @@ typedef struct CP_INSTANCE {
   
   /*********************************************************************/
   /* Token Buffers */
+  int             *fr_partial;
+  unsigned char   *fr_partial_bits;
+  int             *fr_full;
+  unsigned char   *fr_full_bits;
+  ogg_int16_t     *fr_block;
+  unsigned char   *fr_block_bits;
 
   unsigned char   *dct_token_storage;
   ogg_uint16_t    *dct_token_eb_storage;
@@ -298,7 +302,7 @@ typedef struct CP_INSTANCE {
 
   DspFunctions     dsp;  /* Selected functions for this platform */
 
-} CP_INSTANCE;
+};
 
 #define clamp255(x) ((unsigned char)((((x)<0)-1) & ((x) | -((x)>255))))
 
@@ -324,8 +328,6 @@ extern void ClearHuffmanSet( CP_INSTANCE *cpi );
 
 extern void WriteHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES],
                               oggpack_buffer *opb);
-
-extern void PackAndWriteDFArray( CP_INSTANCE *cpi );
 
 extern void WriteFrameHeader( CP_INSTANCE *cpi) ;
 
@@ -356,6 +358,33 @@ extern int PickModes(CP_INSTANCE *cpi, int recode);
 extern void InitFrameInfo(CP_INSTANCE *cpi);
 
 extern void ClearFrameInfo (CP_INSTANCE *cpi);
+
+typedef struct {
+  int cpi_partial_count;
+  int cpi_full_count;
+  int cpi_block_count;
+
+  ogg_uint16_t  sb_partial_count;
+  ogg_uint16_t sb_full_count;
+
+  signed char sb_partial_last;
+  signed char sb_full_last;
+  signed char b_last;
+  signed char b_count;
+  signed char b_pend;
+
+  char sb_partial_break;
+  char sb_full_break;
+  char sb_partial;
+  char sb_coded;
+
+} fr_state_t;
+
+void fr_clear(CP_INSTANCE *cpi, fr_state_t *fr);
+void fr_skipblock(CP_INSTANCE *cpi, fr_state_t *fr);
+void fr_codeblock(CP_INSTANCE *cpi, fr_state_t *fr);
+void fr_finishsb(CP_INSTANCE *cpi, fr_state_t *fr);
+void fr_write(CP_INSTANCE *cpi, fr_state_t *fr);
 
 #ifdef COLLECT_METRICS
 extern void ModeMetrics(CP_INSTANCE *cpi, int huff[4]);

@@ -46,6 +46,13 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
 
   if(cpi->macro) _ogg_free(cpi->macro);
   if(cpi->super[0]) _ogg_free(cpi->super[0]);
+
+  if(cpi->fr_partial)_ogg_free(cpi->fr_partial);
+  if(cpi->fr_partial_bits)_ogg_free(cpi->fr_partial_bits);
+  if(cpi->fr_full)_ogg_free(cpi->fr_full);
+  if(cpi->fr_full_bits)_ogg_free(cpi->fr_full_bits);
+  if(cpi->fr_block)_ogg_free(cpi->fr_block);
+  if(cpi->fr_block_bits)_ogg_free(cpi->fr_block_bits);
 }
 
 /* A note to people reading and wondering why malloc returns aren't
@@ -127,6 +134,13 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 
   cpi->dct_token_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_storage));
   cpi->dct_token_eb_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_eb_storage));
+
+  cpi->fr_partial = _ogg_calloc(cpi->super_total+1, sizeof(*cpi->fr_partial));
+  cpi->fr_partial_bits = _ogg_calloc(cpi->super_total+1, sizeof(*cpi->fr_partial_bits));
+  cpi->fr_full = _ogg_calloc(cpi->super_total+1, sizeof(*cpi->fr_full));
+  cpi->fr_full_bits = _ogg_calloc(cpi->super_total+1, sizeof(*cpi->fr_full_bits));
+  cpi->fr_block = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->fr_block));
+  cpi->fr_block_bits = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->fr_block_bits));
 
 #ifdef COLLECT_METRICS
   cpi->frag_mbi = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->frag_mbi));
