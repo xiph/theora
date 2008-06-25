@@ -251,10 +251,11 @@ struct CP_INSTANCE {
 
   unsigned char   *dct_token_storage;
   ogg_uint16_t    *dct_token_eb_storage;
-  unsigned char   *dct_token[3][64];
-  ogg_uint16_t    *dct_token_eb[3][64];
+  unsigned char   *dct_token[64];
+  ogg_uint16_t    *dct_token_eb[64];
 
-  ogg_uint32_t     dct_token_count[3][64];
+  ogg_uint32_t     dct_token_count[64];
+  ogg_uint32_t     dct_token_ycount[64];
 
   ogg_uint32_t     dc_bits[2][DC_HUFF_CHOICES];
   ogg_uint32_t     ac_bits[2][AC_HUFF_CHOICES];
@@ -272,10 +273,10 @@ struct CP_INSTANCE {
   int             *frag_mbi;
   int             *frag_sad[8];
   int             *dct_token_frag_storage;
-  int             *dct_token_frag[3][64];
+  int             *dct_token_frag[64];
   int             *dct_eob_fi_storage;
-  int             *dct_eob_fi_stack[3][64];
-  int              dct_eob_fi_count[3][64];
+  int             *dct_eob_fi_stack[64];
+  int              dct_eob_fi_count[64];
 #endif
 
   /********************************************************************/
