@@ -192,17 +192,21 @@ static void EncodeTokenGroup(CP_INSTANCE *cpi,
   ogg_uint16_t *eb = cpi->dct_token_eb[group];
  
   for(i=0; i<cpi->dct_token_ycount[group]; i++){
-    oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huffY][token[i]],
-		    cpi->HuffCodeLengthArray_VP3x[huffY][token[i]] );
-    if (cpi->ExtraBitLengths_VP3x[token[i]] > 0) 
-      oggpackB_write( opb, eb[i], cpi->ExtraBitLengths_VP3x[token[i]] );
+    if(token[i] < DCT_NOOP){
+      oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huffY][token[i]],
+		      cpi->HuffCodeLengthArray_VP3x[huffY][token[i]] );
+      if (cpi->ExtraBitLengths_VP3x[token[i]] > 0) 
+	oggpackB_write( opb, eb[i], cpi->ExtraBitLengths_VP3x[token[i]] );
+    }
   }
 
   for(; i<cpi->dct_token_count[group]; i++){
-    oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huffC][token[i]],
-		    cpi->HuffCodeLengthArray_VP3x[huffC][token[i]] );
-    if (cpi->ExtraBitLengths_VP3x[token[i]] > 0) 
-      oggpackB_write( opb, eb[i], cpi->ExtraBitLengths_VP3x[token[i]] );
+    if(token[i] < DCT_NOOP){
+      oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huffC][token[i]],
+		      cpi->HuffCodeLengthArray_VP3x[huffC][token[i]] );
+      if (cpi->ExtraBitLengths_VP3x[token[i]] > 0) 
+	oggpackB_write( opb, eb[i], cpi->ExtraBitLengths_VP3x[token[i]] );
+    }
   }
 }
 

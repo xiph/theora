@@ -73,3 +73,4 @@
 
 /* 32 */
 #define MAX_ENTROPY_TOKENS      (DCT_RUN_CATEGORY2B + 1) /* 32 */
+#define DCT_NOOP                MAX_ENTROPY_TOKENS

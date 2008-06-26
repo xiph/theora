@@ -205,7 +205,6 @@ struct CP_INSTANCE {
   /* SuperBlock, MacroBLock and Fragment Information */
   unsigned char   *frag_coded;
   ogg_uint32_t    *frag_buffer_index;
-  unsigned char   *frag_nonzero;
   ogg_int16_t     *frag_dc;
   dct_t           *frag_dct;
 
