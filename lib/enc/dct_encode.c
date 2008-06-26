@@ -20,6 +20,7 @@
 #include "codec_internal.h"
 #include "dsp.h"
 #include "quant_lookup.h"
+#include<stdio.h>
 
 static int acoffset[64]={
   16,16,16,16,16,16, 32,32,
@@ -33,10 +34,8 @@ static int acoffset[64]={
 /* used for the DC encoding after AC encoding has finished; need to be
    able to undo AC tokens when zero runs cause things to be moved into
    the DC token stack from the AC coefficient 1 token stack */
-static void replace_AC1_token(CP_INSTANCE *cpi, int bump, int pos, 
-			      int token, int eb, int fi){
-  int oldchroma = (pos>=cpi->dct_token_ycount[1]);
-  int newchroma = (oldchroma || (bump && (pos+1 == cpi->dct_token_ycount[1])));
+static void replace_AC1_token(CP_INSTANCE *cpi, int oldchroma, int newchroma,
+			      int pos, int token, int eb, int fi){
   int oldtoken = cpi->dct_token[1][pos];
   int i,offset = acoffset[1];
   
@@ -265,8 +264,8 @@ static void tokenize_AC(CP_INSTANCE *cpi, int fi, int chroma,
 	   prepended later.  */
 	if(cpi->dct_token_count[coeff] == 0){
 	  /* prepending requires space to do so-- save some at front of token stack */
-	  if(eob_pre[coeff]==0 || (eob_pre[coeff]&0x8ff)==0x8ff){ /* 0xfff is a safe overallocation, 
-								     saves a mod 4095 */
+	  if(eob_pre[coeff]==0 || !(eob_pre[coeff]&0x8ff)){ /* 0xfff is a safe overallocation, 
+							       saves a mod 4095 */
 	    cpi->dct_token[coeff]++;
 	    cpi->dct_token_eb[coeff]++;
 #ifdef COLLECT_METRICS
@@ -310,7 +309,7 @@ static void tokenize_AC(CP_INSTANCE *cpi, int fi, int chroma,
 	  int adj = (coeff>1); /* implement a minor restriction on
 				  stack 1 so that we know during DC
 				  fixups that extended a dctrun token
-				  in stack 1 will never overflow */
+				  from stack 1 will never overflow */
 	  if ( ((absval == 1) && (zero_run < 17+adj)) ||
 	       ((absval <= 3) && (zero_run < 3+adj))){
 	    TokenizeDctRunValue( cpi, chroma, coeff, zero_run, val, fi);
@@ -410,18 +409,17 @@ static int decode_dctrun_token(int token, int eb, int *val){
     *val = ((eb&0x8) ? -1 : 1);
     return (eb&0x7)+10;
   case DCT_RUN_CATEGORY2:
-    *val = ( (eb&0x1) ? -((eb&0x1)+2) : (eb&0x1)+2 );
+    *val = ( (eb&0x2) ? -((eb&0x1)+2) : (eb&0x1)+2 );
     return 1;
   case DCT_RUN_CATEGORY2B:
     *val = ( (eb&0x4) ? -(((eb&0x2)>>1)+2) : ((eb&0x2)>>1)+2);
     return (eb&0x1)+2;
   default:
-    *val=0;
+    *val = 0;
     return 0;
   }
 }
 
-#include<stdio.h>
 /* called after AC tokenization is complete, because DC coding has to
    happen after DC predict, which has to happen after the
    Hilbert-ordered TQT loop */
@@ -433,11 +431,14 @@ static void tokenize_DC(CP_INSTANCE *cpi, int fi, int chroma,
   if ( cp[fi] ) {
     dct_t *dct = &cpi->frag_dct[fi];
     int val = dct->data[0];
-    int token1 = cpi->dct_token[1][*coeff1_idx];
-    int eb1 = cpi->dct_token_eb[1][*coeff1_idx];
 
     /* track the coeff 1 token stack: do we need to start a new EOB run? */
-    if (*coeff1_run==0) *coeff1_run = decode_eob_token(token1, eb1);
+    if (*coeff1_run==0){
+      int token1 = cpi->dct_token[1][*coeff1_idx];
+      int eb1 = cpi->dct_token_eb[1][*coeff1_idx];
+
+      *coeff1_run = decode_eob_token(token1, eb1);
+    }
 
     if(val){
       /* nonzero val, we're not going to need any fixup */
@@ -458,36 +459,47 @@ static void tokenize_DC(CP_INSTANCE *cpi, int fi, int chroma,
 	 position */
       
       if(*coeff1_run > 0){
-	
-	/* emit zero short run */
-	add_token(cpi, chroma, 0, DCT_SHORT_ZRL_TOKEN, 0, fi);
+	/* this is complicated by the pre and post runs not yet being
+	   coded to tokens.  Handle all three cases seperately */
+	if(*coeff1_idx<0){
+	  /* pre-run */
 
-#if 0
-	/* coeff1 stack is in the midst of an EOB run; subtract one from its EOB run */
-	int run = decode_eob_token(token1, eb1);
+	    add_token(cpi, chroma, 0, DCT_SHORT_ZRL_TOKEN, 0, fi);
 
-	if(run==1){
-	  /* the EOB 'run' was only one EOB; the token gets nopped */
-	  replace_AC1_token(cpi, 0, *coeff1_idx, DCT_NOOP, 0, 0);
+
+	}else if (*coeff1_idx>=cpi->dct_token_count[1]){
+	  /* post-run */
+
+
+	    add_token(cpi, chroma, 0, DCT_SHORT_ZRL_TOKEN, 0, fi);
+
 	}else{
-	  /* if the coeff 1 EOB run started at this fragment, we're
-	     not just reducing the length of the EOB, we're also
-	     'bumping' the start to the next fragment. It's important
-	     to know that if the token is bumped out of luma into
-	     chroma */
-	  int bump = (run == *coeff1_run);
-	  int newtoken,neweb;
-	  tokenize_eob_run(run-1, &newtoken, &neweb);
-	  replace_AC1_token(cpi, bump, *coeff1_idx, newtoken, neweb, 0);
+
+	  add_token(cpi, chroma, 0, DCT_SHORT_ZRL_TOKEN, 0, fi);
+#if 0
+	  /* normal tokenized run */
+	  int token1 = cpi->dct_token[1][*coeff1_idx];
+	  int eb1 = cpi->dct_token_eb[1][*coeff1_idx];
+	  int run = decode_eob_token(token1, eb1);
+
+	  if(run==1){
+	    /* the EOB 'run' was only one EOB and started this fragemnt; the token gets nopped */
+	    replace_AC1_token(cpi, chroma, chroma, *coeff1_idx, DCT_NOOP, 0, 0);
+	  }else{
+	    /* if the coeff 1 EOB run started at this fragment, we're
+	       not just reducing the length of the EOB, we're also
+	       'bumping' the new start to the next fragment. It's important
+	       to know that if the token is bumped out of luma into
+	       chroma */
+	    int bump = (run == *coeff1_run);
+	    int newtoken=0,neweb=0;
+	    tokenize_eob_run(run-1, &newtoken, &neweb);XXXXXX
+	    replace_AC1_token(cpi, bump, *coeff1_idx, newtoken, neweb, 0);
+	  }
+#endif
 	}
 	
-	/* start/extend the stack zero eob run */
-	if(eob_run[0] == 4095){
-	  emit_eob_run(cpi,(eob_yrun[0]==0),0,4095);
-	  eob_run[0] = 0;
-	  eob_yrun[0] = 0;
-	}
-	
+#if 0
 	eob_run[0]++;
 	if(!chroma)eob_yrun[0]++;
 	
@@ -495,8 +507,12 @@ static void tokenize_DC(CP_INSTANCE *cpi, int fi, int chroma,
 	cpi->dct_eob_fi_stack[0][cpi->dct_eob_fi_count[0]++]=fi;
 #endif
 #endif
- 
+	
+
       }else{
+
+	int token1 = cpi->dct_token[1][*coeff1_idx];
+	int eb1 = cpi->dct_token_eb[1][*coeff1_idx];
 
 	/* coeff 1 is one of: zerorun, dctrun or dctval */
 	/* A zero-run token is expanded and moved to token stack 0 (stack 1 entry noopped) */
@@ -515,13 +531,7 @@ static void tokenize_DC(CP_INSTANCE *cpi, int fi, int chroma,
 	  eob_yrun[0]=0;
 	}
 	  
-
 	if(token1 <= DCT_ZRL_TOKEN){
-
-	  /* emit zero short run */
-	  add_token(cpi, chroma, 0, DCT_SHORT_ZRL_TOKEN, 0, fi);
-	  
-#if 0
 	  /* zero-run.  Extend and move it */
 
 	  int run = decode_zrl_token(token1,eb1);
@@ -532,9 +542,8 @@ static void tokenize_DC(CP_INSTANCE *cpi, int fi, int chroma,
 	      add_token(cpi, chroma, 0, DCT_SHORT_ZRL_TOKEN, run, fi);
 	    else
 	      add_token(cpi, chroma, 0, DCT_ZRL_TOKEN, run, fi);
-#endif
 	} else if(token1 <= DCT_VAL_CATEGORY8){
-	
+
 	  /* DCT value token; will it fit into a dctrun? */
 	  int val = decode_dct_token(token1,eb1);
 
@@ -546,26 +555,23 @@ static void tokenize_DC(CP_INSTANCE *cpi, int fi, int chroma,
 	    /* leave dct value token alone, emit a short zerorun */
 	    add_token(cpi, chroma, 0, DCT_SHORT_ZRL_TOKEN, 0, fi);
 	  }
-
 	} else {
-	  /* emit zero short run */
-	  add_token(cpi, chroma, 0, DCT_SHORT_ZRL_TOKEN, 0, fi);
-
-#if 0
 	  /* dctrun token; extend the run by one and move it to stack 0 */
 	  int val;
 	  int run = decode_dctrun_token(token1,eb1,&val)+1;
-
 	  TokenizeDctRunValue( cpi, chroma, 0, run, val, fi);
 	  replace_AC1_token(cpi, 0, *coeff1_idx, DCT_NOOP, 0, 0);
-#endif
 	}
       }
     }
     
     /* update stack 1 counters */
     if (*coeff1_run > 0) (*coeff1_run)--;
-    if (*coeff1_run == 0) (*coeff1_idx)++;
+    if (*coeff1_run == 0){
+      (*coeff1_idx)++;
+      if (*coeff1_idx >= cpi->dct_token_count[1])
+	*coeff1_run = eob_run[1];
+    }
   }
 }
 
@@ -576,7 +582,7 @@ void DPCMTokenize (CP_INSTANCE *cpi){
   int eob_ypre[64];
   
   int i,sbi;
-  int idx1=0,run1=0;
+  int idx1,run1;
 
   memset(eob_run, 0, sizeof(eob_run));
   memset(eob_pre, 0, sizeof(eob_pre));
@@ -600,7 +606,6 @@ void DPCMTokenize (CP_INSTANCE *cpi){
 #endif
   }
 
-  
   for (sbi=0; sbi < cpi->super_n[0]; sbi++ ){
     superblock_t *sb = &cpi->super[0][sbi];
     int bi;
@@ -609,7 +614,6 @@ void DPCMTokenize (CP_INSTANCE *cpi){
       tokenize_AC(cpi, fi, 0, eob_ypre, eob_pre, eob_yrun, eob_run);
     }
   }
-
   for (; sbi < cpi->super_total; sbi++ ){
     superblock_t *sb = &cpi->super[0][sbi];
     int bi;
@@ -620,6 +624,8 @@ void DPCMTokenize (CP_INSTANCE *cpi){
   }
 
   /* for testing; post-facto tokenization of DC with coeff 1 fixups */
+  run1=eob_pre[1];
+  idx1=(run1?-1:0);
   for (sbi=0; sbi < cpi->super_n[0]; sbi++ ){
     superblock_t *sb = &cpi->super[0][sbi];
     int bi;
