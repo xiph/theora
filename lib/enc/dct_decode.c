@@ -731,8 +731,8 @@ static void LoopFilter__c(PB_INSTANCE *pbi, int FLimit){
 	    loop_filter_v(&pbi->LastFrameRecon[bp[0]],stride,bvp);
 	  if(bp+1<bp_right && !cp[1])
 	    loop_filter_h(&pbi->LastFrameRecon[bp[0]]+8,stride,bvp);
-	  if(bp+stride<bp_end && !cp[stride])
-	    loop_filter_v(&pbi->LastFrameRecon[bp[h]]+8,stride,bvp);
+	  if(bp+h<bp_end && !cp[h])
+	    loop_filter_v(&pbi->LastFrameRecon[bp[h]],stride,bvp);
 	}
 	bp++;
 	cp++;
