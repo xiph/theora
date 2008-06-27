@@ -375,8 +375,8 @@ static void loop_filter_mmx(CP_INSTANCE *cpi, int FLimit){
 	    loop_filter_v(&cpi->lastrecon[bp[0]],stride,ll);
 	  if(bp+1<bp_right && !cp[1])
 	    loop_filter_h(&cpi->lastrecon[bp[0]]+8,stride,ll);
-	  if(bp+stride<bp_end && !cp[stride])
-	    loop_filter_v(&cpi->lastrecon[bp[h]]+8,stride,ll);
+	  if(bp+h<bp_end && !cp[h])
+	    loop_filter_v(&cpi->lastrecon[bp[h]],stride,ll);
 	}
 	bp++;
 	cp++;
