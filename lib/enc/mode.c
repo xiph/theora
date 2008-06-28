@@ -996,8 +996,6 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	
 	switch(mode){
 	case CODE_INTER_PLUS_MV:
-	  cpi->MVBits_0 += mb_mv_bits_0;
-	  cpi->MVBits_1 += 12;
 	  mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = mb->analysis_mv[0][0];
 	  break;
 	case CODE_INTER_LAST_MV:
@@ -1007,12 +1005,8 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	  mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = prior_mv;
 	  break;
 	case CODE_INTER_FOURMV:
-	  cpi->MVBits_0 += mb_4mv_bits_0;
-	  cpi->MVBits_1 += mb_4mv_bits_1;
 	  break;
 	case CODE_GOLDEN_MV:
-	  cpi->MVBits_0 += mb_gmv_bits_0;
-	  cpi->MVBits_1 += 12;
 	  mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = mb->analysis_mv[0][1];
 	  break;
 	default:
@@ -1027,7 +1021,11 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	  switch(mb->mode){
 	  case CODE_INTER_PLUS_MV:
 	    prior_mv = last_mv;
-	    last_mv = mb->analysis_mv[0][0];
+	    last_mv = mb->mv[0]; /* not the same as analysis_mv[0][0]
+				    if we're backing out from a 4mv */
+
+	    cpi->MVBits_0 += mb_mv_bits_0;
+	    cpi->MVBits_1 += 12;
 	    break;
 	  case CODE_INTER_PRIOR_LAST:
 	    {
@@ -1036,21 +1034,24 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	      last_mv = temp;
 	    }
 	    break;
+	  case CODE_GOLDEN_MV:
+	    cpi->MVBits_0 += mb_gmv_bits_0;
+	    cpi->MVBits_1 += 12;
+	    break;
 	  case CODE_INTER_FOURMV:
 	    prior_mv = last_mv;
-	    if(mb->coded & 0x8)
-	      last_mv = mb->mv[3];
-	    else if(mb->coded & 0x4)
-	      last_mv = mb->mv[2];
-	    else if(mb->coded & 0x2)
-	      last_mv = mb->mv[1];
-	    else 
-	      last_mv = mb->mv[0];
-	    break;
-	  default:
+
+	    for(i=0;i<4;i++)
+	      if(mb->coded & (1<<i){
+		cpi->MVBits_0 += 
+		  MvBits[mb->mv[i].x + MAX_MV_EXTENT] + 
+		  MvBits[mb->mv[i].y + MAX_MV_EXTENT];
+		cpi->MV_Bits_1 += 12;
+		last_mv = mb->mv[i];
+	      }
 	    break;
 	  }
-	  
+
 	  oc_mode_set(cpi,mb,mb->mode);      
 	  
 	  interbits += cost[mb->mode];
