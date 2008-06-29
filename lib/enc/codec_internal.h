@@ -248,16 +248,18 @@ struct CP_INSTANCE {
   ogg_int16_t     *fr_block;
   unsigned char   *fr_block_bits;
 
+  int              stack_offset;
   unsigned char   *dct_token_storage;
   ogg_uint16_t    *dct_token_eb_storage;
   unsigned char   *dct_token[64];
   ogg_uint16_t    *dct_token_eb[64];
 
-  ogg_uint32_t     dct_token_count[64];
-  ogg_uint32_t     dct_token_ycount[64];
+  ogg_int32_t      dct_token_count[64];
+  ogg_int32_t      dct_token_ycount[64];
 
   ogg_uint32_t     dc_bits[2][DC_HUFF_CHOICES];
-  ogg_uint32_t     ac_bits[2][AC_HUFF_CHOICES];
+  ogg_uint32_t     ac1_bits[2][AC_HUFF_CHOICES];
+  ogg_uint32_t     acN_bits[2][AC_HUFF_CHOICES];
 
   oc_mode_scheme_chooser chooser;
 

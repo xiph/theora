@@ -1042,11 +1042,11 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	    prior_mv = last_mv;
 
 	    for(i=0;i<4;i++)
-	      if(mb->coded & (1<<i){
+	      if(mb->coded & (1<<i)){
 		cpi->MVBits_0 += 
 		  MvBits[mb->mv[i].x + MAX_MV_EXTENT] + 
 		  MvBits[mb->mv[i].y + MAX_MV_EXTENT];
-		cpi->MV_Bits_1 += 12;
+		cpi->MVBits_1 += 12;
 		last_mv = mb->mv[i];
 	      }
 	    break;

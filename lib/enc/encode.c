@@ -170,11 +170,12 @@ static void ChooseTokenTables (CP_INSTANCE *cpi, int huff[4]) {
     }
   
     /* Work out which table options are best for AC */
-    best = cpi->ac_bits[plane][0];
+    best = cpi->ac1_bits[plane][0]+cpi->acN_bits[plane][0];
     huff[plane+2] = AC_HUFF_OFFSET;
     for ( i = 1; i < AC_HUFF_CHOICES; i++ ) {
-      if ( cpi->ac_bits[plane][i] < best ){
-	best = cpi->ac_bits[plane][i];
+      int test = cpi->ac1_bits[plane][i] + cpi->acN_bits[plane][i];
+      if ( test < best ){
+	best = test;
 	huff[plane+2] = i + AC_HUFF_OFFSET;
       }
     }

@@ -130,8 +130,9 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->super[1] = cpi->super[0] + cpi->super_n[0];
   cpi->super[2] = cpi->super[1] + cpi->super_n[1];
 
-  cpi->dct_token_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_storage));
-  cpi->dct_token_eb_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_eb_storage));
+  cpi->stack_offset = (cpi->frag_total + (cpi->frag_total+4094)/4095 + 1);
+  cpi->dct_token_storage = _ogg_malloc( cpi->stack_offset*BLOCK_SIZE*sizeof(*cpi->dct_token_storage));
+  cpi->dct_token_eb_storage = _ogg_malloc(cpi->stack_offset*BLOCK_SIZE*sizeof(*cpi->dct_token_eb_storage));
 
   cpi->fr_partial = _ogg_calloc(cpi->super_total+1, sizeof(*cpi->fr_partial));
   cpi->fr_partial_bits = _ogg_calloc(cpi->super_total+1, sizeof(*cpi->fr_partial_bits));
@@ -144,7 +145,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->frag_mbi = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->frag_mbi));
   for(i=0;i<8;i++)
     cpi->frag_sad[i] = _ogg_calloc(cpi->frag_total+1, sizeof(**cpi->frag_sad));
-  cpi->dct_token_frag_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_token_frag_storage));
+  cpi->dct_token_frag_storage = _ogg_malloc(cpi->stack_offset*BLOCK_SIZE*sizeof(*cpi->dct_token_frag_storage));
   cpi->dct_eob_fi_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_eob_fi_storage));
 #endif
   
