@@ -100,10 +100,6 @@ typedef struct HUFF_ENTRY {
   ogg_uint32_t       Frequency;
 } HUFF_ENTRY;
 
-typedef struct {
-  ogg_int16_t data[64];
-} dct_t;
-
 typedef struct{
   ogg_int32_t   x;
   ogg_int32_t   y;
@@ -206,7 +202,6 @@ struct CP_INSTANCE {
   unsigned char   *frag_coded;
   ogg_uint32_t    *frag_buffer_index;
   ogg_int16_t     *frag_dc;
-  dct_t           *frag_dct;
 
   macroblock_t    *macro;
   superblock_t    *super[3];
@@ -322,7 +317,7 @@ extern void ReconRefFrames (CP_INSTANCE *cpi);
 extern void fdct_short ( ogg_int16_t *InputData, ogg_int16_t *OutputData );
 
 extern void dct_tokenize_init (CP_INSTANCE *cpi);
-extern void dct_tokenize_AC (CP_INSTANCE *cpi, int fi, int chroma);
+extern void dct_tokenize_AC (CP_INSTANCE *cpi, int fi, ogg_int16_t *dct, int chroma);
 extern void dct_tokenize_finish (CP_INSTANCE *cpi);
 
 extern void WriteQTables(CP_INSTANCE *cpi,oggpack_buffer *opb);

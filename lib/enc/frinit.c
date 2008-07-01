@@ -30,7 +30,6 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
   if(cpi->dct_token_eb_storage) _ogg_free(cpi->dct_token_eb_storage);
   if(cpi->frag_coded) _ogg_free(cpi->frag_coded);
   if(cpi->frag_buffer_index) _ogg_free(cpi->frag_buffer_index);
-  if(cpi->frag_dct) _ogg_free(cpi->frag_dct);
   if(cpi->frag_dc) _ogg_free(cpi->frag_dc);
 #ifdef COLLECT_METRICS
   if(cpi->frag_mbi) _ogg_free(cpi->frag_mbi);
@@ -120,7 +119,6 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   /* +1; the last entry is the 'invalid' frag, which is always set to not coded as it doesn't really exist */
   cpi->frag_coded = calloc(cpi->frag_total+1, sizeof(*cpi->frag_coded)); 
   cpi->frag_buffer_index = calloc(cpi->frag_total, sizeof(*cpi->frag_buffer_index));
-  cpi->frag_dct = calloc(cpi->frag_total, sizeof(*cpi->frag_dct));
   cpi->frag_dc = calloc(cpi->frag_total, sizeof(*cpi->frag_dc));
 
   /* +1; the last entry is the 'invalid' mb, which contains only 'invalid' frags */

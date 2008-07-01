@@ -308,17 +308,16 @@ static int decode_dctrun_token(int token, int eb, int *val){
    not a true assumption but it can be fixed-up as DC is tokenized
    later */
 
-void dct_tokenize_AC(CP_INSTANCE *cpi, int fi, int chroma){
+void dct_tokenize_AC(CP_INSTANCE *cpi, int fi, ogg_int16_t *dct, int chroma){
   int coeff = 1; /* skip DC for now */
-  dct_t *dct = &cpi->frag_dct[fi];
   
   while(coeff < BLOCK_SIZE){
-    ogg_int16_t val = dct->data[coeff];
+    ogg_int16_t val = dct[coeff];
     int zero_run;
     int i = coeff;
     
     while( !val && (++i < BLOCK_SIZE) )
-      val = dct->data[i];
+      val = dct[i];
     
     if ( i == BLOCK_SIZE ){
       

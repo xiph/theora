@@ -553,13 +553,13 @@ static void ps_setup_plane(CP_INSTANCE *cpi, plane_state_t *ps, int plane){
 }
 
 static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv, 
-		int uncoded_overhead, int coded_overhead, rd_metric_t *mo, long *rho_count){
+		int uncoded_overhead, int coded_overhead, rd_metric_t *mo, long *rho_count,
+		ogg_int16_t *data){
   
   int keyframe = (cpi->FrameType == KEY_FRAME);
   int qi = ps->qi;
   ogg_int32_t *iq = ps->iq[mode != CODE_INTRA];
   ogg_int16_t buffer[64];
-  ogg_int16_t *data = cpi->frag_dct[fi].data;
   int bi = cpi->frag_buffer_index[fi];
   int stride = cpi->stride[ps->plane];
   unsigned char *frame_ptr = &cpi->frame[bi];
@@ -726,6 +726,7 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
   int coded = 0;
   int i;
   fr_state_t fr_checkpoint;
+  ogg_int16_t dct[4][64];
 
   rd_metric_t mo;
   memset(&mo,0,sizeof(mo));
@@ -738,7 +739,7 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
        raster order just to make it more difficult. */
     int bi = macroblock_phase_Y[mb_phase][i];
     int fi = mb->Ryuv[0][bi];
-    if(TQB(cpi,ps,mode,fi,mb->mv[bi],0,0,&mo,rc)){
+    if(TQB(cpi,ps,mode,fi,mb->mv[bi],0,0,&mo,rc,dct[i])){
       fr_codeblock(cpi,fr);
       coded++;
     }else{
@@ -803,7 +804,7 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
   for ( i=0; i<4; i++ ){
     int fi = mb->Hyuv[0][i];
     if(cp[fi]) 
-      dct_tokenize_AC(cpi, fi,0);
+      dct_tokenize_AC(cpi, fi, dct[i], 0);
   }
 
   return coded;  
@@ -818,6 +819,7 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
   int coded = 0;
   unsigned char *cp=cpi->frag_coded;
   rd_metric_t mo;
+  ogg_int16_t dct[64];
   memset(&mo,0,sizeof(mo));
 
   for(i=0;i<16;i++){
@@ -856,9 +858,9 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
       }else
 	mv = mb->mv[0];
 	
-      if(TQB(cpi,ps,mb->mode,fi,mv,0,0,&mo,rc)){
+      if(TQB(cpi,ps,mb->mode,fi,mv,0,0,&mo,rc,dct)){
 	fr_codeblock(cpi,fr);
-	dct_tokenize_AC(cpi, fi, 1);
+	dct_tokenize_AC(cpi, fi, dct, 1);
 	coded++;
       }else{
 	fr_skipblock(cpi,fr);
