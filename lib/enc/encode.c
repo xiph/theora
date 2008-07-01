@@ -20,135 +20,86 @@
 #include "codec_internal.h"
 #include "encoder_lookup.h"
 
-static void predict_frag(CP_INSTANCE  *cpi,
-			 ogg_int16_t  *Last,
-			 
-			 macroblock_t *mb, 
-			 macroblock_t *mb_left, 
-			 macroblock_t *mb_downleft,
-			 macroblock_t *mb_down,
-			 macroblock_t *mb_downright, 
-			 
-			 int fi,
-			 int fi_down){
-
-  unsigned char *cp = cpi->frag_coded;
+static int predict_frag(CP_INSTANCE  *cpi,
+			int wpc,
+			int fi,
+			int fi_down,
+			int fixup){
+  
   ogg_int16_t   *dc = cpi->frag_dc;
-  dct_t        *dct = cpi->frag_dct;
-  int wpc = 0;
 
-  /* only do 2 prediction if fragment coded and on non intra or
-     if all fragments are intra */
-  if(cp[fi]) {
+  if(fixup>=0)
+    dc[fixup] -= dc[fi];
+  
+  if(wpc){
+    ogg_int16_t DC = 0;
     
-    int WhichFrame = Mode2Frame[mb->mode];
+    if(wpc&0x1) DC += pc[wpc][0]*dc[fi-1];
+    if(wpc&0x2) DC += pc[wpc][1]*dc[fi_down-1];
+    if(wpc&0x4) DC += pc[wpc][2]*dc[fi_down];
+    if(wpc&0x8) DC += pc[wpc][3]*dc[fi_down+1];
     
-    /* L, DL, D, DR */
-    if(mb_left && cp[fi-1] && Mode2Frame[mb_left->mode] == WhichFrame)
-      wpc|=1;
-    if(mb_downleft && cp[fi_down-1] && Mode2Frame[mb_downleft->mode] == WhichFrame)
-      wpc|=2;
-    if(mb_down && cp[fi_down] && Mode2Frame[mb_down->mode] == WhichFrame)
-      wpc|=4;
-    if(mb_downright && cp[fi_down+1] && Mode2Frame[mb_downright->mode] == WhichFrame)
-      wpc|=8;
-
-    if(wpc){
-      ogg_int16_t DC = 0;
-
-      if(wpc&0x1) DC += pc[wpc][0]*dc[fi-1];
-      if(wpc&0x2) DC += pc[wpc][1]*dc[fi_down-1];
-      if(wpc&0x4) DC += pc[wpc][2]*dc[fi_down];
-      if(wpc&0x8) DC += pc[wpc][3]*dc[fi_down+1];
-
-      /* if we need to do a shift */
-      if(pc[wpc][4]) {
-	/* If negative add in the negative correction factor */
-	DC += (HIGHBITDUPPED(DC) & pc[wpc][5]);
-	/* Shift in lieu of a divide */
-	DC >>= pc[wpc][4];
-      }
-      
-      /* check for outranging on the two predictors that can outrange */
-      if((wpc&(PU|PUL|PL)) == (PU|PUL|PL)){
-	if( abs(DC - dc[fi_down]) > 128) {
-	  DC = dc[fi_down];
-	} else if( abs(DC - dc[fi-1]) > 128) {
-	  DC = dc[fi-1];
-	} else if( abs(DC - dc[fi_down-1]) > 128) {
-	  DC = dc[fi_down-1];
-	}
-      }
-      
-      dct[fi].data[0] = dc[fi] - DC;
-    
-    }else{
-      dct[fi].data[0] = dc[fi] - Last[WhichFrame];
+    /* if we need to do a shift */
+    if(pc[wpc][4]) {
+      /* If negative add in the negative correction factor */
+      DC += (HIGHBITDUPPED(DC) & pc[wpc][5]);
+      /* Shift in lieu of a divide */
+      DC >>= pc[wpc][4];
     }
-
-    /* Save the last fragment coded for whatever frame we are
-       predicting from */
     
-    Last[WhichFrame] = dc[fi];
+    /* check for outranging on the two predictors that can outrange */
+    if((wpc&(PU|PUL|PL)) == (PU|PUL|PL)){
+      if( abs(DC - dc[fi_down]) > 128) {
+	DC = dc[fi_down];
+      } else if( abs(DC - dc[fi-1]) > 128) {
+	DC = dc[fi-1];
+      } else if( abs(DC - dc[fi_down-1]) > 128) {
+	DC = dc[fi_down-1];
+      }
+    }
+    
+    dc[fi] -= DC;
+    return -1;
+  }else{
+    return fi;
   }
 }
 
 static void PredictDC(CP_INSTANCE *cpi){
-  ogg_int32_t plane;
-  ogg_int16_t Last[3];  /* last value used for given frame */
-  int y,y2,x,fi = 0;
+  ogg_int32_t pi;
+  int fixup[3];  /* last value used for given frame */
+  int y,x,fi = cpi->frag_total-1;
+  unsigned char *cp = cpi->frag_coded;
 
   /* for y,u,v; handles arbitrary plane subsampling arrangement.  Shouldn't need to be altered for 4:2:2 or 4:4:4 */
-  for ( plane = 0; plane < 3 ; plane++) {
-    macroblock_t *mb_row = cpi->macro;
-    macroblock_t *mb_down = NULL;
-    int fi_stride = cpi->frag_h[plane];
-    int v = cpi->macro_v;
-    int h = cpi->macro_h;
+  for (pi=2; pi>=0; pi--) {
+    int v = cpi->frag_v[pi];
+    int h = cpi->frag_h[pi];
+    int subh = !(pi && cpi->info.pixelformat != OC_PF_444);
+    int subv = !(pi && cpi->info.pixelformat == OC_PF_420);
 
-    for(x=0;x<3;x++)Last[x]=0;
+    for(x=0;x<3;x++)fixup[x]=-1;
 
-    for ( y = 0 ; y < v ; y++) {
-      for ( y2 = 0 ; y2 <= (cpi->macro_v < cpi->frag_v[plane]) ; y2++) {
-
-	macroblock_t *mb = mb_row;
-	macroblock_t *mb_left = NULL;
-	macroblock_t *mb_downleft = NULL;
-	macroblock_t *mb_downright = ((1<h && mb_down) ? mb_down+1: NULL);	    
-
-	if(h < cpi->frag_h[plane]){
-	  for ( x = 0 ; x < h ; x++) {
-	    predict_frag(cpi,Last,mb, mb_left,mb_downleft,mb_down,mb_down, fi,fi-fi_stride);
-	    predict_frag(cpi,Last,mb, mb,mb_down,mb_down,mb_downright, fi+1,fi-fi_stride+1);
-	    fi+=2;
-	    mb_left = mb;
-	    mb_downleft = mb_down;
-	    
-	    mb++;
-	    if(mb_down){
-	      mb_down++;
-	      mb_downright = (x+2<h ? mb_down+1: NULL);	    
-	    }
+    for (y=v-1; y>=0 ; y--) {
+      macroblock_t *mb_row = cpi->macro + (y>>subv)*cpi->macro_h;
+      macroblock_t *mb_down = cpi->macro + ((y-1)>>subv)*cpi->macro_h;
+      for (x=h-1; x>=0; x--, fi--) {
+	if(cp[fi]) {
+	  int wpc=0;
+	  int wf = Mode2Frame[mb_row[x>>subh].mode];
+	  
+	  if(x>0){ 
+	    if(cp[fi-1] && Mode2Frame[mb_row[(x-1)>>subh].mode] == wf) wpc|=1; /* left */
+	    if(y>0 && cp[fi-h-1] && Mode2Frame[mb_down[(x-1)>>subh].mode] == wf) wpc|=2; /* down left */
 	  }
-	}else{
-	  for ( x = 0 ; x < h ; x++) {
-	    
-	    predict_frag(cpi,Last,mb, mb_left,mb_downleft,mb_down,mb_downright, fi,fi-fi_stride);
-	    fi++;
-	    mb_left = mb;
-	    mb_downleft = mb_down;
-	    
-	    mb++;
-	    if(mb_down){
-	      mb_down++;
-	      mb_downright = (x+2<h ? mb_down+1: NULL);	    
-	    }	    
+	  if(y>0){
+	    if(cp[fi-h] && Mode2Frame[mb_down[x>>subh].mode] == wf) wpc|=4; /* down */
+	    if(x+1<h && cp[fi-h+1] && Mode2Frame[mb_down[(x+1)>>subh].mode] == wf) wpc|=8; /* down right */
 	  }
+
+	  fixup[wf]=predict_frag(cpi,wpc,fi,fi-h,fixup[wf]);
 	}
-	mb_down = mb_row;
       }
-      
-      mb_row += h;
     }
   }
 }
@@ -356,7 +307,7 @@ void EncodeData(CP_INSTANCE *cpi){
   dsp_save_fpu (cpi->dsp);
 
   PredictDC(cpi);
-  DPCMTokenize(cpi);
+  dct_tokenize_finish(cpi);
 
   bits = oggpackB_bits(cpi->oggbuffer);
 

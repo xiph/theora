@@ -261,6 +261,11 @@ struct CP_INSTANCE {
   ogg_uint32_t     ac1_bits[2][AC_HUFF_CHOICES];
   ogg_uint32_t     acN_bits[2][AC_HUFF_CHOICES];
 
+  int              eob_run[64];
+  int              eob_pre[64];
+  int              eob_yrun[64];
+  int              eob_ypre[64];
+
   oc_mode_scheme_chooser chooser;
 
   ogg_uint32_t     MVBits_0; /* count of bits used by MV coding mode 0 */
@@ -316,18 +321,14 @@ extern void ReconRefFrames (CP_INSTANCE *cpi);
 
 extern void fdct_short ( ogg_int16_t *InputData, ogg_int16_t *OutputData );
 
-extern void DPCMTokenize (CP_INSTANCE *cpi);
-
-extern void TransformQuantizeBlock (CP_INSTANCE *cpi, coding_mode_t mode, int fi, mv_t mv) ;
+extern void dct_tokenize_init (CP_INSTANCE *cpi);
+extern void dct_tokenize_AC (CP_INSTANCE *cpi, int fi, int chroma);
+extern void dct_tokenize_finish (CP_INSTANCE *cpi);
 
 extern void WriteQTables(CP_INSTANCE *cpi,oggpack_buffer *opb);
-
 extern void InitQTables( CP_INSTANCE *cpi );
-
 extern void InitHuffmanSet( CP_INSTANCE *cpi );
-
 extern void ClearHuffmanSet( CP_INSTANCE *cpi );
-
 extern void WriteHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES],
                               oggpack_buffer *opb);
 

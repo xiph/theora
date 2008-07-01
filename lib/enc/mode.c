@@ -798,7 +798,14 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
 	mb->coded |= (1<<i);
     }
   }
-  
+
+  /* Tokenize now */
+  for ( i=0; i<4; i++ ){
+    int fi = mb->Hyuv[0][i];
+    if(cp[fi]) 
+      dct_tokenize_AC(cpi, fi,0);
+  }
+
   return coded;  
 }
 
@@ -851,6 +858,7 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
 	
       if(TQB(cpi,ps,mb->mode,fi,mv,0,0,&mo,rc)){
 	fr_codeblock(cpi,fr);
+	dct_tokenize_AC(cpi, fi, 1);
 	coded++;
       }else{
 	fr_skipblock(cpi,fr);
@@ -878,6 +886,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 #ifdef COLLECT_METRICS
   int sad[8][3][4];
 #endif
+
   oc_mode_scheme_chooser_init(cpi);
   ps_setup_frame(cpi,&ps);
   ps_setup_plane(cpi,&ps,0);
@@ -889,6 +898,8 @@ int PickModes(CP_INSTANCE *cpi, int recode){
  
   if(!recode)
     oc_mcenc_start(cpi, &mcenc); 
+
+  dct_tokenize_init(cpi);
    
   /* Choose mvs, modes; must be done in Hilbert order */
   /* quantize and code Luma */
