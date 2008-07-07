@@ -16,6 +16,8 @@
  ********************************************************************/
 
 #include <limits.h>
+#include <pthread.h>
+
 #if !defined(_decint_H)
 # define _decint_H (1)
 # include "theora/theoradec.h"
@@ -43,6 +45,37 @@ struct th_setup_info{
   th_quant_info  qinfo;
 };
 
+
+
+typedef struct {
+  oc_dec_ctx    *dec;
+  int            done;
+  int            pli;
+  int            avail_fragy0;
+  int            avail_fragy_end;
+}oc_dec_pipeline_plane;
+
+typedef struct{
+  int  ti[3][64];
+  int  ebi[3][64];
+  int  eob_runs[3][64];
+  int  bounding_values[256];
+  int *coded_fragis[3];
+  int *uncoded_fragis[3];
+  int  fragy0[3];
+  int  fragy_end[3];
+  int  ncoded_fragis[3];
+  int  nuncoded_fragis[3];
+  int  pred_last[3][3];
+  int  mcu_nvfrags;
+  int  loop_filter;
+  int  pp_level;
+  int  stripe_fragy;
+  int  refi;
+  int  notstart;
+  int  notdone;
+  oc_dec_pipeline_plane pplanes[3];
+}oc_dec_pipeline_state;
 
 
 struct th_dec_ctx{
@@ -90,6 +123,14 @@ struct th_dec_ctx{
   th_ycbcr_buffer      pp_frame_buf;
   /*The striped decode callback function.*/
   th_stripe_callback   stripe_cb;
+  /*The striped decoding pipeline.*/
+  oc_dec_pipeline_state    pipe;
+  /*Mutex for parallel pipelined decode.*/
+  pthread_mutex_t          pipe_lock;
+  /*The auxilliary decoder threads.*/
+  pthread_t                pipe_thread[2];
+  /*Condition variables for the auxilliary decoder threads.*/
+  pthread_cond_t           pipe_cond[2];
 };
 
 #endif
