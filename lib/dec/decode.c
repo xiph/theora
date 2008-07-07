@@ -2133,6 +2133,7 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
       int avail_fragy_end;
       avail_fragy0=avail_fragy_end=_dec->state.fplanes[0].nvfrags;
       notdone=stripe_fragy+pipe.mcu_nvfrags<avail_fragy_end;
+      #pragma omp parallel for
       for(pli=0;pli<3;pli++){
         oc_fragment_plane *fplane;
         int                frag_shift;
