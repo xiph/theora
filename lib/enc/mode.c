@@ -1074,6 +1074,8 @@ int PickModes(CP_INSTANCE *cpi, int recode){
     fr_finishsb(cpi,&fr);
   }
 
+  dct_tokenize_ac_chroma(cpi);
+
   /* code chroma U */
   sb = cpi->super[1];
   sb_end = sb + cpi->super_n[1];

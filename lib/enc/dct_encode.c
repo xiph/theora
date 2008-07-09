@@ -30,17 +30,53 @@ static int acoffset[64]={
   64,64,64,64,64,64,64,64,
   64,64,64,64,64,64,64,64};
 
+typedef struct {
+  int coeff;
+  int count;
+  int chroma;
+  int pre;
+  int run;
+} token_checkpoint_t;
+
+void tokenize_rollback(CP_INSTANCE *cpi, token_checkpoint_t *stack,int n){
+  int i;
+  for(i=n-1;i>=0;i--){
+    int coeff = stack[i].coeff;
+    cpi->dct_token_count[coeff] = stack[i].count; 
+    cpi->eob_run[coeff] = stack[i].run;
+    cpi->eob_pre[coeff] = stack[i].pre;
+  }
+}
+
+void tokenize_commit(CP_INSTANCE *cpi, token_checkpoint_t *stack, int n){
+  int i;
+  for(i=0;i<n;i++){
+    int coeff = stack[i].coeff;
+    int pos = stack[i].count;
+    int token = cpi->dct_token[coeff][pos];
+    int chroma = stack[i].chroma;
+
+    if (coeff == 1){
+      /* AC == 1*/
+    int i,offset = acoffset[1];
+    for ( i = 0; i < AC_HUFF_CHOICES; i++)
+      cpi->ac1_bits[chroma][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
+    }else{
+      /* AC > 1*/
+      int i,offset = acoffset[coeff];
+      for ( i = 0; i < AC_HUFF_CHOICES; i++)
+	cpi->acN_bits[chroma][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
+    }
+  }
+}
+
 static void add_token(CP_INSTANCE *cpi, int chroma, int coeff, 
-		      unsigned char token, ogg_uint16_t eb, int fi){
-  
+		      unsigned char token, ogg_uint16_t eb){
   cpi->dct_token[coeff][cpi->dct_token_count[coeff]] = token;
   cpi->dct_token_eb[coeff][cpi->dct_token_count[coeff]] = eb;
-#ifdef COLLECT_METRICS
-  cpi->dct_token_frag[coeff][cpi->dct_token_count[coeff]] = fi;
-#endif
-  if(!chroma)cpi->dct_token_ycount[coeff]++;
   cpi->dct_token_count[coeff]++;
 
+  /* coeff 0 (DC) is always undconditionally/immediately committed */
   if(coeff == 0){
     /* DC */
     int i;
@@ -57,21 +93,20 @@ static void add_token(CP_INSTANCE *cpi, int chroma, int coeff,
     for ( i = 0; i < AC_HUFF_CHOICES; i++)
       cpi->acN_bits[chroma][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
   }
+
 }
 
 static void prepend_token(CP_INSTANCE *cpi, int chroma, int coeff, 
-			  unsigned char token, ogg_uint16_t eb, int fi){
+			  unsigned char token, ogg_uint16_t eb){
 
   cpi->dct_token[coeff]--;
   cpi->dct_token_eb[coeff]--;
 #ifdef COLLECT_METRICS
   cpi->dct_token_frag[coeff]--;
-  cpi->dct_token_frag[coeff][0] = fi;
 #endif
   cpi->dct_token[coeff][0] = token;
   cpi->dct_token_eb[coeff][0] = eb;
   cpi->dct_token_count[coeff]++;
-  if(!chroma)cpi->dct_token_ycount[coeff]++;
 
   if(coeff == 0){
     /* DC */
@@ -120,98 +155,150 @@ static void tokenize_eob_run(int run, int *token, int *eb){
   }
 }
 
-static void emit_eob_run(CP_INSTANCE *cpi, int chroma, int pos, int run){
+static void add_eob_run(CP_INSTANCE *cpi, int pos, int run){
   int token=0,eb=0;
-  tokenize_eob_run(run, &token, &eb);
-  add_token(cpi, chroma, pos, token, eb, 0);
+  int chroma = !(run&0x8000);
+  tokenize_eob_run(run&0x7fff, &token, &eb);
+  add_token(cpi, chroma, pos, token, eb);
 }
 
 static void prepend_eob_run(CP_INSTANCE *cpi, int chroma, int pos, int run){
   int token=0,eb=0;
   tokenize_eob_run(run, &token, &eb);
-  prepend_token(cpi, chroma, pos, token, eb, 0);
+  prepend_token(cpi, chroma, pos, token, eb);
 }
 
-static void tokenize_dctval (CP_INSTANCE *cpi, 
-			     int chroma, 
-			     int coeff,
-			     ogg_int16_t DataValue,
-			     int fi){
-
-  int AbsDataVal = abs(DataValue);
-  int neg = (DataValue<0);
-
-  if ( AbsDataVal == 1 ){
-
-    add_token(cpi, chroma, coeff, (neg ? MINUS_ONE_TOKEN : ONE_TOKEN), 0, fi);
-
-  } else if ( AbsDataVal == 2 ) {
-
-    add_token(cpi, chroma, coeff, (neg ? MINUS_TWO_TOKEN : TWO_TOKEN), 0, fi);
-
-  } else if ( AbsDataVal <= MAX_SINGLE_TOKEN_VALUE ) {
-
-    add_token(cpi, chroma, coeff, LOW_VAL_TOKENS + (AbsDataVal - DCT_VAL_CAT2_MIN), neg, fi);
-
-  } else if ( AbsDataVal <= 8 ) {
-
-    add_token(cpi, chroma, coeff, DCT_VAL_CATEGORY3, (AbsDataVal - DCT_VAL_CAT3_MIN) + (neg << 1), fi);
-
-  } else if ( AbsDataVal <= 12 ) {
-
-    add_token(cpi, chroma, coeff, DCT_VAL_CATEGORY4, (AbsDataVal - DCT_VAL_CAT4_MIN) + (neg << 2), fi);
-
-  } else if ( AbsDataVal <= 20 ) {
-
-    add_token(cpi, chroma, coeff, DCT_VAL_CATEGORY5, (AbsDataVal - DCT_VAL_CAT5_MIN) + (neg << 3), fi);
-
-  } else if ( AbsDataVal <= 36 ) {
-
-    add_token(cpi, chroma, coeff, DCT_VAL_CATEGORY6, (AbsDataVal - DCT_VAL_CAT6_MIN) + (neg << 4), fi);
-
-  } else if ( AbsDataVal <= 68 ) {
-
-    add_token(cpi, chroma, coeff, DCT_VAL_CATEGORY7, (AbsDataVal - DCT_VAL_CAT7_MIN) + (neg << 5), fi);
-
-  } else {
-
-    add_token(cpi, chroma, coeff, DCT_VAL_CATEGORY8, (AbsDataVal - DCT_VAL_CAT8_MIN) + (neg << 9), fi);
-
-  } 
-}
-
-static void tokenize_dctrun (CP_INSTANCE *cpi, 
-			     int chroma, 
-			     int coeff,
-			     unsigned char RunLength,
-			     ogg_int16_t DataValue,
-			     int fi){
-
-  ogg_uint32_t AbsDataVal = abs( (ogg_int32_t)DataValue );
-  int neg = (DataValue<0);
-
-  /* Values are tokenised as category value and a number of additional
-     bits  that define the category.  */
-
-  if ( AbsDataVal == 1 ) {
-
-    if ( RunLength <= 5 ) 
-      add_token(cpi,chroma,coeff, DCT_RUN_CATEGORY1 + RunLength - 1, neg, fi);
-    else if ( RunLength <= 9 ) 
-      add_token(cpi,chroma,coeff, DCT_RUN_CATEGORY1B, RunLength - 6 + (neg<<2), fi);
-    else 
-      add_token(cpi,chroma,coeff, DCT_RUN_CATEGORY1C, RunLength - 10 + (neg<<3), fi);
-
-  } else if ( AbsDataVal <= 3 ) {
-
-    if ( RunLength == 1 ) 
-      add_token(cpi,chroma,coeff, DCT_RUN_CATEGORY2, AbsDataVal - 2 + (neg<<1), fi);
-    else
-      add_token(cpi,chroma,coeff, DCT_RUN_CATEGORY2B, 
-		(neg<<2) + ((AbsDataVal-2)<<1) + RunLength - 2, fi);
-
+static void emit_raw(CP_INSTANCE *cpi, 
+		     int chroma,
+		     int fi,
+		     int coeff,
+		     int token,
+		     int eb){
+  
+  /* Emit pending EOB run if any */
+  if(cpi->eob_run[coeff]){
+    add_eob_run(cpi,coeff,cpi->eob_run[coeff]);
+    cpi->eob_run[coeff]=0;
   }
+#ifdef COLLECT_METRICS
+  cpi->dct_token_frag[coeff][cpi->dct_token_count[coeff]] = fi;
+#endif
+  add_token(cpi,chroma,coeff,token,eb);
+
 }
+
+static int emit_token(CP_INSTANCE *cpi, 
+		      int chroma,
+		      int fi,
+		      int coeff,
+		      int coeff2,
+		      int val){
+  
+  
+  ogg_uint32_t absval = abs(val);
+  int neg = (val<0);
+  int zero_run = coeff2-coeff;
+  int ret = 1;
+  int token;
+  int eb=0;
+
+  /* Emit pending EOB run if any */
+  if(cpi->eob_run[coeff]){
+    add_eob_run(cpi,coeff,cpi->eob_run[coeff]);
+    cpi->eob_run[coeff]=0;
+  }
+#ifdef COLLECT_METRICS
+  cpi->dct_token_frag[coeff][cpi->dct_token_count[coeff]] = fi;
+#endif
+
+  if (zero_run){
+    int adj = (coeff!=1); /* implement a minor restriction on
+			     stack 1 so that we know during DC
+			     fixups that extended a dctrun token
+			     from stack 1 will never overflow */
+    if ((absval==1) && (zero_run<17+adj)){
+      if ( zero_run <= 5 ) {
+	token = DCT_RUN_CATEGORY1+zero_run-1; 
+	eb    = neg;
+      }else if ( zero_run <= 9 ) {
+	token = DCT_RUN_CATEGORY1B; 
+	eb    = zero_run-6+(neg<<2);
+      }else{
+	token = DCT_RUN_CATEGORY1C;
+	eb    = zero_run-10+(neg<<3);
+      }
+    }else if((absval==2 || absval==3) && (zero_run < 3+adj)){
+      if ( zero_run == 1 ) {
+	token = DCT_RUN_CATEGORY2;
+	eb    = absval-2+(neg<<1);
+      }else{
+	token = DCT_RUN_CATEGORY2B;
+	eb    = (neg<<2)+((absval-2)<<1)+zero_run-2;
+      }
+    }else{
+      if ( zero_run <= 8 )
+	token = DCT_SHORT_ZRL_TOKEN;
+      else
+	token = DCT_ZRL_TOKEN;
+      eb = zero_run-1;
+      if(val) ret=0;
+    }
+  } else if ( absval == 1 ){
+    token = (neg ? MINUS_ONE_TOKEN : ONE_TOKEN);
+  } else if ( absval == 2 ) {
+    token = (neg ? MINUS_TWO_TOKEN : TWO_TOKEN);
+  } else if ( absval <= MAX_SINGLE_TOKEN_VALUE ) {
+    token = LOW_VAL_TOKENS + (absval - DCT_VAL_CAT2_MIN);
+    eb    = neg;
+  } else if ( absval <= 8 ) {
+    token = DCT_VAL_CATEGORY3;
+    eb    = (absval - DCT_VAL_CAT3_MIN) + (neg << 1);
+  } else if ( absval <= 12 ) {
+    token = DCT_VAL_CATEGORY4;
+    eb    = (absval - DCT_VAL_CAT4_MIN) + (neg << 2);
+  } else if ( absval <= 20 ) {
+    token = DCT_VAL_CATEGORY5;
+    eb    = (absval - DCT_VAL_CAT5_MIN) + (neg << 3);
+  } else if ( absval <= 36 ) {
+    token = DCT_VAL_CATEGORY6;
+    eb    = (absval - DCT_VAL_CAT6_MIN) + (neg << 4);
+  } else if ( absval <= 68 ) {
+    token = DCT_VAL_CATEGORY7;
+    eb    = (absval - DCT_VAL_CAT7_MIN) + (neg << 5);
+  } else {
+    token = DCT_VAL_CATEGORY8;
+    eb    = (absval - DCT_VAL_CAT8_MIN) + (neg << 9);
+  } 
+
+  add_token(cpi,chroma,coeff,token,eb);
+
+  return ret;
+}
+
+static void increment_run(CP_INSTANCE *cpi, 
+			  int chroma,
+			  int fi,
+			  int pre,
+			  int coeff){
+
+  if(pre && cpi->dct_token_count[coeff] == 0){
+    /* track pre-run */
+    cpi->eob_pre[coeff]++;
+  }else{
+    if((cpi->eob_run[coeff]&0x7fff) == 4095){
+      add_eob_run(cpi,coeff,cpi->eob_run[coeff]);
+      cpi->eob_run[coeff] = 0;
+    }
+    
+    cpi->eob_run[coeff]++;
+    cpi->eob_run[coeff]|= !chroma<<15;
+  }	  
+#ifdef COLLECT_METRICS
+  cpi->dct_eob_fi_stack[coeff][cpi->dct_eob_fi_count[coeff]++]=fi;
+#endif
+}
+
+
 
 static int decode_eob_token(int token, int eb){
   switch(token){
@@ -234,50 +321,48 @@ static int decode_eob_token(int token, int eb){
   }
 }
 
-static int decode_zrl_token(int token, int eb){
+static int decode_token(int token, int eb, int *val){
   switch(token){
   case DCT_SHORT_ZRL_TOKEN:
   case DCT_ZRL_TOKEN:
+    *val=0;
     return eb+1;
-  default:
-    return 0;
-  }
-}
-
-static int decode_dct_token(int token, int eb){
-  switch(token){
   case ONE_TOKEN:
-    return 1;
+    *val = 1;
+    return 0;
   case MINUS_ONE_TOKEN:
-    return -1;
+    *val = -1;
+    return 0;
   case TWO_TOKEN:
-    return 2;
+    *val = 2;
+    return 0;
   case MINUS_TWO_TOKEN:
-    return -2;
+    *val = -2;
+    return 0;
   case LOW_VAL_TOKENS:
   case LOW_VAL_TOKENS+1:
   case LOW_VAL_TOKENS+2:
   case LOW_VAL_TOKENS+3:
-    return (eb ? -(DCT_VAL_CAT2_MIN+token-LOW_VAL_TOKENS) : DCT_VAL_CAT2_MIN+token-LOW_VAL_TOKENS);
-  case DCT_VAL_CATEGORY3:
-    return ((eb & 0x2) ? -(DCT_VAL_CAT3_MIN+(eb&0x1)) : DCT_VAL_CAT3_MIN+(eb&0x1));
-  case DCT_VAL_CATEGORY4:
-    return ((eb & 0x4) ? -(DCT_VAL_CAT4_MIN+(eb&0x3)) : DCT_VAL_CAT4_MIN+(eb&0x3));
-  case DCT_VAL_CATEGORY5:
-    return ((eb & 0x8) ? -(DCT_VAL_CAT5_MIN+(eb&0x7)) : DCT_VAL_CAT5_MIN+(eb&0x7));
-  case DCT_VAL_CATEGORY6:
-    return ((eb & 0x10) ? -(DCT_VAL_CAT6_MIN+(eb&0xf)) : DCT_VAL_CAT6_MIN+(eb&0xf));
-  case DCT_VAL_CATEGORY7:
-    return ((eb & 0x20) ? -(DCT_VAL_CAT7_MIN+(eb&0x1f)) : DCT_VAL_CAT7_MIN+(eb&0x1f));
-  case DCT_VAL_CATEGORY8:
-    return ((eb & 0x200) ? -(DCT_VAL_CAT8_MIN+(eb&0x1ff)) : DCT_VAL_CAT8_MIN+(eb&0x1ff));
-  default:
+    *val = (eb ? -(DCT_VAL_CAT2_MIN+token-LOW_VAL_TOKENS) : DCT_VAL_CAT2_MIN+token-LOW_VAL_TOKENS);
     return 0;
-  }
-}
-
-static int decode_dctrun_token(int token, int eb, int *val){
-  switch(token){
+  case DCT_VAL_CATEGORY3:
+    *val = ((eb & 0x2) ? -(DCT_VAL_CAT3_MIN+(eb&0x1)) : DCT_VAL_CAT3_MIN+(eb&0x1));
+    return 0;
+  case DCT_VAL_CATEGORY4:
+    *val = ((eb & 0x4) ? -(DCT_VAL_CAT4_MIN+(eb&0x3)) : DCT_VAL_CAT4_MIN+(eb&0x3));
+    return 0;
+  case DCT_VAL_CATEGORY5:
+    *val = ((eb & 0x8) ? -(DCT_VAL_CAT5_MIN+(eb&0x7)) : DCT_VAL_CAT5_MIN+(eb&0x7));
+    return 0;
+  case DCT_VAL_CATEGORY6:
+    *val = ((eb & 0x10) ? -(DCT_VAL_CAT6_MIN+(eb&0xf)) : DCT_VAL_CAT6_MIN+(eb&0xf));
+    return 0;
+  case DCT_VAL_CATEGORY7:
+    *val = ((eb & 0x20) ? -(DCT_VAL_CAT7_MIN+(eb&0x1f)) : DCT_VAL_CAT7_MIN+(eb&0x1f));
+    return 0;
+  case DCT_VAL_CATEGORY8:
+    *val = ((eb & 0x200) ? -(DCT_VAL_CAT8_MIN+(eb&0x1ff)) : DCT_VAL_CAT8_MIN+(eb&0x1ff));
+    return 0;
   case DCT_RUN_CATEGORY1:
   case DCT_RUN_CATEGORY1+1:
   case DCT_RUN_CATEGORY1+2:
@@ -310,10 +395,8 @@ static int decode_dctrun_token(int token, int eb, int *val){
 
 void dct_tokenize_AC(CP_INSTANCE *cpi, int fi, ogg_int16_t *dct, int chroma){
   int coeff = 1; /* skip DC for now */
-  
   while(coeff < BLOCK_SIZE){
     ogg_int16_t val = dct[coeff];
-    int zero_run;
     int i = coeff;
     
     while( !val && (++i < BLOCK_SIZE) )
@@ -323,54 +406,11 @@ void dct_tokenize_AC(CP_INSTANCE *cpi, int fi, ogg_int16_t *dct, int chroma){
       
       /* if there are no other tokens in this group yet, set up to be
 	 prepended later.  */
-      if(cpi->dct_token_count[coeff] == 0 && coeff>1){
-	/* track pre-run */
-	cpi->eob_pre[coeff]++;
-	if(!chroma)cpi->eob_ypre[coeff]++;
-      }else{
-	if(cpi->eob_run[coeff] == 4095){
-	    emit_eob_run(cpi,(cpi->eob_yrun[coeff]==0),coeff,4095);
-	    cpi->eob_run[coeff] = 0;
-	    cpi->eob_yrun[coeff] = 0;
-	}
-	
-	cpi->eob_run[coeff]++;
-	if(!chroma)cpi->eob_yrun[coeff]++;
-      }	  
-#ifdef COLLECT_METRICS
-      cpi->dct_eob_fi_stack[coeff][cpi->dct_eob_fi_count[coeff]++]=fi;
-#endif
+      increment_run(cpi,chroma,fi,coeff>1,coeff);
       coeff = BLOCK_SIZE;
     }else{
       
-      if(cpi->eob_run[coeff]){
-	emit_eob_run(cpi,(cpi->eob_yrun[coeff]==0),coeff,cpi->eob_run[coeff]);
-	cpi->eob_run[coeff]=0;
-	cpi->eob_yrun[coeff]=0;
-      }
-      
-      zero_run = i-coeff;
-      if (zero_run){
-	ogg_uint32_t absval = abs(val);
-	int adj = (coeff>1); /* implement a minor restriction on
-				stack 1 so that we know during DC
-				fixups that extended a dctrun token
-				from stack 1 will never overflow */
-	if ( ((absval == 1) && (zero_run < 17+adj)) ||
-	     ((absval <= 3) && (zero_run < 3+adj))){
-	  tokenize_dctrun( cpi, chroma, coeff, zero_run, val, fi);
-	  coeff = i+1;
-	}else{
-	  if ( zero_run <= 8 )
-	    add_token(cpi, chroma, coeff, DCT_SHORT_ZRL_TOKEN, zero_run - 1, fi);
-	  else
-	    add_token(cpi, chroma, coeff, DCT_ZRL_TOKEN, zero_run - 1, fi);
-	  coeff = i;
-	}
-      }else{
-	tokenize_dctval(cpi, chroma, coeff, val, fi);
-	coeff = i+1;
-      }
+      coeff = i+emit_token(cpi, chroma, fi, coeff, i, val);
     }
   }
 }
@@ -397,48 +437,21 @@ static void tokenize_DC(CP_INSTANCE *cpi, int fi, int chroma,
     if(val){
       /* nonzero DC val, no coeff 1 stack 'fixup'. */
 
-      /* Emit pending DC EOB run if any */
-      if(cpi->eob_run[0]){
-	emit_eob_run(cpi,(cpi->eob_yrun[0]==0),0,cpi->eob_run[0]);
-	cpi->eob_run[0]=0;
-	cpi->eob_yrun[0]=0;
-      }
-      /* Emit DC value token */
-      tokenize_dctval(cpi, chroma, 0, val, fi);
+      emit_token(cpi,chroma,fi,0,0,val);
 
       /* there was a nonzero DC value, so there's no alteration to the
 	 track1 stack for this fragment; track/regenerate stack 1
 	 state unchanged */
       if(*run1){
 	/* in the midst of an EOB run in stack 1 */
-	if(cpi->dct_token_count[1]==0){
-	  /* track pre-run */
-	  cpi->eob_pre[1]++;
-	  if(!chroma)cpi->eob_ypre[1]++;
-	}else{
-	  if(cpi->eob_run[1] == 4095){
-	    emit_eob_run(cpi,(cpi->eob_yrun[1]==0),1,4095);
-	    cpi->eob_run[1] = 0;
-	    cpi->eob_yrun[1] = 0;
-	  }
-	  cpi->eob_run[1]++;
-	  if(!chroma)cpi->eob_yrun[1]++;
-	}	  	  
+	increment_run(cpi,chroma,fi,1,1);
 	(*run1)--;
-#ifdef COLLECT_METRICS
-	cpi->dct_eob_fi_stack[1][cpi->dct_eob_fi_count[1]++]=fi;
-#endif
-      }else{
-	/* non-EOB run token to emit for stack 1 */
 
-	/* emit stack 1 eobrun if any */
-	if(cpi->eob_run[1]){
-	  emit_eob_run(cpi,(cpi->eob_yrun[1]==0),1,cpi->eob_run[1]);
-	  cpi->eob_run[1]=cpi->eob_yrun[1]=0;
-	}
-	
-	/* emit stack 1 token */
-	add_token(cpi, chroma, 1, token1, eb1, fi);
+      }else{
+
+	/* non-EOB run token to emit for stack 1 */
+	emit_raw(cpi,chroma,fi,1,token1,eb1);
+
       }
 
     }else{
@@ -448,23 +461,15 @@ static void tokenize_DC(CP_INSTANCE *cpi, int fi, int chroma,
 	 requires a stack 1 fixup. */
       
       if(*run1){
-	/* current stack 1 token an EOB run; conceptually move this fragment's EOBness to stack 0 */
 
-	if(cpi->eob_run[0] == 4095){
-	  emit_eob_run(cpi,(cpi->eob_yrun[0]==0),0,4095);
-	  cpi->eob_run[0] = 0;
-	  cpi->eob_yrun[0] = 0;
-	}
-	cpi->eob_run[0]++;
-	if(!chroma)cpi->eob_yrun[0]++;	      
-#ifdef COLLECT_METRICS
-	cpi->dct_eob_fi_stack[0][cpi->dct_eob_fi_count[0]++]=fi;
-#endif
+	/* current stack 1 token an EOB run; conceptually move this fragment's EOBness to stack 0 */
+	increment_run(cpi,chroma,fi,0,0);
 	      
 	/* decrement current EOB run for coeff 1 without adding to coded run */
 	(*run1)--;
 
       }else{
+	int run,val=0;
 
 	/* stack 1 token is one of: zerorun, dctrun or dctval */
 	/* A zero-run token is expanded and moved to token stack 0 (stack 1 entry dropped) */
@@ -476,53 +481,10 @@ static void tokenize_DC(CP_INSTANCE *cpi, int fi, int chroma,
 	   so we know there's no chance of overrunning the
 	   representable range */
 
-	/* Emit DC EOB run if any pending */
-	if(cpi->eob_run[0]){
-	  emit_eob_run(cpi,(cpi->eob_yrun[0]==0),0,cpi->eob_run[0]);
-	  cpi->eob_run[0]=0;
-	  cpi->eob_yrun[0]=0;
-	}
-	  
-	if(token1 <= DCT_ZRL_TOKEN){
-	  /* zero-run.  Extend and move it */
-	  int run = decode_zrl_token(token1,eb1);
-	  
-	  /* Emit zerorun token */
-	  if ( run < 8 )
-	    add_token(cpi, chroma, 0, DCT_SHORT_ZRL_TOKEN, run, fi);
-	  else
-	    add_token(cpi, chroma, 0, DCT_ZRL_TOKEN, run, fi);
+	run = decode_token(token1,eb1,&val)+1;
 
-	  /* do not recode stack 1 token */
-
-	} else if(token1 <= DCT_VAL_CATEGORY8){
-
-	  /* DCT value token; will it fit into a dctrun? */
-	  int val = decode_dct_token(token1,eb1);
-
-	  if(abs(val)<=3){
-	    /* emit a dctrun in stack 0, do not recode stack 1 token */
-	    tokenize_dctrun( cpi, chroma, 0, 1, val, fi);
-	  }else{
-	    /* Code stack 0 short zero run */
-	    add_token(cpi, chroma, 0, DCT_SHORT_ZRL_TOKEN, 0, fi);
-	    
-	    /* emit stack 1 eobrun if any */
-	    if(cpi->eob_run[1]){
-	      emit_eob_run(cpi,(cpi->eob_yrun[1]==0),1,cpi->eob_run[1]);
-	      cpi->eob_run[1]=cpi->eob_yrun[1]=0;
-	    }
-	
-	    /* emit stack 1 token */
-	    add_token(cpi, chroma, 1, token1, eb1, fi);
-
-	  }
-	} else {
-	  /* dctrun token; extend the run by one and move it to stack 0 */
-	  int val;
-	  int run = decode_dctrun_token(token1,eb1,&val)+1;
-	  tokenize_dctrun( cpi, chroma, 0, run, val, fi);
-	  /* do not recode stack 1 token */
+	if(!emit_token(cpi,chroma,fi,0,run,val)){
+	  emit_raw(cpi,chroma,fi,1,token1,eb1);
 	}
       }
     }
@@ -530,7 +492,6 @@ static void tokenize_DC(CP_INSTANCE *cpi, int fi, int chroma,
     /* update token counter if not in a run */
     if (!*run1) (*idx1)++;
     
-
   }
 }
 
@@ -539,13 +500,10 @@ void dct_tokenize_init (CP_INSTANCE *cpi){
 
   memset(cpi->eob_run, 0, sizeof(cpi->eob_run));
   memset(cpi->eob_pre, 0, sizeof(cpi->eob_pre));
-  memset(cpi->eob_yrun, 0, sizeof(cpi->eob_yrun));
-  memset(cpi->eob_ypre, 0, sizeof(cpi->eob_ypre));
   memset(cpi->dc_bits, 0, sizeof(cpi->dc_bits));
   memset(cpi->ac1_bits, 0, sizeof(cpi->ac1_bits));
   memset(cpi->acN_bits, 0, sizeof(cpi->acN_bits));
   memset(cpi->dct_token_count, 0, sizeof(cpi->dct_token_count));
-  memset(cpi->dct_token_ycount, 0, sizeof(cpi->dct_token_ycount));
 #ifdef COLLECT_METRICS
   memset(cpi->dct_eob_fi_count, 0, sizeof(cpi->dct_eob_fi_count));
 #endif
@@ -561,6 +519,16 @@ void dct_tokenize_init (CP_INSTANCE *cpi){
   }
 }
 
+void dct_tokenize_ac_chroma (CP_INSTANCE *cpi){
+  int i;
+  for(i=1;i<64;i++){
+    cpi->dct_token_ycount[i]=cpi->dct_token_count[i];
+    if(cpi->eob_run[i])
+      cpi->dct_token_ycount[i]++; /* there will be another y plane token after welding */
+    cpi->eob_ypre[i]=cpi->eob_pre[i];
+  }
+}
+
 /* post-facto DC tokenization (has to be completed after DC predict)
    coeff 1 fixups and eobrun welding */
 void dct_tokenize_finish (CP_INSTANCE *cpi){
@@ -573,11 +541,10 @@ void dct_tokenize_finish (CP_INSTANCE *cpi){
      reparse the stack in the DC code loop.  The current state will be
      recreated by the end of DC encode */
 
-  if(cpi->eob_run[1]) emit_eob_run(cpi,(cpi->eob_yrun[1]==0),1,cpi->eob_run[1]);
+  if(cpi->eob_run[1]) add_eob_run(cpi,1,cpi->eob_run[1]);
   memset(cpi->ac1_bits, 0, sizeof(cpi->ac1_bits));
   cpi->dct_token_count[1]=0;
-  cpi->dct_token_ycount[1]=0;
-  cpi->eob_ypre[1]=cpi->eob_pre[1]=cpi->eob_yrun[1]=cpi->eob_run[1]=0;
+  cpi->eob_pre[1]=cpi->eob_run[1]=0;
 #ifdef COLLECT_METRICS
   /* reset and reuse as a counter */
   cpi->dct_eob_fi_count[1]=0;
@@ -590,6 +557,13 @@ void dct_tokenize_finish (CP_INSTANCE *cpi){
       int fi = sb->f[bi];
       tokenize_DC(cpi, fi, 0, &idx1, &run1);
     }
+  }
+
+  for(i=0;i<2;i++){
+    cpi->dct_token_ycount[i]=cpi->dct_token_count[i];
+    if(cpi->eob_run[i])
+      cpi->dct_token_ycount[i]++; /* there will be another y plane token after welding */
+    cpi->eob_ypre[i]=cpi->eob_pre[i];
   }
 
   for (; sbi < cpi->super_total; sbi++ ){
@@ -607,7 +581,6 @@ void dct_tokenize_finish (CP_INSTANCE *cpi){
   {
     int coeff = 0;
     int run = 0;
-    int chroma = 0; /* plane of next run token to emit */
     
     for(i=0;i<BLOCK_SIZE;i++){
       if(cpi->eob_pre[i]){
@@ -615,25 +588,22 @@ void dct_tokenize_finish (CP_INSTANCE *cpi){
 	
 	/* special case the ongoing run + eob is at or over the max run size;
 	   we know the ongoing run is < 4095 or it would have been flushed already. */
-	if(run && run + cpi->eob_pre[i] >= 4095){ /* 1 */
-	  emit_eob_run(cpi,chroma,coeff,4095);
-	  cpi->eob_pre[i] -= 4095-run; 
-	  cpi->eob_ypre[i] -= 4095-run; 
+	if(run && (run&0x7fff) + cpi->eob_pre[i] >= 4095){ /* 1 */
+	  add_eob_run(cpi,coeff,4095 | (run&0x8000));
+	  cpi->eob_pre[i] -= 4095-(run&0x7fff); 
+	  cpi->eob_ypre[i] -= 4095-(run&0x7fff); 
 	  run = 0;
 	  coeff = i;
-	  chroma = (cpi->eob_ypre[i]<=0);
-	  /* if(cpi->eob_ypre[i]<0)cpi->eob_ypre[i]=0; redundant */
 	}
 	
 	if(run){
 	  if(cpi->dct_token_count[i]){ /* 2 */
 	    /* group is not only an EOB run; emit the run token */
-	    emit_eob_run(cpi,chroma,coeff,run + cpi->eob_pre[i]);
+	    add_eob_run(cpi,coeff,run + cpi->eob_pre[i]);
 	    cpi->eob_ypre[i] = 0;
 	    cpi->eob_pre[i] = 0;
 	    run = cpi->eob_run[i];
 	    coeff = i;
-	    chroma = (cpi->eob_yrun[i]<=0);
 	  }else{ /* 3 */
 	    /* group consists entirely of EOB run.  Add, iterate */
 	    run += cpi->eob_pre[i];
@@ -647,45 +617,48 @@ void dct_tokenize_finish (CP_INSTANCE *cpi){
 	    while(cpi->eob_pre[i] >= 4095){ /* 4 */
 	      int lchroma = (cpi->eob_pre[i]-4095 >= cpi->eob_ypre[i]);
 	      prepend_eob_run(cpi,lchroma,i,4095);
+	      if(!lchroma)cpi->dct_token_ycount[i]++;
 	      cpi->eob_pre[i] -= 4095;
 	    }
 	    if(cpi->eob_pre[i]){ /* 5 */
 	      int lchroma = (cpi->eob_ypre[i]<=0); /* possible when case 1 triggered */
 	      prepend_eob_run(cpi, lchroma, i, cpi->eob_pre[i]);
+	      if(!lchroma)cpi->dct_token_ycount[i]++;
 	      cpi->eob_pre[i] = 0;
 	      cpi->eob_ypre[i] = 0;
 	    }
 	    run = cpi->eob_run[i];
 	    coeff = i;
-	    chroma = (cpi->eob_yrun[i]<=0);
 	  }else{
 	    /* group consists entirely of EOB run.  Add, flush overs, iterate */
+	    int lchroma = (cpi->eob_ypre[i]<=0);
 	    while(cpi->eob_pre[i] >= 4095){
-	      int lchroma = (cpi->eob_ypre[i]<=0);
-	      emit_eob_run(cpi,lchroma,i,4095);
+	      add_eob_run(cpi,i,4095|(!lchroma<<15));
+	      if(!lchroma)cpi->dct_token_ycount[i]++;
 	      cpi->eob_pre[i] -= 4095;
 	      cpi->eob_ypre[i] -= 4095;
+	      lchroma = (cpi->eob_ypre[i]<=0);
 	    }
-	    run = cpi->eob_pre[i];
+	    run = cpi->eob_pre[i] | (!lchroma<<15);
 	    coeff = i;
-	    chroma = (cpi->eob_ypre[i]<=0);
+	    /* source is pre-run, so the eventual eob_emit_run also needs to increment ycount if coded into Y plane */
+	    if(!lchroma)cpi->dct_token_ycount[i]++;
 	  }
 	}
       }else{
 	/* no eob run to begin group */
 	if(i==0 || cpi->dct_token_count[i]){
 	  if(run)
-	    emit_eob_run(cpi,chroma,coeff,run);
+	    add_eob_run(cpi,coeff,run);
 	  
 	  run = cpi->eob_run[i];
 	  coeff = i;
-	  chroma = (cpi->eob_yrun[i]<=0);
 	}
       }
     }
     
     if(run)
-      emit_eob_run(cpi,chroma,coeff,run);
+      add_eob_run(cpi,coeff,run);
     
   }
 }
