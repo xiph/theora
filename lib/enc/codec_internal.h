@@ -323,6 +323,8 @@ typedef struct {
   int run;
 } token_checkpoint_t;
 
+extern void tokenlog_commit(CP_INSTANCE *cpi, token_checkpoint_t *stack, int n);
+extern void tokenlog_rollback(CP_INSTANCE *cpi, token_checkpoint_t *stack,int n);
 extern void dct_tokenize_init (CP_INSTANCE *cpi);
 extern void dct_tokenize_AC (CP_INSTANCE *cpi, int fi, ogg_int16_t *dct, int chroma, token_checkpoint_t **stack);
 extern void dct_tokenize_finish (CP_INSTANCE *cpi);

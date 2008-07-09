@@ -554,12 +554,13 @@ static void ps_setup_plane(CP_INSTANCE *cpi, plane_state_t *ps, int plane){
 
 static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv, 
 		int uncoded_overhead, int coded_overhead, rd_metric_t *mo, long *rho_count,
-		ogg_int16_t *data){
+		token_checkpoint_t **stack){
   
   int keyframe = (cpi->FrameType == KEY_FRAME);
   int qi = ps->qi;
   ogg_int32_t *iq = ps->iq[mode != CODE_INTRA];
   ogg_int16_t buffer[64];
+  ogg_int16_t data[64];
   int bi = cpi->frag_buffer_index[fi];
   int stride = cpi->stride[ps->plane];
   unsigned char *frame_ptr = &cpi->frame[bi];
@@ -571,6 +572,7 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
   ogg_int16_t *dequant = ps->re_q[mode != CODE_INTRA][ps->plane];
   int uncoded_ssd=0,coded_ssd=0,sad=0;
   int lambda = cpi->skip_lambda;
+  token_checkpoint_t *checkpoint=*stack;
 
   /* motion comp */
   switch(mode){
@@ -660,6 +662,9 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
   }
   
   cpi->frag_dc[fi] = data[0];
+
+  /* tokenize */
+  dct_tokenize_AC(cpi, fi, data, fi>=cpi->frag_n[0], stack);
   
   /* reconstruct */
   while(!data[nonzero] && --nonzero);
@@ -701,6 +706,9 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
     mo->uncoded_cost+=(uncoded_overhead<<OC_BIT_SCALE);
 
     if(uncoded_ssd+uncoded_overhead*lambda <= coded_ssd+coded_overhead*lambda+((cost*lambda)>>OC_BIT_SCALE)){ 
+      /* Hm, not worth it.  roll back */
+      tokenlog_rollback(cpi, checkpoint, (*stack)-checkpoint);
+      *stack = checkpoint;
       uncode_frag(cpi,fi,ps->plane);
 
       mo->ssd+=uncoded_ssd;
@@ -726,7 +734,8 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
   int coded = 0;
   int i;
   fr_state_t fr_checkpoint;
-  ogg_int16_t dct[4][64];
+  token_checkpoint_t stack[64*5]; /* worst case token usage for 4 fragments*/
+  token_checkpoint_t *stackptr = stack;
 
   rd_metric_t mo;
   memset(&mo,0,sizeof(mo));
@@ -739,7 +748,7 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
        raster order just to make it more difficult. */
     int bi = macroblock_phase_Y[mb_phase][i];
     int fi = mb->Ryuv[0][bi];
-    if(TQB(cpi,ps,mode,fi,mb->mv[bi],0,0,&mo,rc,dct[i])){
+    if(TQB(cpi,ps,mode,fi,mb->mv[bi],0,0,&mo,rc,&stackptr)){
       fr_codeblock(cpi,fr);
       coded++;
     }else{
@@ -756,7 +765,9 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
 	 macroblock coding cost as a whole (mode and MV) */ 
       if(mo.uncoded_ssd+((cpi->skip_lambda*mo.uncoded_cost)>>OC_BIT_SCALE) <= 
 	 mo.ssd+((cpi->skip_lambda*(mo.cost+mode_overhead))>>(OC_BIT_SCALE))){     
+
 	/* taking macroblock overhead into account, it is not worth coding this MB */
+	tokenlog_rollback(cpi, stack, stackptr-stack);
 
 	memcpy(fr,&fr_checkpoint,sizeof(fr_checkpoint));
 	for(i=0;i<4;i++){
@@ -800,12 +811,8 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
     }
   }
 
-  /* Tokenize now */
-  for ( i=0; i<4; i++ ){
-    int fi = mb->Hyuv[0][i];
-    if(cp[fi]) 
-      dct_tokenize_AC(cpi, fi, dct[i], 0, NULL);
-  }
+  /* Commit tokenization */
+  tokenlog_commit(cpi, stack, stackptr-stack);
 
   return coded;  
 }
@@ -819,7 +826,8 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
   int coded = 0;
   unsigned char *cp=cpi->frag_coded;
   rd_metric_t mo;
-  ogg_int16_t dct[64];
+  token_checkpoint_t stack[64*2]; /* worst case token usage for 1 fragment*/
+  token_checkpoint_t *stackptr = stack;
   memset(&mo,0,sizeof(mo));
 
   for(i=0;i<16;i++){
@@ -858,9 +866,9 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
       }else
 	mv = mb->mv[0];
 	
-      if(TQB(cpi,ps,mb->mode,fi,mv,0,0,&mo,rc,dct)){
+      if(TQB(cpi,ps,mb->mode,fi,mv,0,0,&mo,rc,&stackptr)){
 	fr_codeblock(cpi,fr);
-	dct_tokenize_AC(cpi, fi, dct, 1, NULL);
+	tokenlog_commit(cpi, stack, stackptr-stack);
 	coded++;
       }else{
 	fr_skipblock(cpi,fr);

@@ -21,6 +21,200 @@
 #include "dsp.h"
 #include "quant_lookup.h"
 
+static void make_eobrun_token(int run, int *token, int *eb){
+  if ( run <= 3 ) {
+    if ( run == 1 ) {
+      *token = DCT_EOB_TOKEN;
+    } else if ( run == 2 ) {
+      *token = DCT_EOB_PAIR_TOKEN;
+    } else {
+      *token = DCT_EOB_TRIPLE_TOKEN;
+    }
+    *eb=0;
+    
+  } else {
+    
+    if ( run < 8 ) {
+      *token = DCT_REPEAT_RUN_TOKEN;
+      *eb = run-4;
+    } else if ( run < 16 ) {
+      *token = DCT_REPEAT_RUN2_TOKEN;
+      *eb = run-8;
+    } else if ( run < 32 ) {
+      *token = DCT_REPEAT_RUN3_TOKEN;
+      *eb = run-16;
+    } else if ( run < 4096) {
+      *token = DCT_REPEAT_RUN4_TOKEN;
+      *eb = run;
+    }
+  }
+}
+
+static int make_dct_token(CP_INSTANCE *cpi, 
+			  int coeff,
+			  int coeff2,
+			  int val,
+			  int *eb){
+  
+  ogg_uint32_t absval = abs(val);
+  int neg = (val<0);
+  int zero_run = coeff2-coeff;
+  int token;
+  *eb=0;
+
+  if (zero_run){
+    int adj = (coeff!=1); /* implement a minor restriction on
+			     stack 1 so that we know during DC
+			     fixups that extended a dctrun token
+			     from stack 1 will never overflow */
+    if ((absval==1) && (zero_run<17+adj)){
+      if ( zero_run <= 5 ) {
+	token = DCT_RUN_CATEGORY1+zero_run-1; 
+	*eb   = neg;
+      }else if ( zero_run <= 9 ) {
+	token = DCT_RUN_CATEGORY1B; 
+	*eb   = zero_run-6+(neg<<2);
+      }else{
+	token = DCT_RUN_CATEGORY1C;
+	*eb   = zero_run-10+(neg<<3);
+      }
+    }else if((absval==2 || absval==3) && (zero_run < 3+adj)){
+      if ( zero_run == 1 ) {
+	token = DCT_RUN_CATEGORY2;
+	*eb   = absval-2+(neg<<1);
+      }else{
+	token = DCT_RUN_CATEGORY2B;
+	*eb   = (neg<<2)+((absval-2)<<1)+zero_run-2;
+      }
+    }else{
+      if ( zero_run <= 8 )
+	token = DCT_SHORT_ZRL_TOKEN;
+      else
+	token = DCT_ZRL_TOKEN;
+      *eb = zero_run-1;
+    }
+  } else if ( absval == 1 ){
+    token = (neg ? MINUS_ONE_TOKEN : ONE_TOKEN);
+  } else if ( absval == 2 ) {
+    token = (neg ? MINUS_TWO_TOKEN : TWO_TOKEN);
+  } else if ( absval <= MAX_SINGLE_TOKEN_VALUE ) {
+    token = LOW_VAL_TOKENS + (absval - DCT_VAL_CAT2_MIN);
+    *eb   = neg;
+  } else if ( absval <= 8 ) {
+    token = DCT_VAL_CATEGORY3;
+    *eb   = (absval - DCT_VAL_CAT3_MIN) + (neg << 1);
+  } else if ( absval <= 12 ) {
+    token = DCT_VAL_CATEGORY4;
+    *eb   = (absval - DCT_VAL_CAT4_MIN) + (neg << 2);
+  } else if ( absval <= 20 ) {
+    token = DCT_VAL_CATEGORY5;
+    *eb   = (absval - DCT_VAL_CAT5_MIN) + (neg << 3);
+  } else if ( absval <= 36 ) {
+    token = DCT_VAL_CATEGORY6;
+    *eb   = (absval - DCT_VAL_CAT6_MIN) + (neg << 4);
+  } else if ( absval <= 68 ) {
+    token = DCT_VAL_CATEGORY7;
+    *eb   = (absval - DCT_VAL_CAT7_MIN) + (neg << 5);
+  } else {
+    token = DCT_VAL_CATEGORY8;
+    *eb   = (absval - DCT_VAL_CAT8_MIN) + (neg << 9);
+  } 
+
+  return token;
+}
+
+static int decode_eob_token(int token, int eb){
+  switch(token){
+  case DCT_EOB_TOKEN:
+    return 1;
+  case DCT_EOB_PAIR_TOKEN:
+    return 2; 
+  case DCT_EOB_TRIPLE_TOKEN:
+    return 3;
+  case DCT_REPEAT_RUN_TOKEN:
+    return eb+4;
+  case DCT_REPEAT_RUN2_TOKEN:
+    return eb+8;
+  case DCT_REPEAT_RUN3_TOKEN:
+    return eb+16;	
+  case DCT_REPEAT_RUN4_TOKEN:
+    return eb;
+  default:
+    return 0;
+  }
+}
+
+static int decode_token(int token, int eb, int *val){
+  switch(token){
+  case DCT_SHORT_ZRL_TOKEN:
+  case DCT_ZRL_TOKEN:
+    *val=0;
+    return eb+1;
+  case ONE_TOKEN:
+    *val = 1;
+    return 0;
+  case MINUS_ONE_TOKEN:
+    *val = -1;
+    return 0;
+  case TWO_TOKEN:
+    *val = 2;
+    return 0;
+  case MINUS_TWO_TOKEN:
+    *val = -2;
+    return 0;
+  case LOW_VAL_TOKENS:
+  case LOW_VAL_TOKENS+1:
+  case LOW_VAL_TOKENS+2:
+  case LOW_VAL_TOKENS+3:
+    *val = (eb ? -(DCT_VAL_CAT2_MIN+token-LOW_VAL_TOKENS) : DCT_VAL_CAT2_MIN+token-LOW_VAL_TOKENS);
+    return 0;
+  case DCT_VAL_CATEGORY3:
+    *val = ((eb & 0x2) ? -(DCT_VAL_CAT3_MIN+(eb&0x1)) : DCT_VAL_CAT3_MIN+(eb&0x1));
+    return 0;
+  case DCT_VAL_CATEGORY4:
+    *val = ((eb & 0x4) ? -(DCT_VAL_CAT4_MIN+(eb&0x3)) : DCT_VAL_CAT4_MIN+(eb&0x3));
+    return 0;
+  case DCT_VAL_CATEGORY5:
+    *val = ((eb & 0x8) ? -(DCT_VAL_CAT5_MIN+(eb&0x7)) : DCT_VAL_CAT5_MIN+(eb&0x7));
+    return 0;
+  case DCT_VAL_CATEGORY6:
+    *val = ((eb & 0x10) ? -(DCT_VAL_CAT6_MIN+(eb&0xf)) : DCT_VAL_CAT6_MIN+(eb&0xf));
+    return 0;
+  case DCT_VAL_CATEGORY7:
+    *val = ((eb & 0x20) ? -(DCT_VAL_CAT7_MIN+(eb&0x1f)) : DCT_VAL_CAT7_MIN+(eb&0x1f));
+    return 0;
+  case DCT_VAL_CATEGORY8:
+    *val = ((eb & 0x200) ? -(DCT_VAL_CAT8_MIN+(eb&0x1ff)) : DCT_VAL_CAT8_MIN+(eb&0x1ff));
+    return 0;
+  case DCT_RUN_CATEGORY1:
+  case DCT_RUN_CATEGORY1+1:
+  case DCT_RUN_CATEGORY1+2:
+  case DCT_RUN_CATEGORY1+3:
+  case DCT_RUN_CATEGORY1+4:
+    *val = (eb ? -1 : 1);
+    return token - DCT_RUN_CATEGORY1 + 1;
+  case DCT_RUN_CATEGORY1B:
+    *val = ((eb&0x4) ? -1 : 1);
+    return (eb&0x3)+6;
+  case DCT_RUN_CATEGORY1C:
+    *val = ((eb&0x8) ? -1 : 1);
+    return (eb&0x7)+10;
+  case DCT_RUN_CATEGORY2:
+    *val = ( (eb&0x2) ? -((eb&0x1)+2) : (eb&0x1)+2 );
+    return 1;
+  case DCT_RUN_CATEGORY2B:
+    *val = ( (eb&0x4) ? -(((eb&0x2)>>1)+2) : ((eb&0x2)>>1)+2);
+    return (eb&0x1)+2;
+  default:
+    *val = 0;
+    return 0;
+  }
+}
+
+/* token logging to allow a few fragments of efficient rollback.  SKIP
+   analysis is tied up in the tokenization process, so we need to be
+   able to undo a fragment's tokens on a whim */
+
 static int acoffset[64]={
   16,16,16,16,16,16, 32,32,
   32,32,32,32,32,32,32, 48,
@@ -113,35 +307,6 @@ static void token_prepend(CP_INSTANCE *cpi, int chroma, int coeff,
   tokenlog_metrics(cpi,coeff,chroma,token);
 }
 
-static void make_eobrun_token(int run, int *token, int *eb){
-  if ( run <= 3 ) {
-    if ( run == 1 ) {
-      *token = DCT_EOB_TOKEN;
-    } else if ( run == 2 ) {
-      *token = DCT_EOB_PAIR_TOKEN;
-    } else {
-      *token = DCT_EOB_TRIPLE_TOKEN;
-    }
-    *eb=0;
-    
-  } else {
-    
-    if ( run < 8 ) {
-      *token = DCT_REPEAT_RUN_TOKEN;
-      *eb = run-4;
-    } else if ( run < 16 ) {
-      *token = DCT_REPEAT_RUN2_TOKEN;
-      *eb = run-8;
-    } else if ( run < 32 ) {
-      *token = DCT_REPEAT_RUN3_TOKEN;
-      *eb = run-16;
-    } else if ( run < 4096) {
-      *token = DCT_REPEAT_RUN4_TOKEN;
-      *eb = run;
-    }
-  }
-}
-
 static void tokenize_eobrun(CP_INSTANCE *cpi, int pos, int run, token_checkpoint_t **stack){
   int token=0,eb=0;
   int chroma = !(run&0x8000);
@@ -174,79 +339,6 @@ static void token_add_raw(CP_INSTANCE *cpi,
 #endif
   token_add(cpi,chroma,coeff,token,eb,NULL);
   
-}
-
-static int make_dct_token(CP_INSTANCE *cpi, 
-			  int coeff,
-			  int coeff2,
-			  int val,
-			  int *eb){
-  
-  ogg_uint32_t absval = abs(val);
-  int neg = (val<0);
-  int zero_run = coeff2-coeff;
-  int token;
-  *eb=0;
-
-  if (zero_run){
-    int adj = (coeff!=1); /* implement a minor restriction on
-			     stack 1 so that we know during DC
-			     fixups that extended a dctrun token
-			     from stack 1 will never overflow */
-    if ((absval==1) && (zero_run<17+adj)){
-      if ( zero_run <= 5 ) {
-	token = DCT_RUN_CATEGORY1+zero_run-1; 
-	*eb   = neg;
-      }else if ( zero_run <= 9 ) {
-	token = DCT_RUN_CATEGORY1B; 
-	*eb   = zero_run-6+(neg<<2);
-      }else{
-	token = DCT_RUN_CATEGORY1C;
-	*eb   = zero_run-10+(neg<<3);
-      }
-    }else if((absval==2 || absval==3) && (zero_run < 3+adj)){
-      if ( zero_run == 1 ) {
-	token = DCT_RUN_CATEGORY2;
-	*eb   = absval-2+(neg<<1);
-      }else{
-	token = DCT_RUN_CATEGORY2B;
-	*eb   = (neg<<2)+((absval-2)<<1)+zero_run-2;
-      }
-    }else{
-      if ( zero_run <= 8 )
-	token = DCT_SHORT_ZRL_TOKEN;
-      else
-	token = DCT_ZRL_TOKEN;
-      *eb = zero_run-1;
-    }
-  } else if ( absval == 1 ){
-    token = (neg ? MINUS_ONE_TOKEN : ONE_TOKEN);
-  } else if ( absval == 2 ) {
-    token = (neg ? MINUS_TWO_TOKEN : TWO_TOKEN);
-  } else if ( absval <= MAX_SINGLE_TOKEN_VALUE ) {
-    token = LOW_VAL_TOKENS + (absval - DCT_VAL_CAT2_MIN);
-    *eb   = neg;
-  } else if ( absval <= 8 ) {
-    token = DCT_VAL_CATEGORY3;
-    *eb   = (absval - DCT_VAL_CAT3_MIN) + (neg << 1);
-  } else if ( absval <= 12 ) {
-    token = DCT_VAL_CATEGORY4;
-    *eb   = (absval - DCT_VAL_CAT4_MIN) + (neg << 2);
-  } else if ( absval <= 20 ) {
-    token = DCT_VAL_CATEGORY5;
-    *eb   = (absval - DCT_VAL_CAT5_MIN) + (neg << 3);
-  } else if ( absval <= 36 ) {
-    token = DCT_VAL_CATEGORY6;
-    *eb   = (absval - DCT_VAL_CAT6_MIN) + (neg << 4);
-  } else if ( absval <= 68 ) {
-    token = DCT_VAL_CATEGORY7;
-    *eb   = (absval - DCT_VAL_CAT7_MIN) + (neg << 5);
-  } else {
-    token = DCT_VAL_CATEGORY8;
-    *eb   = (absval - DCT_VAL_CAT8_MIN) + (neg << 9);
-  } 
-
-  return token;
 }
 
 /* NULL stack to force commit */
@@ -300,94 +392,6 @@ static void tokenize_mark_run(CP_INSTANCE *cpi,
 #ifdef COLLECT_METRICS
   cpi->dct_eob_fi_stack[coeff][cpi->dct_eob_fi_count[coeff]++]=fi;
 #endif
-}
-
-static int decode_eob_token(int token, int eb){
-  switch(token){
-  case DCT_EOB_TOKEN:
-    return 1;
-  case DCT_EOB_PAIR_TOKEN:
-    return 2; 
-  case DCT_EOB_TRIPLE_TOKEN:
-    return 3;
-  case DCT_REPEAT_RUN_TOKEN:
-    return eb+4;
-  case DCT_REPEAT_RUN2_TOKEN:
-    return eb+8;
-  case DCT_REPEAT_RUN3_TOKEN:
-    return eb+16;	
-  case DCT_REPEAT_RUN4_TOKEN:
-    return eb;
-  default:
-    return 0;
-  }
-}
-
-static int decode_token(int token, int eb, int *val){
-  switch(token){
-  case DCT_SHORT_ZRL_TOKEN:
-  case DCT_ZRL_TOKEN:
-    *val=0;
-    return eb+1;
-  case ONE_TOKEN:
-    *val = 1;
-    return 0;
-  case MINUS_ONE_TOKEN:
-    *val = -1;
-    return 0;
-  case TWO_TOKEN:
-    *val = 2;
-    return 0;
-  case MINUS_TWO_TOKEN:
-    *val = -2;
-    return 0;
-  case LOW_VAL_TOKENS:
-  case LOW_VAL_TOKENS+1:
-  case LOW_VAL_TOKENS+2:
-  case LOW_VAL_TOKENS+3:
-    *val = (eb ? -(DCT_VAL_CAT2_MIN+token-LOW_VAL_TOKENS) : DCT_VAL_CAT2_MIN+token-LOW_VAL_TOKENS);
-    return 0;
-  case DCT_VAL_CATEGORY3:
-    *val = ((eb & 0x2) ? -(DCT_VAL_CAT3_MIN+(eb&0x1)) : DCT_VAL_CAT3_MIN+(eb&0x1));
-    return 0;
-  case DCT_VAL_CATEGORY4:
-    *val = ((eb & 0x4) ? -(DCT_VAL_CAT4_MIN+(eb&0x3)) : DCT_VAL_CAT4_MIN+(eb&0x3));
-    return 0;
-  case DCT_VAL_CATEGORY5:
-    *val = ((eb & 0x8) ? -(DCT_VAL_CAT5_MIN+(eb&0x7)) : DCT_VAL_CAT5_MIN+(eb&0x7));
-    return 0;
-  case DCT_VAL_CATEGORY6:
-    *val = ((eb & 0x10) ? -(DCT_VAL_CAT6_MIN+(eb&0xf)) : DCT_VAL_CAT6_MIN+(eb&0xf));
-    return 0;
-  case DCT_VAL_CATEGORY7:
-    *val = ((eb & 0x20) ? -(DCT_VAL_CAT7_MIN+(eb&0x1f)) : DCT_VAL_CAT7_MIN+(eb&0x1f));
-    return 0;
-  case DCT_VAL_CATEGORY8:
-    *val = ((eb & 0x200) ? -(DCT_VAL_CAT8_MIN+(eb&0x1ff)) : DCT_VAL_CAT8_MIN+(eb&0x1ff));
-    return 0;
-  case DCT_RUN_CATEGORY1:
-  case DCT_RUN_CATEGORY1+1:
-  case DCT_RUN_CATEGORY1+2:
-  case DCT_RUN_CATEGORY1+3:
-  case DCT_RUN_CATEGORY1+4:
-    *val = (eb ? -1 : 1);
-    return token - DCT_RUN_CATEGORY1 + 1;
-  case DCT_RUN_CATEGORY1B:
-    *val = ((eb&0x4) ? -1 : 1);
-    return (eb&0x3)+6;
-  case DCT_RUN_CATEGORY1C:
-    *val = ((eb&0x8) ? -1 : 1);
-    return (eb&0x7)+10;
-  case DCT_RUN_CATEGORY2:
-    *val = ( (eb&0x2) ? -((eb&0x1)+2) : (eb&0x1)+2 );
-    return 1;
-  case DCT_RUN_CATEGORY2B:
-    *val = ( (eb&0x4) ? -(((eb&0x2)>>1)+2) : ((eb&0x2)>>1)+2);
-    return (eb&0x1)+2;
-  default:
-    *val = 0;
-    return 0;
-  }
 }
 
 /* No final DC to encode yet (DC prediction hasn't been done) So
