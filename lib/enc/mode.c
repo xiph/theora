@@ -804,7 +804,7 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
   for ( i=0; i<4; i++ ){
     int fi = mb->Hyuv[0][i];
     if(cp[fi]) 
-      dct_tokenize_AC(cpi, fi, dct[i], 0);
+      dct_tokenize_AC(cpi, fi, dct[i], 0, NULL);
   }
 
   return coded;  
@@ -860,7 +860,7 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
 	
       if(TQB(cpi,ps,mb->mode,fi,mv,0,0,&mo,rc,dct)){
 	fr_codeblock(cpi,fr);
-	dct_tokenize_AC(cpi, fi, dct, 1);
+	dct_tokenize_AC(cpi, fi, dct, 1, NULL);
 	coded++;
       }else{
 	fr_skipblock(cpi,fr);
@@ -1074,7 +1074,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
     fr_finishsb(cpi,&fr);
   }
 
-  dct_tokenize_ac_chroma(cpi);
+  dct_tokenize_mark_ac_chroma(cpi);
 
   /* code chroma U */
   sb = cpi->super[1];

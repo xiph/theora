@@ -315,10 +315,18 @@ extern void ReconRefFrames (CP_INSTANCE *cpi);
 
 extern void fdct_short ( ogg_int16_t *InputData, ogg_int16_t *OutputData );
 
+typedef struct {
+  int coeff;
+  int count; /* -1 indicates no token, ie, midst of an EOB run */
+  int chroma;
+  int pre;
+  int run;
+} token_checkpoint_t;
+
 extern void dct_tokenize_init (CP_INSTANCE *cpi);
-extern void dct_tokenize_AC (CP_INSTANCE *cpi, int fi, ogg_int16_t *dct, int chroma);
+extern void dct_tokenize_AC (CP_INSTANCE *cpi, int fi, ogg_int16_t *dct, int chroma, token_checkpoint_t **stack);
 extern void dct_tokenize_finish (CP_INSTANCE *cpi);
-extern void dct_tokenize_ac_chroma (CP_INSTANCE *cpi);
+extern void dct_tokenize_mark_ac_chroma (CP_INSTANCE *cpi);
 
 extern void WriteQTables(CP_INSTANCE *cpi,oggpack_buffer *opb);
 extern void InitQTables( CP_INSTANCE *cpi );
