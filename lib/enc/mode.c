@@ -561,6 +561,7 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
   ogg_int32_t *iq = ps->iq[mode != CODE_INTRA];
   ogg_int16_t buffer[64];
   ogg_int16_t data[64];
+  ogg_int16_t dev[64];
   int bi = cpi->frag_buffer_index[fi];
   int stride = cpi->stride[ps->plane];
   unsigned char *frame_ptr = &cpi->frame[bi];
@@ -570,9 +571,10 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
   unsigned char *thisrecon = cpi->recon+bi;
   int nonzero=63;
   ogg_int16_t *dequant = ps->re_q[mode != CODE_INTRA][ps->plane];
-  int uncoded_ssd=0,coded_ssd=0,sad=0;
+  int uncoded_ssd=0,coded_ssd=0,coded_partial_ssd=0,sad=0;
   int lambda = cpi->skip_lambda;
   token_checkpoint_t *checkpoint=*stack;
+  int sad_cost=0;
 
   /* motion comp */
   switch(mode){
@@ -643,25 +645,72 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
     
     for(i=0;i<64;i++){
       int ii = dezigzag_index[i];
-      int pos;
-      int val = abs(buffer[ii])<<1;
-      ogg_int16_t *qqq = (*qq)[i];
-      for(pos=64;pos>0;pos--)
-	if(val < qqq[pos-1])break;
+      //int pos;
+      //int val = abs(buffer[ii])<<1;
+      //ogg_int16_t *qqq = (*qq)[i];
+      //for(pos=64;pos>0;pos--)
+      //if(val < qqq[pos-1])break;
       
       /* rho-domain distribution */
-      rho_count[pos]++;
+      //rho_count[pos]++;
 
-      if(qi<pos){
-	data[i] = 0;
-      }else{
+      //if(qi<pos){
+      //data[i] = 0;
+      //coded_partial_ssd += buffer[ii]*buffer[ii];
+      //}else
+      {
+	int d;
 	int val = (((iq[ii]>>15)*buffer[ii]) + (1<<15) + (((iq[ii]&0x7fff)*buffer[ii])>>15)) >>16;
-	data[i] = (val>511?511:(val<-511?-511:val));
+	val = (val>511?511:(val<-511?-511:val));
+
+	d = val*dequant[i]-buffer[ii];
+	coded_partial_ssd += d*d;
+	data[i] = val;
+	dev[i] = d;
       }
     }
   }
   
   cpi->frag_dc[fi] = data[0];
+
+  /* small performance short-circuit:
+
+     Because roundoff error means that C2 preservation can't really be
+     trusted at low energy levels (and Theora's intentionally leaky
+     fDCT makes this way way worse), we shouldn't reply on SSD
+     gathered in the frequency domain.  We can still use it if we
+     expect it to be... off... especially at low energies.
+
+     If the partial_ssd indicates this block is not worth the bits by
+     some large margin, don't proceed / bother to get a more precise
+     determination */
+  if(!keyframe){
+    sad_cost = BINMAP(mode_rate[qi][ps->plane][mode==CODE_INTRA],sad);
+    if(sad_cost<0)sad_cost=0; /* some of the trained fits can return a negative cost for zero entropy */
+
+    /* for undersampled planes */
+    coded_partial_ssd>>=4; /* undo the scaling of the fDCT */
+    coded_partial_ssd*=ps->ssdmul;
+    uncoded_ssd*=ps->ssdmul;
+
+    mo->uncoded_ssd+=uncoded_ssd;
+    mo->uncoded_cost+=(uncoded_overhead<<OC_BIT_SCALE);
+
+    /* the partial_ssd underreports distortion, so this comparison
+       will only yield false negatives, which are harmless */
+    if(uncoded_ssd+uncoded_overhead*lambda <= 
+       coded_partial_ssd+coded_overhead*lambda+((sad_cost*lambda)>>OC_BIT_SCALE)){ 
+      /* SKIP */
+      
+      uncode_frag(cpi,fi,ps->plane);
+
+      mo->ssd+=uncoded_ssd;
+      mo->cost+=(uncoded_overhead<<OC_BIT_SCALE);
+
+      return 0;
+
+    }
+  }
 
   /* tokenize */
   dct_tokenize_AC(cpi, fi, data, fi>=cpi->frag_n[0], stack);
@@ -686,8 +735,6 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
 
   if(!keyframe){
     int i;
-    int cost = BINMAP(mode_rate[qi][ps->plane][mode==CODE_INTRA],sad);
-    if(cost<0)cost=0; /* some of the trained fits can return a negative cost for zero entropy */
 
     /* in retrospect, should we have skipped this block? */
     /* we are free to apply any distortion measure we like as we have
@@ -700,12 +747,8 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
 
     /* for undersampled planes */
     coded_ssd*=ps->ssdmul;
-    uncoded_ssd*=ps->ssdmul;
     
-    mo->uncoded_ssd+=uncoded_ssd;
-    mo->uncoded_cost+=(uncoded_overhead<<OC_BIT_SCALE);
-
-    if(uncoded_ssd+uncoded_overhead*lambda <= coded_ssd+coded_overhead*lambda+((cost*lambda)>>OC_BIT_SCALE)){ 
+    if(uncoded_ssd+uncoded_overhead*lambda <= coded_ssd+coded_overhead*lambda+((sad_cost*lambda)>>OC_BIT_SCALE)){ 
       /* Hm, not worth it.  roll back */
       tokenlog_rollback(cpi, checkpoint, (*stack)-checkpoint);
       *stack = checkpoint;
@@ -718,7 +761,7 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
     }else{
 
       mo->ssd+=coded_ssd;
-      mo->cost+=cost+(coded_overhead<<OC_BIT_SCALE);
+      mo->cost+=sad_cost+(coded_overhead<<OC_BIT_SCALE);
     }
   }
     
@@ -827,13 +870,13 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
   unsigned char *cp=cpi->frag_coded;
   rd_metric_t mo;
   token_checkpoint_t stack[64*2]; /* worst case token usage for 1 fragment*/
-  token_checkpoint_t *stackptr = stack;
   memset(&mo,0,sizeof(mo));
 
   for(i=0;i<16;i++){
     int fi = sb->f[i];
     int mb_phase;
     if(cp[fi]){
+      token_checkpoint_t *stackptr = stack;
       macroblock_t *mb = &cpi->macro[sb->m[i]];
       mv_t mv;
       if(mb->mode == CODE_INTER_FOURMV){
