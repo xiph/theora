@@ -26,7 +26,7 @@
 #include "dsp.h"
 #include "codec_internal.h"
 
-static void CompressKeyFrame(CP_INSTANCE *cpi){
+static void CompressKeyFrame(CP_INSTANCE *cpi, int recode){
   int i;
 
   oggpackB_reset(cpi->oggbuffer);
@@ -41,13 +41,13 @@ static void CompressKeyFrame(CP_INSTANCE *cpi){
   oggpackB_write(cpi->oggbuffer,0,1);
   
   WriteFrameHeader(cpi);
-  PickModes(cpi,0);
+  PickModes(cpi,recode);
   EncodeData(cpi);
-  
+
   cpi->LastKeyFrame = 1;
 }
 
-static int CompressFrame( CP_INSTANCE *cpi ) {
+static int CompressFrame( CP_INSTANCE *cpi, int recode ) {
   ogg_uint32_t  i;
 
   oggpackB_reset(cpi->oggbuffer);
@@ -60,7 +60,7 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
   oggpackB_write(cpi->oggbuffer,0,1);
 
   WriteFrameHeader(cpi);
-  if(PickModes( cpi,0 )){
+  if(PickModes( cpi,recode )){
     /* mode analysis thinks this should have been a keyframe; start over and code as a keyframe instead */
 
     oggpackB_reset(cpi->oggbuffer);
@@ -81,6 +81,12 @@ static int CompressFrame( CP_INSTANCE *cpi ) {
     
     cpi->LastKeyFrame = 1;
 
+    return 0;
+  }
+
+  if(cpi->first_inter_frame == 0){
+    cpi->first_inter_frame = 1;
+    CompressFrame(cpi,1);
     return 0;
   }
   
@@ -124,7 +130,8 @@ int theora_encode_init(theora_state *th, theora_info *c){
   cpi->BaseQ = c->quality;
 
   /* temporary while the RD code is only partially complete */
-  cpi->skip_lambda=64;
+  cpi->skip_lambda=24;
+  cpi->token_lambda=24;
   cpi->mv_lambda=0;
 
   /* Set encoder flags. */
@@ -230,10 +237,16 @@ int theora_encode_YUVin(theora_state *t,
      shift, even if keyframe_auto_p is turned off */
   if(cpi->LastKeyFrame==-1 || cpi->LastKeyFrame >= (ogg_uint32_t)
      cpi->info.keyframe_frequency_force){
-    CompressKeyFrame(cpi);
+
+    CompressKeyFrame(cpi,0);
+
+    /* On first frame, the previous was a initial dry-run to prime
+       feed-forward statistics */
+    if(cpi->CurrentFrame==1)CompressKeyFrame(cpi,1);
+
   } else  {
     /* Compress the frame. */
-    dropped = CompressFrame(cpi);
+    dropped = CompressFrame(cpi,0);
   }
   
   /* Update stats variables. */

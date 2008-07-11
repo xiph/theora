@@ -561,7 +561,6 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
   ogg_int32_t *iq = ps->iq[mode != CODE_INTRA];
   ogg_int16_t buffer[64];
   ogg_int16_t data[64];
-  ogg_int16_t dev[64];
   int bi = cpi->frag_buffer_index[fi];
   int stride = cpi->stride[ps->plane];
   unsigned char *frame_ptr = &cpi->frame[bi];
@@ -666,7 +665,6 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
 	d = val*dequant[i]-buffer[ii];
 	coded_partial_ssd += d*d;
 	data[i] = val;
-	dev[i] = d;
       }
     }
   }
@@ -713,7 +711,7 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
   }
 
   /* tokenize */
-  dct_tokenize_AC(cpi, fi, data, fi>=cpi->frag_n[0], stack);
+  dct_tokenize_AC(cpi, fi, data, dequant, buffer, fi>=cpi->frag_n[0], stack);
   
   /* reconstruct */
   while(!data[nonzero] && --nonzero);

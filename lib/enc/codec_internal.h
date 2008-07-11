@@ -233,7 +233,20 @@ struct CP_INSTANCE {
   int              readyflag;
   int              packetflag;
   int              doneflag;
-  
+  int              first_inter_frame;
+
+  int              huffchoice[2][2][2]; /* [key/inter][dc/ac][luma/chroma] */
+
+  ogg_uint32_t     dc_bits[2][DC_HUFF_CHOICES];
+  ogg_uint32_t     ac1_bits[2][AC_HUFF_CHOICES];
+  ogg_uint32_t     acN_bits[2][AC_HUFF_CHOICES];
+
+  ogg_uint32_t     MVBits_0; /* count of bits used by MV coding mode 0 */
+  ogg_uint32_t     MVBits_1; /* count of bits used by MV coding mode 1 */
+
+  oc_mode_scheme_chooser chooser;
+
+
   /*********************************************************************/
   /* Token Buffers */
   int             *fr_partial;
@@ -252,18 +265,9 @@ struct CP_INSTANCE {
   ogg_int32_t      dct_token_count[64];
   ogg_int32_t      dct_token_ycount[64];
 
-  ogg_uint32_t     dc_bits[2][DC_HUFF_CHOICES];
-  ogg_uint32_t     ac1_bits[2][AC_HUFF_CHOICES];
-  ogg_uint32_t     acN_bits[2][AC_HUFF_CHOICES];
-
   int              eob_run[64];
   int              eob_pre[64];
   int              eob_ypre[64];
-
-  oc_mode_scheme_chooser chooser;
-
-  ogg_uint32_t     MVBits_0; /* count of bits used by MV coding mode 0 */
-  ogg_uint32_t     MVBits_1; /* count of bits used by MV coding mode 1 */
 
   /********************************************************************/
   /* Fragment SAD->bitrate estimation tracking metrics */
@@ -284,6 +288,7 @@ struct CP_INSTANCE {
   int              keyframe_granule_shift;
   int              skip_lambda;
   int              mv_lambda;
+  int              token_lambda;
   int              BaseQ;
   int              GoldenFrameEnabled;
   int              InterPrediction;
@@ -323,10 +328,20 @@ typedef struct {
   int run;
 } token_checkpoint_t;
 
-extern void tokenlog_commit(CP_INSTANCE *cpi, token_checkpoint_t *stack, int n);
-extern void tokenlog_rollback(CP_INSTANCE *cpi, token_checkpoint_t *stack,int n);
+extern void tokenlog_commit(CP_INSTANCE *cpi, 
+			    token_checkpoint_t *stack, 
+			    int n);
+extern void tokenlog_rollback(CP_INSTANCE *cpi, 
+			      token_checkpoint_t *stack,
+			      int n);
 extern void dct_tokenize_init (CP_INSTANCE *cpi);
-extern void dct_tokenize_AC (CP_INSTANCE *cpi, int fi, ogg_int16_t *dct, int chroma, token_checkpoint_t **stack);
+extern void dct_tokenize_AC (CP_INSTANCE *cpi, 
+			     int fi, 
+			     ogg_int16_t *dct, 
+			     ogg_int16_t *dequant, 
+			     ogg_int16_t *origdct, 
+			     int chroma, 
+			     token_checkpoint_t **stack);
 extern void dct_tokenize_finish (CP_INSTANCE *cpi);
 extern void dct_tokenize_mark_ac_chroma (CP_INSTANCE *cpi);
 

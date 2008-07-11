@@ -216,13 +216,13 @@ static int decode_token(int token, int eb, int *val){
    able to undo a fragment's tokens on a whim */
 
 static int acoffset[64]={
-  16,16,16,16,16,16, 32,32,
-  32,32,32,32,32,32,32, 48,
+  00,00,00,00,00,00,16,16,
+  16,16,16,16,16,16,16,32,
+  32,32,32,32,32,32,32,32,
+  32,32,32,32,48,48,48,48,
   48,48,48,48,48,48,48,48,
-  48,48,48,48, 64,64,64,64,
-  64,64,64,64,64,64,64,64,
-  64,64,64,64,64,64,64,64,
-  64,64,64,64,64,64,64,64};
+  48,48,48,48,48,48,48,48,
+  48,48,48,48,48,48,48,48};
 
 void tokenlog_rollback(CP_INSTANCE *cpi, token_checkpoint_t *stack,int n){
   int i;
@@ -242,12 +242,12 @@ static void tokenlog_metrics(CP_INSTANCE *cpi, int coeff, int chroma, int token)
       cpi->dc_bits[chroma][i] += cpi->HuffCodeLengthArray_VP3x[i][token];
   }else if (coeff == 1){
     /* AC == 1*/
-    int i,offset = acoffset[1];
+    int i,offset = acoffset[1]+AC_HUFF_OFFSET;
     for ( i = 0; i < AC_HUFF_CHOICES; i++)
       cpi->ac1_bits[chroma][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
   }else{
     /* AC > 1*/
-    int i,offset = acoffset[coeff];
+    int i,offset = acoffset[coeff]+AC_HUFF_OFFSET;
     for ( i = 0; i < AC_HUFF_CHOICES; i++)
       cpi->acN_bits[chroma][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
   }
@@ -394,29 +394,131 @@ static void tokenize_mark_run(CP_INSTANCE *cpi,
 #endif
 }
 
+/* only counts bits */
+static int tokencost(CP_INSTANCE *cpi, int huff, int coeff, int token){
+  huff += acoffset[coeff];
+  return cpi->HuffCodeLengthArray_VP3x[huff][token] + cpi->ExtraBitLengths_VP3x[token];
+}
+
+static int tokenize_dctcost(CP_INSTANCE *cpi,int chroma,
+			     int coeff, int coeff2, int val){
+  int huff = cpi->huffchoice[cpi->FrameType!=KEY_FRAME][1][chroma];
+  int eb=0,token=0;
+  int cost = 0;
+  
+  /* if there was an EOB run pending, count the cost of flushing it */
+  if(cpi->eob_run[coeff]){
+    make_eobrun_token(cpi->eob_run[coeff],&token,&eb);
+    cost += tokencost(cpi,huff,coeff,token);
+  }
+
+  /* count cost of token */
+  token = make_dct_token(cpi,coeff,coeff2,val,&eb);
+  cost += tokencost(cpi,huff, coeff, token);
+  
+  /* if token was a zero run, we've not yet coded up to the value */
+  if( (token==DCT_SHORT_ZRL_TOKEN) || (token==DCT_ZRL_TOKEN))
+    return cost + tokenize_dctcost(cpi,chroma,coeff2,coeff2,val);
+  else
+    return cost;
+}
+
+/* The opportunity cost of an in-progress EOB run is the cost to flush
+   the run up to 'n+1' minus the cost of flushing the run up to 'n' */
+static int tokenize_eobcost(CP_INSTANCE *cpi,int chroma, int coeff){
+  int n = cpi->eob_run[coeff];
+  int eb=0,token=0;
+  int cost0=0,cost1;
+  
+  if(n>0){
+    int huff = cpi->huffchoice[cpi->FrameType!=KEY_FRAME][1][!(n&0x8000)];
+
+    make_eobrun_token(n&0x7fff, &token, &eb);
+    cost0 = tokencost(cpi,huff,coeff,token);
+
+    make_eobrun_token((n+1)&0x7fff, &token, &eb);
+    cost1 = tokencost(cpi,huff,coeff,token);
+    
+  }else{
+    int huff = cpi->huffchoice[cpi->FrameType!=KEY_FRAME][1][chroma];
+    cost1 = tokencost(cpi,huff,coeff,DCT_EOB_TOKEN);
+  }    
+
+  return cost1-cost0;
+}
+
 /* No final DC to encode yet (DC prediction hasn't been done) So
    simply assume there will be a nonzero DC value and code.  That's
    not a true assumption but it can be fixed-up as DC is tokenized
    later */
-
-void dct_tokenize_AC(CP_INSTANCE *cpi, int fi, ogg_int16_t *dct, int chroma, token_checkpoint_t **stack){
+void dct_tokenize_AC(CP_INSTANCE *cpi, int fi, 
+		     ogg_int16_t *dct, ogg_int16_t *dequant, ogg_int16_t *origdct, 
+		     int chroma, token_checkpoint_t **stack){
   int coeff = 1; /* skip DC for now */
   while(coeff < BLOCK_SIZE){
-    ogg_int16_t val = dct[coeff];
     int i = coeff;
-    
-    while( !val && (++i < BLOCK_SIZE) )
-      val = dct[i];
+    int ret;
+
+    while( !dct[i] && (++i < BLOCK_SIZE) );
     
     if ( i == BLOCK_SIZE ){
       
-      /* if there are no other tokens in this group yet, set up to be
-	 prepended later.  */
       tokenize_mark_run(cpi,chroma,fi,coeff>1,coeff,stack);
       coeff = BLOCK_SIZE;
     }else{
-      
-      coeff = tokenize_dctval(cpi, chroma, fi, coeff, i, val, stack) + i;
+
+      /* determine costs for encoding this value (and any preceeding
+	 eobrun/zerorun) as well as the cost for encoding a demoted token */
+      int cost = tokenize_dctcost(cpi,chroma,coeff,i,dct[i]);
+      int dval = (dct[i]>0 ? dct[i]-1 : dct[i]+1);
+      int j=i;
+      if(dval){
+	/* demoting will not produce a zero. */
+	cost -= tokenize_dctcost(cpi,chroma,coeff,i,dval);
+      }else{
+	/* demoting token will produce a zero. */
+	j=i+1;
+	while((j < BLOCK_SIZE) && !dct[j] ) j++;
+	if(j==BLOCK_SIZE){
+	  cost += tokenize_eobcost(cpi,chroma,i+1);
+	  cost -= tokenize_eobcost(cpi,chroma,coeff);
+	}else{
+	  cost += tokenize_dctcost(cpi,chroma,i+1,j,dct[j]);
+	  cost -= tokenize_dctcost(cpi,chroma,coeff,j,dct[j]);
+	}
+      }
+
+      if(cost>0){
+	/* demoting results in a cheaper token cost.  Is the bit savings worth the added distortion? */
+	int ii = dezigzag_index[i];
+	int od = dct[i]*dequant[i] - origdct[ii];
+	int dd = dval*dequant[i] - origdct[ii];
+	int delta = dd*dd - od*od;
+
+	if(delta < ((cost*cpi->token_lambda)<<4)){
+	  /* we have a winner.  Demote token */
+	  dct[i]=dval;
+
+	  // perhaps a continue here is best; try it later
+
+	  if(dval==0){
+	    if(j==BLOCK_SIZE){
+	      tokenize_mark_run(cpi,chroma,fi,coeff>1,coeff,stack);
+	      coeff = BLOCK_SIZE;
+	      break;
+	    }else{
+	      i=j;
+	      continue;
+	    }
+	  }
+	}
+      }
+	
+      ret = tokenize_dctval(cpi, chroma, fi, coeff, i, dct[i], stack);
+      if(!ret)
+	tokenize_dctval(cpi, chroma, fi, i, i, dct[i], stack);
+      coeff=i+1;
+
     }
   }
 }

@@ -104,7 +104,8 @@ static void PredictDC(CP_INSTANCE *cpi){
   }
 }
 
-static void ChooseTokenTables (CP_INSTANCE *cpi, int huff[4]) {
+static void ChooseTokenTables (CP_INSTANCE *cpi) {
+  int interp = (cpi->FrameType!=KEY_FRAME);
   int i,plane;
   int best;
   
@@ -112,22 +113,22 @@ static void ChooseTokenTables (CP_INSTANCE *cpi, int huff[4]) {
 
     /* Work out which table options are best for DC */
     best = cpi->dc_bits[plane][0];
-    huff[plane] = DC_HUFF_OFFSET;
+    cpi->huffchoice[interp][0][plane] = DC_HUFF_OFFSET;
     for ( i = 1; i < DC_HUFF_CHOICES; i++ ) {
       if ( cpi->dc_bits[plane][i] < best ) {
 	best = cpi->dc_bits[plane][i];
-	huff[plane] = i + DC_HUFF_OFFSET;
+	cpi->huffchoice[interp][0][plane] = i + DC_HUFF_OFFSET;
       }
     }
   
     /* Work out which table options are best for AC */
     best = cpi->ac1_bits[plane][0]+cpi->acN_bits[plane][0];
-    huff[plane+2] = AC_HUFF_OFFSET;
+    cpi->huffchoice[interp][1][plane] = AC_HUFF_OFFSET;
     for ( i = 1; i < AC_HUFF_CHOICES; i++ ) {
       int test = cpi->ac1_bits[plane][i] + cpi->acN_bits[plane][i];
       if ( test < best ){
 	best = test;
-	huff[plane+2] = i + AC_HUFF_OFFSET;
+	cpi->huffchoice[interp][1][plane] = i + AC_HUFF_OFFSET;
       }
     }
   }
@@ -162,37 +163,42 @@ static void EncodeTokenGroup(CP_INSTANCE *cpi,
   }
 }
 
-static long EncodeTokenList (CP_INSTANCE *cpi, int huff[4]) {
+static long EncodeTokenList (CP_INSTANCE *cpi) {
   int i;
+  int interp = (cpi->FrameType!=KEY_FRAME);
   oggpack_buffer *opb=cpi->oggbuffer;
   long bits0,bits1;
 
   /* DC tokens aren't special, they just come first */
-  oggpackB_write( opb, huff[0] - DC_HUFF_OFFSET, DC_HUFF_CHOICE_BITS );
-  oggpackB_write( opb, huff[1] - DC_HUFF_OFFSET, DC_HUFF_CHOICE_BITS );
+  oggpackB_write( opb, cpi->huffchoice[interp][0][0] - DC_HUFF_OFFSET, DC_HUFF_CHOICE_BITS );
+  oggpackB_write( opb, cpi->huffchoice[interp][0][1] - DC_HUFF_OFFSET, DC_HUFF_CHOICE_BITS );
 
   bits0 = oggpackB_bits(opb);
-  EncodeTokenGroup(cpi, 0,  huff[0], huff[1]);
+  EncodeTokenGroup(cpi, 0,  cpi->huffchoice[interp][0][0], cpi->huffchoice[interp][0][1]);
   bits0 = oggpackB_bits(opb)-bits0;
 
   /* AC tokens */
-  oggpackB_write( opb, huff[2] - AC_HUFF_OFFSET, AC_HUFF_CHOICE_BITS );
-  oggpackB_write( opb, huff[3] - AC_HUFF_OFFSET, AC_HUFF_CHOICE_BITS );
+  oggpackB_write( opb, cpi->huffchoice[interp][1][0] - AC_HUFF_OFFSET, AC_HUFF_CHOICE_BITS );
+  oggpackB_write( opb, cpi->huffchoice[interp][1][1] - AC_HUFF_OFFSET, AC_HUFF_CHOICE_BITS );
 
   bits1 = oggpackB_bits(opb);
   for(i=1;i<=AC_TABLE_2_THRESH;i++)
-    EncodeTokenGroup(cpi, i,  huff[2], huff[3]);
+    EncodeTokenGroup(cpi, i,  cpi->huffchoice[interp][1][0], 
+		     cpi->huffchoice[interp][1][1]);
 
   for(;i<=AC_TABLE_3_THRESH;i++)
-    EncodeTokenGroup(cpi, i,  huff[2]+AC_HUFF_CHOICES, huff[3]+AC_HUFF_CHOICES);
+    EncodeTokenGroup(cpi, i,  cpi->huffchoice[interp][1][0]+AC_HUFF_CHOICES, 
+		     cpi->huffchoice[interp][1][1]+AC_HUFF_CHOICES);
 
   for(;i<=AC_TABLE_4_THRESH;i++)
-    EncodeTokenGroup(cpi, i,  huff[2]+AC_HUFF_CHOICES*2, huff[3]+AC_HUFF_CHOICES*2);
+    EncodeTokenGroup(cpi, i,  cpi->huffchoice[interp][1][0]+AC_HUFF_CHOICES*2, 
+		     cpi->huffchoice[interp][1][1]+AC_HUFF_CHOICES*2);
 
   for(;i<BLOCK_SIZE;i++)
-    EncodeTokenGroup(cpi, i,  huff[2]+AC_HUFF_CHOICES*3, huff[3]+AC_HUFF_CHOICES*3);
+    EncodeTokenGroup(cpi, i,  cpi->huffchoice[interp][1][0]+AC_HUFF_CHOICES*3, 
+		     cpi->huffchoice[interp][1][1]+AC_HUFF_CHOICES*3);
   bits1 = oggpackB_bits(opb)-bits1;
-
+  
   return bits1;
 }
 
@@ -301,15 +307,10 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
 }
 
 void EncodeData(CP_INSTANCE *cpi){
-  int tokenhuff[4];
   long bits;
-
-  dsp_save_fpu (cpi->dsp);
 
   PredictDC(cpi);
   dct_tokenize_finish(cpi);
-
-  bits = oggpackB_bits(cpi->oggbuffer);
 
   /* Mode and MV data not needed for key frames. */
   if ( cpi->FrameType != KEY_FRAME ){
@@ -319,11 +320,11 @@ void EncodeData(CP_INSTANCE *cpi){
     bits = oggpackB_bits(cpi->oggbuffer);
   }
 
-  ChooseTokenTables(cpi, tokenhuff);
+  ChooseTokenTables(cpi);
 #ifdef COLLECT_METRICS
-  ModeMetrics(cpi,tokenhuff);
+  ModeMetrics(cpi);
 #endif
-  long bitsDCT = EncodeTokenList(cpi, tokenhuff);
+  long bitsDCT = EncodeTokenList(cpi);
   bits = oggpackB_bits(cpi->oggbuffer);
   
   ReconRefFrames(cpi);
