@@ -1438,8 +1438,8 @@ static void oc_dec_pipeline_init(oc_dec_ctx *_dec,
   int  pli;
   /*If chroma is sub-sampled in the vertical direction, we have to decode two
      super block rows of Y' for each super block row of Cb and Cr.*/
-  if (_dec->state.info.frame_height > 256) {
-    _pipe->mcu_nvfrags=64<<!(_dec->state.info.pixel_fmt&2);
+  if (_dec->state.info.frame_height > MCU_OMP_VALUE<<!(_dec->state.info.pixel_fmt&2)) {
+    _pipe->mcu_nvfrags=MCU_OMP_VALUE<<!(_dec->state.info.pixel_fmt&2);
   } else {
     _pipe->mcu_nvfrags=_dec->state.info.frame_height;
   }
