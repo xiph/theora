@@ -642,7 +642,20 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
     int i;
     quant_tables *qq = ps->qq[mode != CODE_INTRA];
     
-    for(i=0;i<64;i++){
+    {
+      int d;
+      if(abs(buffer[0])>=dequant[0]){
+	int val = (((iq[0]>>15)*buffer[0]) + (1<<15) + (((iq[0]&0x7fff)*buffer[0])>>15)) >>16;
+	val = (val>511?511:(val<-511?-511:val));
+	
+	d = val*dequant[0]-buffer[0];
+	coded_partial_ssd += d*d;
+	data[0] = val;
+      }else
+	data[0] = 0;
+    }
+    
+    for(i=1;i<64;i++){
       int ii = dezigzag_index[i];
       //int pos;
       //int val = abs(buffer[ii])<<1;
@@ -657,10 +670,13 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
       //data[i] = 0;
       //coded_partial_ssd += buffer[ii]*buffer[ii];
       //}else
+
+
       {
 	int d;
 	int val = (((iq[ii]>>15)*buffer[ii]) + (1<<15) + (((iq[ii]&0x7fff)*buffer[ii])>>15)) >>16;
 	val = (val>511?511:(val<-511?-511:val));
+
 
 	d = val*dequant[i]-buffer[ii];
 	coded_partial_ssd += d*d;
