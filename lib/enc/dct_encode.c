@@ -408,8 +408,10 @@ static int tokenize_dctcost(CP_INSTANCE *cpi,int chroma,
   
   /* if there was an EOB run pending, count the cost of flushing it */
   if(cpi->eob_run[coeff]){
+    int rchroma = !(cpi->eob_run[coeff]&0x8000); 
+    int rhuff = cpi->huffchoice[cpi->FrameType!=KEY_FRAME][1][rchroma];
     make_eobrun_token(cpi->eob_run[coeff],&token,&eb);
-    cost += tokencost(cpi,huff,coeff,token);
+    cost += tokencost(cpi,rhuff,coeff,token);
   }
 
   /* count cost of token */
