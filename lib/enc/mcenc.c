@@ -564,7 +564,7 @@ void oc_mcenc_search(CP_INSTANCE *cpi,
   }
 
   if(!_goldenp) 
-    mb->aerror = *best_err>>1;
+    mb->aerror = *best_err;
   mb->analysis_mv[0][_goldenp].x=best_vec.x<<1;;
   mb->analysis_mv[0][_goldenp].y=best_vec.y<<1;;
 

@@ -1020,7 +1020,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
            the mode will be CODE_INTER_NO_MV as this is the default
            state to which the mode data structure is initialised in
            encoder and decoder at the start of each frame. */
-	
+
 	/* block coding cost is estimated from correlated SAD metrics */
 	/* At this point, all blocks that are in frame are still marked coded */
 
@@ -1041,9 +1041,6 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	cost[CODE_INTER_FOURMV] = 
 	  cost_inter4mv(cpi, qi, mbi, &mb_4mv_bits_0, &mb_4mv_bits_1, &overhead[CODE_INTER_FOURMV]);
 	
-	/* train this too... because the bit cost of an MV should be
-	   considered in the context of LAST_MV and PRIOR_LAST. */
-	cost[CODE_INTER_PLUS_MV] -= 384;
 	
 	/* the explicit MV modes (2,6,7) have not yet gone through
 	   halfpel refinement. We choose the explicit mv mode that's
@@ -1052,26 +1049,30 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	  oc_mcenc_refine4mv(cpi, mbi, block_err);
 	  cost[CODE_INTER_FOURMV] = 
 	    cost_inter4mv(cpi, qi, mbi, &mb_4mv_bits_0, &mb_4mv_bits_1, &overhead[CODE_INTER_FOURMV]);
-	}else if (cost[CODE_GOLDEN_MV]<cost[CODE_INTER_PLUS_MV]){
+	}else if (cost[CODE_GOLDEN_MV]<cost[CODE_INTER_PLUS_MV]-384){
 	  oc_mcenc_refine1mv(cpi, mbi, 1, gerror);
 	  cost[CODE_GOLDEN_MV] = 
 	    cost_inter1mv(cpi, qi, mbi, 1, &mb_gmv_bits_0, &overhead[CODE_GOLDEN_MV]);
-	}else{
-	  oc_mcenc_refine1mv(cpi, mbi, 0, aerror);
-	  cost[CODE_INTER_PLUS_MV] = 
-	    cost_inter1mv(cpi, qi, mbi, 0, &mb_mv_bits_0, &overhead[CODE_INTER_PLUS_MV]);
-	  cost[CODE_INTER_PLUS_MV] -= 384;
 	}
+	oc_mcenc_refine1mv(cpi, mbi, 0, aerror);
+	cost[CODE_INTER_PLUS_MV] = 
+	  cost_inter1mv(cpi, qi, mbi, 0, &mb_mv_bits_0, &overhead[CODE_INTER_PLUS_MV]);
 
 	/* Finally, pick the mode with the cheapest estimated bit cost.*/
+	/* prefer CODE_INTER_PLUS_MV, but not over LAST and LAST2 */
 	mode=0;
-	for(i=1;i<8;i++)
-	  if(cost[i]<cost[mode])
-	    mode=i;
+	if(cost[1] < cost[0])mode=1;
+	if(cost[3] < cost[mode])mode=3;
+	if(cost[4] < cost[mode])mode=4;
+	if(cost[5] < cost[mode])mode=5;
+	if(cost[6] < cost[mode])mode=6;
+	if(cost[7] < cost[mode])mode=7;
+	if(mode == CODE_INTER_LAST_MV || mode == CODE_INTER_PRIOR_LAST){
+	  if(cost[2] < cost[mode])mode=2;
+	}else{
+	  if(cost[2]-384 < cost[mode])mode=2;
+	}
 
-	/* add back such that inter/intra counting are relatively correct */
-	cost[CODE_INTER_PLUS_MV] += 384;
-	
 	switch(mode){
 	case CODE_INTER_PLUS_MV:
 	  mb->mv[0] = mb->mv[1] = mb->mv[2] = mb->mv[3] = mb->analysis_mv[0][0];
