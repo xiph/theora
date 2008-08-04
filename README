@@ -32,23 +32,29 @@ Getting started with the code
 
 Requirements summary:
 
-  For libtheora:  
-         
+  For libtheora:
+
       libogg 1.1 or newer.
 
   For example encoder:
 
-      as above
+      as above,
 
       libvorbis and libvorbisenc 1.0.1 or newer.
 
+  For creating a source distribution package:
+
+      as above,
+
+      fig2dev to build the documentation (transfig package in Ubuntu).
+
   For the player only:
 
-      as above, 
+      as above,
 
-      SDL (Simple Direct media Layer) libraries and headers
- 
-      OSS audio driver and development headers
+      SDL (Simple Direct media Layer) libraries and headers,
+
+      OSS audio driver and development headers.
 
 The provided build system is the GNU automake/autoconf system, and
 the main library, libtheora, should already build smoothly on any
@@ -83,7 +89,7 @@ files in that format.
 *** How do I use the sample player?
 
 The sample player takes an Ogg file on standard in; the file may be
-audio alone, video alone or video with audio.  
+audio alone, video alone or video with audio.
 
 *** What other tools are available?
 
