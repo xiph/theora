@@ -27,7 +27,7 @@ static const __attribute__((aligned(8),used)) ogg_int64_t OC_V4=
  0x0004000400040004LL;
 
 static void loop_filter_v(unsigned char *_pix,int _ystride,
-			  const ogg_int16_t *_ll){
+                          const ogg_int16_t *_ll){
   long esi;
   _pix-=_ystride*2;
   __asm__ __volatile__(
@@ -210,7 +210,7 @@ static void loop_filter_v(unsigned char *_pix,int _ystride,
    four p0's to one register we must transpose the values in four mmx regs.
   When half is done we repeat this for the rest.*/
 static void loop_filter_h4(unsigned char *_pix,long _ystride,
-			   const ogg_int16_t *_ll){
+                           const ogg_int16_t *_ll){
   long esi;
   long edi;
   __asm__ __volatile__(
@@ -343,12 +343,12 @@ static void loop_filter_h4(unsigned char *_pix,long _ystride,
 }
 
 static void loop_filter_h(unsigned char *_pix,int _ystride,
-			  const ogg_int16_t *_ll){
+                          const ogg_int16_t *_ll){
   _pix-=2;
   loop_filter_h4(_pix,_ystride,_ll);
   loop_filter_h4(_pix+(_ystride<<2),_ystride,_ll);
 }
- 
+
 static void loop_filter_mmx(PB_INSTANCE *pbi, int FLimit){
   int j;
   ogg_int16_t __attribute__((aligned(8)))  ll[4];
@@ -359,7 +359,7 @@ static void loop_filter_mmx(PB_INSTANCE *pbi, int FLimit){
   ll[0]=ll[1]=ll[2]=ll[3]=FLimit;
 
   for ( j = 0; j < 3 ; j++){
-    ogg_uint32_t *bp_begin = bp; 
+    ogg_uint32_t *bp_begin = bp;
     ogg_uint32_t *bp_end;
     int stride;
     int h;
@@ -376,23 +376,23 @@ static void loop_filter_mmx(PB_INSTANCE *pbi, int FLimit){
       stride = pbi->UVStride;
       break;
     }
-    
+
     while(bp<bp_end){
       ogg_uint32_t *bp_left = bp;
       ogg_uint32_t *bp_right = bp + h;
       while(bp<bp_right){
-	if(cp[0]){
-	  if(bp>bp_left)
-	    loop_filter_h(&pbi->LastFrameRecon[bp[0]],stride,ll);
-	  if(bp_left>bp_begin)
-	    loop_filter_v(&pbi->LastFrameRecon[bp[0]],stride,ll);
-	  if(bp+1<bp_right && !cp[1])
-	    loop_filter_h(&pbi->LastFrameRecon[bp[0]]+8,stride,ll);
-	  if(bp+h<bp_end && !cp[h])
-	    loop_filter_v(&pbi->LastFrameRecon[bp[h]],stride,ll);
-	}
-	bp++;
-	cp++;
+        if(cp[0]){
+          if(bp>bp_left)
+            loop_filter_h(&pbi->LastFrameRecon[bp[0]],stride,ll);
+          if(bp_left>bp_begin)
+            loop_filter_v(&pbi->LastFrameRecon[bp[0]],stride,ll);
+          if(bp+1<bp_right && !cp[1])
+            loop_filter_h(&pbi->LastFrameRecon[bp[0]]+8,stride,ll);
+          if(bp+h<bp_end && !cp[h])
+            loop_filter_v(&pbi->LastFrameRecon[bp[h]],stride,ll);
+        }
+        bp++;
+        cp++;
       }
     }
   }

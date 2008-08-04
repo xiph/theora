@@ -401,7 +401,7 @@ ogg_uint16_t idctconstants[(4+7+1) * 4] = {
     "   paddsw  "r0","r0"\n"                            \
     "   movq    "r1","I(1)"\n"  /* save R1 */           \
     "   paddsw  "r7","r0"\n"    /* r0 = R0 = G. + C. */ \
-    "#end RowIDCT"										\
+    "#end RowIDCT"                                                                              \
 );
 // end RowIDCT macro (8 + 38 = 46 cycles)
 
@@ -465,7 +465,7 @@ ogg_uint16_t idctconstants[(4+7+1) * 4] = {
     "   movq    "r5","J(5)"\n"  /* store NR5 at J5 */       \
     "   movq    "r7","J(7)"\n"  /* store NR7 at J7 */       \
     "   movq    "r0","I(0)"\n"  /* store NR0 at I0 */       \
-    "#end ColumnIDCT\n"										\
+    "#end ColumnIDCT\n"                                                                         \
 );
 // end ColumnIDCT macro (38 + 19 = 57 cycles)
 
@@ -559,7 +559,7 @@ ogg_uint16_t idctconstants[(4+7+1) * 4] = {
     "   movq        "r4","I(3)"\n"          \
                                             \
     "   movq        "r2","I(2)"\n"          \
-    "#end Transpose\n"						\
+    "#end Transpose\n"                                          \
 );
 // end Transpose macro (19 cycles).
 
@@ -1013,7 +1013,7 @@ void IDctSlow__mmx(  Q_LIST_ENTRY * InputData,
     "   paddsw  "r0","r0"\n"                                \
     "   movq    "r1","I(1)"\n"  /* save R1 */               \
     "   paddsw  "r7","r0"\n"        /* r0 = R0 = G. + C. */ \
-    "#end RowIDCT_10\n"										\
+    "#end RowIDCT_10\n"                                                                         \
 );
 // end RowIDCT macro (8 + 38 = 46 cycles)
 
@@ -1060,7 +1060,7 @@ void IDctSlow__mmx(  Q_LIST_ENTRY * InputData,
     "   movq    "r7","J(7)"\n"  /* store NR7 at J7 */   \
                                                         \
     "   movq    "r0","I(0)"\n"  /* store NR0 at I0 */   \
-    "#end ColumnIDCT_10\n"								\
+    "#end ColumnIDCT_10\n"                                                              \
 );
 // end ColumnIDCT macro (38 + 19 = 57 cycles)
 /* --------------------------------------------------------------- */
@@ -1389,7 +1389,7 @@ void IDct3__mmx( Q_LIST_ENTRY * InputData,
     );
 
     ASM(
-    "movq   (%eax), "r0"\n"     
+    "movq   (%eax), "r0"\n"
     "pmullw (%esi), "r0"\n"     /* r0 = 03 02 01 00 */
     "movq   "M(0)", "r2"\n"     /* r2 = __ __ __ FF */
     "movq   "r0", "r3"\n"       /* r3 = 03 02 01 00 */
@@ -1444,7 +1444,6 @@ void IDct3__mmx( Q_LIST_ENTRY * InputData,
 /* install our implementation in the function table */
 void dsp_mmx_idct_init(DspFunctions *funcs)
 {
-  TH_DEBUG("enabling accelerated x86_32 mmx idct functions.\n");
   funcs->IDctSlow = IDctSlow__mmx;
   funcs->IDct10 = IDct10__mmx;
   funcs->IDct3 = IDct3__mmx;

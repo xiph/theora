@@ -123,11 +123,6 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
   memset( cpi->PartiallyCodedFlags, 0, cpi->pb.SuperBlocks );
   memset( cpi->BlockCodedFlags, 0, cpi->pb.UnitFragments);
 
-#ifdef _TH_DEBUG_
-  unsigned char blockraster[cpi->pb.UnitFragments];
-  memset(blockraster,0,sizeof(blockraster));
-#endif
-
   for( SB = 0; SB < cpi->pb.SuperBlocks; SB++ ) {
     /* Check for coded blocks and macro-blocks */
     for ( MB=0; MB<4; MB++ ) {
@@ -143,10 +138,6 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
             if ( cpi->pb.display_fragments[DfBlockIndex] ) {
               cpi->pb.SBCodedFlags[SB] = 1; /* SB at least partly coded */
               cpi->BlockCodedFlags[BListIndex] = 1; /* Block is coded */
-
-#ifdef _TH_DEBUG_
-	      blockraster[DfBlockIndex]=1;
-#endif	      
 
             }else{
               cpi->pb.SBFullyFlags[SB] = 0; /* SB not fully coded */
@@ -170,77 +161,16 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
     }
   }
 
-#ifdef _TH_DEBUG_
-  // assuming 4:2:0 right now
-  TH_DEBUG("predicted (partially coded frame)\n");
-  TH_DEBUG("superblock coded flags = {");
-  int x,y;
-  i=0;
-
-  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+31)/32;y++){
-    TH_DEBUG("\n   ");
-    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+31)/32;x++,i++)
-      TH_DEBUG("%x", ((cpi->pb.SBFullyFlags[i]!=0)|
-		      (cpi->PartiallyCodedFlags[i]!=0)));
-  }
-  TH_DEBUG("\n   ");
-  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+63)/64;y++){
-    TH_DEBUG("\n   ");
-    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+63)/64;x++,i++)
-      TH_DEBUG("%x", ((cpi->pb.SBFullyFlags[i]!=0)|
-		      (cpi->PartiallyCodedFlags[i]!=0)));
-  }
-  TH_DEBUG("\n   ");
-  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+63)/64;y++){
-    TH_DEBUG("\n   ");
-    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+63)/64;x++,i++)
-      TH_DEBUG("%x", ((cpi->pb.SBFullyFlags[i]!=0)|
-		      (cpi->PartiallyCodedFlags[i]!=0)));
-  }
-  TH_DEBUG("\n}\n");
-
-  if(i!=cpi->pb.SuperBlocks)
-    TH_DEBUG("WARNING!  superblock count, raster %d != flat %d\n",
-	     i,cpi->pb.SuperBlocks);
-
-  TH_DEBUG("block coded flags = {");
-
-  i=0;
-
-  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+7)/8;y++){
-    TH_DEBUG("\n   ");
-    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+7)/8;x++,i++)
-      TH_DEBUG("%x", blockraster[i]);
-  }
-  TH_DEBUG("\n   ");
-  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+15)/16;y++){
-    TH_DEBUG("\n   ");
-    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+15)/16;x++,i++)
-      TH_DEBUG("%x", blockraster[i]);
-  }
-  TH_DEBUG("\n   ");
-  for(y=0;y< (cpi->ScanConfig.VideoFrameHeight+15)/16;y++){
-    TH_DEBUG("\n   ");
-    for(x=0;x< (cpi->ScanConfig.VideoFrameWidth+15)/16;x++,i++)
-      TH_DEBUG("%x", blockraster[i]);
-  }
-  TH_DEBUG("\n}\n");
-
-  if(i!=cpi->pb.UnitFragments)
-    TH_DEBUG("WARNING!  block count, raster %d != flat %d\n",
-	     i,cpi->pb.UnitFragments);
-#endif	      
-
   /* Code list of partially coded Super-Block.  */
   val = cpi->PartiallyCodedFlags[0];
   oggpackB_write( cpi->oggbuffer, (ogg_uint32_t)val, 1);
 
-  i = 0; 
+  i = 0;
   while ( i < cpi->pb.SuperBlocks ) {
     run_count = 0;
-    while ( (i<cpi->pb.SuperBlocks) && 
-	    (cpi->PartiallyCodedFlags[i]==val) &&
-	    run_count<4129 ) {
+    while ( (i<cpi->pb.SuperBlocks) &&
+            (cpi->PartiallyCodedFlags[i]==val) &&
+            run_count<4129 ) {
       i++;
       run_count++;
     }
@@ -251,13 +181,13 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
     if(run_count >= 4129 && i < cpi->pb.SuperBlocks ){
       val = cpi->PartiallyCodedFlags[i];
       oggpackB_write( cpi->oggbuffer, (ogg_uint32_t)val, 1);
-      
+
     }else
       val = ( val == 0 ) ? 1 : 0;
   }
 
   /* RLC Super-Block fully/not coded. */
-  i = 0; 
+  i = 0;
 
   /* Skip partially coded blocks */
   while( (i < cpi->pb.SuperBlocks) && cpi->PartiallyCodedFlags[i] )
@@ -269,9 +199,9 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
 
     while ( i < cpi->pb.SuperBlocks ) {
       run_count = 0;
-      while ( (i < cpi->pb.SuperBlocks) && 
-	      (cpi->pb.SBFullyFlags[i] == val) &&
-	      run_count < 4129) {
+      while ( (i < cpi->pb.SuperBlocks) &&
+              (cpi->pb.SBFullyFlags[i] == val) &&
+              run_count < 4129) {
         i++;
         /* Skip partially coded blocks */
         while( (i < cpi->pb.SuperBlocks) && cpi->PartiallyCodedFlags[i] )
@@ -311,6 +241,3 @@ void PackAndWriteDFArray( CP_INSTANCE *cpi ){
     }
   }
 }
-
-
-

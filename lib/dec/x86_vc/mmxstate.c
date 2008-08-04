@@ -42,33 +42,33 @@ static const unsigned char OC_FZIG_ZAGMMX[64]=
 
 /* Fill a block with value */
 static __inline void loc_fill_mmx_value (__m64 * _dst, __m64 _value){
-	__m64 t	 = _value;
-	_dst[0]  = t;	_dst[1]  = t;	_dst[2]  = t;	_dst[3]  = t;
-	_dst[4]  = t;	_dst[5]  = t;	_dst[6]  = t;	_dst[7]  = t;
-	_dst[8]  = t;	_dst[9]  = t;	_dst[10] = t;	_dst[11] = t;
-	_dst[12] = t;	_dst[13] = t;	_dst[14] = t;	_dst[15] = t;
+  __m64 t   = _value;
+  _dst[0]  = t;  _dst[1]  = t;  _dst[2]  = t;  _dst[3]  = t;
+  _dst[4]  = t;  _dst[5]  = t;  _dst[6]  = t;  _dst[7]  = t;
+  _dst[8]  = t;  _dst[9]  = t;  _dst[10] = t;  _dst[11] = t;
+  _dst[12] = t;  _dst[13] = t;  _dst[14] = t;  _dst[15] = t;
 }
 
 /* copy a block of 8 byte elements using different strides */
-static __inline void loc_blockcopy_mmx (unsigned char * _dst, int _dst_ystride, 
-																			  unsigned char * _src, int _src_ystride){
-	__m64 a,b,c,d,e,f,g,h;
-	a = *(__m64*)(_src + 0 * _src_ystride);
-	b = *(__m64*)(_src + 1 * _src_ystride);
-	c = *(__m64*)(_src + 2 * _src_ystride);
-	d = *(__m64*)(_src + 3 * _src_ystride);
-	e = *(__m64*)(_src + 4 * _src_ystride);
-	f = *(__m64*)(_src + 5 * _src_ystride);
-	g = *(__m64*)(_src + 6 * _src_ystride);
-	h = *(__m64*)(_src + 7 * _src_ystride);
-	*(__m64*)(_dst + 0 * _dst_ystride) = a;
-	*(__m64*)(_dst + 1 * _dst_ystride) = b;
-	*(__m64*)(_dst + 2 * _dst_ystride) = c;
-	*(__m64*)(_dst + 3 * _dst_ystride) = d;
-	*(__m64*)(_dst + 4 * _dst_ystride) = e;
-	*(__m64*)(_dst + 5 * _dst_ystride) = f;
-	*(__m64*)(_dst + 6 * _dst_ystride) = g;
-	*(__m64*)(_dst + 7 * _dst_ystride) = h;
+static __inline void loc_blockcopy_mmx (unsigned char * _dst, int _dst_ystride,
+                                        unsigned char * _src, int _src_ystride){
+  __m64 a,b,c,d,e,f,g,h;
+  a = *(__m64*)(_src + 0 * _src_ystride);
+  b = *(__m64*)(_src + 1 * _src_ystride);
+  c = *(__m64*)(_src + 2 * _src_ystride);
+  d = *(__m64*)(_src + 3 * _src_ystride);
+  e = *(__m64*)(_src + 4 * _src_ystride);
+  f = *(__m64*)(_src + 5 * _src_ystride);
+  g = *(__m64*)(_src + 6 * _src_ystride);
+  h = *(__m64*)(_src + 7 * _src_ystride);
+  *(__m64*)(_dst + 0 * _dst_ystride) = a;
+  *(__m64*)(_dst + 1 * _dst_ystride) = b;
+  *(__m64*)(_dst + 2 * _dst_ystride) = c;
+  *(__m64*)(_dst + 3 * _dst_ystride) = d;
+  *(__m64*)(_dst + 4 * _dst_ystride) = e;
+  *(__m64*)(_dst + 5 * _dst_ystride) = f;
+  *(__m64*)(_dst + 6 * _dst_ystride) = g;
+  *(__m64*)(_dst + 7 * _dst_ystride) = h;
 }
 
 void oc_state_frag_recon_mmx(oc_theora_state *_state,const oc_fragment *_frag,
@@ -117,7 +117,7 @@ void oc_state_frag_recon_mmx(oc_theora_state *_state,const oc_fragment *_frag,
        the iDCT.*/
     /*First zero the buffer.*/
     /*On K7, etc., this could be replaced with movntq and sfence.*/
-		loc_fill_mmx_value ((__m64 *)res_buf, _mm_setzero_si64());
+    loc_fill_mmx_value ((__m64 *)res_buf, _mm_setzero_si64());
 
     res_buf[0]=(ogg_int16_t)((ogg_int32_t)_frag->dc*_dc_iquant);
     /*This is planned to be rewritten in MMX.*/
@@ -156,12 +156,12 @@ void oc_state_frag_recon_mmx(oc_theora_state *_state,const oc_fragment *_frag,
        _frag->buffer[ref_framei]+mvoffsets[1],ref_ystride,res_buf);
     }
     else{
-			oc_frag_recon_inter_mmx(_frag->buffer[dst_framei],dst_ystride,
+      oc_frag_recon_inter_mmx(_frag->buffer[dst_framei],dst_ystride,
        _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,res_buf);
     }
   }
 
-	_mm_empty();
+  _mm_empty();
 }
 
 
@@ -180,8 +180,8 @@ void oc_state_frag_copy_mmx(const oc_theora_state *_state,const int *_fragis,
   fragi_end=_fragis+_nfragis;
   for(fragi=_fragis;fragi<fragi_end;fragi++){
     oc_fragment *frag = _state->frags+*fragi;
-		loc_blockcopy_mmx (frag->buffer[dst_framei], dst_ystride, 
-											 frag->buffer[src_framei], src_ystride);
+    loc_blockcopy_mmx (frag->buffer[dst_framei], dst_ystride,
+                       frag->buffer[src_framei], src_ystride);
   }
   _m_empty();
 }

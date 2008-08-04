@@ -11,7 +11,7 @@
  ********************************************************************
 
   function:
-    last mod: $Id: 
+    last mod: $Id:
 
  ********************************************************************/
 
@@ -21,7 +21,7 @@
   Originally written by Rudolf Marek, based on code from On2's VP3.
   Converted to Visual Studio inline assembly by Nils Pipenbrinck.
 
-  Note: I can't test these since my example files never get into the 
+  Note: I can't test these since my example files never get into the
   loop filters, but the code has been converted semi-automatic from
   the GCC sources, so it ought to work.
   ---------------------------------------------------------------------*/
@@ -33,7 +33,7 @@
 
 
 
-static void loop_filter_v(unsigned char *_pix,int _ystride, 
+static void loop_filter_v(unsigned char *_pix,int _ystride,
                           const ogg_int16_t *_ll){
   _asm {
     mov       eax,  [_pix]
@@ -41,134 +41,134 @@ static void loop_filter_v(unsigned char *_pix,int _ystride,
     mov       ebx,  [_ll]
 
     /* _pix -= ystride */
-    sub       eax,   edx                    
+    sub       eax,   edx
     /*  mm0=0          */
-    pxor      mm0,   mm0                    
+    pxor      mm0,   mm0
     /* _pix -= ystride */
-    sub       eax,   edx                    
+    sub       eax,   edx
     /*  esi=_ystride*3 */
-    lea       esi, [edx + edx*2]            
+    lea       esi, [edx + edx*2]
 
-    /*  mm7=_pix[0...8]*/       
-    movq      mm7, [eax]          
-    /*  mm4=_pix[0...8+_ystride*3]*/          
-    movq      mm4, [eax + esi]    
-    /*  mm6=_pix[0...8]*/           
-    movq      mm6, mm7                      
-    /*  Expand unsigned _pix[0...3] to 16 bits.*/                      
-    punpcklbw mm6, mm0                    
-    movq      mm5, mm4                      
+    /*  mm7=_pix[0...8]*/
+    movq      mm7, [eax]
+    /*  mm4=_pix[0...8+_ystride*3]*/
+    movq      mm4, [eax + esi]
+    /*  mm6=_pix[0...8]*/
+    movq      mm6, mm7
+    /*  Expand unsigned _pix[0...3] to 16 bits.*/
+    punpcklbw mm6, mm0
+    movq      mm5, mm4
     /*  Expand unsigned _pix[4...7] to 16 bits.*/
-    punpckhbw mm7, mm0                    
-    punpcklbw mm4, mm0                    
-    /*  Expand other arrays too.*/        
-    punpckhbw mm5, mm0                    
-    /*mm7:mm6=_p[0...7]-_p[0...7+_ystride*3]:*/          
-    psubw     mm6, mm4                      
-    psubw     mm7, mm5                      
-    /*mm5=mm4=_pix[0...7+_ystride]*/          
-    movq      mm4, [eax + edx]    
-    /*mm1=mm3=mm2=_pix[0..7]+_ystride*2]*/          
-    movq      mm2, [eax + edx*2]  
-    movq      mm5, mm4                                
-    movq      mm3, mm2                                
-    movq      mm1, mm2                      
-    /*Expand these arrays.*/                       
-    punpckhbw mm5, mm0                    
-    punpcklbw mm4, mm0                              
-    punpckhbw mm3, mm0                              
-    punpcklbw mm2, mm0                              
-    pcmpeqw   mm0, mm0                      
-    /*mm0=3 3 3 3   
+    punpckhbw mm7, mm0
+    punpcklbw mm4, mm0
+    /*  Expand other arrays too.*/
+    punpckhbw mm5, mm0
+    /*mm7:mm6=_p[0...7]-_p[0...7+_ystride*3]:*/
+    psubw     mm6, mm4
+    psubw     mm7, mm5
+    /*mm5=mm4=_pix[0...7+_ystride]*/
+    movq      mm4, [eax + edx]
+    /*mm1=mm3=mm2=_pix[0..7]+_ystride*2]*/
+    movq      mm2, [eax + edx*2]
+    movq      mm5, mm4
+    movq      mm3, mm2
+    movq      mm1, mm2
+    /*Expand these arrays.*/
+    punpckhbw mm5, mm0
+    punpcklbw mm4, mm0
+    punpckhbw mm3, mm0
+    punpcklbw mm2, mm0
+    pcmpeqw   mm0, mm0
+    /*mm0=3 3 3 3
     mm3:mm2=_pix[0...8+_ystride*2]-_pix[0...8+_ystride]*/
-    psubw     mm3, mm5                                
-    psrlw     mm0, 14                                 
-    psubw     mm2, mm4  
+    psubw     mm3, mm5
+    psrlw     mm0, 14
+    psubw     mm2, mm4
     /*Scale by 3.*/
-    pmullw    mm3, mm0                                
-    pmullw    mm2, mm0  
+    pmullw    mm3, mm0
+    pmullw    mm2, mm0
     /*mm0=4 4 4 4
     f=mm3:mm2==_pix[0...8]-_pix[0...8+_ystride*3]+
      3*(_pix[0...8+_ystride*2]-_pix[0...8+_ystride])*/
-    psrlw     mm0, 1                                  
-    paddw     mm3, mm7                                
-    psllw     mm0, 2    
+    psrlw     mm0, 1
+    paddw     mm3, mm7
+    psllw     mm0, 2
     paddw     mm2, mm6
     /*Add 4.*/
-    paddw     mm3, mm0                                  
-    paddw     mm2, mm0                                
-    /*"Divide" by 8.*/                                
-    psraw     mm3, 3                                    
-    psraw     mm2, 3                                  
-    /*Now compute lflim of mm3:mm2 cf. Section 7.10 of the sepc.*/                         
+    paddw     mm3, mm0
+    paddw     mm2, mm0
+    /*"Divide" by 8.*/
+    psraw     mm3, 3
+    psraw     mm2, 3
+    /*Now compute lflim of mm3:mm2 cf. Section 7.10 of the sepc.*/
     /*Free up mm5.*/
-    packuswb  mm4, mm5  
+    packuswb  mm4, mm5
     /*mm0=L L L L*/
-    movq      mm0, [ebx]   
+    movq      mm0, [ebx]
     /*if(R_i<-2L||R_i>2L)R_i=0:*/
-    movq      mm5, mm2                                
-    pxor      mm6, mm6                                
-    movq      mm7, mm0                                
-    psubw     mm6, mm0                                
-    psllw     mm7, 1                                  
-    psllw     mm6, 1   
+    movq      mm5, mm2
+    pxor      mm6, mm6
+    movq      mm7, mm0
+    psubw     mm6, mm0
+    psllw     mm7, 1
+    psllw     mm6, 1
     /*mm2==R_3 R_2 R_1 R_0*/
     /*mm5==R_3 R_2 R_1 R_0*/
     /*mm6==-2L -2L -2L -2L*/
     /*mm7==2L 2L 2L 2L*/
-    pcmpgtw   mm7, mm2                                
-    pcmpgtw   mm5, mm6                                
-    pand      mm2, mm7                                
-    movq      mm7, mm0                                
-    pand      mm2, mm5                                
-    psllw     mm7, 1                                  
-    movq      mm5, mm3   
+    pcmpgtw   mm7, mm2
+    pcmpgtw   mm5, mm6
+    pand      mm2, mm7
+    movq      mm7, mm0
+    pand      mm2, mm5
+    psllw     mm7, 1
+    movq      mm5, mm3
     /*mm3==R_7 R_6 R_5 R_4*/
     /*mm5==R_7 R_6 R_5 R_4*/
     /*mm6==-2L -2L -2L -2L*/
     /*mm7==2L 2L 2L 2L*/
-    pcmpgtw   mm7, mm3                                
-    pcmpgtw   mm5, mm6                                
-    pand      mm3, mm7                                
-    movq      mm7, mm0                                
-    pand      mm3, mm5    
+    pcmpgtw   mm7, mm3
+    pcmpgtw   mm5, mm6
+    pand      mm3, mm7
+    movq      mm7, mm0
+    pand      mm3, mm5
    /*if(R_i<-L)R_i'=R_i+2L;
      if(R_i>L)R_i'=R_i-2L;
      if(R_i<-L||R_i>L)R_i=-R_i':*/
-    psraw     mm6, 1                                  
-    movq      mm5, mm2                                
-    psllw     mm7, 1  
+    psraw     mm6, 1
+    movq      mm5, mm2
+    psllw     mm7, 1
     /*mm2==R_3 R_2 R_1 R_0*/
     /*mm5==R_3 R_2 R_1 R_0*/
     /*mm6==-L -L -L -L*/
     /*mm0==L L L L*/
     /*mm5=R_i>L?FF:00*/
-    pcmpgtw   mm5, mm0 
+    pcmpgtw   mm5, mm0
     /*mm6=-L>R_i?FF:00*/
-    pcmpgtw   mm6, mm2   
+    pcmpgtw   mm6, mm2
     /*mm7=R_i>L?2L:0*/
-    pand      mm7, mm5 
+    pand      mm7, mm5
     /*mm2=R_i>L?R_i-2L:R_i*/
-    psubw     mm2, mm7                                
-    movq      mm7, mm0 
+    psubw     mm2, mm7
+    movq      mm7, mm0
     /*mm5=-L>R_i||R_i>L*/
-    por       mm5, mm6                                
-    psllw     mm7, 1    
+    por       mm5, mm6
+    psllw     mm7, 1
     /*mm7=-L>R_i?2L:0*/
-    pand      mm7, mm6                                
-    pxor      mm6, mm6   
+    pand      mm7, mm6
+    pxor      mm6, mm6
     /*mm2=-L>R_i?R_i+2L:R_i*/
-    paddw     mm2, mm7                                
-    psubw     mm6, mm0 
+    paddw     mm2, mm7
+    psubw     mm6, mm0
     /*mm5=-L>R_i||R_i>L?-R_i':0*/
-    pand      mm5, mm2                                
-    movq      mm7, mm0   
+    pand      mm5, mm2
+    movq      mm7, mm0
     /*mm2=-L>R_i||R_i>L?0:R_i*/
-    psubw     mm2, mm5                                
-    psllw     mm7, 1  
+    psubw     mm2, mm5
+    psllw     mm7, 1
     /*mm2=-L>R_i||R_i>L?-R_i':R_i*/
-    psubw     mm2, mm5                                
-    movq      mm5, mm3   
+    psubw     mm2, mm5
+    movq      mm5, mm3
     /*mm3==R_7 R_6 R_5 R_4*/
     /*mm5==R_7 R_6 R_5 R_4*/
     /*mm6==-L -L -L -L*/
@@ -176,44 +176,44 @@ static void loop_filter_v(unsigned char *_pix,int _ystride,
     /*mm6=-L>R_i?FF:00*/
     pcmpgtw   mm6, mm3
     /*mm5=R_i>L?FF:00*/
-    pcmpgtw   mm5, mm0    
+    pcmpgtw   mm5, mm0
     /*mm7=R_i>L?2L:0*/
-    pand      mm7, mm5 
+    pand      mm7, mm5
     /*mm2=R_i>L?R_i-2L:R_i*/
-    psubw     mm3, mm7                                
-    psllw     mm0, 1      
+    psubw     mm3, mm7
+    psllw     mm0, 1
     /*mm5=-L>R_i||R_i>L*/
-    por       mm5, mm6     
+    por       mm5, mm6
     /*mm0=-L>R_i?2L:0*/
-    pand      mm0, mm6   
+    pand      mm0, mm6
     /*mm3=-L>R_i?R_i+2L:R_i*/
-    paddw     mm3, mm0  
+    paddw     mm3, mm0
     /*mm5=-L>R_i||R_i>L?-R_i':0*/
-    pand      mm5, mm3    
+    pand      mm5, mm3
     /*mm2=-L>R_i||R_i>L?0:R_i*/
-    psubw     mm3, mm5  
+    psubw     mm3, mm5
     /*mm3=-L>R_i||R_i>L?-R_i':R_i*/
-    psubw     mm3, mm5   
+    psubw     mm3, mm5
     /*Unfortunately, there's no unsigned byte+signed byte with unsigned
        saturation op code, so we have to promote things back 16 bits.*/
-    pxor      mm0, mm0                                
-    movq      mm5, mm4                                
-    punpcklbw mm4, mm0                              
-    punpckhbw mm5, mm0                              
-    movq      mm6, mm1                                
-    punpcklbw mm1, mm0                              
-    punpckhbw mm6, mm0 
+    pxor      mm0, mm0
+    movq      mm5, mm4
+    punpcklbw mm4, mm0
+    punpckhbw mm5, mm0
+    movq      mm6, mm1
+    punpcklbw mm1, mm0
+    punpckhbw mm6, mm0
     /*_pix[0...8+_ystride]+=R_i*/
-    paddw     mm4, mm2                                
-    paddw     mm5, mm3  
+    paddw     mm4, mm2
+    paddw     mm5, mm3
     /*_pix[0...8+_ystride*2]-=R_i*/
-    psubw     mm1, mm2                                
-    psubw     mm6, mm3                                
-    packuswb  mm4, mm5                               
-    packuswb  mm1, mm6 
+    psubw     mm1, mm2
+    psubw     mm6, mm3
+    packuswb  mm4, mm5
+    packuswb  mm1, mm6
     /*Write it back out.*/
-    movq    [eax + edx], mm4              
-    movq    [eax + edx*2], mm1            
+    movq    [eax + edx], mm4
+    movq    [eax + edx*2], mm1
   }
 }
 
@@ -221,7 +221,7 @@ static void loop_filter_v(unsigned char *_pix,int _ystride,
   Data are striped p0 p1 p2 p3 ... p0 p1 p2 p3 ..., so in order to load all
    four p0's to one register we must transpose the values in four mmx regs.
   When half is done we repeat this for the rest.*/
-static void loop_filter_h4(unsigned char *_pix,long _ystride, 
+static void loop_filter_h4(unsigned char *_pix,long _ystride,
                            const ogg_int16_t *_ll){
   /* todo: merge the comments from the GCC sources */
   _asm {
@@ -229,79 +229,79 @@ static void loop_filter_h4(unsigned char *_pix,long _ystride,
     mov   edx, [_ystride]
     mov   eax, [_ll]
     /*esi=_ystride*3*/
-    lea     esi, [edx + edx*2]              
+    lea     esi, [edx + edx*2]
 
-    movd    mm0, dword ptr [ecx]            
-    movd    mm1, dword ptr [ecx + edx]      
-    movd    mm2, dword ptr [ecx + edx*2]    
-    movd    mm3, dword ptr [ecx + esi]      
-    punpcklbw mm0, mm1                      
-    punpcklbw mm2, mm3                      
-    movq    mm1, mm0                        
-    punpckhwd mm0, mm2                      
-    punpcklwd mm1, mm2                      
-    pxor    mm7, mm7                        
-    movq    mm5, mm1                        
-    punpcklbw mm1, mm7                      
-    punpckhbw mm5, mm7                      
-    movq    mm3, mm0                        
-    punpcklbw mm0, mm7                      
-    punpckhbw mm3, mm7                      
-    psubw   mm1, mm3                        
-    movq    mm4, mm0                        
-    pcmpeqw mm2, mm2                        
-    psubw   mm0, mm5                        
-    psrlw   mm2, 14                         
-    pmullw  mm0, mm2                        
-    psrlw   mm2, 1                          
-    paddw   mm0, mm1                        
-    psllw   mm2, 2                          
-    paddw   mm0, mm2                        
-    psraw   mm0, 3                          
-    movq    mm6, qword ptr [eax]            
-    movq    mm1, mm0                        
-    pxor    mm2, mm2                        
-    movq    mm3, mm6                        
-    psubw   mm2, mm6                        
-    psllw   mm3, 1                          
-    psllw   mm2, 1                          
-    pcmpgtw mm3, mm0                        
-    pcmpgtw mm1, mm2                        
-    pand    mm0, mm3                        
-    pand    mm0, mm1                        
-    psraw   mm2, 1                          
-    movq    mm1, mm0                        
-    movq    mm3, mm6                        
-    pcmpgtw mm2, mm0                        
-    pcmpgtw mm1, mm6                        
-    psllw   mm3, 1                          
-    psllw   mm6, 1                          
-    pand    mm3, mm1                        
-    pand    mm6, mm2                        
-    psubw   mm0, mm3                        
-    por     mm1, mm2                        
-    paddw   mm0, mm6                        
-    pand    mm1, mm0                        
-    psubw   mm0, mm1                        
-    psubw   mm0, mm1                        
-    paddw   mm5, mm0                        
-    psubw   mm4, mm0                        
-    packuswb mm5, mm7                       
-    packuswb mm4, mm7                       
-    punpcklbw mm5, mm4                      
-    movd    edi, mm5                        
-    mov     word ptr [ecx + 01H], di        
-    psrlq   mm5, 32                         
-    shr     edi, 16                         
-    mov     word ptr [ecx + edx + 01H], di  
-    movd    edi, mm5                        
+    movd    mm0, dword ptr [ecx]
+    movd    mm1, dword ptr [ecx + edx]
+    movd    mm2, dword ptr [ecx + edx*2]
+    movd    mm3, dword ptr [ecx + esi]
+    punpcklbw mm0, mm1
+    punpcklbw mm2, mm3
+    movq    mm1, mm0
+    punpckhwd mm0, mm2
+    punpcklwd mm1, mm2
+    pxor    mm7, mm7
+    movq    mm5, mm1
+    punpcklbw mm1, mm7
+    punpckhbw mm5, mm7
+    movq    mm3, mm0
+    punpcklbw mm0, mm7
+    punpckhbw mm3, mm7
+    psubw   mm1, mm3
+    movq    mm4, mm0
+    pcmpeqw mm2, mm2
+    psubw   mm0, mm5
+    psrlw   mm2, 14
+    pmullw  mm0, mm2
+    psrlw   mm2, 1
+    paddw   mm0, mm1
+    psllw   mm2, 2
+    paddw   mm0, mm2
+    psraw   mm0, 3
+    movq    mm6, qword ptr [eax]
+    movq    mm1, mm0
+    pxor    mm2, mm2
+    movq    mm3, mm6
+    psubw   mm2, mm6
+    psllw   mm3, 1
+    psllw   mm2, 1
+    pcmpgtw mm3, mm0
+    pcmpgtw mm1, mm2
+    pand    mm0, mm3
+    pand    mm0, mm1
+    psraw   mm2, 1
+    movq    mm1, mm0
+    movq    mm3, mm6
+    pcmpgtw mm2, mm0
+    pcmpgtw mm1, mm6
+    psllw   mm3, 1
+    psllw   mm6, 1
+    pand    mm3, mm1
+    pand    mm6, mm2
+    psubw   mm0, mm3
+    por     mm1, mm2
+    paddw   mm0, mm6
+    pand    mm1, mm0
+    psubw   mm0, mm1
+    psubw   mm0, mm1
+    paddw   mm5, mm0
+    psubw   mm4, mm0
+    packuswb mm5, mm7
+    packuswb mm4, mm7
+    punpcklbw mm5, mm4
+    movd    edi, mm5
+    mov     word ptr [ecx + 01H], di
+    psrlq   mm5, 32
+    shr     edi, 16
+    mov     word ptr [ecx + edx + 01H], di
+    movd    edi, mm5
     mov     word ptr [ecx + edx*2 + 01H], di
-    shr     edi, 16                         
-    mov     word ptr [ecx + esi + 01H], di  
+    shr     edi, 16
+    mov     word ptr [ecx + esi + 01H], di
   }
 }
 
-static void loop_filter_h(unsigned char *_pix,int _ystride, 
+static void loop_filter_h(unsigned char *_pix,int _ystride,
                           const ogg_int16_t *_ll){
   _pix-=2;
   loop_filter_h4(_pix,_ystride,_ll);

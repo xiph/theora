@@ -22,8 +22,8 @@
 static const __attribute__ ((aligned(8),used)) ogg_int64_t V128 = 0x8080808080808080LL;
 
 static void copy8x8__mmx (unsigned char *src,
-	                unsigned char *dest,
-	                unsigned int stride)
+                        unsigned char *dest,
+                        unsigned int stride)
 {
   __asm__ __volatile__ (
     "  .p2align 4                      \n\t"
@@ -35,14 +35,14 @@ static void copy8x8__mmx (unsigned char *src,
     "  movq        (%1, %2, 2), %%mm2  \n\t"
     "  movq        (%1, %%edi), %%mm3  \n\t"
 
-    "  lea         (%1, %2, 4), %1     \n\t" 
+    "  lea         (%1, %2, 4), %1     \n\t"
 
     "  movq        %%mm0, (%0)         \n\t"
     "  movq        %%mm1, (%0, %2)     \n\t"
     "  movq        %%mm2, (%0, %2, 2)  \n\t"
     "  movq        %%mm3, (%0, %%edi)  \n\t"
 
-    "  lea         (%0, %2, 4), %0     \n\t" 
+    "  lea         (%0, %2, 4), %0     \n\t"
 
     "  movq        (%1), %%mm0         \n\t"
     "  movq        (%1, %2), %%mm1     \n\t"
@@ -61,7 +61,7 @@ static void copy8x8__mmx (unsigned char *src,
 }
 
 static void recon_intra8x8__mmx (unsigned char *ReconPtr, ogg_int16_t *ChangePtr,
-		      ogg_uint32_t LineStep)
+                      ogg_uint32_t LineStep)
 {
   __asm__ __volatile__ (
     "  .p2align 4                      \n\t"
@@ -69,11 +69,11 @@ static void recon_intra8x8__mmx (unsigned char *ReconPtr, ogg_int16_t *ChangePtr
     "  movq        %[V128], %%mm0      \n\t" /* Set mm0 to 0x8080808080808080 */
 
     "  lea         128(%1), %%edi      \n\t" /* Endpoint in input buffer */
-    "1:                                \n\t" 
+    "1:                                \n\t"
     "  movq         (%1), %%mm2        \n\t" /* First four input values */
 
     "  packsswb    8(%1), %%mm2        \n\t" /* pack with next(high) four values */
-    "  por         %%mm0, %%mm0        \n\t" 
+    "  por         %%mm0, %%mm0        \n\t"
     "  pxor        %%mm0, %%mm2        \n\t" /* Convert result to unsigned (same as add 128) */
     "  lea         16(%1), %1          \n\t" /* Step source buffer */
     "  cmp         %%edi, %1           \n\t" /* are we done */
@@ -91,7 +91,7 @@ static void recon_intra8x8__mmx (unsigned char *ReconPtr, ogg_int16_t *ChangePtr
 }
 
 static void recon_inter8x8__mmx (unsigned char *ReconPtr, unsigned char *RefPtr,
-		      ogg_int16_t *ChangePtr, ogg_uint32_t LineStep)
+                      ogg_int16_t *ChangePtr, ogg_uint32_t LineStep)
 {
   __asm__ __volatile__ (
     "  .p2align 4                      \n\t"
@@ -127,8 +127,8 @@ static void recon_inter8x8__mmx (unsigned char *ReconPtr, unsigned char *RefPtr,
 }
 
 static void recon_inter8x8_half__mmx (unsigned char *ReconPtr, unsigned char *RefPtr1,
-		           unsigned char *RefPtr2, ogg_int16_t *ChangePtr,
-			   ogg_uint32_t LineStep)
+                           unsigned char *RefPtr2, ogg_int16_t *ChangePtr,
+                           ogg_uint32_t LineStep)
 {
   __asm__ __volatile__ (
     "  .p2align 4                      \n\t"
@@ -173,7 +173,6 @@ static void recon_inter8x8_half__mmx (unsigned char *ReconPtr, unsigned char *Re
 
 void dsp_mmx_recon_init(DspFunctions *funcs)
 {
-  TH_DEBUG("enabling accelerated x86_32 mmx recon functions.\n");
   funcs->copy8x8 = copy8x8__mmx;
   funcs->recon_intra8x8 = recon_intra8x8__mmx;
   funcs->recon_inter8x8 = recon_inter8x8__mmx;

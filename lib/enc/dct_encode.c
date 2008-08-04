@@ -295,7 +295,7 @@ static void MotionBlockDifference (CP_INSTANCE * cpi, unsigned char * FiltPtr,
                                    half pixel MC */
   unsigned char  *ReconPtr1;    /* DCT reconstructed image pointers */
   unsigned char  *ReconPtr2;    /* Pointer used in half pixel MC */
-  
+
   switch(MvDevisor) {
   case 2:
     MvShift = 1;
@@ -413,7 +413,7 @@ void TransformQuantizeBlock (CP_INSTANCE *cpi, ogg_int32_t FragIndex,
       select_quantiser(&cpi->pb, BLOCK_INTER_Y);
   } else {
     LeftEdge = !((FragIndex-cpi->pb.YPlaneFragments)%(cpi->pb.HFragments>>1));
-	
+
     if(FragIndex < (ogg_int32_t)cpi->pb.YPlaneFragments + (ogg_int32_t)cpi->pb.UVPlaneFragments) {
       /* U plane */
       if ( cpi->pb.CodingMode == CODE_INTRA )

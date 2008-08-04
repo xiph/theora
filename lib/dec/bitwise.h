@@ -18,59 +18,61 @@
 # define _bitwise_H (1)
 # include <ogg/ogg.h>
 
-void theorapackB_reset(oggpack_buffer *b);
-void theorapackB_readinit(oggpack_buffer *b,unsigned char *buf,int bytes);
-/* Read in bits without advancing the bitptr; bits <= 32 */
-static int theorapackB_look(oggpack_buffer *b,int bits,long *_ret);
-int theorapackB_look1(oggpack_buffer *b,long *_ret);
-static void theorapackB_adv(oggpack_buffer *b,int bits);
-void theorapackB_adv1(oggpack_buffer *b);
-/* bits <= 32 */
-int theorapackB_read(oggpack_buffer *b,int bits,long *_ret);
-int theorapackB_read1(oggpack_buffer *b,long *_ret);
-long theorapackB_bytes(oggpack_buffer *b);
-long theorapackB_bits(oggpack_buffer *b);
-unsigned char *theorapackB_get_buffer(oggpack_buffer *b);
+void theorapackB_readinit(oggpack_buffer *_b,unsigned char *_buf,int _bytes);
+/*Read in bits without advancing the bitptr.
+  Here we assume 0<=_bits&&_bits<=32.*/
+static int theorapackB_look(oggpack_buffer *_b,int _bits,long *_ret);
+int theorapackB_look1(oggpack_buffer *_b,long *_ret);
+static void theorapackB_adv(oggpack_buffer *_b,int _bits);
+void theorapackB_adv1(oggpack_buffer *_b);
+/*Here we assume 0<=_bits&&_bits<=32.*/
+int theorapackB_read(oggpack_buffer *_b,int _bits,long *_ret);
+int theorapackB_read1(oggpack_buffer *_b,long *_ret);
+long theorapackB_bytes(oggpack_buffer *_b);
+long theorapackB_bits(oggpack_buffer *_b);
+unsigned char *theorapackB_get_buffer(oggpack_buffer *_b);
 
 /*These two functions are only used in one place, and declaring them static so
    they can be inlined saves considerable function call overhead.*/
 
-/* Read in bits without advancing the bitptr; bits <= 32 */
-static int theorapackB_look(oggpack_buffer *b,int bits,long *_ret){
+/*Read in bits without advancing the bitptr.
+  Here we assume 0<=_bits&&_bits<=32.*/
+static int theorapackB_look(oggpack_buffer *_b,int _bits,long *_ret){
   long ret;
   long m;
-  m=32-bits;
-  bits+=b->endbit;
-  if(b->endbyte+4>=b->storage){
-    /* not the main path */
-    if(b->endbyte>=b->storage){
+  long d;
+  m=32-_bits;
+  _bits+=_b->endbit;
+  d=_b->storage-_b->endbyte;
+  if(d<=4){
+    /*Not the main path.*/
+    if(d<=0){
       *_ret=0L;
-      return -1;
+      return -(_bits>d*8);
     }
     /*If we have some bits left, but not enough, return the ones we have.*/
-    if((b->storage-b->endbyte)*8<bits)bits=(b->storage-b->endbyte)*8;
+    if(d*8<_bits)_bits=d*8;
   }
-  ret=b->ptr[0]<<(24+b->endbit);
-  if(bits>8){
-    ret|=b->ptr[1]<<(16+b->endbit);
-    if(bits>16){
-      ret|=b->ptr[2]<<(8+b->endbit);
-      if(bits>24){
-        ret|=b->ptr[3]<<(b->endbit);
-        if(bits>32&&b->endbit)
-          ret|=b->ptr[4]>>(8-b->endbit);
+  ret=_b->ptr[0]<<24+_b->endbit;
+  if(_bits>8){
+    ret|=_b->ptr[1]<<16+_b->endbit;
+    if(_bits>16){
+      ret|=_b->ptr[2]<<8+_b->endbit;
+      if(_bits>24){
+        ret|=_b->ptr[3]<<_b->endbit;
+        if(_bits>32)ret|=_b->ptr[4]>>8-_b->endbit;
       }
     }
   }
-  *_ret=((ret&0xffffffff)>>(m>>1))>>((m+1)>>1);
+  *_ret=((ret&0xFFFFFFFF)>>(m>>1))>>(m+1>>1);
   return 0;
 }
 
-static void theorapackB_adv(oggpack_buffer *b,int bits){
-  bits+=b->endbit;
-  b->ptr+=bits/8;
-  b->endbyte+=bits/8;
-  b->endbit=bits&7;
+static void theorapackB_adv(oggpack_buffer *_b,int _bits){
+  _bits+=_b->endbit;
+  _b->ptr+=_bits>>3;
+  _b->endbyte+=_bits>>3;
+  _b->endbit=_bits&7;
 }
 
 #endif

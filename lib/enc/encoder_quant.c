@@ -20,12 +20,6 @@
 #include "codec_internal.h"
 #include "quant_lookup.h"
 
-#ifdef _TH_DEBUG_
-#include <stdio.h>
-extern FILE *debugout;
-extern long dframe;
-#endif
-
 #define OC_QUANT_MAX        (1024<<2)
 static const unsigned DC_QUANT_MIN[2]={4<<2,8<<2};
 static const unsigned AC_QUANT_MIN[2]={2<<2,4<<2};
@@ -41,9 +35,9 @@ static int ilog(unsigned _v){
 
 
 void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer* _opb) {
-  
-  th_quant_info *_qinfo = &pbi->quant_info; 
-  
+
+  th_quant_info *_qinfo = &pbi->quant_info;
+
   const th_quant_ranges *qranges;
   const th_quant_base   *base_mats[2*3*64];
   int                    indices[2][3][64];
@@ -58,7 +52,7 @@ void WriteQTables(PB_INSTANCE *pbi,oggpack_buffer* _opb) {
   int                    plj;
   int                    bmi;
   int                    i;
-  
+
   /*Unlike the scale tables, we can't assume the maximum value will be in
      index 0, so search for it here.*/
   i=_qinfo->loop_filter_limits[0];
@@ -149,133 +143,57 @@ void InitQTables( PB_INSTANCE *pbi ){
   th_quant_info *qinfo = &pbi->quant_info;
 
   pbi->QThreshTable = pbi->quant_info.ac_scale;
-  
+
   for(qti=0;qti<2;qti++){
     for(pli=0;pli<3;pli++){
       int qi;  /* quality index */
       int qri; /* range iterator */
-      
+
       for(qi=0,qri=0; qri<=qinfo->qi_ranges[qti][pli].nranges; qri++){
-	th_quant_base base;
-	
-	ogg_uint32_t      q;
-	int               qi_start;
-	int               qi_end;
-	int               ci;
-	memcpy(base,qinfo->qi_ranges[qti][pli].base_matrices[qri],
-	       sizeof(base));
-	
-	qi_start=qi;
-	if(qri==qinfo->qi_ranges[qti][pli].nranges)
-	  qi_end=qi+1;
-	else 
-	  qi_end=qi+qinfo->qi_ranges[qti][pli].sizes[qri];
-	
-	/* Iterate over quality indicies in this range */
-	for(;;){
-	  
-	  /*Scale DC the coefficient from the proper table.*/
-	  q=((ogg_uint32_t)qinfo->dc_scale[qi]*base[0]/100)<<2;
-	  q=OC_CLAMPI(DC_QUANT_MIN[qti],q,OC_QUANT_MAX);
-	  pbi->quant_tables[qti][pli][qi][0]=(ogg_uint16_t)q;
-	  
-	  /*Now scale AC coefficients from the proper table.*/
-	  for(ci=1;ci<64;ci++){
-	    q=((ogg_uint32_t)qinfo->ac_scale[qi]*base[ci]/100)<<2;
-	    q=OC_CLAMPI(AC_QUANT_MIN[qti],q,OC_QUANT_MAX);
-	    pbi->quant_tables[qti][pli][qi][ci]=(ogg_uint16_t)q;
-	  }
-	  
-	  if(++qi>=qi_end)break;
-	  
-	  /*Interpolate the next base matrix.*/
-	  for(ci=0;ci<64;ci++){
-	    base[ci]=(unsigned char)
-	      ((2*((qi_end-qi)*qinfo->qi_ranges[qti][pli].base_matrices[qri][ci]+
-		   (qi-qi_start)*qinfo->qi_ranges[qti][pli].base_matrices[qri+1][ci])
-		+qinfo->qi_ranges[qti][pli].sizes[qri])/
-	       (2*qinfo->qi_ranges[qti][pli].sizes[qri]));
-	  }
-	}
+        th_quant_base base;
+
+        ogg_uint32_t      q;
+        int               qi_start;
+        int               qi_end;
+        int               ci;
+        memcpy(base,qinfo->qi_ranges[qti][pli].base_matrices[qri],
+               sizeof(base));
+
+        qi_start=qi;
+        if(qri==qinfo->qi_ranges[qti][pli].nranges)
+          qi_end=qi+1;
+        else
+          qi_end=qi+qinfo->qi_ranges[qti][pli].sizes[qri];
+
+        /* Iterate over quality indicies in this range */
+        for(;;){
+
+          /*Scale DC the coefficient from the proper table.*/
+          q=((ogg_uint32_t)qinfo->dc_scale[qi]*base[0]/100)<<2;
+          q=OC_CLAMPI(DC_QUANT_MIN[qti],q,OC_QUANT_MAX);
+          pbi->quant_tables[qti][pli][qi][0]=(ogg_uint16_t)q;
+
+          /*Now scale AC coefficients from the proper table.*/
+          for(ci=1;ci<64;ci++){
+            q=((ogg_uint32_t)qinfo->ac_scale[qi]*base[ci]/100)<<2;
+            q=OC_CLAMPI(AC_QUANT_MIN[qti],q,OC_QUANT_MAX);
+            pbi->quant_tables[qti][pli][qi][ci]=(ogg_uint16_t)q;
+          }
+
+          if(++qi>=qi_end)break;
+
+          /*Interpolate the next base matrix.*/
+          for(ci=0;ci<64;ci++){
+            base[ci]=(unsigned char)
+              ((2*((qi_end-qi)*qinfo->qi_ranges[qti][pli].base_matrices[qri][ci]+
+                   (qi-qi_start)*qinfo->qi_ranges[qti][pli].base_matrices[qri+1][ci])
+                +qinfo->qi_ranges[qti][pli].sizes[qri])/
+               (2*qinfo->qi_ranges[qti][pli].sizes[qri]));
+          }
+        }
       }
     }
   }
-
-#ifdef _TH_DEBUG_
-  int i, j, k, l;
-
-  /* dump the static tables */
-  {
-    int i, j, k, l, m;
-    TH_DEBUG("loop filter limits = {");
-    for(i=0;i<64;){
-      TH_DEBUG("\n        ");
-      for(j=0;j<16;i++,j++)
-	TH_DEBUG("%3d ",qinfo->loop_filter_limits[i]);
-    }
-    TH_DEBUG("\n}\n\n");
-
-    TH_DEBUG("ac scale = {");
-    for(i=0;i<64;){
-      TH_DEBUG("\n        ");
-      for(j=0;j<16;i++,j++)
-	TH_DEBUG("%3d ",qinfo->ac_scale[i]);
-    }
-    TH_DEBUG("\n}\n\n");
-
-    TH_DEBUG("dc scale = {");
-    for(i=0;i<64;){
-      TH_DEBUG("\n        ");
-      for(j=0;j<16;i++,j++)
-	TH_DEBUG("%3d ",qinfo->dc_scale[i]);
-    }
-    TH_DEBUG("\n}\n\n");
-
-    for(k=0;k<2;k++)
-      for(l=0;l<3;l++){
-	char *name[2][3]={
-	  {"intra Y bases","intra U bases", "intra V bases"},
-	  {"inter Y bases","inter U bases", "inter V bases"}
-	};
-
-	th_quant_ranges *r = &qinfo->qi_ranges[k][l];
-	TH_DEBUG("%s = {\n",name[k][l]);
-	TH_DEBUG("        ranges = %d\n",r->nranges);
-	TH_DEBUG("        intervals = { ");
-	for(i=0;i<r->nranges;i++)
-	  TH_DEBUG("%3d ",r->sizes[i]);
-	TH_DEBUG("}\n");
-	TH_DEBUG("\n        matricies = { ");
-	for(m=0;m<r->nranges+1;m++){
-	  TH_DEBUG("\n          { ");
-	  for(i=0;i<64;){
-	    TH_DEBUG("\n            ");
-	    for(j=0;j<8;i++,j++)
-	      TH_DEBUG("%3d ",r->base_matrices[m][i]);
-	  }
-	  TH_DEBUG("\n          }");
-	}
-	TH_DEBUG("\n        }\n");
-      }
-  }
-
-  /* dump the calculated quantizer tables */
-  for(i=0;i<2;i++){
-    for(j=0;j<3;j++){
-      for(k=0;k<64;k++){
-	TH_DEBUG("quantizer table [%s][%s][Q%d] = {",
-		 (i==0?"intra":"inter"),(j==0?"Y":(j==1?"U":"V")),k);
-	for(l=0;l<64;l++){
-	  if((l&7)==0)
-	    TH_DEBUG("\n   ");
-	  TH_DEBUG("%4d ",pbi->quant_tables[i][j][k][l]);
-	}
-	TH_DEBUG("}\n");
-      }
-    }
-  }
-#endif
-
 }
 
 static void BuildZigZagIndex(PB_INSTANCE *pbi){
@@ -289,17 +207,17 @@ static void BuildZigZagIndex(PB_INSTANCE *pbi){
 }
 
 static void init_quantizer ( CP_INSTANCE *cpi,
-			     unsigned char QIndex ){
+                             unsigned char QIndex ){
   int i;
   double ZBinFactor;
   double RoundingFactor;
-  
+
   double temp_fp_quant_coeffs;
   double temp_fp_quant_round;
   double temp_fp_ZeroBinSize;
   PB_INSTANCE *pbi = &cpi->pb;
-  
-  
+
+
   const ogg_uint16_t * temp_Y_coeffs;
   const ogg_uint16_t * temp_U_coeffs;
   const ogg_uint16_t * temp_V_coeffs;
@@ -307,22 +225,22 @@ static void init_quantizer ( CP_INSTANCE *cpi,
   const ogg_uint16_t * temp_Inter_U_coeffs;
   const ogg_uint16_t * temp_Inter_V_coeffs;
   ogg_uint16_t scale_factor = cpi->pb.quant_info.ac_scale[QIndex];
-  
+
   /* Notes on setup of quantisers.  The initial multiplication by
      the scale factor is done in the ogg_int32_t domain to insure that the
      precision in the quantiser is the same as in the inverse
      quantiser where all calculations are integer.  The "<< 2" is a
      normalisation factor for the forward DCT transform. */
-  
+
   temp_Y_coeffs = pbi->quant_tables[0][0][QIndex];
   temp_U_coeffs = pbi->quant_tables[0][1][QIndex];
   temp_V_coeffs = pbi->quant_tables[0][2][QIndex];
   temp_Inter_Y_coeffs = pbi->quant_tables[1][0][QIndex];
   temp_Inter_U_coeffs = pbi->quant_tables[1][1][QIndex];
   temp_Inter_V_coeffs = pbi->quant_tables[1][2][QIndex];
-  
+
   ZBinFactor = 0.9;
-  
+
   switch(cpi->pb.info.sharpness){
   case 0:
     ZBinFactor = 0.65;
@@ -393,7 +311,7 @@ static void init_quantizer ( CP_INSTANCE *cpi,
     pbi->fp_ZeroBinSize_Inter_U[0]= (0.5 + temp_fp_ZeroBinSize);
     temp_fp_quant_coeffs= 1.0 / temp_fp_quant_coeffs;
     pbi->fp_quant_Inter_U_coeffs[0]= (0.5 + SHIFT16 * temp_fp_quant_coeffs);
-    
+
     /* Inter V */
     temp_fp_quant_coeffs = temp_Inter_V_coeffs[0];
     temp_fp_quant_round = temp_fp_quant_coeffs * RoundingFactor;
@@ -402,7 +320,7 @@ static void init_quantizer ( CP_INSTANCE *cpi,
     pbi->fp_ZeroBinSize_Inter_V[0]= (0.5 + temp_fp_ZeroBinSize);
     temp_fp_quant_coeffs= 1.0 / temp_fp_quant_coeffs;
     pbi->fp_quant_Inter_V_coeffs[0]= (0.5 + SHIFT16 * temp_fp_quant_coeffs);
-    
+
 
     for ( i = 1; i < 64; i++ ){
       /* Intra Y */
@@ -469,7 +387,7 @@ static void init_quantizer ( CP_INSTANCE *cpi,
 void select_quantiser(PB_INSTANCE *pbi, int type) {
   /* select a quantiser according to what plane has to be coded in what
    * mode. Could be extended to a more sophisticated scheme. */
-  
+
   switch(type) {
     case BLOCK_Y:
       pbi->fquant_coeffs = pbi->fp_quant_Y_coeffs;
@@ -494,12 +412,12 @@ void select_quantiser(PB_INSTANCE *pbi, int type) {
     case BLOCK_INTER_U:
       pbi->fquant_coeffs = pbi->fp_quant_Inter_U_coeffs;
       pbi->fquant_round = pbi->fp_quant_Inter_U_round;
-      pbi->fquant_ZbSize = pbi->fp_ZeroBinSize_Inter_U;		
+      pbi->fquant_ZbSize = pbi->fp_ZeroBinSize_Inter_U;
       break;
     case BLOCK_INTER_V:
       pbi->fquant_coeffs = pbi->fp_quant_Inter_V_coeffs;
       pbi->fquant_round = pbi->fp_quant_Inter_V_round;
-      pbi->fquant_ZbSize = pbi->fp_ZeroBinSize_Inter_V;		
+      pbi->fquant_ZbSize = pbi->fp_ZeroBinSize_Inter_V;
       break;
   }
 }
@@ -523,7 +441,7 @@ void quantize( PB_INSTANCE *pbi,
 
   /* Note that we add half divisor to effect rounding on positive number */
   for( i = 0; i < VFRAGPIXELS; i++) {
-  
+
     int col;
     /* Iterate through columns */
     for( col = 0; col < 8; col++) {
@@ -538,7 +456,7 @@ void quantize( PB_INSTANCE *pbi,
         quantized_list[ZigZagPtr[col]] = ( val < -511 ) ? -511 : val;
       }
     }
- 
+
     FquantRoundPtr += 8;
     FquantCoeffsPtr += 8;
     FquantZBinSizePtr += 8;
@@ -548,9 +466,9 @@ void quantize( PB_INSTANCE *pbi,
 }
 
 static void init_dequantizer ( PB_INSTANCE *pbi,
-			       unsigned char  QIndex ){
+                               unsigned char  QIndex ){
   int i, j;
-  
+
   ogg_uint16_t * InterY_coeffs;
   ogg_uint16_t * InterU_coeffs;
   ogg_uint16_t * InterV_coeffs;
@@ -564,7 +482,7 @@ static void init_dequantizer ( PB_INSTANCE *pbi,
   InterY_coeffs = pbi->quant_tables[1][0][QIndex];
   InterU_coeffs = pbi->quant_tables[1][1][QIndex];
   InterV_coeffs = pbi->quant_tables[1][2][QIndex];
-  
+
   /* invert the dequant index into the quant index
      the dxer has a different order than the cxer. */
   BuildZigZagIndex(pbi);
@@ -606,7 +524,7 @@ void UpdateQ( PB_INSTANCE *pbi, int NewQIndex ){
   else if (NewQIndex < 0) NewQIndex = 0;
 
   pbi->FrameQIndex = NewQIndex;
-  
+
   qscale = pbi->quant_info.ac_scale[NewQIndex];
   pbi->ThisFrameQualityValue = qscale;
 
@@ -624,7 +542,7 @@ void UpdateQC( CP_INSTANCE *cpi, ogg_uint32_t NewQ ){
     qscale = pbi->quant_info.ac_scale[Q_TABLE_SIZE-1];
   else if ( qscale > pbi->quant_info.ac_scale[0] )
     qscale = pbi->quant_info.ac_scale[0];
-  
+
   /* Set the inter/intra descision control variables. */
   pbi->FrameQIndex = Q_TABLE_SIZE - 1;
   while ((ogg_int32_t) pbi->FrameQIndex >= 0 ) {

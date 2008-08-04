@@ -21,7 +21,7 @@
   Note: Loops are unrolled for best performance.
   The iteration each instruction belongs to is marked in the comments as #i.*/
 #include "x86int.h"
-#include <stdlib.h>
+#include <stddef.h>
 
 #if defined(USE_ASM)
 

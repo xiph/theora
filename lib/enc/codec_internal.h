@@ -287,10 +287,10 @@ typedef struct codec_setup_info {
 struct PB_INSTANCE {
   oggpack_buffer *opb;
   theora_info     info;
-  
+
   /* flag to indicate if the headers already have been written */
   int            HeadersWritten;
-  
+
   /* how far do we shift the granulepos to seperate out P frame counts? */
   int             keyframe_granule_shift;
 
@@ -489,14 +489,14 @@ struct PB_INSTANCE {
   ogg_int32_t    fp_quant_Inter_Y_coeffs[64];
   ogg_int32_t    fp_quant_Inter_U_coeffs[64];
   ogg_int32_t    fp_quant_Inter_V_coeffs[64];
-  
+
   ogg_int32_t    fp_quant_Y_round[64];
   ogg_int32_t    fp_quant_U_round[64];
   ogg_int32_t    fp_quant_V_round[64];
   ogg_int32_t    fp_quant_Inter_Y_round[64];
   ogg_int32_t    fp_quant_Inter_U_round[64];
   ogg_int32_t    fp_quant_Inter_V_round[64];
-  
+
   ogg_int32_t    fp_ZeroBinSize_Y[64];
   ogg_int32_t    fp_ZeroBinSize_U[64];
   ogg_int32_t    fp_ZeroBinSize_V[64];
@@ -517,15 +517,6 @@ struct PB_INSTANCE {
   unsigned char *DataOutputInPtr;
 
   DspFunctions   dsp;  /* Selected functions for this platform */
-
-#ifdef _TH_DEBUG_
-  Q_LIST_ENTRY (*QFragQUAN)[64];           /* Fragment Coefficients
-                                               Array Pointers */
-  Q_LIST_ENTRY (*QFragFREQ)[64];            /* Fragment Coefficients
-                                               Array Pointers */
-  Q_LIST_ENTRY (*QFragTIME)[64];            /* Fragment Coefficients
-                                               Array Pointers */
-#endif
 
 };
 

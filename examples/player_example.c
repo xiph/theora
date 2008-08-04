@@ -567,6 +567,10 @@ int main(int argc,char *const *argv){
 
   /* and now we have it all.  initialize decoders */
   if(theora_p){
+    ti.offset_x=0;
+    ti.offset_y=0;
+    ti.frame_width=ti.width;
+    ti.frame_height=ti.height;
     theora_decode_init(&td,&ti);
     printf("Ogg logical stream %lx is Theora %dx%d %.02f fps",
            to.serialno,ti.width,ti.height,

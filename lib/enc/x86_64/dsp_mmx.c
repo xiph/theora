@@ -32,12 +32,12 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t V128 = 0x008000800080
 
 static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
                   ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine,
-                  ogg_uint32_t ReconPixelsPerLine) 
+                  ogg_uint32_t ReconPixelsPerLine)
 {
   __asm__ __volatile__ (
     "  .balign 16                   \n\t"
 
-    "  pxor        %%mm7, %%mm7     \n\t" 
+    "  pxor        %%mm7, %%mm7     \n\t"
 
     ".rept 8                        \n\t"
     "  movq        (%0), %%mm0      \n\t" /* mm0 = FiltPtr */
@@ -64,20 +64,20 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
        "+r" (ReconPtr),
        "+r" (DctInputPtr)
      : "r" ((ogg_uint64_t)PixelsPerLine),
-       "r" ((ogg_uint64_t)ReconPixelsPerLine) 
+       "r" ((ogg_uint64_t)ReconPixelsPerLine)
      : "memory"
   );
 }
 
 static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
-                      ogg_uint32_t PixelsPerLine) 
+                      ogg_uint32_t PixelsPerLine)
 {
   ogg_uint64_t ppl = PixelsPerLine;
 
   __asm__ __volatile__ (
     "  .balign 16                   \n\t"
 
-    "  pxor        %%mm7, %%mm7     \n\t" 
+    "  pxor        %%mm7, %%mm7     \n\t"
     "  movq        %[V128], %%mm1   \n\t"
 
     ".rept 8                        \n\t"
@@ -107,12 +107,12 @@ static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
 static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
                      unsigned char *ReconPtr2, ogg_int16_t *DctInputPtr,
                      ogg_uint32_t PixelsPerLine,
-                     ogg_uint32_t ReconPixelsPerLine) 
+                     ogg_uint32_t ReconPixelsPerLine)
 {
   __asm__ __volatile__ (
     "  .balign 16                   \n\t"
 
-    "  pxor        %%mm7, %%mm7     \n\t" 
+    "  pxor        %%mm7, %%mm7     \n\t"
 
     ".rept 8                        \n\t"
     "  movq        (%0), %%mm0      \n\t" /* mm0 = FiltPtr */
@@ -149,7 +149,7 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
        "+r" (ReconPtr2),
        "+r" (DctInputPtr)
      : "r" ((ogg_uint64_t)PixelsPerLine),
-       "r" ((ogg_uint64_t)ReconPixelsPerLine) 
+       "r" ((ogg_uint64_t)ReconPixelsPerLine)
      : "memory"
   );
 }
@@ -167,7 +167,7 @@ static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint32_t Stri
     "  pxor        %%mm7, %%mm7     \n\t"
     "  mov         $8, %%rdi        \n\t"
     "1:                             \n\t"
-    "  movq        (%2), %%mm0      \n\t"	/* take 8 bytes */
+    "  movq        (%2), %%mm0      \n\t"       /* take 8 bytes */
     "  movq        %%mm0, %%mm2     \n\t"
 
     "  punpcklbw   %%mm6, %%mm0     \n\t"
@@ -178,11 +178,11 @@ static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint32_t Stri
 
     "  pmaddwd     %%mm0, %%mm0     \n\t"
     "  pmaddwd     %%mm2, %%mm2     \n\t"
-    
+
     "  paddd       %%mm0, %%mm7     \n\t"
     "  paddd       %%mm2, %%mm7     \n\t"
 
-    "  add         %3, %2           \n\t"	/* Inc pointer into src data */
+    "  add         %3, %2           \n\t"       /* Inc pointer into src data */
 
     "  dec         %%rdi            \n\t"
     "  jnz 1b                       \n\t"
@@ -204,7 +204,7 @@ static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint32_t Stri
 
      : "=r" (XSum),
        "=r" (XXSum),
-       "+r" (DataPtr) 
+       "+r" (DataPtr)
      : "r" ((ogg_uint64_t)Stride)
      : "rdi", "memory"
   );
@@ -214,7 +214,7 @@ static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint32_t Stri
 }
 
 static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcStride,
-		                 unsigned char *RefDataPtr, ogg_uint32_t RefStride)
+                                 unsigned char *RefDataPtr, ogg_uint32_t RefStride)
 {
   ogg_uint64_t  XSum;
   ogg_uint64_t  XXSum;
@@ -227,7 +227,7 @@ static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcS
     "  pxor        %%mm7, %%mm7     \n\t"
     "  mov         $8, %%rdi        \n\t"
     "1:                             \n\t"
-    "  movq        (%2), %%mm0      \n\t"	/* take 8 bytes */
+    "  movq        (%2), %%mm0      \n\t"       /* take 8 bytes */
     "  movq        (%3), %%mm1      \n\t"
     "  movq        %%mm0, %%mm2     \n\t"
     "  movq        %%mm1, %%mm3     \n\t"
@@ -245,12 +245,12 @@ static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcS
 
     "  pmaddwd     %%mm0, %%mm0     \n\t"
     "  pmaddwd     %%mm2, %%mm2     \n\t"
-    
+
     "  paddd       %%mm0, %%mm7     \n\t"
     "  paddd       %%mm2, %%mm7     \n\t"
 
-    "  add         %4, %2           \n\t"	/* Inc pointer into src data */
-    "  add         %5, %3           \n\t"	/* Inc pointer into ref data */
+    "  add         %4, %2           \n\t"       /* Inc pointer into src data */
+    "  add         %5, %3           \n\t"       /* Inc pointer into ref data */
 
     "  dec         %%rdi            \n\t"
     "  jnz 1b                       \n\t"
@@ -272,8 +272,8 @@ static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcS
 
      : "=m" (XSum),
        "=m" (XXSum),
-       "+r" (SrcData), 
-       "+r" (RefDataPtr) 
+       "+r" (SrcData),
+       "+r" (RefDataPtr)
      : "r" ((ogg_uint64_t)SrcStride),
        "r" ((ogg_uint64_t)RefStride)
      : "rdi", "memory"
@@ -292,7 +292,6 @@ static void restore_fpu (void)
 
 void dsp_mmx_init(DspFunctions *funcs)
 {
-  TH_DEBUG("setting accelerated x86_64 mmx dsp functions.\n");
   funcs->restore_fpu = restore_fpu;
   funcs->sub8x8 = sub8x8__mmx;
   funcs->sub8x8_128 = sub8x8_128__mmx;

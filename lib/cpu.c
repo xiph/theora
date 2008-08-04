@@ -220,24 +220,6 @@ ogg_uint32_t oc_cpu_flags_get(void){
     /*Implement me.*/
     flags=0;
   }
-# if defined(DEBUG)
-  if(flags){
-    TH_DEBUG("vectorized instruction sets supported:");
-    if(flags&OC_CPU_X86_MMX)TH_DEBUG(" mmx");
-    if(flags&OC_CPU_X86_MMXEXT)TH_DEBUG(" mmxext");
-    if(flags&OC_CPU_X86_SSE)TH_DEBUG(" sse");
-    if(flags&OC_CPU_X86_SSE2)TH_DEBUG(" sse2");
-    if(flags&OC_CPU_X86_3DNOW)TH_DEBUG(" 3dnow");
-    if(flags&OC_CPU_X86_3DNOWEXT)TH_DEBUG(" 3dnowext");
-    if(flags&OC_CPU_X86_PNI)TH_DEBUG(" pni");
-    if(flags&OC_CPU_X86_SSSE3)TH_DEBUG(" ssse3");
-    if(flags&OC_CPU_X86_SSE4_1)TH_DEBUG(" sse4_1");
-    if(flags&OC_CPU_X86_SSE4_2)TH_DEBUG(" sse4_2");
-    if(flags&OC_CPU_X86_SSE4A)TH_DEBUG(" sse4a");
-    if(flags&OC_CPU_X86_SSE5)TH_DEBUG(" sse5");
-    TH_DEBUG("\n");
-  }
-# endif
   return flags;
 }
 #endif

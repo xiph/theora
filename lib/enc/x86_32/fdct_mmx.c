@@ -59,7 +59,7 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  psubsw      %%mm3, %%mm1       \n\t" /* mm1 = is12 - is56 */             \
   "  movq        %%mm0," #temp "    \n\t" /* Save is07 - is34 to free mm0; */ \
   "  paddsw      %%mm3, %%mm3       \n\t"                                     \
-  "  paddsw      %%mm1, %%mm3       \n\t" /* mm3 = is12 + 1s56	= is1256 */   \
+  "  paddsw      %%mm1, %%mm3       \n\t" /* mm3 = is12 + 1s56  = is1256 */   \
                                                                               \
   "  psubsw    " #ip6 ", %%mm7      \n\t" /* mm7 = ip5 - ip6 = id56 */        \
   /* ------------------------------------------------------------------- */   \
@@ -85,7 +85,7 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  pmulhw      %[xC4S4], %%mm3    \n\t" /* mm3 = xC4S4 * ( is0734 +is1256 ) - ( is0734 +is1256 ) */ \
                                                                               \
   "  psrlw       $15, %%mm2         \n\t"                                     \
-  "  paddw       %%mm0, %%mm3       \n\t" /* mm3 = xC4S4 * ( is0734 +is1256 )	 */ \
+  "  paddw       %%mm0, %%mm3       \n\t" /* mm3 = xC4S4 * ( is0734 +is1256 )    */ \
   "  paddw       %%mm2, %%mm3       \n\t" /* Truncate mm3, now it is op[0] */ \
                                                                               \
   "  movq        %%mm3," #ip0 "     \n\t"                                     \
@@ -136,16 +136,16 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  movq        %%mm1, %%mm3       \n\t"                                     \
                                                                               \
   "  pmulhw      %%mm0, %%mm1       \n\t" /* mm0 = xC4S4 * ( is12 - is56 ) - ( is12 - is56 ) */ \
-  "  psrlw       $15, %%mm2         \n\t"				      \
+  "  psrlw       $15, %%mm2         \n\t"                                     \
                                                                               \
   "  paddw       %%mm3, %%mm1       \n\t" /* mm0 = xC4S4 * ( is12 - is56 ) */ \
   "  paddw       %%mm2, %%mm1       \n\t" /* Truncate mm1, now it is icommon_product1 */ \
                                                                               \
   "  movq        %%mm7, %%mm2       \n\t"                                     \
-  "  movq        %%mm7, %%mm3       \n\t"			              \
+  "  movq        %%mm7, %%mm3       \n\t"                                     \
                                                                               \
   "  pmulhw      %%mm0, %%mm7       \n\t" /* mm7 = xC4S4 * ( id12 + id56 ) - ( id12 + id56 ) */ \
-  "  psrlw       $15, %%mm2         \n\t"			              \
+  "  psrlw       $15, %%mm2         \n\t"                                     \
                                                                               \
   "  paddw       %%mm3, %%mm7       \n\t" /* mm7 = xC4S4 * ( id12 + id56 ) */ \
   "  paddw       %%mm2, %%mm7       \n\t" /* Truncate mm7, now it is icommon_product2 */ \
@@ -234,10 +234,10 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  paddw       %%mm6, %%mm7       \n\t" /* mm7 = xC3S5 * irot_input_y */    \
                                                                               \
   "  paddw       %%mm7, %%mm3       \n\t" /* ip5 */                           \
-  "  movq        %%mm3," #ip5 "     \n\t" 
+  "  movq        %%mm3," #ip5 "     \n\t"
 
 #define Transpose_mmx(ip0,ip1,ip2,ip3,ip4,ip5,ip6,ip7,                  \
-		      op0,op1,op2,op3,op4,op5,op6,op7)                  \
+                      op0,op1,op2,op3,op4,op5,op6,op7)                  \
   "  movq      " #ip0 ", %%mm0      \n\t" /* mm0 = a0 a1 a2 a3 */       \
   "  movq      " #ip4 ", %%mm4      \n\t" /* mm4 = e4 e5 e6 e7 */       \
   "  movq      " #ip1 ", %%mm1      \n\t" /* mm1 = b0 b1 b2 b3 */       \
@@ -251,9 +251,9 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  movq        %%mm4, %%mm1       \n\t" /* mm1 = e3 e2 e1 e0 */       \
   "  punpcklwd   %%mm5, %%mm4       \n\t" /* mm4 = f1 e1 f0 e0 */       \
   "  movq        %%mm0," #op0 "     \n\t" /* save a3 a2 a1 a0  */       \
-  "  punpckhwd	 %%mm5, %%mm1       \n\t" /* mm1 = f3 e3 f2 e2 */       \
+  "  punpckhwd   %%mm5, %%mm1       \n\t" /* mm1 = f3 e3 f2 e2 */       \
   "  movq        %%mm6, %%mm0       \n\t" /* mm0 = g3 g2 g1 g0 */       \
-  "  punpcklwd	 %%mm7, %%mm6       \n\t" /* mm6 = h1 g1 h0 g0 */       \
+  "  punpcklwd   %%mm7, %%mm6       \n\t" /* mm6 = h1 g1 h0 g0 */       \
   "  movq        %%mm4, %%mm5       \n\t" /* mm5 = f1 e1 f0 e0 */       \
   "  punpckldq   %%mm6, %%mm4       \n\t" /* mm4 = h0 g0 f0 e0 = MM4 */ \
   "  punpckhdq   %%mm6, %%mm5       \n\t" /* mm5 = h1 g1 f1 e1 = MM5 */ \
@@ -285,7 +285,7 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131
   "  movq        %%mm2," #op2 "     \n\t"
 
 
-/* This performs a 2D Forward DCT on an 8x8 block with short 
+/* This performs a 2D Forward DCT on an 8x8 block with short
    coefficients. We try to do the truncation to match the C
    version. */
 static void fdct_short__mmx ( ogg_int16_t *InputData, ogg_int16_t *OutputData)
@@ -299,23 +299,23 @@ static void fdct_short__mmx ( ogg_int16_t *InputData, ogg_int16_t *OutputData)
      * we will transpose the block of data to two 4x8 blocks???
      */
     Transpose_mmx (  (%0), 16(%0), 32(%0), 48(%0),  8(%0), 24(%0), 40(%0), 56(%0),
-		     (%1), 16(%1), 32(%1), 48(%1),  8(%1), 24(%1), 40(%1), 56(%1))
+                     (%1), 16(%1), 32(%1), 48(%1),  8(%1), 24(%1), 40(%1), 56(%1))
     Fdct_mmx      (  (%1), 16(%1), 32(%1), 48(%1),  8(%1), 24(%1), 40(%1), 56(%1), (%2))
 
     Transpose_mmx (64(%0), 80(%0), 96(%0),112(%0), 72(%0), 88(%0),104(%0),120(%0),
-		   64(%1), 80(%1), 96(%1),112(%1), 72(%1), 88(%1),104(%1),120(%1))
+                   64(%1), 80(%1), 96(%1),112(%1), 72(%1), 88(%1),104(%1),120(%1))
     Fdct_mmx      (64(%1), 80(%1), 96(%1),112(%1), 72(%1), 88(%1),104(%1),120(%1), (%2))
 
     Transpose_mmx ( 0(%1), 16(%1), 32(%1), 48(%1), 64(%1), 80(%1), 96(%1),112(%1),
-		    0(%1), 16(%1), 32(%1), 48(%1), 64(%1), 80(%1), 96(%1),112(%1))
+                    0(%1), 16(%1), 32(%1), 48(%1), 64(%1), 80(%1), 96(%1),112(%1))
     Fdct_mmx      ( 0(%1), 16(%1), 32(%1), 48(%1), 64(%1), 80(%1), 96(%1),112(%1), (%2))
 
     Transpose_mmx ( 8(%1), 24(%1), 40(%1), 56(%1), 72(%1), 88(%1),104(%1),120(%1),
-		    8(%1), 24(%1), 40(%1), 56(%1), 72(%1), 88(%1),104(%1),120(%1))
+                    8(%1), 24(%1), 40(%1), 56(%1), 72(%1), 88(%1),104(%1),120(%1))
     Fdct_mmx      ( 8(%1), 24(%1), 40(%1), 56(%1), 72(%1), 88(%1),104(%1),120(%1), (%2))
 
     "  emms                         \n\t"
-    
+
     : "+r" (InputData),
       "+r" (OutputData)
     : "r" (temp),
@@ -333,7 +333,6 @@ static void fdct_short__mmx ( ogg_int16_t *InputData, ogg_int16_t *OutputData)
 /* install our implementation in the function table */
 void dsp_mmx_fdct_init(DspFunctions *funcs)
 {
-  TH_DEBUG("enabling accelerated x86_32 mmx fdct function.\n");
   funcs->fdct_short = fdct_short__mmx;
 }
 

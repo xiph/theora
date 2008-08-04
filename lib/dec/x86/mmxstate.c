@@ -19,7 +19,7 @@
   Originally written by Rudolf Marek.*/
 #include "x86int.h"
 #include "../../internal.h"
-#include <stdlib.h>
+#include <stddef.h>
 
 #if defined(USE_ASM)
 

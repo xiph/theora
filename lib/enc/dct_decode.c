@@ -65,15 +65,6 @@ static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
   /* Set up pointer into the quantisation buffer. */
   pbi->quantized_list = &pbi->QFragData[FragmentNumber][0];
 
-#ifdef _TH_DEBUG_
- {
-   int i;
-   for(i=0;i<64;i++)
-     pbi->QFragFREQ[FragmentNumber][dezigzag_index[i]]= 
-       pbi->quantized_list[i] * pbi->dequant_coeffs[i];
- }
-#endif
-
   /* Invert quantisation and DCT to get pixel data. */
   switch(pbi->FragCoefEOB[FragmentNumber]){
   case 0:case 1:
@@ -88,14 +79,6 @@ static void ExpandKFBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber ){
   default:
     dsp_IDctSlow(pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
   }
-
-#ifdef _TH_DEBUG_
- {
-   int i;
-   for(i=0;i<64;i++)
-     pbi->QFragTIME[FragmentNumber][i]= pbi->ReconDataBuffer[i];
- }
-#endif
 
   /* Convert fragment number to a pixel offset in a reconstruction buffer. */
   ReconPixelIndex = pbi->recon_pixel_index_table[FragmentNumber];
@@ -148,13 +131,13 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber){
 
     /* Select appropriate dequantiser matrix. */
     if ( pbi->CodingMode == CODE_INTRA )
-      if ( FragmentNumber < 
+      if ( FragmentNumber <
                 (ogg_int32_t)(pbi->YPlaneFragments + pbi->UVPlaneFragments) )
         pbi->dequant_coeffs = pbi->dequant_U_coeffs;
       else
         pbi->dequant_coeffs = pbi->dequant_V_coeffs;
     else
-      if ( FragmentNumber < 
+      if ( FragmentNumber <
                 (ogg_int32_t)(pbi->YPlaneFragments + pbi->UVPlaneFragments) )
         pbi->dequant_coeffs = pbi->dequant_InterU_coeffs;
       else
@@ -163,15 +146,6 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber){
 
   /* Set up pointer into the quantisation buffer. */
   pbi->quantized_list = &pbi->QFragData[FragmentNumber][0];
-
-#ifdef _TH_DEBUG_
- {
-   int i;
-   for(i=0;i<64;i++)
-     pbi->QFragFREQ[FragmentNumber][dezigzag_index[i]]= 
-       pbi->quantized_list[i] * pbi->dequant_coeffs[i];
- }
-#endif
 
   /* Invert quantisation and DCT to get pixel data. */
   switch(pbi->FragCoefEOB[FragmentNumber]){
@@ -187,14 +161,6 @@ static void ExpandBlock ( PB_INSTANCE *pbi, ogg_int32_t FragmentNumber){
   default:
     dsp_IDctSlow(pbi->dsp, pbi->quantized_list, pbi->dequant_coeffs, pbi->ReconDataBuffer );
   }
-
-#ifdef _TH_DEBUG_
- {
-   int i;
-   for(i=0;i<64;i++)
-     pbi->QFragTIME[FragmentNumber][i]= pbi->ReconDataBuffer[i];
- }
-#endif
 
   /* Convert fragment number to a pixel offset in a reconstruction buffer. */
   ReconPixelIndex = pbi->recon_pixel_index_table[FragmentNumber];
@@ -646,8 +612,8 @@ void ClearDownQFragData(PB_INSTANCE *pbi){
 }
 
 static void loop_filter_h(unsigned char * PixelPtr,
-			  ogg_int32_t LineLength,
-			  ogg_int16_t *BoundingValuePtr){
+                          ogg_int32_t LineLength,
+                          ogg_int16_t *BoundingValuePtr){
   ogg_int32_t j;
   ogg_int32_t FiltVal;
   PixelPtr-=2;
@@ -669,8 +635,8 @@ static void loop_filter_h(unsigned char * PixelPtr,
 }
 
 static void loop_filter_v(unsigned char * PixelPtr,
-			  ogg_int32_t LineLength,
-			  ogg_int16_t *BoundingValuePtr){
+                          ogg_int32_t LineLength,
+                          ogg_int16_t *BoundingValuePtr){
   ogg_int32_t j;
   ogg_int32_t FiltVal;
   PixelPtr -= 2*LineLength;
@@ -702,7 +668,7 @@ static void LoopFilter__c(PB_INSTANCE *pbi, int FLimit){
   SetupBoundingValueArray_Generic(BoundingValues, FLimit);
 
   for ( j = 0; j < 3 ; j++){
-    ogg_uint32_t *bp_begin = bp; 
+    ogg_uint32_t *bp_begin = bp;
     ogg_uint32_t *bp_end;
     int stride;
     int h;
@@ -719,23 +685,23 @@ static void LoopFilter__c(PB_INSTANCE *pbi, int FLimit){
       stride = pbi->UVStride;
       break;
     }
-    
+
     while(bp<bp_end){
       ogg_uint32_t *bp_left = bp;
       ogg_uint32_t *bp_right = bp + h;
       while(bp<bp_right){
-	if(cp[0]){
-	  if(bp>bp_left)
-	    loop_filter_h(&pbi->LastFrameRecon[bp[0]],stride,bvp);
-	  if(bp_left>bp_begin)
-	    loop_filter_v(&pbi->LastFrameRecon[bp[0]],stride,bvp);
-	  if(bp+1<bp_right && !cp[1])
-	    loop_filter_h(&pbi->LastFrameRecon[bp[0]]+8,stride,bvp);
-	  if(bp+h<bp_end && !cp[h])
-	    loop_filter_v(&pbi->LastFrameRecon[bp[h]],stride,bvp);
-	}
-	bp++;
-	cp++;
+        if(cp[0]){
+          if(bp>bp_left)
+            loop_filter_h(&pbi->LastFrameRecon[bp[0]],stride,bvp);
+          if(bp_left>bp_begin)
+            loop_filter_v(&pbi->LastFrameRecon[bp[0]],stride,bvp);
+          if(bp+1<bp_right && !cp[1])
+            loop_filter_h(&pbi->LastFrameRecon[bp[0]]+8,stride,bvp);
+          if(bp+h<bp_end && !cp[h])
+            loop_filter_v(&pbi->LastFrameRecon[bp[h]],stride,bvp);
+        }
+        bp++;
+        cp++;
       }
     }
   }
@@ -842,7 +808,7 @@ void ReconRefFrames (PB_INSTANCE *pbi){
       FragsDown = pbi->VFragments >> 1;
       break;
     /*case 2:  v */
-    default:    
+    default:
       FromFragment = pbi->YPlaneFragments + pbi->UVPlaneFragments;
       ToFragment = pbi->YPlaneFragments + (2 * pbi->UVPlaneFragments) ;
       FragsAcross = pbi->HFragments >> 1;
@@ -949,94 +915,6 @@ void ReconRefFrames (PB_INSTANCE *pbi){
   /* Apply a loop filter to edge pixels of updated blocks */
   dsp_LoopFilter(pbi->dsp, pbi, pbi->quant_info.loop_filter_limits[pbi->FrameQIndex]);
 
-#ifdef _TH_DEBUG_
-    {
-      int x,y,i,j,k,xn,yn,stride;
-      int plane;
-      int buf;
-
-      /* dump fragment DCT components */
-      for(plane=0;plane<3;plane++){
-	char *plstr;
-	int offset;
-	switch(plane){
-	case 0:
-	  plstr="Y";
-	  xn = pbi->HFragments;
-	  yn = pbi->VFragments;
-	  offset = 0; 
-	  stride = pbi->YStride;
-	  break;
-	case 1:
-	  plstr="U";
-	  xn = pbi->HFragments>>1;
-	  yn = pbi->VFragments>>1;
-	  offset = pbi->VFragments * pbi->HFragments;	
-	  stride = pbi->UVStride;
-	  break;
-	case 2:
-	  plstr="V";
-	  xn = pbi->HFragments>>1;
-	  yn = pbi->VFragments>>1;
-	  offset = pbi->VFragments * pbi->HFragments + 
-	    ((pbi->VFragments * pbi->HFragments) >> 2);
-	  stride = pbi->UVStride;
-	  break;
-	}
-	for(y=0;y<yn;y++){
-	  for(x=0;x<xn;x++,i++){
-	    
-	    for(buf=0;buf<3;buf++){
-	      Q_LIST_ENTRY (*ptr)[64];
-	      char *bufn;
-	      
-	      switch(buf){
-	      case 0:
-		bufn = "coded";
-		ptr = pbi->QFragQUAN;
-		break;
-	      case 1:
-		bufn = "coeff";
-		ptr = pbi->QFragFREQ;
-		break;
-	      case 2:
-		bufn = "idct";
-		ptr = pbi->QFragTIME;
-		break;
-	      }
-	      
-	      i = offset + y*xn + x;
-	      
-	      TH_DEBUG("%s %s [%d][%d] = {",bufn,plstr,x,y);
-	      if ( !pbi->display_fragments[i] ) 
-		TH_DEBUG(" not coded }\n");
-	      else{
-		int l=0;
-		for(j=0;j<8;j++){
-		  TH_DEBUG("\n   ");
-		  for(k=0;k<8;k++,l++){
-		    TH_DEBUG("%d ",ptr[i][l]);
-		  }
-		}
-		TH_DEBUG(" }\n");
-	      }
-	    }
-	    
-	    /* and the loop filter output, which is a flat struct */
-	    TH_DEBUG("recon %s [%d][%d] = {",plstr,x,y);
-	    for(j=0;j<8;j++){
-	      int l = pbi->recon_pixel_index_table[i] + j*stride;
-	      TH_DEBUG("\n   ");
-	      for(k=0;k<8;k++,l++)
-		TH_DEBUG("%d ", pbi->LastFrameRecon[l]);
-	    }
-	    TH_DEBUG(" }\n\n");
-	  }
-	}
-      }
-    }
-#endif
-
   /* We may need to update the UMV border */
   UpdateUMVBorder(pbi, pbi->LastFrameRecon);
 
@@ -1054,7 +932,7 @@ void dsp_dct_decode_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)
   funcs->LoopFilter = LoopFilter__c;
 #if defined(USE_ASM)
   // Todo: Port the dct for MSC one day.
-#if !defined (_MSC_VER)  
+#if !defined (_MSC_VER)
   if (cpu_flags & OC_CPU_X86_MMX) {
     dsp_mmx_dct_decode_init(funcs);
   }

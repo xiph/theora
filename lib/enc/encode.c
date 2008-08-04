@@ -28,10 +28,10 @@
 #define HIGHBITDUPPED(X) (((ogg_int16_t) X)  >> 15)
 
 static ogg_uint32_t QuadCodeComponent ( CP_INSTANCE *cpi,
-					ogg_uint32_t FirstSB,
-					ogg_uint32_t SBRows,
-					ogg_uint32_t SBCols,
-					ogg_uint32_t PixelsPerLine){
+                                        ogg_uint32_t FirstSB,
+                                        ogg_uint32_t SBRows,
+                                        ogg_uint32_t SBCols,
+                                        ogg_uint32_t PixelsPerLine){
 
   ogg_int32_t   FragIndex;      /* Fragment number */
   ogg_uint32_t  MB, B;          /* Macro-Block, Block indices */
@@ -49,7 +49,7 @@ static ogg_uint32_t QuadCodeComponent ( CP_INSTANCE *cpi,
     for ( SBcol=0; SBcol<SBCols; SBcol++ ) {
       /* Check its four Macro-Blocks  */
       /* 'Macro-Block' is a misnomer in the chroma planes; this is
-	 really just a Hilbert curve iterator */
+         really just a Hilbert curve iterator */
       for ( MB=0; MB<4; MB++ ) {
 
         if ( QuadMapToMBTopLeft(cpi->pb.BlockMap,SB,MB) >= 0 ) {
@@ -359,31 +359,15 @@ static void PackModes (CP_INSTANCE *cpi) {
       /* Add the appropriate mode entropy token. */
       ModeIndex = SchemeList[cpi->ModeList[i]];
       oggpackB_write( opb, ModeBitPatterns[ModeIndex],
-		      (ogg_uint32_t)ModeBitLengths[ModeIndex] );
+                      (ogg_uint32_t)ModeBitLengths[ModeIndex] );
     }
   }else{
     /* Fall back to MODE_BITS per entry */
     for ( i = 0; i < cpi->ModeListCount; i++)
       /* Add the appropriate mode entropy token. */
-      oggpackB_write( opb, cpi->ModeList[i], MODE_BITS  );  
+      oggpackB_write( opb, cpi->ModeList[i], MODE_BITS  );
   }
-  
-#ifdef _TH_DEBUG_
-  TH_DEBUG("mode encode scheme = %d\n",(int)BestScheme);
-  if ( BestScheme == 0 ) {
-    TH_DEBUG("mode scheme list = { ");
-    for ( j = 0; j < MAX_MODES; j++ )
-      TH_DEBUG("%d ",(int)BestModeSchemes[j]);
-    TH_DEBUG("}\n");
-  }
-  TH_DEBUG("mode list = { ");
-  for ( i = 0; i < cpi->ModeListCount; i++) {
-    if((i&0x1f)==0)
-      TH_DEBUG("\n   ");
-    TH_DEBUG("%d ",cpi->ModeList[i]);
-  }
-  TH_DEBUG("\n}\n");
-#endif
+
 }
 
 static void PackMotionVectors (CP_INSTANCE *cpi) {
@@ -422,15 +406,6 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
                      (ogg_uint32_t)MvBitsPtr[cpi->MVList[i].y] );
   }
 
-#ifdef _TH_DEBUG_
-  TH_DEBUG("motion vectors = {");
-  for ( i = 0; i < (ogg_int32_t)cpi->MvListCount; i++ ) {
-    if((i&0x7)==0)
-      TH_DEBUG("\n   ");
-    TH_DEBUG("%+03d,%+03d ",cpi->MVList[i].x,cpi->MVList[i].y);
-  }
-  TH_DEBUG("\n}\n");
-#endif
 }
 
 static void PackEOBRun( CP_INSTANCE *cpi) {
@@ -905,17 +880,6 @@ static ogg_uint32_t QuadCodeDisplayFragments (CP_INSTANCE *cpi) {
     }
   }
 
-#ifdef _TH_DEBUG_
- {
-   int j;
-   for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) {
-     FragIndex = cpi->pb.CodedBlockList[i];
-     for(j=0;j<64;j++)
-       cpi->pb.QFragQUAN[FragIndex][j] = cpi->pb.QFragData[FragIndex][j];
-   }
- }
-#endif
-
   /* Pack DC tokens and adjust the ones we couldn't predict 2d */
   for ( i = 0; i < cpi->pb.CodedBlockIndex; i++ ) {
     /* Get the linear index for the current coded fragment. */
@@ -1013,7 +977,7 @@ ogg_uint32_t PickIntra( CP_INSTANCE *cpi,
           cpi->pb.FragCodingMethod[cpi->pb.YPlaneFragments +
                                   cpi->pb.UVPlaneFragments + UVFragOffset] =
             cpi->MBCodingMode;
-	}
+        }
       }
 
       /* Next Super-Block */
@@ -1391,7 +1355,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
           cpi->MBCodingMode = CODE_INTER_PLUS_MV;
           SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
-				    VFragIndex,&InterMVect);
+                                    VFragIndex,&InterMVect);
 
           /* Update Prior last mv with last mv */
           PriorLastInterMVect.x = LastInterMVect.x;
@@ -1407,7 +1371,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
           cpi->MBCodingMode = CODE_GOLDEN_MV;
           SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
-				    VFragIndex,&GFMVect);
+                                    VFragIndex,&GFMVect);
 
           /* Note last inter GF MV for future use */
           LastGFMVect.x = GFMVect.x;
@@ -1463,7 +1427,7 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 
           cpi->MBCodingMode = CODE_INTRA;
           SetMBMotionVectorsAndMode(cpi,YFragIndex,UFragIndex,
-				    VFragIndex,&ZeroVect);
+                                    VFragIndex,&ZeroVect);
         }
 
 
@@ -1487,17 +1451,11 @@ ogg_uint32_t PickModes(CP_INSTANCE *cpi,
 void WriteFrameHeader( CP_INSTANCE *cpi) {
   ogg_uint32_t i;
   oggpack_buffer *opb=cpi->oggbuffer;
-
-  TH_DEBUG("\n>>>> beginning frame %ld\n\n",dframe);
-
   /* Output the frame type (base/key frame or inter frame) */
   oggpackB_write( opb, cpi->pb.FrameType, 1 );
-  TH_DEBUG("frame type = video, %s\n",cpi->pb.FrameType?"predicted":"key");
-  
   /* Write out details of the current value of Q... variable resolution. */
   for ( i = 0; i < Q_TABLE_SIZE; i++ ) {
     if ( cpi->pb.ThisFrameQualityValue == cpi->pb.QThreshTable[i] ) {
-      TH_DEBUG("frame quality = { %d }\n",i);
       oggpackB_write( opb, i, 6 );
       break;
     }

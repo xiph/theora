@@ -26,18 +26,13 @@
 #include "dsp.h"
 #include "codec_internal.h"
 
-#ifdef _TH_DEBUG_
-FILE *debugout=NULL;
-long dframe=0;
-#endif
-
 #define A_TABLE_SIZE        29
 #define DF_CANDIDATE_WINDOW 5
 
 /*
- * th_quant_info for VP3 
+ * th_quant_info for VP3
  */
- 
+
 /*The default quantization parameters used by VP3.1.*/
 static const int OC_VP31_RANGE_SIZES[1]={63};
 static const th_quant_base OC_VP31_BASES_INTRA_Y[2]={
@@ -897,10 +892,6 @@ int theora_encode_init(theora_state *th, theora_info *c){
 
   CP_INSTANCE *cpi;
 
-#ifdef _TH_DEBUG_
-  debugout=fopen("theoraenc-debugout.txt","w");
-#endif
-
   memset(th, 0, sizeof(*th));
   /*Currently only the 4:2:0 format is supported.*/
   if(c->pixelformat!=OC_PF_420)return OC_IMPL;
@@ -1043,7 +1034,7 @@ int theora_encode_init(theora_state *th, theora_info *c){
      current clip. */
   cpi->ThisIsFirstFrame = 1;
   cpi->readyflag = 1;
-  
+
   cpi->pb.HeadersWritten = 0;
   /*We overload this flag to track header output.*/
   cpi->doneflag=-3;
@@ -1111,7 +1102,7 @@ int theora_encode_YUVin(theora_state *t,
     if(cpi->LastKeyFrame >= (ogg_uint32_t)
        cpi->pb.info.keyframe_frequency_force)
       cpi->ThisIsKeyFrame = 1;
-    
+
     if ( cpi->ThisIsKeyFrame ) {
       CompressKeyFrame(cpi);
       cpi->ThisIsKeyFrame = 0;
@@ -1130,10 +1121,6 @@ int theora_encode_YUVin(theora_state *t,
   t->granulepos=
     ((cpi->CurrentFrame - cpi->LastKeyFrame)<<cpi->pb.keyframe_granule_shift)+
     cpi->LastKeyFrame - 1;
-
-#ifdef _TH_DEBUG_
-  dframe++;
-#endif  
 
   return 0;
 }
@@ -1170,7 +1157,7 @@ static void _tp_writebuffer(oggpack_buffer *opb, const char *buf, const long len
 
 static void _tp_writelsbint(oggpack_buffer *opb, long value)
 {
-  oggpackB_write(opb, value&0xFF, 8); 
+  oggpackB_write(opb, value&0xFF, 8);
   oggpackB_write(opb, value>>8&0xFF, 8);
   oggpackB_write(opb, value>>16&0xFF, 8);
   oggpackB_write(opb, value>>24&0xFF, 8);
@@ -1197,7 +1184,7 @@ int theora_encode_header(theora_state *t, ogg_packet *op){
   /* Applications use offset_y to mean offset from the top of the image; the
    * meaning in the bitstream is the opposite (from the bottom). Transform.
    */
-  offset_y = cpi->pb.info.height - cpi->pb.info.frame_height - 
+  offset_y = cpi->pb.info.height - cpi->pb.info.frame_height -
     cpi->pb.info.offset_y;
   oggpackB_write(cpi->oggbuffer,offset_y,8);
 
@@ -1321,11 +1308,6 @@ static void theora_encode_clear (theora_state  *th){
     _ogg_free(cpi);
   }
 
-#ifdef _TH_DEBUG_
-  fclose(debugout);
-  debugout=NULL;
-#endif
-
   memset(th,0,sizeof(*th));
 }
 
@@ -1377,59 +1359,59 @@ static int theora_encode_control(theora_state *th,int req,
   CP_INSTANCE *cpi;
   PB_INSTANCE *pbi;
   int value;
-  
+
   if(th == NULL)
     return TH_EFAULT;
 
   cpi = th->internal_encode;
   pbi = &cpi->pb;
-  
+
   switch(req) {
     case TH_ENCCTL_SET_QUANT_PARAMS:
       if( ( buf==NULL&&buf_sz!=0 )
-  	   || ( buf!=NULL&&buf_sz!=sizeof(th_quant_info) )
-  	   || cpi->pb.HeadersWritten ){
+           || ( buf!=NULL&&buf_sz!=sizeof(th_quant_info) )
+           || cpi->pb.HeadersWritten ){
         return TH_EINVAL;
       }
-      
+
       memcpy(&pbi->quant_info, buf, sizeof(th_quant_info));
       InitQTables(pbi);
-      
+
       return 0;
     case TH_ENCCTL_SET_VP3_COMPATIBLE:
       if(cpi->pb.HeadersWritten)
         return TH_EINVAL;
-      
+
       memcpy(&pbi->quant_info, &TH_VP31_QUANT_INFO, sizeof(th_quant_info));
       InitQTables(pbi);
-      
+
       return 0;
     case TH_ENCCTL_SET_SPLEVEL:
       if(buf == NULL || buf_sz != sizeof(int))
         return TH_EINVAL;
-      
+
       memcpy(&value, buf, sizeof(int));
-            
+
       switch(value) {
         case 0:
           cpi->MotionCompensation = 1;
           pbi->info.quick_p = 0;
         break;
-        
+
         case 1:
           cpi->MotionCompensation = 1;
           pbi->info.quick_p = 1;
         break;
-        
+
         case 2:
           cpi->MotionCompensation = 0;
           pbi->info.quick_p = 1;
         break;
-        
+
         default:
-          return TH_EINVAL;    
+          return TH_EINVAL;
       }
-      
+
       return 0;
     case TH_ENCCTL_GET_SPLEVEL_MAX:
       value = 2;

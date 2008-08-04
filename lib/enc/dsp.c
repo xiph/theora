@@ -72,7 +72,7 @@ static void sub8x8_128__c (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
 static void sub8x8avg2__c (unsigned char *FiltPtr, unsigned char *ReconPtr1,
                      unsigned char *ReconPtr2, ogg_int16_t *DctInputPtr,
                      ogg_uint32_t PixelsPerLine,
-                     ogg_uint32_t ReconPixelsPerLine) 
+                     ogg_uint32_t ReconPixelsPerLine)
 {
   int i;
 
@@ -100,12 +100,12 @@ static ogg_uint32_t row_sad8__c (unsigned char *Src1, unsigned char *Src2)
   ogg_uint32_t SadValue;
   ogg_uint32_t SadValue1;
 
-  SadValue    = DSP_OP_ABS_DIFF (Src1[0], Src2[0]) + 
+  SadValue    = DSP_OP_ABS_DIFF (Src1[0], Src2[0]) +
                 DSP_OP_ABS_DIFF (Src1[1], Src2[1]) +
                 DSP_OP_ABS_DIFF (Src1[2], Src2[2]) +
                 DSP_OP_ABS_DIFF (Src1[3], Src2[3]);
 
-  SadValue1   = DSP_OP_ABS_DIFF (Src1[4], Src2[4]) + 
+  SadValue1   = DSP_OP_ABS_DIFF (Src1[4], Src2[4]) +
                 DSP_OP_ABS_DIFF (Src1[5], Src2[5]) +
                 DSP_OP_ABS_DIFF (Src1[6], Src2[6]) +
                 DSP_OP_ABS_DIFF (Src1[7], Src2[7]);
@@ -132,7 +132,7 @@ static ogg_uint32_t col_sad8x8__c (unsigned char *Src1, unsigned char *Src2,
     SadValue[5] += abs(Src1[5] - Src2[5]);
     SadValue[6] += abs(Src1[6] - Src2[6]);
     SadValue[7] += abs(Src1[7] - Src2[7]);
-    
+
     Src1 += stride;
     Src2 += stride;
   }
@@ -146,18 +146,18 @@ static ogg_uint32_t col_sad8x8__c (unsigned char *Src1, unsigned char *Src2,
     SadValue2[5] += abs(Src1[5] - Src2[5]);
     SadValue2[6] += abs(Src1[6] - Src2[6]);
     SadValue2[7] += abs(Src1[7] - Src2[7]);
-    
+
     Src1 += stride;
     Src2 += stride;
   }
-    
+
   for ( i = 0; i < 8; i++ ){
     if ( SadValue[i] > MaxSad )
       MaxSad = SadValue[i];
     if ( SadValue2[i] > MaxSad )
       MaxSad = SadValue2[i];
   }
-    
+
   return MaxSad;
 }
 
@@ -186,7 +186,7 @@ static ogg_uint32_t sad8x8__c (unsigned char *ptr1, ogg_uint32_t stride1,
 }
 
 static ogg_uint32_t sad8x8_thres__c (unsigned char *ptr1, ogg_uint32_t stride1,
-                 unsigned char *ptr2, ogg_uint32_t stride2, 
+                 unsigned char *ptr2, ogg_uint32_t stride2,
              ogg_uint32_t thres)
 {
   ogg_uint32_t  i;
@@ -300,23 +300,23 @@ static ogg_uint32_t inter8x8_err__c (unsigned char *SrcData, ogg_uint32_t SrcStr
     DiffVal = DSP_OP_DIFF (SrcData[3], RefDataPtr[3]);
     XSum += DiffVal;
     XXSum += DiffVal*DiffVal;
-        
+
     DiffVal = DSP_OP_DIFF (SrcData[4], RefDataPtr[4]);
     XSum += DiffVal;
     XXSum += DiffVal*DiffVal;
-        
+
     DiffVal = DSP_OP_DIFF (SrcData[5], RefDataPtr[5]);
     XSum += DiffVal;
     XXSum += DiffVal*DiffVal;
-        
+
     DiffVal = DSP_OP_DIFF (SrcData[6], RefDataPtr[6]);
     XSum += DiffVal;
     XXSum += DiffVal*DiffVal;
-        
+
     DiffVal = DSP_OP_DIFF (SrcData[7], RefDataPtr[7]);
     XSum += DiffVal;
     XXSum += DiffVal*DiffVal;
-        
+
     /* Step to next row of block. */
     SrcData += SrcStride;
     RefDataPtr += RefStride;
@@ -382,7 +382,6 @@ static void nop (void) { /* NOP */ }
 
 void dsp_init(DspFunctions *funcs)
 {
-  /* TH_DEBUG("setting dsp functions to C defaults.\n"); */
   funcs->save_fpu = nop;
   funcs->restore_fpu = nop;
   funcs->sub8x8 = sub8x8__c;

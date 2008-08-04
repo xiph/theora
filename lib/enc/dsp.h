@@ -36,19 +36,19 @@ typedef struct
   void   (*sub8x8avg2)     (unsigned char *FiltPtr, unsigned char *ReconPtr1,
                      unsigned char *ReconPtr2, ogg_int16_t *DctInputPtr,
                ogg_uint32_t PixelsPerLine,
-               ogg_uint32_t ReconPixelsPerLine); 
+               ogg_uint32_t ReconPixelsPerLine);
 
-  void   (*copy8x8)      (unsigned char *src, unsigned char *dest, 
+  void   (*copy8x8)      (unsigned char *src, unsigned char *dest,
                      ogg_uint32_t stride);
 
-  void   (*recon_intra8x8)    (unsigned char *ReconPtr, ogg_int16_t *ChangePtr, 
+  void   (*recon_intra8x8)    (unsigned char *ReconPtr, ogg_int16_t *ChangePtr,
                      ogg_uint32_t LineStep);
 
-  void   (*recon_inter8x8)    (unsigned char *ReconPtr, unsigned char *RefPtr, 
+  void   (*recon_inter8x8)    (unsigned char *ReconPtr, unsigned char *RefPtr,
                      ogg_int16_t *ChangePtr, ogg_uint32_t LineStep);
 
-  void   (*recon_inter8x8_half)  (unsigned char *ReconPtr, unsigned char *RefPtr1, 
-           unsigned char *RefPtr2, ogg_int16_t *ChangePtr, 
+  void   (*recon_inter8x8_half)  (unsigned char *ReconPtr, unsigned char *RefPtr1,
+           unsigned char *RefPtr2, ogg_int16_t *ChangePtr,
          ogg_uint32_t LineStep);
 
   void   (*fdct_short)          (ogg_int16_t *InputData, ogg_int16_t *OutputData);
@@ -62,7 +62,7 @@ typedef struct
                unsigned char *ptr2, ogg_uint32_t stride2);
 
   ogg_uint32_t (*sad8x8_thres)  (unsigned char *ptr1, ogg_uint32_t stride1,
-                unsigned char *ptr2, ogg_uint32_t stride2, 
+                unsigned char *ptr2, ogg_uint32_t stride2,
          ogg_uint32_t thres);
 
   ogg_uint32_t (*sad8x8_xy2_thres)(unsigned char *SrcData, ogg_uint32_t SrcStride,
@@ -78,19 +78,19 @@ typedef struct
   ogg_uint32_t (*inter8x8_err_xy2)(unsigned char *SrcData, ogg_uint32_t SrcStride,
                      unsigned char *RefDataPtr1,
                unsigned char *RefDataPtr2, ogg_uint32_t RefStride);
-               
+
   void (*LoopFilter) (PB_INSTANCE *pbi, int FLimit);
 
   void (*FilterVert) (unsigned char * PixelPtr,
                  ogg_int32_t LineLength, ogg_int16_t *BoundingValuePtr);
 
-   void (*IDctSlow) (ogg_int16_t *InputData, 
+   void (*IDctSlow) (ogg_int16_t *InputData,
                   ogg_int16_t *QuantMatrix, ogg_int16_t *OutputData);
 
-    void (*IDct3) (ogg_int16_t *InputData, 
+    void (*IDct3) (ogg_int16_t *InputData,
                    ogg_int16_t *QuantMatrix, ogg_int16_t *OutputData);
-                   
-    void (*IDct10) (ogg_int16_t *InputData, 
+
+    void (*IDct10) (ogg_int16_t *InputData,
                   ogg_int16_t *QuantMatrix, ogg_int16_t *OutputData);
 } DspFunctions;
 

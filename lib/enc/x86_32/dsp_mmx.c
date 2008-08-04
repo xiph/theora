@@ -50,12 +50,12 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t V128 = 0x008000800080
 
 static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
                   ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine,
-                  ogg_uint32_t ReconPixelsPerLine) 
+                  ogg_uint32_t ReconPixelsPerLine)
 {
   __asm__ __volatile__ (
     "  .p2align 4                   \n\t"
 
-    "  pxor        %%mm7, %%mm7     \n\t" 
+    "  pxor        %%mm7, %%mm7     \n\t"
     SUB_LOOP
     SUB_LOOP
     SUB_LOOP
@@ -68,7 +68,7 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
        "+r" (ReconPtr),
        "+r" (DctInputPtr)
      : "m" (PixelsPerLine),
-       "m" (ReconPixelsPerLine) 
+       "m" (ReconPixelsPerLine)
      : "memory"
   );
 }
@@ -86,16 +86,16 @@ static void sub8x8__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr,
   "  movq        %%mm2, 8(%1)     \n\t" /* write answer out */                \
   /* Increment pointers */                                                    \
   "  add         $16, %1           \n\t"                                      \
-  "  add         %2, %0           \n\t"  
+  "  add         %2, %0           \n\t"
 
 
 static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
-                      ogg_uint32_t PixelsPerLine) 
+                      ogg_uint32_t PixelsPerLine)
 {
   __asm__ __volatile__ (
     "  .p2align 4                   \n\t"
 
-    "  pxor        %%mm7, %%mm7     \n\t" 
+    "  pxor        %%mm7, %%mm7     \n\t"
     "  movq        %[V128], %%mm1   \n\t"
     SUB_128_LOOP
     SUB_128_LOOP
@@ -140,18 +140,18 @@ static void sub8x8_128__mmx (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
   "  add         $16, %3           \n\t"                                      \
   "  add         %4, %0           \n\t"                                       \
   "  add         %5, %1           \n\t"                                       \
-  "  add         %5, %2           \n\t"  
+  "  add         %5, %2           \n\t"
 
 
 static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
                      unsigned char *ReconPtr2, ogg_int16_t *DctInputPtr,
                      ogg_uint32_t PixelsPerLine,
-                     ogg_uint32_t ReconPixelsPerLine) 
+                     ogg_uint32_t ReconPixelsPerLine)
 {
   __asm__ __volatile__ (
     "  .p2align 4                   \n\t"
 
-    "  pxor        %%mm7, %%mm7     \n\t" 
+    "  pxor        %%mm7, %%mm7     \n\t"
     SUB_AVG2_LOOP
     SUB_AVG2_LOOP
     SUB_AVG2_LOOP
@@ -165,7 +165,7 @@ static void sub8x8avg2__mmx (unsigned char *FiltPtr, unsigned char *ReconPtr1,
        "+r" (ReconPtr2),
        "+r" (DctInputPtr)
      : "m" (PixelsPerLine),
-       "m" (ReconPixelsPerLine) 
+       "m" (ReconPixelsPerLine)
      : "memory"
   );
 }
@@ -177,15 +177,15 @@ static ogg_uint32_t row_sad8__mmx (unsigned char *Src1, unsigned char *Src2)
   __asm__ __volatile__ (
     "  .p2align 4                   \n\t"
 
-    "  pxor        %%mm6, %%mm6     \n\t"	/* zero out mm6 for unpack */
-    "  pxor        %%mm7, %%mm7     \n\t" 	/* zero out mm7 for unpack */
-    "  movq        (%1), %%mm0      \n\t"	/* take 8 bytes */
+    "  pxor        %%mm6, %%mm6     \n\t"       /* zero out mm6 for unpack */
+    "  pxor        %%mm7, %%mm7     \n\t"       /* zero out mm7 for unpack */
+    "  movq        (%1), %%mm0      \n\t"       /* take 8 bytes */
     "  movq        (%2), %%mm1      \n\t"
 
     "  movq        %%mm0, %%mm2     \n\t"
-    "  psubusb     %%mm1, %%mm0     \n\t" 	/* A - B */
-    "  psubusb     %%mm2, %%mm1     \n\t"	/* B - A */
-    "  por         %%mm1, %%mm0     \n\t"      	/* and or gives abs difference */
+    "  psubusb     %%mm1, %%mm0     \n\t"       /* A - B */
+    "  psubusb     %%mm2, %%mm1     \n\t"       /* B - A */
+    "  por         %%mm1, %%mm0     \n\t"       /* and or gives abs difference */
 
     "  movq        %%mm0, %%mm1     \n\t"
 
@@ -194,7 +194,7 @@ static ogg_uint32_t row_sad8__mmx (unsigned char *Src1, unsigned char *Src2)
 
     "  movq        %%mm0, %%mm2     \n\t"
     "  movq        %%mm1, %%mm3     \n\t"
-    "  psrlq       $32, %%mm2       \n\t"	/* fold and add */
+    "  psrlq       $32, %%mm2       \n\t"       /* fold and add */
     "  psrlq       $32, %%mm3       \n\t"
     "  paddw       %%mm2, %%mm0     \n\t"
     "  paddw       %%mm3, %%mm1     \n\t"
@@ -206,13 +206,13 @@ static ogg_uint32_t row_sad8__mmx (unsigned char *Src1, unsigned char *Src2)
     "  paddw       %%mm3, %%mm1     \n\t"
 
     "  psubusw     %%mm0, %%mm1     \n\t"
-    "  paddw       %%mm0, %%mm1     \n\t" 	/* mm1 = max(mm1, mm0) */
+    "  paddw       %%mm0, %%mm1     \n\t"       /* mm1 = max(mm1, mm0) */
     "  movd        %%mm1, %0        \n\t"
     "  andl        $0xffff, %0      \n\t"
 
      : "=m" (MaxSad),
-       "+r" (Src1), 
-       "+r" (Src2) 
+       "+r" (Src1),
+       "+r" (Src2)
      :
      : "memory"
   );
@@ -220,80 +220,80 @@ static ogg_uint32_t row_sad8__mmx (unsigned char *Src1, unsigned char *Src2)
 }
 
 static ogg_uint32_t col_sad8x8__mmx (unsigned char *Src1, unsigned char *Src2,
-		                    ogg_uint32_t stride)
+                                    ogg_uint32_t stride)
 {
   ogg_uint32_t MaxSad;
 
   __asm__ __volatile__ (
     "  .p2align 4                   \n\t"
 
-    "  pxor        %%mm3, %%mm3     \n\t"	/* zero out mm3 for unpack */
-    "  pxor        %%mm4, %%mm4     \n\t"	/* mm4 low sum */
-    "  pxor        %%mm5, %%mm5     \n\t" 	/* mm5 high sum */
-    "  pxor        %%mm6, %%mm6     \n\t"	/* mm6 low sum */
-    "  pxor        %%mm7, %%mm7     \n\t" 	/* mm7 high sum */
-    "  mov         $4, %%edi        \n\t"	/* 4 rows */
+    "  pxor        %%mm3, %%mm3     \n\t"       /* zero out mm3 for unpack */
+    "  pxor        %%mm4, %%mm4     \n\t"       /* mm4 low sum */
+    "  pxor        %%mm5, %%mm5     \n\t"       /* mm5 high sum */
+    "  pxor        %%mm6, %%mm6     \n\t"       /* mm6 low sum */
+    "  pxor        %%mm7, %%mm7     \n\t"       /* mm7 high sum */
+    "  mov         $4, %%edi        \n\t"       /* 4 rows */
     "1:                             \n\t"
-    "  movq        (%1), %%mm0      \n\t"	/* take 8 bytes */
-    "  movq        (%2), %%mm1      \n\t"	/* take 8 bytes */
+    "  movq        (%1), %%mm0      \n\t"       /* take 8 bytes */
+    "  movq        (%2), %%mm1      \n\t"       /* take 8 bytes */
 
     "  movq        %%mm0, %%mm2     \n\t"
-    "  psubusb     %%mm1, %%mm0     \n\t" 	/* A - B */
-    "  psubusb     %%mm2, %%mm1     \n\t"	/* B - A */
-    "  por         %%mm1, %%mm0     \n\t"      	/* and or gives abs difference */
+    "  psubusb     %%mm1, %%mm0     \n\t"       /* A - B */
+    "  psubusb     %%mm2, %%mm1     \n\t"       /* B - A */
+    "  por         %%mm1, %%mm0     \n\t"       /* and or gives abs difference */
     "  movq        %%mm0, %%mm1     \n\t"
 
-    "  punpcklbw   %%mm3, %%mm0     \n\t"	/* unpack to higher precision for accumulation */
-    "  paddw       %%mm0, %%mm4     \n\t"	/* accumulate difference... */
-    "  punpckhbw   %%mm3, %%mm1     \n\t"	/* unpack high four bytes to higher precision */
-    "  paddw       %%mm1, %%mm5     \n\t"	/* accumulate difference... */
-    "  add         %3, %1           \n\t"	/* Inc pointer into the new data */
-    "  add         %3, %2           \n\t"	/* Inc pointer into the new data */
+    "  punpcklbw   %%mm3, %%mm0     \n\t"       /* unpack to higher precision for accumulation */
+    "  paddw       %%mm0, %%mm4     \n\t"       /* accumulate difference... */
+    "  punpckhbw   %%mm3, %%mm1     \n\t"       /* unpack high four bytes to higher precision */
+    "  paddw       %%mm1, %%mm5     \n\t"       /* accumulate difference... */
+    "  add         %3, %1           \n\t"       /* Inc pointer into the new data */
+    "  add         %3, %2           \n\t"       /* Inc pointer into the new data */
 
     "  dec         %%edi            \n\t"
     "  jnz 1b                       \n\t"
 
-    "  mov         $4, %%edi        \n\t"	/* 4 rows */
+    "  mov         $4, %%edi        \n\t"       /* 4 rows */
     "2:                             \n\t"
-    "  movq        (%1), %%mm0      \n\t"	/* take 8 bytes */
-    "  movq        (%2), %%mm1      \n\t"	/* take 8 bytes */
+    "  movq        (%1), %%mm0      \n\t"       /* take 8 bytes */
+    "  movq        (%2), %%mm1      \n\t"       /* take 8 bytes */
 
     "  movq        %%mm0, %%mm2     \n\t"
-    "  psubusb     %%mm1, %%mm0     \n\t" 	/* A - B */
-    "  psubusb     %%mm2, %%mm1     \n\t"	/* B - A */
-    "  por         %%mm1, %%mm0     \n\t"      	/* and or gives abs difference */
+    "  psubusb     %%mm1, %%mm0     \n\t"       /* A - B */
+    "  psubusb     %%mm2, %%mm1     \n\t"       /* B - A */
+    "  por         %%mm1, %%mm0     \n\t"       /* and or gives abs difference */
     "  movq        %%mm0, %%mm1     \n\t"
 
-    "  punpcklbw   %%mm3, %%mm0     \n\t"	/* unpack to higher precision for accumulation */
-    "  paddw       %%mm0, %%mm6     \n\t"	/* accumulate difference... */
-    "  punpckhbw   %%mm3, %%mm1     \n\t"	/* unpack high four bytes to higher precision */
-    "  paddw       %%mm1, %%mm7     \n\t"	/* accumulate difference... */
-    "  add         %3, %1           \n\t"	/* Inc pointer into the new data */
-    "  add         %3, %2           \n\t"	/* Inc pointer into the new data */
+    "  punpcklbw   %%mm3, %%mm0     \n\t"       /* unpack to higher precision for accumulation */
+    "  paddw       %%mm0, %%mm6     \n\t"       /* accumulate difference... */
+    "  punpckhbw   %%mm3, %%mm1     \n\t"       /* unpack high four bytes to higher precision */
+    "  paddw       %%mm1, %%mm7     \n\t"       /* accumulate difference... */
+    "  add         %3, %1           \n\t"       /* Inc pointer into the new data */
+    "  add         %3, %2           \n\t"       /* Inc pointer into the new data */
 
     "  dec         %%edi            \n\t"
     "  jnz 2b                       \n\t"
 
     "  psubusw     %%mm6, %%mm7     \n\t"
-    "  paddw       %%mm6, %%mm7     \n\t" 	/* mm7 = max(mm7, mm6) */
-    "  psubusw     %%mm4, %%mm5     \n\t" 	
-    "  paddw       %%mm4, %%mm5     \n\t" 	/* mm5 = max(mm5, mm4) */
-    "  psubusw     %%mm5, %%mm7     \n\t" 	
-    "  paddw       %%mm5, %%mm7     \n\t" 	/* mm7 = max(mm5, mm7) */
+    "  paddw       %%mm6, %%mm7     \n\t"       /* mm7 = max(mm7, mm6) */
+    "  psubusw     %%mm4, %%mm5     \n\t"
+    "  paddw       %%mm4, %%mm5     \n\t"       /* mm5 = max(mm5, mm4) */
+    "  psubusw     %%mm5, %%mm7     \n\t"
+    "  paddw       %%mm5, %%mm7     \n\t"       /* mm7 = max(mm5, mm7) */
     "  movq        %%mm7, %%mm6     \n\t"
     "  psrlq       $32, %%mm6       \n\t"
-    "  psubusw     %%mm6, %%mm7     \n\t" 	
-    "  paddw       %%mm6, %%mm7     \n\t" 	/* mm7 = max(mm5, mm7) */
+    "  psubusw     %%mm6, %%mm7     \n\t"
+    "  paddw       %%mm6, %%mm7     \n\t"       /* mm7 = max(mm5, mm7) */
     "  movq        %%mm7, %%mm6     \n\t"
     "  psrlq       $16, %%mm6       \n\t"
-    "  psubusw     %%mm6, %%mm7     \n\t" 	
-    "  paddw       %%mm6, %%mm7     \n\t" 	/* mm7 = max(mm5, mm7) */
+    "  psubusw     %%mm6, %%mm7     \n\t"
+    "  paddw       %%mm6, %%mm7     \n\t"       /* mm7 = max(mm5, mm7) */
     "  movd        %%mm7, %0        \n\t"
     "  andl        $0xffff, %0      \n\t"
 
      : "=r" (MaxSad),
-       "+r" (Src1), 
-       "+r" (Src2) 
+       "+r" (Src1),
+       "+r" (Src2)
      : "r" (stride)
      : "memory", "edi"
   );
@@ -302,29 +302,29 @@ static ogg_uint32_t col_sad8x8__mmx (unsigned char *Src1, unsigned char *Src2,
 }
 
 #define SAD_LOOP                                                              \
-  "  movq        (%1), %%mm0      \n\t"	/* take 8 bytes */                    \
+  "  movq        (%1), %%mm0      \n\t" /* take 8 bytes */                    \
   "  movq        (%2), %%mm1      \n\t"                                       \
   "  movq        %%mm0, %%mm2     \n\t"                                       \
-  "  psubusb     %%mm1, %%mm0     \n\t" 	/* A - B */                         \
-  "  psubusb     %%mm2, %%mm1     \n\t"	/* B - A */                           \
+  "  psubusb     %%mm1, %%mm0     \n\t"         /* A - B */                         \
+  "  psubusb     %%mm2, %%mm1     \n\t" /* B - A */                           \
   "  por         %%mm1, %%mm0     \n\t" /* and or gives abs difference */     \
   "  movq        %%mm0, %%mm1     \n\t"                                       \
-  "  punpcklbw   %%mm6, %%mm0     \n\t"	/* unpack to higher precision for accumulation */ \
-  "  paddw       %%mm0, %%mm7     \n\t"	/* accumulate difference... */        \
-  "  punpckhbw   %%mm6, %%mm1     \n\t"	/* unpack high four bytes to higher precision */ \
-  "  add         %3, %1           \n\t"	/* Inc pointer into the new data */   \
-  "  paddw       %%mm1, %%mm7     \n\t"	/* accumulate difference... */        \
-  "  add         %4, %2           \n\t"	/* Inc pointer into ref data */  
+  "  punpcklbw   %%mm6, %%mm0     \n\t" /* unpack to higher precision for accumulation */ \
+  "  paddw       %%mm0, %%mm7     \n\t" /* accumulate difference... */        \
+  "  punpckhbw   %%mm6, %%mm1     \n\t" /* unpack high four bytes to higher precision */ \
+  "  add         %3, %1           \n\t" /* Inc pointer into the new data */   \
+  "  paddw       %%mm1, %%mm7     \n\t" /* accumulate difference... */        \
+  "  add         %4, %2           \n\t" /* Inc pointer into ref data */
 
 static ogg_uint32_t sad8x8__mmx (unsigned char *ptr1, ogg_uint32_t stride1,
-		       	    unsigned char *ptr2, ogg_uint32_t stride2)
+                            unsigned char *ptr2, ogg_uint32_t stride2)
 {
   ogg_uint32_t  DiffVal;
 
   __asm__ __volatile__ (
     "  .p2align 4                   \n\t"
-    "  pxor        %%mm6, %%mm6     \n\t"	/* zero out mm6 for unpack */
-    "  pxor        %%mm7, %%mm7     \n\t" 	/* mm7 contains the result */
+    "  pxor        %%mm6, %%mm6     \n\t"       /* zero out mm6 for unpack */
+    "  pxor        %%mm7, %%mm7     \n\t"       /* mm7 contains the result */
     SAD_LOOP
     SAD_LOOP
     SAD_LOOP
@@ -343,8 +343,8 @@ static ogg_uint32_t sad8x8__mmx (unsigned char *ptr1, ogg_uint32_t stride1,
     "  andl        $0xffff, %0      \n\t"
 
      : "=m" (DiffVal),
-       "+r" (ptr1), 
-       "+r" (ptr2) 
+       "+r" (ptr1),
+       "+r" (ptr2)
      : "r" (stride1),
        "r" (stride2)
      : "memory"
@@ -354,33 +354,33 @@ static ogg_uint32_t sad8x8__mmx (unsigned char *ptr1, ogg_uint32_t stride1,
 }
 
 static ogg_uint32_t sad8x8_thres__mmx (unsigned char *ptr1, ogg_uint32_t stride1,
-		       		  unsigned char *ptr2, ogg_uint32_t stride2, 
-			   	  ogg_uint32_t thres)
+                                  unsigned char *ptr2, ogg_uint32_t stride2,
+                                  ogg_uint32_t thres)
 {
   return sad8x8__mmx (ptr1, stride1, ptr2, stride2);
 }
 
 static ogg_uint32_t sad8x8_xy2_thres__mmx (unsigned char *SrcData, ogg_uint32_t SrcStride,
-		                      unsigned char *RefDataPtr1,
-			              unsigned char *RefDataPtr2, ogg_uint32_t RefStride,
-			              ogg_uint32_t thres)
+                                      unsigned char *RefDataPtr1,
+                                      unsigned char *RefDataPtr2, ogg_uint32_t RefStride,
+                                      ogg_uint32_t thres)
 {
   ogg_uint32_t  DiffVal;
 
   __asm__ __volatile__ (
     "  .p2align 4                   \n\t"
 
-    "  pcmpeqd     %%mm5, %%mm5     \n\t"	/* fefefefefefefefe in mm5 */
+    "  pcmpeqd     %%mm5, %%mm5     \n\t"       /* fefefefefefefefe in mm5 */
     "  paddb       %%mm5, %%mm5     \n\t"
-   
-    "  pxor        %%mm6, %%mm6     \n\t"	/* zero out mm6 for unpack */
-    "  pxor        %%mm7, %%mm7     \n\t" 	/* mm7 contains the result */
-    "  mov         $8, %%edi        \n\t"	/* 8 rows */
+
+    "  pxor        %%mm6, %%mm6     \n\t"       /* zero out mm6 for unpack */
+    "  pxor        %%mm7, %%mm7     \n\t"       /* mm7 contains the result */
+    "  mov         $8, %%edi        \n\t"       /* 8 rows */
     "1:                             \n\t"
-    "  movq        (%1), %%mm0      \n\t"	/* take 8 bytes */
+    "  movq        (%1), %%mm0      \n\t"       /* take 8 bytes */
 
     "  movq        (%2), %%mm2      \n\t"
-    "  movq        (%3), %%mm3      \n\t"	/* take average of mm2 and mm3 */
+    "  movq        (%3), %%mm3      \n\t"       /* take average of mm2 and mm3 */
     "  movq        %%mm2, %%mm1     \n\t"
     "  pand        %%mm3, %%mm1     \n\t"
     "  pxor        %%mm2, %%mm3     \n\t"
@@ -390,18 +390,18 @@ static ogg_uint32_t sad8x8_xy2_thres__mmx (unsigned char *SrcData, ogg_uint32_t 
 
     "  movq        %%mm0, %%mm2     \n\t"
 
-    "  psubusb     %%mm1, %%mm0     \n\t" 	/* A - B */
-    "  psubusb     %%mm2, %%mm1     \n\t"	/* B - A */
-    "  por         %%mm1, %%mm0     \n\t"    	/* and or gives abs difference */
+    "  psubusb     %%mm1, %%mm0     \n\t"       /* A - B */
+    "  psubusb     %%mm2, %%mm1     \n\t"       /* B - A */
+    "  por         %%mm1, %%mm0     \n\t"       /* and or gives abs difference */
     "  movq        %%mm0, %%mm1     \n\t"
 
-    "  punpcklbw   %%mm6, %%mm0     \n\t"	/* unpack to higher precision for accumulation */
-    "  paddw       %%mm0, %%mm7     \n\t"	/* accumulate difference... */
-    "  punpckhbw   %%mm6, %%mm1     \n\t"	/* unpack high four bytes to higher precision */
-    "  add         %4, %1           \n\t"	/* Inc pointer into the new data */
-    "  paddw       %%mm1, %%mm7     \n\t"	/* accumulate difference... */
-    "  add         %5, %2           \n\t"	/* Inc pointer into ref data */
-    "  add         %5, %3           \n\t"	/* Inc pointer into ref data */
+    "  punpcklbw   %%mm6, %%mm0     \n\t"       /* unpack to higher precision for accumulation */
+    "  paddw       %%mm0, %%mm7     \n\t"       /* accumulate difference... */
+    "  punpckhbw   %%mm6, %%mm1     \n\t"       /* unpack high four bytes to higher precision */
+    "  add         %4, %1           \n\t"       /* Inc pointer into the new data */
+    "  paddw       %%mm1, %%mm7     \n\t"       /* accumulate difference... */
+    "  add         %5, %2           \n\t"       /* Inc pointer into ref data */
+    "  add         %5, %3           \n\t"       /* Inc pointer into ref data */
 
     "  dec         %%edi            \n\t"
     "  jnz 1b                       \n\t"
@@ -416,9 +416,9 @@ static ogg_uint32_t sad8x8_xy2_thres__mmx (unsigned char *SrcData, ogg_uint32_t 
     "  andl        $0xffff, %0      \n\t"
 
      : "=m" (DiffVal),
-       "+r" (SrcData), 
-       "+r" (RefDataPtr1), 
-       "+r" (RefDataPtr2) 
+       "+r" (SrcData),
+       "+r" (RefDataPtr1),
+       "+r" (RefDataPtr2)
      : "m" (SrcStride),
        "m" (RefStride)
      : "edi", "memory"
@@ -440,7 +440,7 @@ static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint32_t Stri
     "  pxor        %%mm7, %%mm7     \n\t"
     "  mov         $8, %%edi        \n\t"
     "1:                             \n\t"
-    "  movq        (%2), %%mm0      \n\t"	/* take 8 bytes */
+    "  movq        (%2), %%mm0      \n\t"       /* take 8 bytes */
     "  movq        %%mm0, %%mm2     \n\t"
 
     "  punpcklbw   %%mm6, %%mm0     \n\t"
@@ -451,11 +451,11 @@ static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint32_t Stri
 
     "  pmaddwd     %%mm0, %%mm0     \n\t"
     "  pmaddwd     %%mm2, %%mm2     \n\t"
-    
+
     "  paddd       %%mm0, %%mm7     \n\t"
     "  paddd       %%mm2, %%mm7     \n\t"
 
-    "  add         %3, %2           \n\t"	/* Inc pointer into src data */
+    "  add         %3, %2           \n\t"       /* Inc pointer into src data */
 
     "  dec         %%edi            \n\t"
     "  jnz 1b                       \n\t"
@@ -477,7 +477,7 @@ static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint32_t Stri
 
      : "=r" (XSum),
        "=r" (XXSum),
-       "+r" (DataPtr) 
+       "+r" (DataPtr)
      : "r" (Stride)
      : "edi", "memory"
   );
@@ -487,7 +487,7 @@ static ogg_uint32_t intra8x8_err__mmx (unsigned char *DataPtr, ogg_uint32_t Stri
 }
 
 static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcStride,
-		                 unsigned char *RefDataPtr, ogg_uint32_t RefStride)
+                                 unsigned char *RefDataPtr, ogg_uint32_t RefStride)
 {
   ogg_uint32_t  XSum;
   ogg_uint32_t  XXSum;
@@ -500,7 +500,7 @@ static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcS
     "  pxor        %%mm7, %%mm7     \n\t"
     "  mov         $8, %%edi        \n\t"
     "1:                             \n\t"
-    "  movq        (%2), %%mm0      \n\t"	/* take 8 bytes */
+    "  movq        (%2), %%mm0      \n\t"       /* take 8 bytes */
     "  movq        (%3), %%mm1      \n\t"
     "  movq        %%mm0, %%mm2     \n\t"
     "  movq        %%mm1, %%mm3     \n\t"
@@ -518,12 +518,12 @@ static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcS
 
     "  pmaddwd     %%mm0, %%mm0     \n\t"
     "  pmaddwd     %%mm2, %%mm2     \n\t"
-    
+
     "  paddd       %%mm0, %%mm7     \n\t"
     "  paddd       %%mm2, %%mm7     \n\t"
 
-    "  add         %4, %2           \n\t"	/* Inc pointer into src data */
-    "  add         %5, %3           \n\t"	/* Inc pointer into ref data */
+    "  add         %4, %2           \n\t"       /* Inc pointer into src data */
+    "  add         %5, %3           \n\t"       /* Inc pointer into ref data */
 
     "  dec         %%edi            \n\t"
     "  jnz 1b                       \n\t"
@@ -545,8 +545,8 @@ static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcS
 
      : "=m" (XSum),
        "=m" (XXSum),
-       "+r" (SrcData), 
-       "+r" (RefDataPtr) 
+       "+r" (SrcData),
+       "+r" (RefDataPtr)
      : "m" (SrcStride),
        "m" (RefStride)
      : "edi", "memory"
@@ -557,8 +557,8 @@ static ogg_uint32_t inter8x8_err__mmx (unsigned char *SrcData, ogg_uint32_t SrcS
 }
 
 static ogg_uint32_t inter8x8_err_xy2__mmx (unsigned char *SrcData, ogg_uint32_t SrcStride,
-		                     unsigned char *RefDataPtr1,
-				     unsigned char *RefDataPtr2, ogg_uint32_t RefStride)
+                                     unsigned char *RefDataPtr1,
+                                     unsigned char *RefDataPtr2, ogg_uint32_t RefStride)
 {
   ogg_uint32_t XSum;
   ogg_uint32_t XXSum;
@@ -566,17 +566,17 @@ static ogg_uint32_t inter8x8_err_xy2__mmx (unsigned char *SrcData, ogg_uint32_t 
   __asm__ __volatile__ (
     "  .p2align 4                   \n\t"
 
-    "  pcmpeqd     %%mm4, %%mm4     \n\t"	/* fefefefefefefefe in mm4 */
+    "  pcmpeqd     %%mm4, %%mm4     \n\t"       /* fefefefefefefefe in mm4 */
     "  paddb       %%mm4, %%mm4     \n\t"
     "  pxor        %%mm5, %%mm5     \n\t"
     "  pxor        %%mm6, %%mm6     \n\t"
     "  pxor        %%mm7, %%mm7     \n\t"
     "  mov         $8, %%edi        \n\t"
     "1:                             \n\t"
-    "  movq        (%2), %%mm0      \n\t"	/* take 8 bytes */
+    "  movq        (%2), %%mm0      \n\t"       /* take 8 bytes */
 
     "  movq        (%3), %%mm2      \n\t"
-    "  movq        (%4), %%mm3      \n\t"	/* take average of mm2 and mm3 */
+    "  movq        (%4), %%mm3      \n\t"       /* take average of mm2 and mm3 */
     "  movq        %%mm2, %%mm1     \n\t"
     "  pand        %%mm3, %%mm1     \n\t"
     "  pxor        %%mm2, %%mm3     \n\t"
@@ -600,13 +600,13 @@ static ogg_uint32_t inter8x8_err_xy2__mmx (unsigned char *SrcData, ogg_uint32_t 
 
     "  pmaddwd     %%mm0, %%mm0     \n\t"
     "  pmaddwd     %%mm2, %%mm2     \n\t"
-    
+
     "  paddd       %%mm0, %%mm7     \n\t"
     "  paddd       %%mm2, %%mm7     \n\t"
 
-    "  add         %5, %2           \n\t"	/* Inc pointer into src data */
-    "  add         %6, %3           \n\t"	/* Inc pointer into ref data */
-    "  add         %6, %4           \n\t"	/* Inc pointer into ref data */
+    "  add         %5, %2           \n\t"       /* Inc pointer into src data */
+    "  add         %6, %3           \n\t"       /* Inc pointer into ref data */
+    "  add         %6, %4           \n\t"       /* Inc pointer into ref data */
 
     "  dec         %%edi            \n\t"
     "  jnz 1b                       \n\t"
@@ -628,9 +628,9 @@ static ogg_uint32_t inter8x8_err_xy2__mmx (unsigned char *SrcData, ogg_uint32_t 
 
      : "=m" (XSum),
        "=m" (XXSum),
-       "+r" (SrcData), 
+       "+r" (SrcData),
        "+r" (RefDataPtr1),
-       "+r" (RefDataPtr2) 
+       "+r" (RefDataPtr2)
      : "m" (SrcStride),
        "m" (RefStride)
      : "edi", "memory"
@@ -649,7 +649,6 @@ static void restore_fpu (void)
 
 void dsp_mmx_init(DspFunctions *funcs)
 {
-  TH_DEBUG("enabling accelerated x86_32 mmx dsp functions.\n");
   funcs->restore_fpu = restore_fpu;
   funcs->sub8x8 = sub8x8__mmx;
   funcs->sub8x8_128 = sub8x8_128__mmx;

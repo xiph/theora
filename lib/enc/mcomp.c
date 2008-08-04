@@ -111,7 +111,7 @@ static ogg_uint32_t GetInterErr (CP_INSTANCE *cpi, unsigned char * NewDataPtr,
               RefDataPtr1, RefPixelsPerLine);
   }else{
     DiffVal = dsp_inter8x8_err_xy2 (cpi->dsp, NewDataPtr, PixelsPerLine,
-              RefDataPtr1, 
+              RefDataPtr1,
               RefDataPtr2, RefPixelsPerLine);
   }
 
@@ -133,11 +133,11 @@ static ogg_uint32_t GetHalfPixelSumAbsDiffs (CP_INSTANCE *cpi,
 
   if ( RefOffset == 0 ) {
     /* Simple case as for non 0.5 pixel */
-    DiffVal += dsp_sad8x8 (cpi->dsp, SrcData, PixelsPerLine, 
+    DiffVal += dsp_sad8x8 (cpi->dsp, SrcData, PixelsPerLine,
                    RefDataPtr1, RefPixelsPerLine);
   } else  {
-    DiffVal += dsp_sad8x8_xy2_thres (cpi->dsp, SrcData, PixelsPerLine, 
-                   RefDataPtr1, 
+    DiffVal += dsp_sad8x8_xy2_thres (cpi->dsp, SrcData, PixelsPerLine,
+                   RefDataPtr1,
                    RefDataPtr2, RefPixelsPerLine, BestSoFar);
   }
 
@@ -729,7 +729,7 @@ ogg_uint32_t GetFOURMVExhaustiveSearch (CP_INSTANCE *cpi,
 
   dsp_save_fpu (cpi->dsp);
 
-  /* For the moment the 4MV mode is only deemed to be valid 
+  /* For the moment the 4MV mode is only deemed to be valid
      if all four Y blocks are to be updated */
   /* This may be adapted later. */
   if ( cpi->pb.display_fragments[FragIndex] &&
