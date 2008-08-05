@@ -2976,13 +2976,13 @@ This value is then scaled by four, to match the scaling of the DCT output,
 \item
 Assign \locvar{\qri} the index of a quant range such that
 \begin{displaymath}
-\sum_{\qrj=0}^{\locvar{\qri}-1}
- \bitvar{\qi} \ge \bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\qrj],
+\bitvar{\qi} \ge \sum_{\qrj=0}^{\locvar{\qri}-1}
+ \bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\qrj],
 \end{displaymath}
  and
 \begin{displaymath}
-\sum_{\qrj=0}^{\locvar{\qri}}
- \bitvar{\qi} \le \bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\qrj],
+\bitvar{\qi} \le \sum_{\qrj=0}^{\locvar{\qri}}
+ \bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\qrj],
 \end{displaymath}
  where summation from $0$ to $-1$ is defined to be zero.
 If there is more than one such value of $\locvar{\qri}$, i.e., if \bitvar{\qi}
