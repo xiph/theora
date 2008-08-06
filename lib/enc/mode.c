@@ -308,9 +308,6 @@ static int cost_intra(CP_INSTANCE *cpi, int qi, int mbi, ogg_uint32_t *intrabits
       if(cp[fi]){
 	int sad = BIntraSAD(cpi,fi,i);
 	cost += BINMAP(mode_rate[qi][i][1],sad);
-#ifdef COLLECT_METRICS
-	cpi->frag_sad[CODE_INTRA][fi]=sad;
-#endif
       }
     }
   }
@@ -331,9 +328,6 @@ static int cost_inter(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv, int mode, int 
       if(cp[fi]){
 	int sad = BInterSAD(cpi,fi,i,mode==CODE_USING_GOLDEN,mv);
 	cost += BINMAP(mode_rate[qi][i][0],sad);
-#ifdef COLLECT_METRICS
-	cpi->frag_sad[mode][fi]=sad;
-#endif
       }
     }
   }
@@ -356,10 +350,6 @@ static int cost_inter_nomv(CP_INSTANCE *cpi, int qi, int mbi, int *overhead){
 
 	if(i)sad<<=2;
 	cost += BINMAP(mode_rate[qi][i][0],sad);
-#ifdef COLLECT_METRICS
-	cpi->frag_sad[CODE_INTER_NO_MV][fi]=sad;
-#endif
-
       }
     }
   }
@@ -379,9 +369,6 @@ static int cost_inter1mv(CP_INSTANCE *cpi, int qi, int mbi, int golden, int *bit
       if(cp[fi]){
 	int sad = BInterSAD(cpi,fi,i,golden,mb->analysis_mv[0][golden]);
 	cost += BINMAP(mode_rate[qi][i][0],sad);
-#ifdef COLLECT_METRICS
-	cpi->frag_sad[golden?CODE_GOLDEN_MV:CODE_INTER_PLUS_MV][fi]=sad;
-#endif
       }
     }
   }
@@ -411,9 +398,6 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
     if(cp[fi]){
       int sad = BInterSAD(cpi,fi,0,0,mb->mv[j]);
       cost += BINMAP(mode_rate[qi][0][0],sad);
-#ifdef COLLECT_METRICS
-      cpi->frag_sad[CODE_INTER_FOURMV][fi]=sad;
-#endif
 
       *bits0 += 
 	MvBits[mb->mv[j].x + MAX_MV_EXTENT] + 
@@ -439,9 +423,7 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
 	if(cp[fi]){
 	  int sad = BInterSAD(cpi,fi,i,0,ch);
 	  cost += BINMAP(mode_rate[qi][i][0],sad);
-#ifdef COLLECT_METRICS
-	  cpi->frag_sad[CODE_INTER_FOURMV][fi]=sad;
-#endif
+
 	}
       }
     }
@@ -467,9 +449,6 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
 	  if(cp[fi]){
 	    int sad = BInterSAD(cpi,fi,i,0,mv[j]);
 	    cost += BINMAP(mode_rate[qi][i][0],sad);
-#ifdef COLLECT_METRICS
-	    cpi->frag_sad[CODE_INTER_FOURMV][fi]=sad;
-#endif
 	  }
 	}
       }
@@ -483,9 +462,6 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
 	if(cp[fi]){
 	  int sad = BInterSAD(cpi,fi,i,0,mb->mv[j]);
 	  cost += BINMAP(mode_rate[qi][i][0],sad);
-#ifdef COLLECT_METRICS
-	  cpi->frag_sad[CODE_INTER_FOURMV][fi]=sad;
-#endif
 	}
       }
     }
@@ -574,6 +550,7 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
   int lambda = cpi->skip_lambda;
   token_checkpoint_t *checkpoint=*stack;
   int sad_cost=0;
+  int i;
 
   /* motion comp */
   switch(mode){
@@ -614,7 +591,6 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
   }
 
   if(!keyframe){
-    int i;
     if(mode==CODE_INTER_NO_MV){
       for(i=0;i<64;i++)
 	uncoded_ssd += data[i]*data[i];
@@ -623,16 +599,27 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
       for(i=0;i<64;i++)
 	uncoded_ssd += buffer[i]*buffer[i];
     }
+  }
+
+  if(mode==CODE_INTRA){
+    int acc=0;
+    for(i=0;i<64;i++)
+      acc += data[i];
 
     for(i=0;i<64;i++)
-      sad += abs(data[i]);
+      sad += abs((data[i]<<6)-acc);
 
-    if(mode==CODE_INTRA){
-      sad >>=6;
-    }else{
-      if(ps->plane)sad<<=2;
-    }
+    sad >>=6;
+  }else{
+    for(i=0;i<64;i++)
+      sad += abs(data[i]);
+    
+    if(ps->plane)sad<<=2;
   }
+
+#ifdef COLLECT_METRICS
+  cpi->frag_sad[fi]=sad;
+#endif
 
   /* transform */
   dsp_fdct_short(cpi->dsp, data, buffer);
@@ -651,8 +638,10 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
 	d = val*dequant[0]-buffer[0];
 	coded_partial_ssd += d*d;
 	data[0] = val;
-      }else
+      }else{
+	coded_partial_ssd += buffer[0]*buffer[0];
 	data[0] = 0;
+      }
     }
     
     for(i=1;i<64;i++){
@@ -950,10 +939,6 @@ int PickModes(CP_INSTANCE *cpi, int recode){
   plane_state_t ps;
   fr_state_t fr;
 
-#ifdef COLLECT_METRICS
-  int sad[8][3][4];
-#endif
-
   oc_mode_scheme_chooser_init(cpi);
   ps_setup_frame(cpi,&ps);
   ps_setup_plane(cpi,&ps,0);
@@ -1129,6 +1114,8 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 		last_mv = mb->mv[i];
 	      }
 	    break;
+	  default:
+	    break;
 	  }
 
 	  oc_mode_set(cpi,mb,mb->mode);      
@@ -1275,15 +1262,17 @@ static int parse_eob_run(int token, int eb){
   }
 }
 
-static void ModeMetricsGroup(CP_INSTANCE *cpi, int plane, int group, int huff, int eobcounts[3][64], int *actual_bits){
-  int ti;
-  int *stack = cpi->dct_eob_fi_stack[plane][group];
-  int *tfi = cpi->dct_token_frag[plane][group];
-  int tn = cpi->dct_token_count[plane][group];
+
+static void ModeMetricsGroup(CP_INSTANCE *cpi, int group, int huffY, int huffC, int eobcounts[64], int *actual_bits){
+  int ti=0;
+  int *stack = cpi->dct_eob_fi_stack[group];
+  int *tfi = cpi->dct_token_frag[group];
+  int ty = cpi->dct_token_ycount[group];
+  int tn = cpi->dct_token_count[group];
   
   for(ti=0;ti<tn;ti++){
-    int token = cpi->dct_token[plane][group][ti];
-    int bits = cpi->HuffCodeLengthArray_VP3x[huff][token] + cpi->ExtraBitLengths_VP3x[token];
+    int token = cpi->dct_token[group][ti];
+    int bits = cpi->HuffCodeLengthArray_VP3x[(ti<ty ? huffY : huffC)][token] + cpi->ExtraBitLengths_VP3x[token];
       
     if(token>DCT_REPEAT_RUN4_TOKEN){
       /* not an EOB run; this token belongs to a single fragment */
@@ -1291,39 +1280,38 @@ static void ModeMetricsGroup(CP_INSTANCE *cpi, int plane, int group, int huff, i
       actual_bits[fi] += (bits<<OC_BIT_SCALE);
     }else{
       /* EOB run; its bits should be split up between all the fragments in the run */
-      int run = parse_eob_run(token, cpi->dct_token_eb[plane][group][ti]);
+      int run = parse_eob_run(token, cpi->dct_token_eb[group][ti]);
       int fracbits = ((bits<<OC_BIT_SCALE) + (run>>1))/run;
       
       if(ti+1<tn){
 	/* tokens follow EOB so it must be entirely ensconced within this plane/group */
 	while(run--){
-	  int fi = stack[eobcounts[plane][group]++];
+	  int fi = stack[eobcounts[group]++];
 	  actual_bits[fi]+=fracbits;
 	}
       }else{
 	/* EOB is the last token in this plane/group, so it may span into the next plane/group */
-	int n = cpi->dct_eob_fi_count[plane][group];
+	int n = cpi->dct_eob_fi_count[group];
 	while(run){
-	  while(eobcounts[plane][group] < n && run){
-	    int fi = stack[eobcounts[plane][group]++];
+	  while(eobcounts[group] < n && run){
+	    int fi = stack[eobcounts[group]++];
 	    actual_bits[fi]+=fracbits;
 	    run--;
 	  }
-	  plane++;
-	  if(plane>=3){
+	  if(run){
 	    group++;
-	    plane=0;
+	    n = cpi->dct_eob_fi_count[group];
+	    stack = cpi->dct_eob_fi_stack[group];
 	  }
-	  n = cpi->dct_eob_fi_count[plane][group];
-	  stack = cpi->dct_eob_fi_stack[plane][group];
-	 
 	}
       }
     }
   }
 }
 
-void ModeMetrics(CP_INSTANCE *cpi, int huff[4]){
+void ModeMetrics(CP_INSTANCE *cpi){
+  int interp = (cpi->FrameType!=KEY_FRAME);
+  int huff[4];
   int fi,gi;
   int y = cpi->frag_n[0];
   int u = y + cpi->frag_n[1];
@@ -1331,11 +1319,15 @@ void ModeMetrics(CP_INSTANCE *cpi, int huff[4]){
   unsigned char *cp = cpi->frag_coded;
   int *sp = cpi->frag_sad;
   int *mp = cpi->frag_mbi;
-  int eobcounts[3][64];
+  int eobcounts[64];
   int qi = cpi->BaseQ; /* temporary */
   int actual_bits[cpi->frag_total];
   memset(actual_bits,0,sizeof(actual_bits));
   memset(eobcounts,0,sizeof(eobcounts));
+  huff[0] = cpi->huffchoice[interp][0][0];
+  huff[1] = cpi->huffchoice[interp][0][1];
+  huff[2] = cpi->huffchoice[interp][1][0];
+  huff[3] = cpi->huffchoice[interp][1][1];
 
   if(mode_metrics==0){
     memset(mode_metric,0,sizeof(mode_metric));
@@ -1343,42 +1335,26 @@ void ModeMetrics(CP_INSTANCE *cpi, int huff[4]){
   }
 
   /* count bits for tokens */
-  ModeMetricsGroup(cpi, 0, 0, huff[0], eobcounts, actual_bits);
-  ModeMetricsGroup(cpi, 1, 0, huff[1], eobcounts, actual_bits);
-  ModeMetricsGroup(cpi, 2, 0, huff[1], eobcounts, actual_bits);
-  for(gi=1;gi<=AC_TABLE_2_THRESH;gi++){
-    ModeMetricsGroup(cpi, 0, gi,  huff[2], eobcounts, actual_bits);
-    ModeMetricsGroup(cpi, 1, gi,  huff[3], eobcounts, actual_bits);
-    ModeMetricsGroup(cpi, 2, gi,  huff[3], eobcounts, actual_bits);
-  }
-  for(;gi<=AC_TABLE_3_THRESH;gi++){
-    ModeMetricsGroup(cpi, 0, gi, huff[2]+AC_HUFF_CHOICES, eobcounts, actual_bits);
-    ModeMetricsGroup(cpi, 1, gi, huff[3]+AC_HUFF_CHOICES, eobcounts, actual_bits);
-    ModeMetricsGroup(cpi, 2, gi, huff[3]+AC_HUFF_CHOICES, eobcounts, actual_bits);
-  }
-  for(;gi<=AC_TABLE_4_THRESH;gi++){
-    ModeMetricsGroup(cpi, 0, gi, huff[2]+AC_HUFF_CHOICES*2, eobcounts, actual_bits);
-    ModeMetricsGroup(cpi, 1, gi, huff[3]+AC_HUFF_CHOICES*2, eobcounts, actual_bits);
-    ModeMetricsGroup(cpi, 2, gi, huff[3]+AC_HUFF_CHOICES*2, eobcounts, actual_bits);
-  }
-  for(;gi<BLOCK_SIZE;gi++){
-    ModeMetricsGroup(cpi, 0, gi, huff[2]+AC_HUFF_CHOICES*3, eobcounts, actual_bits);
-    ModeMetricsGroup(cpi, 1, gi, huff[3]+AC_HUFF_CHOICES*3, eobcounts, actual_bits);
-    ModeMetricsGroup(cpi, 2, gi, huff[3]+AC_HUFF_CHOICES*3, eobcounts, actual_bits);
-  }
+  ModeMetricsGroup(cpi, 0, huff[0], huff[1], eobcounts, actual_bits);
+  for(gi=1;gi<=AC_TABLE_2_THRESH;gi++)
+    ModeMetricsGroup(cpi, gi,  huff[2], huff[3], eobcounts, actual_bits);
+  for(;gi<=AC_TABLE_3_THRESH;gi++)
+    ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES, huff[3]+AC_HUFF_CHOICES, eobcounts, actual_bits);
+  for(;gi<=AC_TABLE_4_THRESH;gi++)
+    ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES*2, huff[3]+AC_HUFF_CHOICES*2, eobcounts, actual_bits);
+  for(;gi<BLOCK_SIZE;gi++)
+    ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES*3, huff[2]+AC_HUFF_CHOICES*3, eobcounts, actual_bits);
 
   /* accumulate */
-  for(fi=0;fi<v;fi++)
+  for(fi=0;fi<v;fi++){
     if(cp[fi]){
       macroblock_t *mb = &cpi->macro[mp[fi]];
       int mode = mb->mode;
       int plane = (fi<y ? 0 : (fi<u ? 1 : 2));
-      int bin = BIN(sp[mode][fi]);
-      if(bin<OC_SAD_BINS){
-	mode_metric[qi][plane][mode==CODE_INTRA].frag[bin]++;
-	mode_metric[qi][plane][mode==CODE_INTRA].sad[bin] += sp[fi];
-	mode_metric[qi][plane][mode==CODE_INTRA].bits[bin] += actual_bits[fi];
-      }
+      int bin = BIN(sp[fi]);
+      mode_metric[qi][plane][mode==CODE_INTRA].frag[bin]++;
+      mode_metric[qi][plane][mode==CODE_INTRA].sad[bin] += sp[fi];
+      mode_metric[qi][plane][mode==CODE_INTRA].bits[bin] += actual_bits[fi];
     }
 
   /* update global SAD/rate estimation matrix */

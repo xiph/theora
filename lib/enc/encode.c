@@ -324,7 +324,7 @@ void EncodeData(CP_INSTANCE *cpi){
 #ifdef COLLECT_METRICS
   ModeMetrics(cpi);
 #endif
-  long bitsDCT = EncodeTokenList(cpi);
+  EncodeTokenList(cpi);
   bits = oggpackB_bits(cpi->oggbuffer);
   
   ReconRefFrames(cpi);

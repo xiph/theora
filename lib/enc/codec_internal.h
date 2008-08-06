@@ -275,7 +275,7 @@ struct CP_INSTANCE {
 
 #ifdef COLLECT_METRICS
   int             *frag_mbi;
-  int             *frag_sad[8];
+  int             *frag_sad;
   int             *dct_token_frag_storage;
   int             *dct_token_frag[64];
   int             *dct_eob_fi_storage;
@@ -410,7 +410,7 @@ void fr_finishsb(CP_INSTANCE *cpi, fr_state_t *fr);
 void fr_write(CP_INSTANCE *cpi, fr_state_t *fr);
 
 #ifdef COLLECT_METRICS
-extern void ModeMetrics(CP_INSTANCE *cpi, int huff[4]);
+extern void ModeMetrics(CP_INSTANCE *cpi);
 extern void DumpMetrics(CP_INSTANCE *cpi);
 #endif
 
