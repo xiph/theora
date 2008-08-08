@@ -487,7 +487,6 @@ static void uncode_frag(CP_INSTANCE *cpi, int fi, int plane){
 
 typedef struct{
   int uncoded_ssd;
-  int uncoded_cost;
   int ssd;
   int cost;
 } rd_metric_t;
@@ -529,7 +528,7 @@ static void ps_setup_plane(CP_INSTANCE *cpi, plane_state_t *ps, int plane){
 }
 
 static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv, 
-		int uncoded_overhead, int coded_overhead, rd_metric_t *mo, long *rho_count,
+		int coding_overhead, rd_metric_t *mo, long *rho_count,
 		token_checkpoint_t **stack){
   
   int keyframe = (cpi->FrameType == KEY_FRAME);
@@ -697,19 +696,14 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
     uncoded_ssd*=ps->ssdmul;
 
     mo->uncoded_ssd+=uncoded_ssd;
-    mo->uncoded_cost+=(uncoded_overhead<<OC_BIT_SCALE);
 
     /* the partial_ssd underreports distortion, so this comparison
        will only yield false negatives, which are harmless */
-    if(uncoded_ssd+uncoded_overhead*lambda <= 
-       coded_partial_ssd+coded_overhead*lambda+((sad_cost*lambda)>>OC_BIT_SCALE)){ 
+    if(uncoded_ssd <= coded_partial_ssd+coding_overhead*lambda+((sad_cost*lambda)>>OC_BIT_SCALE)){ 
       /* SKIP */
       
       uncode_frag(cpi,fi,ps->plane);
-
       mo->ssd+=uncoded_ssd;
-      mo->cost+=(uncoded_overhead<<OC_BIT_SCALE);
-
       return 0;
 
     }
@@ -751,20 +745,19 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
     /* for undersampled planes */
     coded_ssd*=ps->ssdmul;
     
-    if(uncoded_ssd+uncoded_overhead*lambda <= coded_ssd+coded_overhead*lambda+((sad_cost*lambda)>>OC_BIT_SCALE)){ 
+    if(uncoded_ssd <= coded_ssd+coding_overhead*lambda+((sad_cost*lambda)>>OC_BIT_SCALE)){ 
       /* Hm, not worth it.  roll back */
       tokenlog_rollback(cpi, checkpoint, (*stack)-checkpoint);
       *stack = checkpoint;
       uncode_frag(cpi,fi,ps->plane);
 
       mo->ssd+=uncoded_ssd;
-      mo->cost+=(uncoded_overhead<<OC_BIT_SCALE);
 
       return 0;
     }else{
 
       mo->ssd+=coded_ssd;
-      mo->cost+=sad_cost+(coded_overhead<<OC_BIT_SCALE);
+      mo->cost+=sad_cost;
     }
   }
     
@@ -779,14 +772,14 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
   int mode = mb->mode;
   int coded = 0;
   int i;
-  fr_state_t fr_checkpoint;
+  fr_state_t fr_nocode;
   token_checkpoint_t stack[64*5]; /* worst case token usage for 4 fragments*/
   token_checkpoint_t *stackptr = stack;
 
   rd_metric_t mo;
   memset(&mo,0,sizeof(mo));
 
-  memcpy(&fr_checkpoint,fr,sizeof(fr_checkpoint));
+  memcpy(&fr_nocode,fr,sizeof(fr_nocode));
 
   for(i=0;i<4;i++){
     /* Blocks must be handled in Hilbert order which is defined by MB
@@ -794,7 +787,9 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
        raster order just to make it more difficult. */
     int bi = macroblock_phase_Y[mb_phase][i];
     int fi = mb->Ryuv[0][bi];
-    if(TQB(cpi,ps,mode,fi,mb->mv[bi],0,0,&mo,rc,&stackptr)){
+
+    fr_skipblock(cpi,&fr_nocode);
+    if(TQB(cpi,ps,mode,fi,mb->mv[bi],fr_block_coding_cost(cpi,fr),&mo,rc,&stackptr)){
       fr_codeblock(cpi,fr);
       coded++;
     }else{
@@ -803,22 +798,21 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
 	mb->mv[bi]=(mv_t){0,0};
     }
   }
-
+  
 
   if(cpi->FrameType != KEY_FRAME){
     if(coded){
       /* block by block, still coding the MB.  Now consider the
 	 macroblock coding cost as a whole (mode and MV) */ 
-      if(mo.uncoded_ssd+((cpi->skip_lambda*mo.uncoded_cost)>>OC_BIT_SCALE) <= 
-	 mo.ssd+((cpi->skip_lambda*(mo.cost+mode_overhead))>>(OC_BIT_SCALE))){     
-
+      int fr_overhead = fr->cost - fr_nocode.cost;
+      if(mo.uncoded_ssd <= mo.ssd+((cpi->skip_lambda*(mo.cost+fr_overhead+mode_overhead))>>(OC_BIT_SCALE))){     
+	
 	/* taking macroblock overhead into account, it is not worth coding this MB */
 	tokenlog_rollback(cpi, stack, stackptr-stack);
-
-	memcpy(fr,&fr_checkpoint,sizeof(fr_checkpoint));
+	
+	memcpy(fr,&fr_nocode,sizeof(fr_nocode));
 	for(i=0;i<4;i++){
 	  int fi = mb->Ryuv[0][i];
-	  fr_skipblock(cpi,fr);
 	  if(cp[fi])
 	    uncode_frag(cpi,fi,0);
 	}
@@ -912,7 +906,7 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
       }else
 	mv = mb->mv[0];
 	
-      if(TQB(cpi,ps,mb->mode,fi,mv,0,0,&mo,rc,&stackptr)){
+      if(TQB(cpi,ps,mb->mode,fi,mv,fr_block_coding_cost(cpi,fr),&mo,rc,&stackptr)){
 	fr_codeblock(cpi,fr);
 	tokenlog_commit(cpi, stack, stackptr-stack);
 	coded++;

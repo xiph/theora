@@ -38,6 +38,8 @@ void fr_clear(CP_INSTANCE *cpi, fr_state_t *fr){
   fr->cpi_partial_count=0;
   fr->cpi_full_count=0;
   fr->cpi_block_count=0;
+
+  fr->cost=0;
 }
 
 static int Brun( ogg_uint32_t value, ogg_int16_t *token) {
@@ -72,6 +74,23 @@ static int Brun( ogg_uint32_t value, ogg_int16_t *token) {
  }
 }
 
+static int BrunCost( ogg_uint32_t value ) {
+  
+  if ( value <= 2 ) {
+    return 2;
+  } else if ( value <= 4 ) {
+    return 3;
+  } else if ( value <= 6 ) {
+    return 4;
+  } else if ( value <= 10 ) {
+    return 6;
+  } else if ( value <= 14 ) {
+    return 7;
+  } else {
+    return 9;
+ }
+}
+
 void fr_skipblock(CP_INSTANCE *cpi, fr_state_t *fr){
   if(fr->sb_coded){
     if(!fr->sb_partial){
@@ -82,6 +101,7 @@ void fr_skipblock(CP_INSTANCE *cpi, fr_state_t *fr){
 	/* first run of the frame */
 	cpi->fr_block[fr->cpi_block_count]=1;
 	cpi->fr_block_bits[fr->cpi_block_count]=1;
+	fr->cost++;
 	fr->cpi_block_count++;
 	fr->b_last = 1;
       }
@@ -91,7 +111,8 @@ void fr_skipblock(CP_INSTANCE *cpi, fr_state_t *fr){
 	fr->b_count += fr->b_pend;
       }else{
 	/* in-progress run an uncoded run; flush */
-	cpi->fr_block_bits[fr->cpi_block_count] = 
+	fr->cost +=
+	  cpi->fr_block_bits[fr->cpi_block_count] = 
 	  Brun(fr->b_count, cpi->fr_block+fr->cpi_block_count);
 	fr->cpi_block_count++;
 	fr->b_count=fr->b_pend;
@@ -103,7 +124,8 @@ void fr_skipblock(CP_INSTANCE *cpi, fr_state_t *fr){
     if(fr->b_last == 0){
       fr->b_count++;
     }else{
-      cpi->fr_block_bits[fr->cpi_block_count] = 
+      fr->cost+=
+	cpi->fr_block_bits[fr->cpi_block_count] = 
 	Brun(fr->b_count, cpi->fr_block+fr->cpi_block_count);
       fr->cpi_block_count++;
       fr->b_count = 1;
@@ -125,6 +147,7 @@ void fr_codeblock(CP_INSTANCE *cpi, fr_state_t *fr){
 	/* first run of the frame */
 	cpi->fr_block[fr->cpi_block_count]=0;
 	cpi->fr_block_bits[fr->cpi_block_count]=1;
+	fr->cost++;
 	fr->cpi_block_count++;
 	fr->b_last = 0;
       }
@@ -134,7 +157,8 @@ void fr_codeblock(CP_INSTANCE *cpi, fr_state_t *fr){
 	fr->b_count += fr->b_pend;
       }else{
 	/* in-progress run a coded run; flush */
-	cpi->fr_block_bits[fr->cpi_block_count] = 
+	fr->cost+=
+	  cpi->fr_block_bits[fr->cpi_block_count] = 
 	  Brun(fr->b_count, cpi->fr_block+fr->cpi_block_count);
 	fr->cpi_block_count++;
 	fr->b_count=fr->b_pend;
@@ -146,7 +170,8 @@ void fr_codeblock(CP_INSTANCE *cpi, fr_state_t *fr){
     if(fr->b_last == 1){
       fr->b_count++;
     }else{
-      cpi->fr_block_bits[fr->cpi_block_count] = 
+      fr->cost+=
+	cpi->fr_block_bits[fr->cpi_block_count] = 
 	Brun(fr->b_count, cpi->fr_block+fr->cpi_block_count);
       fr->cpi_block_count++;
       fr->b_count = 1;
@@ -194,12 +219,32 @@ static int SBRun(ogg_uint32_t value, int *token){
   }
 }
 
+static int SBRunCost(ogg_uint32_t value){
+
+  if ( value == 1 ){
+    return 1;
+  } else if ( value <= 3 ) {
+    return 3;
+  } else if ( value <= 5 ) {
+    return 4;
+  } else if ( value <= 9 ) {
+    return 6;
+  } else if ( value <= 17 ) {
+    return 8;
+  } else if ( value <= 33 ) {
+    return 10;
+  } else {
+    return 18;
+  }
+}
+
 void fr_finishsb(CP_INSTANCE *cpi, fr_state_t *fr){
   /* update partial state */
   int partial = (fr->sb_partial & fr->sb_coded); 
   if(fr->sb_partial_last == -1){
     cpi->fr_partial[fr->cpi_partial_count] = partial;
     cpi->fr_partial_bits[fr->cpi_partial_count] = 1;
+    fr->cost++;
     fr->cpi_partial_count++;
     fr->sb_partial_last = partial;
   }
@@ -210,11 +255,13 @@ void fr_finishsb(CP_INSTANCE *cpi, fr_state_t *fr){
     if(fr->sb_partial_break){
       cpi->fr_partial[fr->cpi_partial_count] = partial;
       cpi->fr_partial_bits[fr->cpi_partial_count] = 1;
+      fr->cost++;
       fr->cpi_partial_count++;
     }
       
     fr->sb_partial_break=0;
-    cpi->fr_partial_bits[fr->cpi_partial_count] = 
+    fr->cost+=
+      cpi->fr_partial_bits[fr->cpi_partial_count] = 
       SBRun( fr->sb_partial_count, cpi->fr_partial+fr->cpi_partial_count);
     fr->cpi_partial_count++;
     
@@ -229,6 +276,7 @@ void fr_finishsb(CP_INSTANCE *cpi, fr_state_t *fr){
     if(fr->sb_full_last == -1){
       cpi->fr_full[fr->cpi_full_count] = fr->sb_coded;
       cpi->fr_full_bits[fr->cpi_full_count] = 1;
+      fr->cost++;
       fr->cpi_full_count++;
       fr->sb_full_last = fr->sb_coded;
     }
@@ -239,11 +287,13 @@ void fr_finishsb(CP_INSTANCE *cpi, fr_state_t *fr){
       if(fr->sb_full_break){
 	cpi->fr_full[fr->cpi_full_count] = fr->sb_coded;
 	cpi->fr_full_bits[fr->cpi_full_count] = 1;
+	fr->cost++;
 	fr->cpi_full_count++;
       }
 
       fr->sb_full_break=0;
-      cpi->fr_full_bits[fr->cpi_full_count] = 
+      fr->cost+=
+	cpi->fr_full_bits[fr->cpi_full_count] = 
 	SBRun( fr->sb_full_count, cpi->fr_full+fr->cpi_full_count);
       fr->cpi_full_count++;
       if(fr->sb_full_count >= 4129) fr->sb_full_break = 1;
@@ -258,15 +308,99 @@ void fr_finishsb(CP_INSTANCE *cpi, fr_state_t *fr){
   fr->sb_coded=0;
 }
 
+int fr_block_coding_cost(CP_INSTANCE *cpi, fr_state_t *fr){
+  int coded=0, uncoded=0;
+
+  if(fr->b_pend == 0){
+    /* first block in SB */ 
+
+    /* if(fr->sb_partial_last==1){ */
+    /* last SB was partially coded; no opportunity cost one way or the other */
+    /* } */
+
+    if(fr->sb_partial_last==0){ 
+      if(fr->sb_full_last==1){
+	/* last SB was fully coded */
+	/* if next block is uncoded, the result may be a partial or
+	   fully uncoded superblock, but we don't know which yet.
+	   The certain cost is the minimum of the two. */
+	int uncoded1 = SBRunCost( fr->sb_full_count );
+	int uncoded2 = SBRunCost( fr->sb_partial_count );
+	uncoded += OC_MINI(uncoded1, uncoded2);
+
+	if(fr->sb_full_count+1 >= 4129)
+	  coded += SBRunCost( fr->sb_full_count )+1;
+
+      }
+      if(fr->sb_full_last==0){
+	/* last SB was fully uncoded */
+	/* if next block is coded, the result may be a partial or
+	   fully coded superblock, but we don't know which yet.
+	   The certain cost is the minimum of the two. */
+	int coded1 = SBRunCost( fr->sb_full_count );
+	int coded2 = SBRunCost( fr->sb_partial_count );
+	coded += OC_MINI(coded1, coded2);
+	if(fr->sb_full_count+1 >= 4129)
+	  uncoded += SBRunCost( fr->sb_full_count )+1;
+
+      }
+    }
+
+    /* this is the first block in the SB, so it always begins a block-run; there is no block opportunity cost either way */
+
+  }else{
+    if(fr->sb_partial){
+      if(fr->sb_coded){
+	/* SB is partially coded to this point; only new costs are block-run costs */
+
+	if(fr->b_last == 0){
+	  coded += BrunCost(fr->b_count);
+	}else{
+	  uncoded += BrunCost(fr->b_count);
+	}
+
+      }else{
+	/* SB is fully uncoded to this point */
+
+	/* coded cost reflects transition from uncoded -> partial */
+	coded += BrunCost(fr->b_pend);
+
+	if(fr->sb_partial_last==0){ 
+	  coded += SBRunCost( fr->sb_partial_count );
+	}else
+	  if(fr->sb_partial_count+1 >= 4129)
+	    coded += SBRunCost( fr->sb_partial_count )+1;
+
+      }
+    }else{
+      /* SB is fully coded to this point */
+
+      uncoded += BrunCost(fr->b_pend);
+
+      /* uncoded cost reflects transition from coded -> partial */
+      uncoded += BrunCost(fr->b_pend);
+      
+      if(fr->sb_partial_last==0){ 
+	uncoded += SBRunCost( fr->sb_partial_count );
+      }else
+	if(fr->sb_partial_count+1 >= 4129)
+	  uncoded += SBRunCost( fr->sb_partial_count )+1;
+    }
+  }
+  return coded-uncoded;
+}
+
 static void fr_flush(CP_INSTANCE *cpi, fr_state_t *fr){
   /* flush any pending partial run */
   if(fr->sb_partial_break){
     cpi->fr_partial[fr->cpi_partial_count] = fr->sb_partial_last;
     cpi->fr_partial_bits[fr->cpi_partial_count] = 1;
+    fr->cost++;
     fr->cpi_partial_count++;
   }
   if(fr->sb_partial_count){
-    cpi->fr_partial_bits[fr->cpi_partial_count] = 
+    fr->cost+=
+      cpi->fr_partial_bits[fr->cpi_partial_count] = 
       SBRun( fr->sb_partial_count, cpi->fr_partial+fr->cpi_partial_count);
     fr->cpi_partial_count++;
   }
@@ -275,17 +409,20 @@ static void fr_flush(CP_INSTANCE *cpi, fr_state_t *fr){
   if(fr->sb_full_break){
     cpi->fr_full[fr->cpi_full_count] = fr->sb_full_last;
     cpi->fr_full_bits[fr->cpi_full_count] = 1;
+    fr->cost++;
     fr->cpi_full_count++;
   }
   if(fr->sb_full_count){
-    cpi->fr_full_bits[fr->cpi_full_count] = 
+    fr->cost+=
+      cpi->fr_full_bits[fr->cpi_full_count] = 
       SBRun( fr->sb_full_count, cpi->fr_full+fr->cpi_full_count);
     fr->cpi_full_count++;
   }
 
   /* flush any pending block run */
   if(fr->b_count){
-    cpi->fr_block_bits[fr->cpi_block_count] = 
+    fr->cost+=
+      cpi->fr_block_bits[fr->cpi_block_count] = 
       Brun(fr->b_count, cpi->fr_block+fr->cpi_block_count);
     fr->cpi_block_count++;
   }

@@ -404,6 +404,7 @@ typedef struct {
   char sb_partial;
   char sb_coded;
 
+  int cost;
 } fr_state_t;
 
 void fr_clear(CP_INSTANCE *cpi, fr_state_t *fr);
@@ -411,6 +412,7 @@ void fr_skipblock(CP_INSTANCE *cpi, fr_state_t *fr);
 void fr_codeblock(CP_INSTANCE *cpi, fr_state_t *fr);
 void fr_finishsb(CP_INSTANCE *cpi, fr_state_t *fr);
 void fr_write(CP_INSTANCE *cpi, fr_state_t *fr);
+int fr_block_coding_cost(CP_INSTANCE *cpi, fr_state_t *fr);
 
 #ifdef COLLECT_METRICS
 extern void ModeMetrics(CP_INSTANCE *cpi);
