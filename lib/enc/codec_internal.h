@@ -326,6 +326,9 @@ typedef struct {
   int chroma;
   int pre;
   int run;
+#ifdef COLLECT_METRICS
+  int runstack;
+#endif
 } token_checkpoint_t;
 
 extern void tokenlog_commit(CP_INSTANCE *cpi, 

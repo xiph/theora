@@ -1346,7 +1346,7 @@ void ModeMetrics(CP_INSTANCE *cpi){
     ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES*3, huff[2]+AC_HUFF_CHOICES*3, eobcounts, actual_bits);
 
   /* accumulate */
-  for(fi=0;fi<v;fi++){
+  for(fi=0;fi<v;fi++)
     if(cp[fi]){
       macroblock_t *mb = &cpi->macro[mp[fi]];
       int mode = mb->mode;

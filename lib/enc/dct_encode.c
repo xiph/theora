@@ -231,6 +231,9 @@ void tokenlog_rollback(CP_INSTANCE *cpi, token_checkpoint_t *stack,int n){
     if(stack[i].count>=0) cpi->dct_token_count[coeff] = stack[i].count; 
     cpi->eob_run[coeff] = stack[i].run;
     cpi->eob_pre[coeff] = stack[i].pre;
+#ifdef COLLECT_METRICS
+    cpi->dct_eob_fi_count[coeff] = stack[i].runstack;
+#endif
   }
 }
 
@@ -271,6 +274,9 @@ static void tokenlog_mark(CP_INSTANCE *cpi, int coeff, token_checkpoint_t **stac
   (*stack)->count = -1;
   (*stack)->run = cpi->eob_run[coeff];
   (*stack)->pre = cpi->eob_pre[coeff];
+#ifdef COLLECT_METRICS
+  (*stack)->runstack = cpi->dct_eob_fi_count[coeff];
+#endif
   (*stack)++;
 }
 
@@ -286,6 +292,9 @@ static void token_add(CP_INSTANCE *cpi, int chroma, int coeff,
     (*stack)->chroma = chroma;
     (*stack)->run = cpi->eob_run[coeff];
     (*stack)->pre = cpi->eob_pre[coeff];
+#ifdef COLLECT_METRICS
+    (*stack)->runstack = cpi->dct_eob_fi_count[coeff];
+#endif
     (*stack)++;
   }else{
     tokenlog_metrics(cpi,coeff,chroma,token);
@@ -500,8 +509,6 @@ void dct_tokenize_AC(CP_INSTANCE *cpi, int fi,
 	if(delta < ((cost*cpi->token_lambda)<<4)){
 	  /* we have a winner.  Demote token */
 	  dct[i]=dval;
-
-	  // perhaps a continue here is best; try it later
 
 	  if(dval==0){
 	    if(j==BLOCK_SIZE){
