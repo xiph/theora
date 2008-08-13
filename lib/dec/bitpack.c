@@ -1,11 +1,11 @@
 /********************************************************************
  *                                                                  *
- * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * THIS FILE IS PART OF THE OggTheora SOFTWARE CODEC SOURCE CODE.   *
  * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2002             *
+ * THE OggTheora SOURCE CODE IS (C) COPYRIGHT 1994-2008             *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -20,7 +20,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include "bitwise.h"
+#include "bitpack.h"
 
 void theorapackB_readinit(oggpack_buffer *_b,unsigned char *_buf,int _bytes){
   memset(_b,0,sizeof(*_b));

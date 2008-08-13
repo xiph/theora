@@ -20,7 +20,7 @@
 # define _decint_H (1)
 # include "theora/theoradec.h"
 # include "../internal.h"
-# include "bitwise.h"
+# include "bitpack.h"
 
 typedef struct th_setup_info oc_setup_info;
 typedef struct th_dec_ctx    oc_dec_ctx;

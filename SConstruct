@@ -30,7 +30,7 @@ encoder_sources = """
 
 decoder_sources = """
         dec/apiwrapper.c \
-	dec/bitwise.c \
+	dec/bitpack.c \
         dec/decapiwrapper.c \
         dec/decinfo.c \
         dec/decode.c \
