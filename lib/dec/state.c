@@ -831,13 +831,13 @@ void oc_state_frag_recon_c(oc_theora_state *_state,oc_fragment *_frag,
     ogg_int16_t p;
     /*Why is the iquant product rounded in this case and no others?
       Who knows.*/
-    p=(ogg_int16_t)((ogg_int32_t)_frag->dc*_dc_iquant+15>>5);
+    p=(ogg_int16_t)((ogg_int32_t)(ogg_int16_t)_frag->dc*_dc_iquant+15>>5);
     /*LOOP VECTORIZES.*/
     for(ci=0;ci<64;ci++)res_buf[ci]=p;
   }
   else{
     /*First, dequantize the coefficients.*/
-    dct_buf[0]=(ogg_int16_t)((ogg_int32_t)_frag->dc*_dc_iquant);
+    dct_buf[0]=(ogg_int16_t)((ogg_int32_t)(ogg_int16_t)_frag->dc*_dc_iquant);
     for(zzi=1;zzi<_ncoefs;zzi++){
       int ci;
       ci=OC_FZIG_ZAG[zzi];
