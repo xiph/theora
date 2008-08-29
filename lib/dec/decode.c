@@ -443,7 +443,7 @@ static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
   oc_mb               *mb;
   oc_mb               *mb_end;
   const int           *alphabet;
-  long                 val,j;
+  long                 val;
   int                  scheme0_alphabet[8];
   int                  mode_scheme;
   theorapackB_read(&_dec->opb,3,&val);
@@ -654,7 +654,7 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
   else{
     long val;
     int  flag;
-    int  nqi0;
+    int  nqi1;
     int  run_count;
     /*Otherwise, we decode a qi index for each fragment, using two passes of
       the same binary RLE scheme used for super-block coded bits.
@@ -666,14 +666,14 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
       with the corresponding qi's for this frame.*/
     theorapackB_read1(&_dec->opb,&val);
     flag=(int)val;
-    run_count=nqi0=0;
+    run_count=nqi1=0;
     while(coded_fragi<coded_fragi_end){
       int full_run;
       run_count=oc_sb_run_unpack(&_dec->opb);
       full_run=run_count>=4129;
       do{
         _dec->state.frags[*coded_fragi++].qi=flag;
-        nqi0+=!flag;
+        nqi1+=flag;
       }
       while(--run_count>0&&coded_fragi<coded_fragi_end);
       if(full_run&&coded_fragi<coded_fragi_end){
@@ -686,7 +686,7 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
       If it's not, we should issue a warning of some kind.*/
     /*If we have 3 different qi's for this frame, and there was at least one
        fragment with a non-zero qi, make the second pass.*/
-    if(_dec->state.nqis==3&&nqi0<ncoded_fragis){
+    if(_dec->state.nqis==3&&nqi1>0){
       /*Skip qii==0 fragments.*/
       for(coded_fragi=_dec->state.coded_fragis;
        _dec->state.frags[*coded_fragi].qi==0;coded_fragi++);
