@@ -13,12 +13,19 @@ test: check
 
 TESTS_ENVIRONMENT = $(VALGRIND_ENVIRONMENT)
 
-TESTS = noop noop_theoraenc noop_theora \
-	comment comment_theoradec comment_theora \
+TESTS_DEC = noop_theora \ 
+        comment comment_theoradec comment_theora
+
+TESTS_ENC = noop noop_theoraenc \
 	granulepos granulepos_theoraenc granulepos_theora
 
-noinst_PROGRAMS = $(TESTS)
+if THEORA_DISABLE_ENCODE
+TESTS = $(TESTS_DEC)
+else
+TESTS = $(TESTS_DEC) $(TESTS_ENC)
+endif
 
+check_PROGRAMS = $(TESTS)
 # dummy call tests for the current api
 noop_SOURCES = noop.c
 noop_LDADD = $(THEORAENC_LIBS)
