@@ -25,7 +25,7 @@ FIG_PDFS = $(FIG_SRCS:.fig=.pdf)
 # add any native-pdf figures here
 FIG_OBJS = $(FIG_PDFS)
 
-EXTRA_DIST = $(built_docs) $(SPEC_SRCS) $(FIG_SRCS)
+EXTRA_DIST = $(built_docs) $(SPEC_SRCS) $(FIG_SRCS) ltablex.sty
 
 if BUILD_SPEC
 # latex three times is the charm with references
