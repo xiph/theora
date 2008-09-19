@@ -168,6 +168,22 @@ AC_ARG_ENABLE(asm,
     [  --disable-asm           disable assembly optimizations ],
     [ ac_enable_asm=$enableval ], [ ac_enable_asm=yes] )
 
+# early gcc doesn't support named parameters; disable asm in this case
+if ! test -z "$GCC"; then
+    AC_MSG_CHECKING([if the compiler version supports named asm params])
+    gcc_version=`${CC} -dumpversion`
+    gcc_version_major=`echo ${gcc_version} | cut -f 1 -d '.'`
+    gcc_version_minor=`echo ${gcc_version} | cut -f 2 -d '.'`
+    if test "${gcc_version_major}" -lt 3; then
+      ac_enable_asm=no
+      AC_MSG_RESULT([no (${gcc_version})])
+    elif test "${gcc_version_major}" -eq 3 -a "${gcc_version_minor}" -lt 1; then
+      ac_enable_asm=no
+      AC_MSG_RESULT([no (${gcc_version})])
+    else
+      AC_MSG_RESULT([ok (${gcc_version})])
+    fi
+fi
 if test "x${ac_enable_asm}" = xyes; then
   cpu_optimization="no optimization for your platform, please send a patch"
   case $target_cpu in
