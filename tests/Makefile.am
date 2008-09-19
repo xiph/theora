@@ -13,8 +13,8 @@ test: check
 
 TESTS_ENVIRONMENT = $(VALGRIND_ENVIRONMENT)
 
-TESTS_DEC = noop_theora \ 
-        comment comment_theoradec comment_theora
+TESTS_DEC = noop_theora \
+	comment comment_theoradec comment_theora
 
 TESTS_ENC = noop noop_theoraenc \
 	granulepos granulepos_theoraenc granulepos_theora
