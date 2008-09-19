@@ -17,7 +17,7 @@
 
 #include "codec_internal.h"
 
-ogg_uint32_t MvPattern[(MAX_MV_EXTENT * 2) + 1] = {
+static const ogg_uint32_t MvPattern[(MAX_MV_EXTENT * 2) + 1] = {
   0x000000ff, 0x000000fd, 0x000000fb, 0x000000f9,
   0x000000f7, 0x000000f5, 0x000000f3, 0x000000f1,
   0x000000ef, 0x000000ed, 0x000000eb, 0x000000e9,
@@ -36,7 +36,7 @@ ogg_uint32_t MvPattern[(MAX_MV_EXTENT * 2) + 1] = {
   0x000000fa, 0x000000fc, 0x000000fe,
 };
 
-ogg_uint32_t MvBits[(MAX_MV_EXTENT * 2) + 1] = {
+static const ogg_uint32_t MvBits[(MAX_MV_EXTENT * 2) + 1] = {
   8, 8, 8, 8, 8, 8, 8, 8,
   8, 8, 8, 8, 8, 8, 8, 8,
   7, 7, 7, 7, 7, 7, 7, 7,
@@ -47,7 +47,7 @@ ogg_uint32_t MvBits[(MAX_MV_EXTENT * 2) + 1] = {
   8, 8, 8, 8, 8, 8, 8,
 };
 
-ogg_uint32_t MvPattern2[(MAX_MV_EXTENT * 2) + 1] = {
+static const ogg_uint32_t MvPattern2[(MAX_MV_EXTENT * 2) + 1] = {
   0x0000003f, 0x0000003d, 0x0000003b, 0x00000039,
   0x00000037, 0x00000035, 0x00000033, 0x00000031,
   0x0000002f, 0x0000002d, 0x0000002b, 0x00000029,
@@ -66,7 +66,7 @@ ogg_uint32_t MvPattern2[(MAX_MV_EXTENT * 2) + 1] = {
   0x0000003a, 0x0000003c, 0x0000003e,
 };
 
-ogg_uint32_t MvBits2[(MAX_MV_EXTENT * 2) + 1] = {
+static const ogg_uint32_t MvBits2[(MAX_MV_EXTENT * 2) + 1] = {
   6, 6, 6, 6, 6, 6, 6, 6,
   6, 6, 6, 6, 6, 6, 6, 6,
   6, 6, 6, 6, 6, 6, 6, 6,
@@ -77,13 +77,13 @@ ogg_uint32_t MvBits2[(MAX_MV_EXTENT * 2) + 1] = {
   6, 6, 6, 6, 6, 6, 6,
 };
 
-ogg_uint32_t ModeBitPatterns[MAX_MODES] = {
+static const ogg_uint32_t ModeBitPatterns[MAX_MODES] = {
   0x00, 0x02, 0x06, 0x0E, 0x1E, 0x3E, 0x7E, 0x7F };
 
-ogg_int32_t ModeBitLengths[MAX_MODES] =  {
+static const ogg_int32_t ModeBitLengths[MAX_MODES] =  {
   1,    2,    3,    4,    5,    6,    7,    7 };
 
-unsigned char ModeSchemes[MODE_METHODS-2][MAX_MODES] =  {
+static const unsigned char ModeSchemes[MODE_METHODS-2][MAX_MODES] =  {
   /* Last Mv dominates */
   { 3,    4,    2,    0,    1,    5,    6,    7 },    /* L P  M N I G GM 4 */
   { 2,    4,    3,    0,    1,    5,    6,    7 },    /* L P  N M I G GM 4 */
@@ -97,7 +97,7 @@ unsigned char ModeSchemes[MODE_METHODS-2][MAX_MODES] =  {
 };
 
 
-ogg_uint32_t MvThreshTable[Q_TABLE_SIZE] = {
+static const ogg_uint32_t MvThreshTable[Q_TABLE_SIZE] = {
   65, 65, 65, 65, 50, 50, 50, 50,
   40, 40, 40, 40, 40, 40, 40, 40,
   30, 30, 30, 30, 30, 30, 30, 30,
@@ -108,7 +108,7 @@ ogg_uint32_t MvThreshTable[Q_TABLE_SIZE] = {
   0,  0,  0,  0,  0,  0,  0,  0
 };
 
-ogg_uint32_t MVChangeFactorTable[Q_TABLE_SIZE] = {
+static const ogg_uint32_t MVChangeFactorTable[Q_TABLE_SIZE] = {
   11, 11, 11, 11, 12, 12, 12, 12,
   13, 13, 13, 13, 13, 13, 13, 13,
   14, 14, 14, 14, 14, 14, 14, 14,

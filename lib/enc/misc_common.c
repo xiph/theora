@@ -23,7 +23,7 @@
 #define MAX_UP_REG_LOOPS        2
 
 /* Gives the initial bytes per block estimate for each Q value */
-double BpbTable[Q_TABLE_SIZE] = {
+static const double BpbTable[Q_TABLE_SIZE] = {
   0.42,  0.45,  0.46,  0.49,  0.51,  0.53,  0.56,  0.58,
   0.61,  0.64,  0.68,  0.71,  0.74,  0.77,  0.80,  0.84,
   0.89,  0.92,  0.98,  1.01,  1.04,  1.13,  1.17,  1.23,
@@ -34,7 +34,7 @@ double BpbTable[Q_TABLE_SIZE] = {
   5.61,  5.87,  6.11,  6.41,  6.71,  6.99,  7.36,  7.69
 };
 
-double KfBpbTable[Q_TABLE_SIZE] = {
+static const double KfBpbTable[Q_TABLE_SIZE] = {
   0.74,  0.81,  0.88,  0.94,  1.00,  1.06,  1.14,  1.19,
   1.27,  1.34,  1.42,  1.49,  1.54,  1.59,  1.66,  1.73,
   1.80,  1.87,  1.97,  2.01,  2.08,  2.21,  2.25,  2.36,
