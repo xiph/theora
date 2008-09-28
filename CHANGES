@@ -1,6 +1,22 @@
-libtheora 1.0beta4 (unreleased)
+libtheora 1.0 (unreleased)
 
- - no changes yet.
+ - Merge x86 assembly for forward DCT from Thusnelda branch.
+ - Update 32 bit MMX with loop filter fix.
+ - Check for an uninitialized state before dereferencing in propagating
+   decode calls
+ - Remove all TH_DEBUG statements.
+ - Rename the bitpacker source files imported from libogg to avoid
+   confusing simple build systems using both libraries.
+ - Add VS2008 project files.
+ - Add explicit casts as a work-around for Solaris's cc ignoring the
+   signedness of bitfield types.
+ - Set quantization parameters to default values when an empty buffer is
+   passed with TH_ENCCTL_SET_QUANT_PARAMS.
+ - Split encoder and decoder tests depending on configure settings.
+ - Return lstylex.sty to the distribution.
+ - Disable inline assembly on gcc versions prior to 3.1.
+ - Remove extern references for OC_*_QUANT_MIN.
+ - Make various data tables static const so they can be read-only.
 
 libtheora 1.0beta3 (2008 April 16)
 
@@ -9,12 +25,12 @@ libtheora 1.0beta3 (2008 April 16)
    not be considered stable yet.
  - Change granule_frame() to return an index as documented.
    This is a change of behaviour from 1.0beta1.
- - Document that granule_time() returns the end of the 
-   presentation interval. 
+ - Document that granule_time() returns the end of the
+   presentation interval.
  - Use a custom copy of the libogg bitpacker in the decoder
    to avoid function call overhead.
  - MMX code improved and ported to MSVC.
- - Fix a problem with the MMX code on SELinux 
+ - Fix a problem with the MMX code on SELinux.
  - Fix a problem with decoder quantizer initialization.
  - Fix a page queue problem with png2theora.
  - Improved robustness.
