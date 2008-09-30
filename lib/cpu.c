@@ -89,8 +89,10 @@ static void oc_detect_cpuid_helper(ogg_uint32_t *_eax,ogg_uint32_t *_ebx){
     pushfd
     pop eax
     popfd
-    mov [_eax],eax
-    mov [_ebx],ebx
+    mov ecx,_eax
+    mov [ecx],eax
+    mov ecx,_ebx
+    mov [ecx],ebx
   }
 }
 # endif
