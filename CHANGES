@@ -3,7 +3,7 @@ libtheora 1.0 (unreleased)
  - Merge x86 assembly for forward DCT from Thusnelda branch.
  - Update 32 bit MMX with loop filter fix.
  - Check for an uninitialized state before dereferencing in propagating
-   decode calls
+   decode calls.
  - Remove all TH_DEBUG statements.
  - Rename the bitpacker source files imported from libogg to avoid
    confusing simple build systems using both libraries.
@@ -17,6 +17,9 @@ libtheora 1.0 (unreleased)
  - Disable inline assembly on gcc versions prior to 3.1.
  - Remove extern references for OC_*_QUANT_MIN.
  - Make various data tables static const so they can be read-only.
+ - cpuid assembly fix for MSVC.
+ - Remove ENCCTL codes from the old encoder API.
+ - Implement TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE ctl.
 
 libtheora 1.0beta3 (2008 April 16)
 
