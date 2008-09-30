@@ -315,6 +315,20 @@ typedef struct theora_comment{
  */
 #define TH_DECCTL_SET_PPLEVEL (3)
 
+/**Sets the maximum distance between key frames.
+ * This can be changed during an encode, but will be bounded by
+ *  <tt>1<<th_info#keyframe_granule_shift</tt>.
+ * If it is set before encoding begins, th_info#keyframe_granule_shift will
+ *  be enlarged appropriately.
+ *
+ * \param[in]  buf <tt>ogg_uint32_t</tt>: The maximum distance between key
+ *                   frames.
+ * \param[out] buf <tt>ogg_uint32_t</tt>: The actual maximum distance set.
+ * \retval TH_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
+ * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(ogg_uint32_t)</tt>.
+ * \retval TH_IMPL   Not supported by this implementation.*/
+#define TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE (4)
+
 /**Set the granule position.
  * Call this after a seek, to update the internal granulepos
  * in the decoder, to insure that subsequent frames are marked
