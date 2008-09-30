@@ -1367,6 +1367,20 @@ static int theora_encode_control(theora_state *th,int req,
   pbi = &cpi->pb;
 
   switch(req) {
+    case TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE:
+      {
+	ogg_uint32_t keyframe_frequency_force;
+	if( (buf==NULL) || (buf_sz!=sizeof(ogg_uint32_t))) return TH_EINVAL;
+	keyframe_frequency_force=*(ogg_uint32_t *)buf;
+	
+	keyframe_frequency_force=
+	  OC_MINI(keyframe_frequency_force,
+		  1U<<cpi->pb.keyframe_granule_shift);
+	cpi->pb.info.keyframe_frequency_force=
+	  OC_MAXI(1,keyframe_frequency_force);
+	*(ogg_uint32_t *)buf=cpi->pb.info.keyframe_frequency_force;
+	return 0;
+      }
     case TH_ENCCTL_SET_QUANT_PARAMS:
       if( ( buf==NULL&&buf_sz!=0 )
            || ( buf!=NULL&&buf_sz!=sizeof(th_quant_info) )
