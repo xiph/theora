@@ -22,7 +22,7 @@
 # include "config.h"
 #endif
 
-#define COLLECT_METRICS 
+#undef COLLECT_METRICS 
 
 #include "theora/theora.h"
 #include "encoder_huffman.h"
@@ -255,6 +255,10 @@ struct CP_INSTANCE {
   unsigned char   *fr_full_bits;
   ogg_int16_t     *fr_block;
   unsigned char   *fr_block_bits;
+  int              fr_partial_count;
+  int              fr_full_count;
+  int              fr_block_count;
+
 
   int              stack_offset;
   unsigned char   *dct_token_storage;
@@ -386,11 +390,7 @@ extern void InitFrameInfo(CP_INSTANCE *cpi);
 extern void ClearFrameInfo (CP_INSTANCE *cpi);
 
 typedef struct {
-  int cpi_partial_count;
-  int cpi_full_count;
-  int cpi_block_count;
-
-  ogg_uint16_t  sb_partial_count;
+  ogg_uint16_t sb_partial_count;
   ogg_uint16_t sb_full_count;
 
   signed char sb_partial_last;
@@ -407,12 +407,14 @@ typedef struct {
   int cost;
 } fr_state_t;
 
-void fr_clear(CP_INSTANCE *cpi, fr_state_t *fr);
-void fr_skipblock(CP_INSTANCE *cpi, fr_state_t *fr);
-void fr_codeblock(CP_INSTANCE *cpi, fr_state_t *fr);
-void fr_finishsb(CP_INSTANCE *cpi, fr_state_t *fr);
-void fr_write(CP_INSTANCE *cpi, fr_state_t *fr);
-int fr_block_coding_cost(CP_INSTANCE *cpi, fr_state_t *fr);
+extern void fr_clear(CP_INSTANCE *cpi, fr_state_t *fr);
+extern void fr_skipblock(CP_INSTANCE *cpi, fr_state_t *fr);
+extern void fr_codeblock(CP_INSTANCE *cpi, fr_state_t *fr);
+extern void fr_finishsb(CP_INSTANCE *cpi, fr_state_t *fr);
+extern void fr_write(CP_INSTANCE *cpi, fr_state_t *fr);
+
+extern int fr_cost1(fr_state_t *fr);
+extern int fr_cost4(fr_state_t *pre, fr_state_t *post);
 
 #ifdef COLLECT_METRICS
 extern void ModeMetrics(CP_INSTANCE *cpi);

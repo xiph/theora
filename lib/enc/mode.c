@@ -768,18 +768,20 @@ static int macroblock_phase_Y[4][4] = {{0,1,3,2},{0,2,3,1},{0,2,3,1},{3,2,0,1}};
 
 static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_state_t *ps, long *rc, 
 		    int mode_overhead, fr_state_t *fr){
+
+  int full_checkpoint = cpi->fr_full_count;
+  int partial_checkpoint = cpi->fr_partial_count;
+  int block_checkpoint = cpi->fr_block_count;
+  fr_state_t fr_checkpoint = *fr;
   unsigned char *cp=cpi->frag_coded;
   int mode = mb->mode;
   int coded = 0;
   int i;
-  fr_state_t fr_nocode;
   token_checkpoint_t stack[64*5]; /* worst case token usage for 4 fragments*/
   token_checkpoint_t *stackptr = stack;
 
   rd_metric_t mo;
   memset(&mo,0,sizeof(mo));
-
-  memcpy(&fr_nocode,fr,sizeof(fr_nocode));
 
   for(i=0;i<4;i++){
     /* Blocks must be handled in Hilbert order which is defined by MB
@@ -788,8 +790,7 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
     int bi = macroblock_phase_Y[mb_phase][i];
     int fi = mb->Ryuv[0][bi];
 
-    fr_skipblock(cpi,&fr_nocode);
-    if(TQB(cpi,ps,mode,fi,mb->mv[bi],fr_block_coding_cost(cpi,fr),&mo,rc,&stackptr)){
+    if(TQB(cpi,ps,mode,fi,mb->mv[bi],fr_cost1(fr),&mo,rc,&stackptr)){
       fr_codeblock(cpi,fr);
       coded++;
     }else{
@@ -804,17 +805,21 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
     if(coded){
       /* block by block, still coding the MB.  Now consider the
 	 macroblock coding cost as a whole (mode and MV) */ 
-      int fr_overhead = fr->cost - fr_nocode.cost;
-      if(mo.uncoded_ssd <= mo.ssd+((cpi->skip_lambda*(mo.cost+fr_overhead+mode_overhead))>>(OC_BIT_SCALE))){     
+      int codecost = mo.cost+fr_cost4(&fr_checkpoint,fr)+mode_overhead;
+      if(mo.uncoded_ssd <= mo.ssd+((cpi->skip_lambda*codecost)>>(OC_BIT_SCALE))){     
 	
 	/* taking macroblock overhead into account, it is not worth coding this MB */
 	tokenlog_rollback(cpi, stack, stackptr-stack);
+	memcpy(fr,&fr_checkpoint,sizeof(fr_checkpoint));
+	cpi->fr_full_count = full_checkpoint;
+	cpi->fr_partial_count = partial_checkpoint;
+	cpi->fr_block_count = block_checkpoint;
 	
-	memcpy(fr,&fr_nocode,sizeof(fr_nocode));
 	for(i=0;i<4;i++){
 	  int fi = mb->Ryuv[0][i];
 	  if(cp[fi])
 	    uncode_frag(cpi,fi,0);
+	  fr_skipblock(cpi,fr);
 	}
 	coded=0;
 
@@ -906,7 +911,7 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
       }else
 	mv = mb->mv[0];
 	
-      if(TQB(cpi,ps,mb->mode,fi,mv,fr_block_coding_cost(cpi,fr),&mo,rc,&stackptr)){
+      if(TQB(cpi,ps,mb->mode,fi,mv,fr_cost1(fr),&mo,rc,&stackptr)){
 	fr_codeblock(cpi,fr);
 	tokenlog_commit(cpi, stack, stackptr-stack);
 	coded++;
@@ -937,6 +942,9 @@ int PickModes(CP_INSTANCE *cpi, int recode){
   ps_setup_frame(cpi,&ps);
   ps_setup_plane(cpi,&ps,0);
   fr_clear(cpi,&fr);
+  cpi->fr_full_count=0;
+  cpi->fr_partial_count=0;
+  cpi->fr_block_count=0;
 
   memset(rho_count,0,sizeof(rho_count));
   cpi->MVBits_0 = 0;
