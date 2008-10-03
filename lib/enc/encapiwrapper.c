@@ -1091,7 +1091,7 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _ycbcr){
     int            pli;
     pic_x=cpi->pb.info.offset_x;
     pic_y=cpi->pb.info.offset_y;
-    if(_ycbcr[0].width>pic_width&&_ycbcr[0].height>pic_height){
+    if(_ycbcr[0].width>pic_width||_ycbcr[0].height>pic_height){
       buf=th_encode_copy_pad_plane(ycbcr+0,_enc->buf,_ycbcr+0,
        pic_x,pic_y,pic_width,pic_height);
     }
@@ -1108,7 +1108,7 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _ycbcr){
       int x0;
       int y0;
       x0=pic_x>>hdec;
-      y0=pic_x>>hdec;
+      y0=pic_y>>vdec;
       buf=th_encode_copy_pad_plane(ycbcr+pli,buf,_ycbcr+pli,
        x0,y0,(pic_x+pic_width+hdec>>hdec)-x0,(pic_y+pic_height+vdec>>vdec)-y0);
     }
