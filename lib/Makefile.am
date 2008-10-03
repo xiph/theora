@@ -8,6 +8,7 @@ EXTRA_DIST = \
         enc/x86_32/recon_mmx.c \
         enc/x86_32/fdct_mmx.c \
         enc/x86_32/idct_mmx.c \
+        enc/x86_64/dct_decode_mmx.c \
         enc/x86_64/dsp_mmx.c \
         enc/x86_64/dsp_mmxext.c \
         enc/x86_64/recon_mmx.c \
