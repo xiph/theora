@@ -24,14 +24,9 @@ EXTRA_DIST = \
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = theora.pc theoradec.pc theoraenc.pc
 
+# Remove the .svn folders included in the tarball
 dist-hook:
-	for item in $(EXTRA_DIST); do \
-	  if test -d $$item; then \
-	    echo -n "cleaning $$item dir for distribution..."; \
-	    rm -rf `find $(distdir)/$$item -name .svn`; \
-	    echo "OK"; \
-	  fi; \
-	done
+	find $(distdir) -type d -name '.svn' | xargs rm -rf
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@"
