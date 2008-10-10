@@ -1388,8 +1388,10 @@ static int theora_encode_control(theora_state *th,int req,
         return TH_EINVAL;
       }
 
-      if(buf==NULL)buf=&TH_VP31_QUANT_INFO;
-      memcpy(&pbi->quant_info, buf, sizeof(th_quant_info));
+      if(buf==NULL)
+	memcpy(&pbi->quant_info, &TH_VP31_QUANT_INFO, sizeof(th_quant_info));
+      else
+	memcpy(&pbi->quant_info, buf, sizeof(th_quant_info));
       InitQTables(pbi);
 
       return 0;

@@ -271,7 +271,7 @@ static void EncodeAcTokenList (CP_INSTANCE *cpi) {
 static void PackModes (CP_INSTANCE *cpi) {
   ogg_uint32_t    i,j;
   unsigned char   ModeIndex;
-  unsigned char  *SchemeList;
+  const unsigned char  *SchemeList;
 
   unsigned char   BestModeSchemes[MAX_MODES];
   ogg_int32_t     ModeCount[MAX_MODES];
@@ -373,8 +373,8 @@ static void PackModes (CP_INSTANCE *cpi) {
 static void PackMotionVectors (CP_INSTANCE *cpi) {
   ogg_int32_t  i;
   ogg_uint32_t MethodBits[2] = {0,0};
-  ogg_uint32_t * MvBitsPtr;
-  ogg_uint32_t * MvPatternPtr;
+  const ogg_uint32_t * MvBitsPtr;
+  const ogg_uint32_t * MvPatternPtr;
 
   oggpack_buffer *opb=cpi->oggbuffer;
 
