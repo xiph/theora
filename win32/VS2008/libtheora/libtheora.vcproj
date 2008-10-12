@@ -2289,6 +2289,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\..\lib\dec\bitpack.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\lib\dec\dct.h"
 					>
 				</File>
