@@ -161,7 +161,7 @@ elif conf.CheckHost_x86_64():
   """)
 env = conf.Finish()
 
-env.Append(CPPPATH=['lib', 'include', 'lib/enc'])
+env.Append(CPPPATH=['lib', 'include'])
 env.ParseConfig('pkg-config --cflags --libs ogg')
 
 libtheoradec_a = env.Library('lib/theoradec',

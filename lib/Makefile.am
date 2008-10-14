@@ -1,4 +1,4 @@
-INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/lib -I$(top_srcdir)/lib/dec -I$(top_srcdir)/lib/enc
+INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/lib -I$(top_srcdir)/lib/dec
 AM_CFLAGS = $(OGG_CFLAGS)
 
 EXTRA_DIST = \
