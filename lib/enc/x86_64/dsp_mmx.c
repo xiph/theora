@@ -17,8 +17,8 @@
 
 #include <stdlib.h>
 
-#include "codec_internal.h"
-#include "dsp.h"
+#include "../codec_internal.h"
+#include "../dsp.h"
 
 #if defined(USE_ASM)
 

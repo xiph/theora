@@ -78,7 +78,7 @@ dec/quant.h \
 
 LIBTHEORADEC_CSOURCES = \
 dec/apiwrapper.c \
-dec/bitwise.c \
+dec/bitpack.c \
 dec/decapiwrapper.c \
 dec/decinfo.c \
 dec/decode.c \
