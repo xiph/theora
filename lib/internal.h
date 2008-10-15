@@ -6,7 +6,7 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
@@ -212,12 +212,12 @@ typedef struct{
   /*The quality index used for this fragment's AC coefficients.*/
   unsigned        qi:6;
   /*The mode of the macroblock this fragment belongs to.*/
-  int             mbmode:8;
+  signed int      mbmode:8;
   /*The prediction-corrected DC component.
     Note that some compilers (e.g., Solaris's) will ignore the signedness of
      the type and treat this value as unsigned always, so it will need to be
      casted before being used.*/
-  int             dc:16;
+  signed int      dc:16;
   /*A pointer to the portion of an image covered by this fragment in several
      images.
     The first three are reconstructed frame buffers, while the last is the

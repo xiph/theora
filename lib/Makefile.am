@@ -121,7 +121,6 @@ noinst_HEADERS = \
 	dec/dct.h \
 	dec/decint.h \
 	dec/dequant.h \
-	dec/enquant.h \
 	dec/huffdec.h \
 	dec/huffman.h \
 	dec/idct.h \
