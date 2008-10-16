@@ -1728,7 +1728,7 @@ static void oc_dering_block(unsigned char *_idata,int _ystride,int _b,
 
 static void oc_dec_dering_frag_rows(oc_dec_ctx *_dec,th_img_plane *_img,
  int _pli,int _fragy0,int _fragy_end){
-  th_img_plane  *iplane;
+  th_img_plane      *iplane;
   oc_fragment_plane *fplane;
   oc_fragment       *frag;
   int               *variance;
@@ -1760,10 +1760,10 @@ static void oc_dec_dering_frag_rows(oc_dec_ctx *_dec,th_img_plane *_img,
       if(strong&&var>sthresh){
         oc_dering_block(idata+x,iplane->stride,b,
          _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],1);
-        if(_pli||(b&1)&&*(variance-1)>OC_DERING_THRESH4||
-         (b&2)&&variance[1]>OC_DERING_THRESH4||
-         (b&4)&&*(variance-fplane->nvfrags)>OC_DERING_THRESH4||
-         (b&8)&&variance[fplane->nvfrags]>OC_DERING_THRESH4){
+        if(_pli||!(b&1)&&*(variance-1)>OC_DERING_THRESH4||
+         !(b&2)&&variance[1]>OC_DERING_THRESH4||
+         !(b&4)&&*(variance-fplane->nvfrags)>OC_DERING_THRESH4||
+         !(b&8)&&variance[fplane->nvfrags]>OC_DERING_THRESH4){
           oc_dering_block(idata+x,iplane->stride,b,
            _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],1);
           oc_dering_block(idata+x,iplane->stride,b,
