@@ -20,6 +20,15 @@ libtheora 1.0 (2008 October 20)
  - cpuid assembly fix for MSVC.
  - Remove ENCCTL codes from the old encoder API.
  - Implement TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE ctl.
+ - 64 bit build fixes.
+ - Fix segfault when exactly one of the width or height is not a multiple
+   of 16, but the other is.
+ - Compute the correct vertical offset for chroma.
+ - Mingw32 build fixes.
+ - VS2005 build fixes.
+ - Declare bitfield entries to be explicitly signed.
+ - Do not clobber the cropping rectangle.
+ - Pkg-config naming workaround; 1.0 was considered lower than 1.0beta.
 
 libtheora 1.0beta3 (2008 April 16)
 
