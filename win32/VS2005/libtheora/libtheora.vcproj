@@ -6,7 +6,6 @@
 	ProjectGUID="{653F3841-3F26-49B9-AFCF-091DB4B67031}"
 	RootNamespace="libtheora"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
@@ -457,10 +456,6 @@
 		<Filter
 			Name="lib"
 			>
-			<File
-				RelativePath="..\..\..\lib\cpu.c"
-				>
-			</File>
 			<File
 				RelativePath="..\..\..\lib\cpu.h"
 				>

@@ -458,10 +458,6 @@
 			Name="lib"
 			>
 			<File
-				RelativePath="..\..\..\lib\cpu.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\lib\cpu.h"
 				>
 			</File>
