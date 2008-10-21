@@ -50,8 +50,7 @@ libtheora_Sources = Split(decoder_sources + encoder_sources)
 
 env = Environment()
 if env['CC'] == 'gcc':
-  env.Append(CCFLAGS=["-g", "-O2", "-Wall"])
-#  env.Append(CCFLAGS=["-g", "-Wall"])
+  env.Append(CCFLAGS=["-g", "-O2", "-Wall", "-Wno-parentheses"])
 
 def CheckPKGConfig(context, version): 
   context.Message( 'Checking for pkg-config... ' ) 
