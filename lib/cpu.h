@@ -31,6 +31,4 @@
 #define OC_CPU_X86_SSE4A    (1<<10)
 #define OC_CPU_X86_SSE5     (1<<11)
 
-static ogg_uint32_t oc_cpu_flags_get(void);
-
 #endif
