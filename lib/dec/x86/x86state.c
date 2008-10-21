@@ -19,7 +19,7 @@
 
 #if defined(USE_ASM)
 
-#include "../../cpu.h"
+#include "../../cpu.c"
 
 void oc_state_vtable_init_x86(oc_theora_state *_state){
   _state->cpu_flags=oc_cpu_flags_get();

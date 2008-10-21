@@ -129,7 +129,6 @@ noinst_HEADERS = \
 	dec/x86/x86int.h
 
 libtheoradec_la_SOURCES = \
-  cpu.c \
 	$(decoder_arch_sources) \
 	$(decoder_sources) \
   Version_script-dec
@@ -138,7 +137,6 @@ libtheoradec_la_LDFLAGS = \
   @THEORADEC_LDFLAGS@
 
 libtheoraenc_la_SOURCES = \
-  cpu.c \
 	$(encoder_arch_sources) \
 	$(encoder_sources) \
   Version_script-enc
@@ -147,7 +145,6 @@ libtheoraenc_la_LDFLAGS = \
   @THEORAENC_LDFLAGS@ $(OGG_LIBS)
 
 libtheora_la_SOURCES = \
-  cpu.c \
 	$(decoder_arch_sources) \
 	$(decoder_sources) \
 	$(encoder_arch_sources) \

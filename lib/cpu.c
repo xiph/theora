@@ -21,7 +21,7 @@
 #include "cpu.h"
 
 #if !defined(USE_ASM)
-ogg_uint32_t oc_cpu_flags_get(void){
+static ogg_uint32_t oc_cpu_flags_get(void){
   return 0;
 }
 #else
@@ -124,7 +124,7 @@ static ogg_uint32_t oc_parse_amd_flags(ogg_uint32_t _edx,ogg_uint32_t _ecx){
   return flags;
 }
 
-ogg_uint32_t oc_cpu_flags_get(void){
+static ogg_uint32_t oc_cpu_flags_get(void){
   ogg_uint32_t flags;
   ogg_uint32_t eax;
   ogg_uint32_t ebx;
