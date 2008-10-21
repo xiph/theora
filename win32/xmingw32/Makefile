@@ -47,7 +47,7 @@ MAKEDEPEND = ${CC} -MM
 # The location of include files.
 # Modify these to point to your Ogg and Vorbis include directories if they are
 #  not installed in a standard location.
-CINCLUDE = `${SDLCONFIG} --cflags` -D_REENTRANT
+CINCLUDE = -D_REENTRANT
 # Extra compilation flags.
 # You may get speed increases by including flags such as -O2 or -O3 or
 #  -ffast-math, or additional flags, depending on your system and compiler.
@@ -59,7 +59,7 @@ RELEASE_CFLAGS = ${CFLAGS} -mtune=nocona -O3 -fomit-frame-pointer -fforce-addr \
 # The -g flag will generally include debugging information.
 DEBUG_CFLAGS = ${CFLAGS} -g
 # Libraries to link with, and the location of library files.
-LIBS = -logg -lvorbis -lvorbisenc `${SDLCONFIG} --libs`
+LIBS = -logg -lvorbis -lvorbisenc
 
 # ANYTHING BELOW THIS LINE PROBABLY DOES NOT NEED EDITING
 CINCLUDE := -I../../include ${CINCLUDE}
@@ -368,10 +368,11 @@ ${ENCODER_EXAMPLE_TARGET}: ${ENCODER_EXAMPLE_OBJS} ${LIBTHEORADEC_TARGET} \
          ${LIBTHEORAENC_TARGET}.a ${LIBTHEORADEC_TARGET}.a
 
 # player_example
+${PLAYER_EXAMPLE_TARGET}: CINCLUDE += $(SDLCONFIG) --cflags
 ${PLAYER_EXAMPLE_TARGET}: ${PLAYER_EXAMPLE_OBJS} ${LIBTHEORADEC_TARGET}
 	mkdir -p ${TARGETBINDIR}
 	${CC} ${CFLAGS} -o $@ ${PLAYER_EXAMPLE_OBJS} ${LIBS} \
-         ${LIBTHEORADEC_TARGET}.a
+         ${LIBTHEORADEC_TARGET}.a `${SDLCONFIG} --libs`
 
 # Remove all targets.
 clean:
