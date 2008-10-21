@@ -95,7 +95,6 @@ dec/x86/mmxstate.c \
 dec/x86/x86state.c \
 dec/x86/mmxidct.c \
 dec/x86/mmxfrag.c \
-cpu.c \
 )
 
 LIBTHEORADEC_CHEADERS =   \
@@ -133,7 +132,6 @@ enc/x86_32/dsp_mmxext.c \
 enc/x86_32/recon_mmx.c \
 enc/x86_32/idct_mmx.c \
 enc/x86_32/fdct_mmx.c \
-cpu.c \
 )
 
 LIBTHEORAENC_CHEADERS = \

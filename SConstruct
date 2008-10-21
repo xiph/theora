@@ -44,9 +44,9 @@ decoder_sources = """
         dec/state.c
 """
 
-libtheoradec_Sources = Split(decoder_sources + "cpu.c")
-libtheoraenc_Sources = Split(encoder_sources + "cpu.c")
-libtheora_Sources = Split(decoder_sources + encoder_sources + "cpu.c")
+libtheoradec_Sources = Split(decoder_sources)
+libtheoraenc_Sources = Split(encoder_sources)
+libtheora_Sources = Split(decoder_sources + encoder_sources)
 
 env = Environment()
 if env['CC'] == 'gcc':
