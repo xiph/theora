@@ -214,7 +214,7 @@ AM_CONDITIONAL(OC_X86ASM,[test x$ac_enable_asm = xyes])
 # Test whenever ld supports -version-script
 AC_PROG_LD
 AC_PROG_LD_GNU
-AC_MSG_CHECKING([library versioning support])
+AC_MSG_CHECKING([library symbol versioning support])
 
 THDEC_VERSION_ARG=""
 THENC_VERSION_ARG=""
@@ -240,6 +240,9 @@ if test "x$lt_cv_prog_gnu_ld" = "xyes"; then
     AC_MSG_RESULT([no])
     ;;
  esac
+else
+    # build without versioning
+    AC_MSG_RESULT([no])
 fi
  
 THEORADEC_LDFLAGS="$THEORA_LDFLAGS $THDEC_VERSION_ARG"
