@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		08192FEB0EAE77BD00FA9B31 /* bitpack.c in Sources */ = {isa = PBXBuildFile; fileRef = 08192FE90EAE77BD00FA9B31 /* bitpack.c */; };
+		08192FEC0EAE77BD00FA9B31 /* bitpack.h in Headers */ = {isa = PBXBuildFile; fileRef = 08192FEA0EAE77BD00FA9B31 /* bitpack.h */; };
+		08192FED0EAE77BD00FA9B31 /* bitpack.c in Sources */ = {isa = PBXBuildFile; fileRef = 08192FE90EAE77BD00FA9B31 /* bitpack.c */; };
+		08192FEE0EAE77BD00FA9B31 /* bitpack.h in Headers */ = {isa = PBXBuildFile; fileRef = 08192FEA0EAE77BD00FA9B31 /* bitpack.h */; };
 		094A00050B77F5EC0005C7B8 /* dsp_mmx.c in Sources */ = {isa = PBXBuildFile; fileRef = 094A00010B77F5EC0005C7B8 /* dsp_mmx.c */; };
 		094A00060B77F5EC0005C7B8 /* dsp_mmxext.c in Sources */ = {isa = PBXBuildFile; fileRef = 094A00020B77F5EC0005C7B8 /* dsp_mmxext.c */; };
 		094A00070B77F5EC0005C7B8 /* fdct_mmx.c in Sources */ = {isa = PBXBuildFile; fileRef = 094A00030B77F5EC0005C7B8 /* fdct_mmx.c */; };
@@ -63,13 +67,9 @@
 		09C8F65D0C82FC1E00F72188 /* decode.c in Sources */ = {isa = PBXBuildFile; fileRef = 097728E10BCABCAA00303091 /* decode.c */; };
 		09C8F65E0C82FC1E00F72188 /* decinfo.c in Sources */ = {isa = PBXBuildFile; fileRef = 097728DF0BCABCAA00303091 /* decinfo.c */; };
 		09C8F6600C82FC2000F72188 /* apiwrapper.c in Sources */ = {isa = PBXBuildFile; fileRef = 097728DD0BCABCAA00303091 /* apiwrapper.c */; };
-		09C8F6700C82FC9500F72188 /* cpu.c in Sources */ = {isa = PBXBuildFile; fileRef = 73514EC30B0C7E3200CEC060 /* cpu.c */; };
 		09C8F6710C82FC9900F72188 /* cpu.h in Headers */ = {isa = PBXBuildFile; fileRef = 73514EC70B0C7E5700CEC060 /* cpu.h */; };
-		37CA8E2D0DD745B4005C8CB6 /* bitwise.c in Sources */ = {isa = PBXBuildFile; fileRef = 37CA8E290DD745B4005C8CB6 /* bitwise.c */; };
 		37CA8E2F0DD745B4005C8CB6 /* decapiwrapper.c in Sources */ = {isa = PBXBuildFile; fileRef = 37CA8E2B0DD745B4005C8CB6 /* decapiwrapper.c */; };
 		37CA8E300DD745B4005C8CB6 /* apiwrapper.h in Headers */ = {isa = PBXBuildFile; fileRef = 37CA8E280DD745B4005C8CB6 /* apiwrapper.h */; };
-		37CA8E310DD745B4005C8CB6 /* bitwise.c in Sources */ = {isa = PBXBuildFile; fileRef = 37CA8E290DD745B4005C8CB6 /* bitwise.c */; };
-		37CA8E320DD745B4005C8CB6 /* bitwise.h in Headers */ = {isa = PBXBuildFile; fileRef = 37CA8E2A0DD745B4005C8CB6 /* bitwise.h */; };
 		37CA8E330DD745B4005C8CB6 /* decapiwrapper.c in Sources */ = {isa = PBXBuildFile; fileRef = 37CA8E2B0DD745B4005C8CB6 /* decapiwrapper.c */; };
 		37CA8E350DD7464D005C8CB6 /* encapiwrapper.c in Sources */ = {isa = PBXBuildFile; fileRef = 37CA8E340DD7464D005C8CB6 /* encapiwrapper.c */; };
 		37CA8E360DD7464D005C8CB6 /* encapiwrapper.c in Sources */ = {isa = PBXBuildFile; fileRef = 37CA8E340DD7464D005C8CB6 /* encapiwrapper.c */; };
@@ -100,7 +100,6 @@
 		734A75FA09D76DCC002D8FAE /* pp.h in Headers */ = {isa = PBXBuildFile; fileRef = 734A75F109D76DCC002D8FAE /* pp.h */; };
 		734A75FB09D76DCC002D8FAE /* quant_lookup.h in Headers */ = {isa = PBXBuildFile; fileRef = 734A75F209D76DCC002D8FAE /* quant_lookup.h */; };
 		734A75FC09D76DCC002D8FAE /* toplevel_lookup.h in Headers */ = {isa = PBXBuildFile; fileRef = 734A75F309D76DCC002D8FAE /* toplevel_lookup.h */; };
-		73514EC50B0C7E3200CEC060 /* cpu.c in Sources */ = {isa = PBXBuildFile; fileRef = 73514EC30B0C7E3200CEC060 /* cpu.c */; };
 		73514EC60B0C7E3200CEC060 /* dsp.c in Sources */ = {isa = PBXBuildFile; fileRef = 73514EC40B0C7E3200CEC060 /* dsp.c */; };
 		73514EC90B0C7E5700CEC060 /* cpu.h in Headers */ = {isa = PBXBuildFile; fileRef = 73514EC70B0C7E5700CEC060 /* cpu.h */; };
 		73514ECA0B0C7E5700CEC060 /* dsp.h in Headers */ = {isa = PBXBuildFile; fileRef = 73514EC80B0C7E5700CEC060 /* dsp.h */; };
@@ -117,7 +116,6 @@
 		738837200B1928CC005C7A69 /* pp.c in Sources */ = {isa = PBXBuildFile; fileRef = 734A75D309D76C7E002D8FAE /* pp.c */; };
 		738837220B1928D2005C7A69 /* reconstruct.c in Sources */ = {isa = PBXBuildFile; fileRef = 734A75D509D76C7E002D8FAE /* reconstruct.c */; };
 		738837230B1928D5005C7A69 /* scan.c in Sources */ = {isa = PBXBuildFile; fileRef = 734A75D609D76C7E002D8FAE /* scan.c */; };
-		738837250B1928DB005C7A69 /* cpu.c in Sources */ = {isa = PBXBuildFile; fileRef = 73514EC30B0C7E3200CEC060 /* cpu.c */; };
 		738837260B1928E1005C7A69 /* dsp.c in Sources */ = {isa = PBXBuildFile; fileRef = 73514EC40B0C7E3200CEC060 /* dsp.c */; };
 		738837270B1929EC005C7A69 /* dct_encode.c in Sources */ = {isa = PBXBuildFile; fileRef = 734A75C709D76C7E002D8FAE /* dct_encode.c */; };
 		7388372A0B1929F4005C7A69 /* encode.c in Sources */ = {isa = PBXBuildFile; fileRef = 734A75CA09D76C7E002D8FAE /* encode.c */; };
@@ -127,6 +125,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		08192FE90EAE77BD00FA9B31 /* bitpack.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = bitpack.c; sourceTree = "<group>"; };
+		08192FEA0EAE77BD00FA9B31 /* bitpack.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = bitpack.h; sourceTree = "<group>"; };
 		089C1667FE841158C02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		094A00010B77F5EC0005C7B8 /* dsp_mmx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dsp_mmx.c; sourceTree = "<group>"; };
 		094A00020B77F5EC0005C7B8 /* dsp_mmxext.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dsp_mmxext.c; sourceTree = "<group>"; };
@@ -165,8 +165,6 @@
 		09C8F6430C82FBE500F72188 /* libtheoradec.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libtheoradec.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		32BAE0B70371A74B00C91783 /* Theora_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Theora_Prefix.pch; sourceTree = "<group>"; };
 		37CA8E280DD745B4005C8CB6 /* apiwrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = apiwrapper.h; sourceTree = "<group>"; };
-		37CA8E290DD745B4005C8CB6 /* bitwise.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bitwise.c; sourceTree = "<group>"; };
-		37CA8E2A0DD745B4005C8CB6 /* bitwise.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bitwise.h; sourceTree = "<group>"; };
 		37CA8E2B0DD745B4005C8CB6 /* decapiwrapper.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = decapiwrapper.c; sourceTree = "<group>"; };
 		37CA8E340DD7464D005C8CB6 /* encapiwrapper.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = encapiwrapper.c; path = ../lib/enc/encapiwrapper.c; sourceTree = SOURCE_ROOT; };
 		37CA8E380DD747F1005C8CB6 /* internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = internal.h; path = ../lib/internal.h; sourceTree = SOURCE_ROOT; };
@@ -197,7 +195,6 @@
 		734A75F209D76DCC002D8FAE /* quant_lookup.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = quant_lookup.h; path = ../lib/enc/quant_lookup.h; sourceTree = SOURCE_ROOT; };
 		734A75F309D76DCC002D8FAE /* toplevel_lookup.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = toplevel_lookup.h; path = ../lib/enc/toplevel_lookup.h; sourceTree = SOURCE_ROOT; };
 		734A75FE09D76E86002D8FAE /* encoder_disabled.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = encoder_disabled.c; path = ../lib/enc/encoder_disabled.c; sourceTree = SOURCE_ROOT; };
-		73514EC30B0C7E3200CEC060 /* cpu.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = cpu.c; path = "../lib//cpu.c"; sourceTree = SOURCE_ROOT; };
 		73514EC40B0C7E3200CEC060 /* dsp.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = dsp.c; path = ../lib/enc/dsp.c; sourceTree = SOURCE_ROOT; };
 		73514EC70B0C7E5700CEC060 /* cpu.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = cpu.h; path = "../lib//cpu.h"; sourceTree = SOURCE_ROOT; };
 		73514EC80B0C7E5700CEC060 /* dsp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dsp.h; path = ../lib/enc/dsp.h; sourceTree = SOURCE_ROOT; };
@@ -276,7 +273,6 @@
 			children = (
 				37CA8E270DD743AB005C8CB6 /* enc */,
 				097728DC0BCABCAA00303091 /* dec */,
-				73514EC30B0C7E3200CEC060 /* cpu.c */,
 				73514EC70B0C7E5700CEC060 /* cpu.h */,
 				37CA8E380DD747F1005C8CB6 /* internal.h */,
 				32BAE0B70371A74B00C91783 /* Theora_Prefix.pch */,
@@ -301,8 +297,9 @@
 		097728DC0BCABCAA00303091 /* dec */ = {
 			isa = PBXGroup;
 			children = (
+				08192FE90EAE77BD00FA9B31 /* bitpack.c */,
+				08192FEA0EAE77BD00FA9B31 /* bitpack.h */,
 				097728DD0BCABCAA00303091 /* apiwrapper.c */,
-				37CA8E290DD745B4005C8CB6 /* bitwise.c */,
 				37CA8E2B0DD745B4005C8CB6 /* decapiwrapper.c */,
 				097728DF0BCABCAA00303091 /* decinfo.c */,
 				097728E10BCABCAA00303091 /* decode.c */,
@@ -315,7 +312,6 @@
 				097728EE0BCABCAA00303091 /* quant.c */,
 				097728F00BCABCAA00303091 /* state.c */,
 				37CA8E280DD745B4005C8CB6 /* apiwrapper.h */,
-				37CA8E2A0DD745B4005C8CB6 /* bitwise.h */,
 				097728DE0BCABCAA00303091 /* dct.h */,
 				097728E00BCABCAA00303091 /* decint.h */,
 				097728E30BCABCAA00303091 /* dequant.h */,
@@ -398,6 +394,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				09C8F6710C82FC9900F72188 /* cpu.h in Headers */,
+				08192FEE0EAE77BD00FA9B31 /* bitpack.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -437,8 +434,8 @@
 				097729950BCAC60000303091 /* codec.h in Headers */,
 				097729960BCAC60000303091 /* theoradec.h in Headers */,
 				37CA8E300DD745B4005C8CB6 /* apiwrapper.h in Headers */,
-				37CA8E320DD745B4005C8CB6 /* bitwise.h in Headers */,
 				37CA8E390DD747F1005C8CB6 /* internal.h in Headers */,
+				08192FEC0EAE77BD00FA9B31 /* bitpack.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -505,7 +502,6 @@
 		0867D690FE84028FC02AAC07 /* Project object */ = {
 			isa = PBXProject;
 			buildConfigurationList = 4FADC24608B4156D00ABE55E /* Build configuration list for PBXProject "Theora" */;
-			compatibilityVersion = "Xcode 2.4";
 			hasScannedForEncodings = 1;
 			mainGroup = 0867D691FE84028FC02AAC07 /* Theora */;
 			productRefGroup = 034768DDFF38A45A11DB9C8B /* Products */;
@@ -560,9 +556,8 @@
 				09C8F65D0C82FC1E00F72188 /* decode.c in Sources */,
 				09C8F65E0C82FC1E00F72188 /* decinfo.c in Sources */,
 				09C8F6600C82FC2000F72188 /* apiwrapper.c in Sources */,
-				09C8F6700C82FC9500F72188 /* cpu.c in Sources */,
-				37CA8E2D0DD745B4005C8CB6 /* bitwise.c in Sources */,
 				37CA8E2F0DD745B4005C8CB6 /* decapiwrapper.c in Sources */,
+				08192FED0EAE77BD00FA9B31 /* bitpack.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -583,7 +578,6 @@
 				738837200B1928CC005C7A69 /* pp.c in Sources */,
 				738837220B1928D2005C7A69 /* reconstruct.c in Sources */,
 				738837230B1928D5005C7A69 /* scan.c in Sources */,
-				738837250B1928DB005C7A69 /* cpu.c in Sources */,
 				738837260B1928E1005C7A69 /* dsp.c in Sources */,
 				738837270B1929EC005C7A69 /* dct_encode.c in Sources */,
 				7388372A0B1929F4005C7A69 /* encode.c in Sources */,
@@ -619,7 +613,6 @@
 				734A75E709D76C7E002D8FAE /* pp.c in Sources */,
 				734A75E909D76C7E002D8FAE /* reconstruct.c in Sources */,
 				734A75EA09D76C7E002D8FAE /* scan.c in Sources */,
-				73514EC50B0C7E3200CEC060 /* cpu.c in Sources */,
 				73514EC60B0C7E3200CEC060 /* dsp.c in Sources */,
 				094A00050B77F5EC0005C7B8 /* dsp_mmx.c in Sources */,
 				094A00060B77F5EC0005C7B8 /* dsp_mmxext.c in Sources */,
@@ -643,9 +636,9 @@
 				0977292E0BCABCFD00303091 /* dct_decode_mmx.c in Sources */,
 				0977292F0BCABCFD00303091 /* idct_mmx.c in Sources */,
 				0977298D0BCAC5A800303091 /* encoder_quant.c in Sources */,
-				37CA8E310DD745B4005C8CB6 /* bitwise.c in Sources */,
 				37CA8E330DD745B4005C8CB6 /* decapiwrapper.c in Sources */,
 				37CA8E350DD7464D005C8CB6 /* encapiwrapper.c in Sources */,
+				08192FEB0EAE77BD00FA9B31 /* bitpack.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
