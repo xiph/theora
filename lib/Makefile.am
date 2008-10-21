@@ -2,6 +2,7 @@ INCLUDES = -I$(top_srcdir)/include
 AM_CFLAGS = $(OGG_CFLAGS)
 
 EXTRA_DIST = \
+	cpu.c \
         enc/x86_32/dct_decode_mmx.c \
         enc/x86_32/dsp_mmx.c \
         enc/x86_32/dsp_mmxext.c \
