@@ -459,6 +459,10 @@ main(int argc, char *argv[])
   }
 
   input_mask = argv[optind];
+  if (!input_mask) {
+    fprintf(stderr, "no input files specified; run with -h for help.\n");
+    exit(1);
+  }
   /* dirname and basename must operate on scratch strings */
   scratch = strdup(input_mask);
   input_directory = strdup(dirname(scratch));
