@@ -76,11 +76,11 @@ struct option options [] = {
 static void usage(void){
   fprintf(stderr,
           "%s %s\n"
-          "Usage: %s [options] input\n\n"
-          "The input uses C printf format to represents a list of files, i.e.\n"
-          "  file-%%06d.png to look for files file000001.png to file9999999.png \n\n"
+          "Usage: %s [options] <input>\n\n"
+          "The input argument uses C printf format to represents a list of files,\n"
+          "  i.e. file-%%06d.png to look for files file000001.png to file9999999.png \n\n"
           "Options: \n\n"
-          "  -o --output <filename.ogv>     file name for encoded output\n"
+          "  -o --output <filename.ogv>     file name for encoded output (required)\n\n"
           "  -V --video-rate-target <n>     bitrate target for Theora video\n\n"
           "  -v --video-quality <n>         Theora quality selector fro 0 to 10\n"
           "                                 (0 yields smallest files but lowest\n"
