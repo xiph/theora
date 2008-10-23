@@ -68,11 +68,11 @@ struct option options [] = {
   {"video-rate-target",required_argument,NULL,'V'},
   {"audio-quality",required_argument,NULL,'a'},
   {"video-quality",required_argument,NULL,'v'},
-  {"aspect-numerator",optional_argument,NULL,'s'},
-  {"aspect-denominator",optional_argument,NULL,'S'},
-  {"framerate-numerator",optional_argument,NULL,'f'},
-  {"framerate-denominator",optional_argument,NULL,'F'},
-  {"vp3-compatible",0,NULL,'c'},
+  {"aspect-numerator",required_argument,NULL,'s'},
+  {"aspect-denominator",required_argument,NULL,'S'},
+  {"framerate-numerator",required_argument,NULL,'f'},
+  {"framerate-denominator",required_argument,NULL,'F'},
+  {"vp3-compatible",no_argument,NULL,'c'},
   {NULL,0,NULL,0}
 };
 

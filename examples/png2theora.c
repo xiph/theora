@@ -60,16 +60,16 @@ static theora_info theora_ti;
 
 static char *input_filter;
 
-const char *optstring = "o:h:v:V:s:S:f:F:";
+const char *optstring = "o:hv:V:s:S:f:F:";
 struct option options [] = {
  {"output",required_argument,NULL,'o'},
- {"help",optional_argument,NULL,'h'},
+ {"help",no_argument,NULL,'h'},
  {"video-rate-target",required_argument,NULL,'V'},
  {"video-quality",required_argument,NULL,'v'},
- {"aspect-numerator",optional_argument,NULL,'s'},
- {"aspect-denominator",optional_argument,NULL,'S'},
- {"framerate-numerator",optional_argument,NULL,'f'},
- {"framerate-denominator",optional_argument,NULL,'F'},
+ {"aspect-numerator",required_argument,NULL,'s'},
+ {"aspect-denominator",required_argument,NULL,'S'},
+ {"framerate-numerator",required_argument,NULL,'f'},
+ {"framerate-denominator",required_argument,NULL,'F'},
  {NULL,0,NULL,0}
 };
 
