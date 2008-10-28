@@ -1,4 +1,4 @@
-libtheora 1.0 (2008 October 22)
+libtheora 1.0 (2008 October 29)
 
  - Merge x86 assembly for forward DCT from Thusnelda branch.
  - Update 32 bit MMX with loop filter fix.
@@ -25,6 +25,7 @@ libtheora 1.0 (2008 October 22)
  - Build updates for 64-bit platforms, Mingw32, VS and XCode.
  - Do not clobber the cropping rectangle.
  - Declare ourselves 1.0final to pkg-config to sort after beta releases.
+ - Fix the scons build to include asm in libtheoradec/enc.
 
 libtheora 1.0beta3 (2008 April 16)
 
