@@ -3,8 +3,7 @@
 from os.path import join
 import SCons
 
-# TODO: should use lamda and map to work on python 1.5
-def path(prefix, list): return [join(prefix, x) for x in list]
+## primary source lists
 
 encoder_sources = """
         enc/dct_encode.c
@@ -29,25 +28,55 @@ encoder_sources = """
 """
 
 decoder_sources = """
-        dec/apiwrapper.c \
-	dec/bitpack.c \
-        dec/decapiwrapper.c \
-        dec/decinfo.c \
-        dec/decode.c \
-        dec/dequant.c \
-        dec/fragment.c \
-        dec/huffdec.c \
-        dec/idct.c \
-        dec/info.c \
-        dec/internal.c \
-        dec/quant.c \
+        dec/apiwrapper.c
+        dec/bitpack.c
+        dec/decapiwrapper.c
+        dec/decinfo.c
+        dec/decode.c
+        dec/dequant.c
+        dec/fragment.c
+        dec/huffdec.c
+        dec/idct.c
+        dec/info.c
+        dec/internal.c
+        dec/quant.c
         dec/state.c
 """
 
-libtheoradec_Sources = Split(decoder_sources)
-libtheoraenc_Sources = Split(encoder_sources)
-libtheora_Sources = Split(decoder_sources + encoder_sources)
+# optional platform-dependent sources
 
+decoder_x86_32_sources = """
+        dec/x86/mmxidct.c
+        dec/x86/mmxfrag.c
+        dec/x86/mmxstate.c
+        dec/x86/x86state.c
+"""
+encoder_x86_32_sources = """
+	enc/x86_32/dct_decode_mmx.c
+	enc/x86_32/dsp_mmx.c
+	enc/x86_32/dsp_mmxext.c
+	enc/x86_32/recon_mmx.c
+	enc/x86_32/idct_mmx.c
+	enc/x86_32/fdct_mmx.c
+"""
+decoder_x86_64_sources = """
+        dec/x86/mmxidct.c
+        dec/x86/mmxfrag.c
+        dec/x86/mmxstate.c
+        dec/x86/x86state.c
+"""
+encoder_x86_64_sources = """
+	enc/x86_64/dct_decode_mmx.c
+	enc/x86_64/dsp_mmx.c
+	enc/x86_64/dsp_mmxext.c
+	enc/x86_64/recon_mmx.c
+	enc/x86_64/idct_mmx.c
+	enc/x86_64/fdct_mmx.c
+  """
+
+## Conditional configuration machinery
+
+# Build environment
 env = Environment()
 if env['CC'] == 'gcc':
   env.Append(CCFLAGS=["-g", "-O2", "-Wall", "-Wno-parentheses"])
@@ -100,6 +129,7 @@ def CheckHost_x86_64(context):
   context.Result(result)
   return result
 
+# Conditional configuration
 conf = Configure(env, custom_tests = {
   'CheckPKGConfig' : CheckPKGConfig,
   'CheckPKG' : CheckPKG,
@@ -107,7 +137,7 @@ conf = Configure(env, custom_tests = {
   'CheckHost_x86_32' : CheckHost_x86_32,
   'CheckHost_x86_64' : CheckHost_x86_64,
   })
-  
+
 if not conf.CheckPKGConfig('0.15.0'): 
    print 'pkg-config >= 0.15.0 not found.' 
    Exit(1)
@@ -133,32 +163,24 @@ if build_player_example and not conf.CheckSDL():
   build_player_example=False
 
 if conf.CheckHost_x86_32():
-  libtheora_Sources += Split("""
-        dec/x86/mmxidct.c
-        dec/x86/mmxfrag.c
-        dec/x86/mmxstate.c
-        dec/x86/x86state.c
-	enc/x86_32/dct_decode_mmx.c
-	enc/x86_32/dsp_mmx.c
-	enc/x86_32/dsp_mmxext.c
-	enc/x86_32/recon_mmx.c
-	enc/x86_32/idct_mmx.c
-	enc/x86_32/fdct_mmx.c
-  """)
+  decoder_sources += decoder_x86_32_sources
+  encoder_sources += encoder_x86_32_sources
 elif conf.CheckHost_x86_64():
-  libtheora_Sources += Split("""
-        dec/x86/mmxidct.c
-        dec/x86/mmxfrag.c
-        dec/x86/mmxstate.c
-        dec/x86/x86state.c
-	enc/x86_64/dct_decode_mmx.c
-	enc/x86_64/dsp_mmx.c
-	enc/x86_64/dsp_mmxext.c
-	enc/x86_64/recon_mmx.c
-	enc/x86_64/idct_mmx.c
-	enc/x86_64/fdct_mmx.c
-  """)
+  decoder_sources += decoder_x86_64_sources
+  encoder_sources += encoder_x86_64_sources
+
+# library source assignments
+libtheoradec_Sources = Split(decoder_sources)
+libtheoraenc_Sources = Split(encoder_sources)
+libtheora_Sources = Split(decoder_sources + encoder_sources)
+
+# Complete configuration
 env = conf.Finish()
+
+## Search paths
+
+# TODO: should use lamda and map to work on python 1.5
+def path(prefix, list): return [join(prefix, x) for x in list]
 
 env.Append(CPPPATH=['include'])
 env.ParseConfig('pkg-config --cflags --libs ogg')
@@ -178,7 +200,8 @@ libtheora_a = env.Library('lib/theora',
 libtheora_so = env.SharedLibrary('lib/theora',
 	path('lib', libtheora_Sources))
 
-#installing
+## Install
+
 prefix='/usr'
 lib_dir = prefix + '/lib'
 env.Alias('install', prefix)
