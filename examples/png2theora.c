@@ -479,6 +479,7 @@ main(int argc, char *argv[])
        break;
      case 'F':
        video_fps_denominator=rint(atof(optarg));
+       break;
      default:
         usage();
         break;
