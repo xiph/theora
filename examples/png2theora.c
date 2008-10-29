@@ -328,7 +328,17 @@ png_read(const char *pathname, unsigned int *w, unsigned int *h, unsigned char *
   png_structp png_ptr;
   png_infop info_ptr;
   png_infop end_ptr;
+  png_bytep row_data;
   png_bytep *row_pointers;
+  png_color_16p bkgd;
+  png_uint_32 width;
+  png_uint_32 height;
+  int bit_depth;
+  int color_type;
+  int interlace_type;
+  int compression_type;
+  int filter_method;
+  png_uint_32 y;
 
   fp = fopen(pathname, "rb");
   if(!fp) {
@@ -372,17 +382,38 @@ png_read(const char *pathname, unsigned int *w, unsigned int *h, unsigned char *
 
   png_init_io(png_ptr, fp);
   png_set_sig_bytes(png_ptr, 8);
+  png_read_info(png_ptr, info_ptr);
+  png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
+   &interlace_type, &compression_type, &filter_method);
+  png_set_expand(png_ptr);
+  if(bit_depth<8)png_set_packing(png_ptr);
+  if(bit_depth==16)png_set_strip_16(png_ptr);
+  if(!(color_type&PNG_COLOR_MASK_COLOR))png_set_gray_to_rgb(png_ptr);
+  if(png_get_bKGD(png_ptr, info_ptr, &bkgd)){
+    png_set_background(png_ptr, bkgd, PNG_BACKGROUND_GAMMA_FILE, 1, 1.0);
+  }
+  /*Note that color_type 2 and 3 can also have alpha, despite not setting the
+     PNG_COLOR_MASK_ALPHA bit.
+    We always strip it to prevent libpng from overrunning our buffer.*/
+  png_set_strip_alpha(png_ptr);
 
-  png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_STRIP_16 |
-    PNG_TRANSFORM_STRIP_ALPHA | PNG_TRANSFORM_PACKING, NULL);
+  row_data = (png_bytep)png_malloc(png_ptr,
+    3*height*width*png_sizeof(*row_data));
+  row_pointers = (png_bytep *)png_malloc(png_ptr,
+    height*png_sizeof(*row_pointers));
+  for(y = 0; y < height; y++) {
+    row_pointers[y] = row_data + y*(3*width);
+  }
+  png_read_image(png_ptr, row_pointers);
+  png_read_end(png_ptr, end_ptr);
 
-  row_pointers = png_get_rows(png_ptr, info_ptr);
-
-  *w = png_get_image_width(png_ptr, info_ptr);
-  *h = png_get_image_height(png_ptr, info_ptr);
+  *w = width;
+  *h = height;
   *yuv = malloc(*w * *h * 3);
   rgb_to_yuv(row_pointers, *yuv, *w, *h);
 
+  png_free(png_ptr, row_pointers);
+  png_free(png_ptr, row_data);
   png_destroy_read_struct(&png_ptr, &info_ptr, &end_ptr);
 
   fclose(fp);
