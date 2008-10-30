@@ -1,6 +1,5 @@
 # SCons build specification
 # see http://www.scons.org if you do not have this tool
-from os.path import join
 import SCons
 
 ## primary source lists
@@ -180,6 +179,7 @@ env = conf.Finish()
 ## Search paths
 
 # TODO: should use lamda and map to work on python 1.5
+from os.path import join
 def path(prefix, list): return [join(prefix, x) for x in list]
 
 env.Append(CPPPATH=['include'])
