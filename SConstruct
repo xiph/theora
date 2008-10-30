@@ -207,6 +207,7 @@ lib_dir = join(prefix, 'lib')
 env.Alias('install', prefix)
 env.Install(lib_dir, [libtheora_a, libtheora_so])
 env.Install(lib_dir, [libtheoradec_a, libtheoradec_so])
+env.Install(lib_dir, [libtheoraenc_a, libtheoraenc_so])
 
 # example programs
 dump_video = env.Copy()
