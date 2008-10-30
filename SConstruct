@@ -73,6 +73,13 @@ encoder_x86_64_sources = """
 	enc/x86_64/fdct_mmx.c
   """
 
+inst_headers = """
+	theora.h
+	theoradec.h
+	theoraenc.h
+	codec.h
+  """
+
 ## Conditional configuration machinery
 
 # Build environment
@@ -208,6 +215,9 @@ env.Alias('install', prefix)
 env.Install(lib_dir, [libtheora_a, libtheora_so])
 env.Install(lib_dir, [libtheoradec_a, libtheoradec_so])
 env.Install(lib_dir, [libtheoraenc_a, libtheoraenc_so])
+inc_dir = join(prefix, 'include')
+env.Install( join(inc_dir, 'theora'),
+  path('include/theora', Split(inst_headers)) )
 
 # example programs
 dump_video = env.Copy()
