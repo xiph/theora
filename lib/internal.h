@@ -211,12 +211,13 @@ typedef struct{
   unsigned        invalid:1;
   /*The quality index used for this fragment's AC coefficients.*/
   unsigned        qi:6;
-  /*The mode of the macroblock this fragment belongs to.*/
+  /*The mode of the macroblock this fragment belongs to.
+    Note that the C standard requires an explicit signed keyword for bitfield
+     types, since some compilers may treat them as unsigned without it.*/
   signed int      mbmode:8;
   /*The prediction-corrected DC component.
-    Note that some compilers (e.g., Solaris's) will ignore the signedness of
-     the type and treat this value as unsigned always, so it will need to be
-     casted before being used.*/
+    Note that the C standard requires an explicit signed keyword for bitfield
+     types, since some compilers may treat them as unsigned without it.*/
   signed int      dc:16;
   /*A pointer to the portion of an image covered by this fragment in several
      images.

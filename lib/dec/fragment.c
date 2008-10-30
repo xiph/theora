@@ -179,7 +179,7 @@ int oc_frag_pred_dc(const oc_fragment *_frag,
     pflag=1<<i;
     if((BC_MASK[bc]&pflag)&&predfr[i]->coded&&
      OC_FRAME_FOR_MODE[predfr[i]->mbmode]==pred_frame){
-      p[np++]=(ogg_int16_t)predfr[i]->dc;
+      p[np++]=predfr[i]->dc;
       pflags|=pflag;
     }
   }
