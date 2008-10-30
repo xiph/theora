@@ -202,8 +202,8 @@ libtheora_so = env.SharedLibrary('lib/theora',
 
 ## Install
 
-prefix='/usr'
-lib_dir = prefix + '/lib'
+prefix='/usr/local'
+lib_dir = join(prefix, 'lib')
 env.Alias('install', prefix)
 env.Install(lib_dir, [libtheora_a, libtheora_so])
 env.Install(lib_dir, [libtheoradec_a, libtheoradec_so])
