@@ -7,7 +7,7 @@
     <key>CFBundleExecutable</key>
     <string>Theora</string>
     <key>CFBundleGetInfoString</key>
-    <string>Theora framework 1.0alpha6svn, Copyright © 2002-2006 Xiph.Org Foundation</string>
+    <string>Theora framework 1.0, Copyright © 2002-2008 Xiph.Org Foundation</string>
     <key>CFBundleIconFile</key>
     <string></string>
     <key>CFBundleIdentifier</key>
@@ -19,11 +19,11 @@
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleVersion</key>
-    <string>1.0d6</string>
+    <string>1.0</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0alpha6svn</string>
+    <string>1.0</string>
     <key>NSHumanReadableCopyright</key>
-    <string>Theora framework 1.0alpha6svn, Copyright © 2002-2006 Xiph.Org Foundation</string>
+    <string>Theora framework 1.0, Copyright © 2002-2008 Xiph.Org Foundation</string>
     <key>CSResourcesFileMapped</key>
     <true/>
 </dict>
