@@ -1,4 +1,4 @@
-libtheora 1.0 (2008 October 29)
+libtheora 1.0 (2008 November 3)
 
  - Merge x86 assembly for forward DCT from Thusnelda branch.
  - Update 32 bit MMX with loop filter fix.
