@@ -40,5 +40,5 @@ EXPORTS
 	th_encode_ycbcr_in
 	th_granule_time
 	th_info_clear
-	th_info_init	th_packet_isheader
-
+	th_info_init
+	th_packet_isheader
