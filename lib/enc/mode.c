@@ -1345,7 +1345,7 @@ void ModeMetrics(CP_INSTANCE *cpi){
   for(;gi<=AC_TABLE_4_THRESH;gi++)
     ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES*2, huff[3]+AC_HUFF_CHOICES*2, eobcounts, actual_bits);
   for(;gi<BLOCK_SIZE;gi++)
-    ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES*3, huff[2]+AC_HUFF_CHOICES*3, eobcounts, actual_bits);
+    ModeMetricsGroup(cpi, gi, huff[2]+AC_HUFF_CHOICES*3, huff[3]+AC_HUFF_CHOICES*3, eobcounts, actual_bits);
 
   /* accumulate */
   for(fi=0;fi<v;fi++)

@@ -428,10 +428,11 @@ static int tokenize_dctcost(CP_INSTANCE *cpi,int chroma,
   cost += tokencost(cpi,huff, coeff, token);
   
   /* if token was a zero run, we've not yet coded up to the value */
-  if( (token==DCT_SHORT_ZRL_TOKEN) || (token==DCT_ZRL_TOKEN))
-    return cost + tokenize_dctcost(cpi,chroma,coeff2,coeff2,val);
-  else
-    return cost;
+  if( (token==DCT_SHORT_ZRL_TOKEN) || (token==DCT_ZRL_TOKEN)){
+    token = make_dct_token(cpi,coeff2,coeff2,val,&eb);
+    cost += tokencost(cpi,huff, coeff, token);
+  }
+  return cost;
 }
 
 /* The opportunity cost of an in-progress EOB run is the cost to flush
