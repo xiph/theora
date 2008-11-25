@@ -723,9 +723,12 @@ int main(int argc,char *const *argv){
 
     case 'V':
       video_r=rint(atof(optarg)*1000);
-      if(video_r<45000 || video_r>2000000){
-        fprintf(stderr,"Illegal video bitrate (choose 45kbps through 2000kbps)\n");
+      if(video_r<0){
+        fprintf(stderr,"Illegal video bitrate (choose > 0 please)\n");
         exit(1);
+      }
+      if(video_r>(1<<24)-1){
+        fprintf(stderr,"Warning: encoder may limit video to 16 Mbps\n");
       }
       video_q=0;
      break;
