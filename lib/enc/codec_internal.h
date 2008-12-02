@@ -22,7 +22,7 @@
 # include "config.h"
 #endif
 
-#undef COLLECT_METRICS 
+//#define COLLECT_METRICS 
 
 #include "theora/theora.h"
 #include "encoder_huffman.h"
@@ -246,7 +246,6 @@ struct CP_INSTANCE {
 
   oc_mode_scheme_chooser chooser;
 
-
   /*********************************************************************/
   /* Token Buffers */
   int             *fr_partial;
@@ -278,6 +277,7 @@ struct CP_INSTANCE {
   long             rho_count[65]; 
 
 #ifdef COLLECT_METRICS
+  long             rho_postop; 
   int             *frag_mbi;
   int             *frag_sad;
   int             *dct_token_frag_storage;
@@ -285,6 +285,8 @@ struct CP_INSTANCE {
   int             *dct_eob_fi_storage;
   int             *dct_eob_fi_stack[64];
   int              dct_eob_fi_count[64];
+  ogg_int64_t     dist_dist[3][8];
+  ogg_int64_t     dist_bits[3][8];
 #endif
 
   /********************************************************************/

@@ -506,7 +506,7 @@ void dct_tokenize_AC(CP_INSTANCE *cpi, int fi,
 	int dd = dval*dequant[i] - origdct[ii];
 	int delta = dd*dd - od*od;
 
-	if(delta < ((cost*cpi->token_lambda)<<4)){
+	if(delta < cost*cpi->token_lambda){
 	  /* we have a winner.  Demote token */
 	  dct[i]=dval;
 
