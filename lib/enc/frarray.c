@@ -400,13 +400,9 @@ int fr_cost1(fr_state_t *fr){
   int cost;
 
   fr_skipblock(NULL,&temp);
-  fr_finishsb(NULL,&temp);
-  fr_flush(NULL,&temp);
   cost=temp.cost;
   temp=*fr;
   fr_codeblock(NULL,&temp);
-  fr_finishsb(NULL,&temp);
-  fr_flush(NULL,&temp);
   return temp.cost - cost;
 }
 
@@ -419,10 +415,8 @@ int fr_cost4(fr_state_t *pre, fr_state_t *post){
   fr_skipblock(NULL,&temp);
   fr_skipblock(NULL,&temp);
   fr_finishsb(NULL,&temp);
-  fr_flush(NULL,&temp);
   cost=temp.cost;
   temp=*post;
   fr_finishsb(NULL,&temp);
-  fr_flush(NULL,&temp);
   return temp.cost - cost;
 }
