@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2008                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -224,6 +224,12 @@ static int acoffset[64]={
   48,48,48,48,48,48,48,48,
   48,48,48,48,48,48,48,48};
 
+/* only counts bits */
+static int tokencost(CP_INSTANCE *cpi, int huff, int coeff, int token){
+  huff += acoffset[coeff];
+  return cpi->HuffCodeLengthArray_VP3x[huff][token] + cpi->ExtraBitLengths_VP3x[token];
+}
+
 void tokenlog_rollback(CP_INSTANCE *cpi, token_checkpoint_t *stack,int n){
   int i;
   for(i=n-1;i>=0;i--){
@@ -316,11 +322,15 @@ static void token_prepend(CP_INSTANCE *cpi, int chroma, int coeff,
   tokenlog_metrics(cpi,coeff,chroma,token);
 }
 
-static void tokenize_eobrun(CP_INSTANCE *cpi, int pos, int run, token_checkpoint_t **stack){
+static int tokenize_eobrun(CP_INSTANCE *cpi, int pos, int run, token_checkpoint_t **stack){
   int token=0,eb=0;
   int chroma = !(run&0x8000);
+  int huff = cpi->huffchoice[cpi->FrameType!=KEY_FRAME][1][chroma];
+
   make_eobrun_token(run&0x7fff, &token, &eb);
   token_add(cpi, chroma, pos, token, eb, stack);
+
+  return tokencost(cpi,huff,pos,token);
 }
 
 
@@ -360,7 +370,7 @@ static int tokenize_dctval(CP_INSTANCE *cpi,
 			   token_checkpoint_t **stack){
   int eb=0;
   int token=make_dct_token(cpi,coeff,coeff2,val,&eb);
-  
+
   /* Emit pending EOB run if any */
   if(cpi->eob_run[coeff]){
     tokenize_eobrun(cpi,coeff,cpi->eob_run[coeff],stack);
@@ -378,19 +388,20 @@ static int tokenize_dctval(CP_INSTANCE *cpi,
   return 1;
 }
 
-static void tokenize_mark_run(CP_INSTANCE *cpi, 
+static int tokenize_mark_run(CP_INSTANCE *cpi, 
 			      int chroma,
 			      int fi,
 			      int pre,
 			      int coeff,
 			      token_checkpoint_t **stack){
-  
+  int cost = 0;
+
   if(pre && cpi->dct_token_count[coeff] == 0){
     if(stack)tokenlog_mark(cpi,coeff,stack); /* log an undo without logging a token */
     cpi->eob_pre[coeff]++;
   }else{
     if((cpi->eob_run[coeff]&0x7fff) == 4095){
-      tokenize_eobrun(cpi,coeff,cpi->eob_run[coeff],stack);
+      cost += tokenize_eobrun(cpi,coeff,cpi->eob_run[coeff],stack);
       cpi->eob_run[coeff] = 0;
     }
     
@@ -401,12 +412,7 @@ static void tokenize_mark_run(CP_INSTANCE *cpi,
 #ifdef COLLECT_METRICS
   cpi->dct_eob_fi_stack[coeff][cpi->dct_eob_fi_count[coeff]++]=fi;
 #endif
-}
-
-/* only counts bits */
-static int tokencost(CP_INSTANCE *cpi, int huff, int coeff, int token){
-  huff += acoffset[coeff];
-  return cpi->HuffCodeLengthArray_VP3x[huff][token] + cpi->ExtraBitLengths_VP3x[token];
+  return cost;
 }
 
 static int tokenize_dctcost(CP_INSTANCE *cpi,int chroma,
@@ -462,10 +468,11 @@ static int tokenize_eobcost(CP_INSTANCE *cpi,int chroma, int coeff){
    simply assume there will be a nonzero DC value and code.  That's
    not a true assumption but it can be fixed-up as DC is tokenized
    later */
-void dct_tokenize_AC(CP_INSTANCE *cpi, int fi, 
+int dct_tokenize_AC(CP_INSTANCE *cpi, int fi, 
 		     ogg_int16_t *dct, ogg_int16_t *dequant, ogg_int16_t *origdct, 
 		     int chroma, token_checkpoint_t **stack){
   int coeff = 1; /* skip DC for now */
+  int retcost = 0;
   while(coeff < BLOCK_SIZE){
     int i = coeff;
     int ret;
@@ -474,45 +481,48 @@ void dct_tokenize_AC(CP_INSTANCE *cpi, int fi,
     
     if ( i == BLOCK_SIZE ){
       
-      tokenize_mark_run(cpi,chroma,fi,coeff>1,coeff,stack);
+      retcost += tokenize_mark_run(cpi,chroma,fi,coeff>1,coeff,stack);
       coeff = BLOCK_SIZE;
     }else{
 
       /* determine costs for encoding this value (and any preceeding
 	 eobrun/zerorun) as well as the cost for encoding a demoted token */
-      int cost = tokenize_dctcost(cpi,chroma,coeff,i,dct[i]);
+      int costA = tokenize_dctcost(cpi,chroma,coeff,i,dct[i]),costB;
+      int costD = costA;
       int dval = (dct[i]>0 ? dct[i]-1 : dct[i]+1);
       int j=i;
       if(dval){
 	/* demoting will not produce a zero. */
-	cost -= tokenize_dctcost(cpi,chroma,coeff,i,dval);
+	costD -= costB = tokenize_dctcost(cpi,chroma,coeff,i,dval);
       }else{
 	/* demoting token will produce a zero. */
 	j=i+1;
+	costB = 0;
 	while((j < BLOCK_SIZE) && !dct[j] ) j++;
 	if(j==BLOCK_SIZE){
-	  cost += tokenize_eobcost(cpi,chroma,i+1);
-	  cost -= tokenize_eobcost(cpi,chroma,coeff);
+	  costD += tokenize_eobcost(cpi,chroma,i+1);
+	  costD -= tokenize_eobcost(cpi,chroma,coeff);
 	}else{
-	  cost += tokenize_dctcost(cpi,chroma,i+1,j,dct[j]);
-	  cost -= tokenize_dctcost(cpi,chroma,coeff,j,dct[j]);
+	  costD += tokenize_dctcost(cpi,chroma,i+1,j,dct[j]);
+	  costD -= tokenize_dctcost(cpi,chroma,coeff,j,dct[j]);
 	}
       }
 
-      if(cost>0){
+      if(costD>0){
 	/* demoting results in a cheaper token cost.  Is the bit savings worth the added distortion? */
 	int ii = dezigzag_index[i];
 	int od = dct[i]*dequant[i] - origdct[ii];
 	int dd = dval*dequant[i] - origdct[ii];
 	int delta = dd*dd - od*od;
 
-	if(delta < cost*cpi->token_lambda){
+	if(delta < costD*cpi->token_lambda){
 	  /* we have a winner.  Demote token */
 	  dct[i]=dval;
+	  costA=costB;
 
 	  if(dval==0){
 	    if(j==BLOCK_SIZE){
-	      tokenize_mark_run(cpi,chroma,fi,coeff>1,coeff,stack);
+	      retcost += tokenize_mark_run(cpi,chroma,fi,coeff>1,coeff,stack);
 	      coeff = BLOCK_SIZE;
 	      break;
 	    }else{
@@ -522,6 +532,7 @@ void dct_tokenize_AC(CP_INSTANCE *cpi, int fi,
 	  }
 	}
       }
+      retcost+=costA;
 	
       ret = tokenize_dctval(cpi, chroma, fi, coeff, i, dct[i], stack);
       if(!ret)
@@ -530,6 +541,7 @@ void dct_tokenize_AC(CP_INSTANCE *cpi, int fi,
 
     }
   }
+  return retcost;
 }
 
 /* called after AC tokenization is complete, because DC coding has to
@@ -547,7 +559,7 @@ static void tokenize_DC(CP_INSTANCE *cpi, int fi, int chroma,
     int val = cpi->frag_dc[fi];
     int token1 = cpi->dct_token[1][*idx1];
     int eb1 = cpi->dct_token_eb[1][*idx1];
-    
+
     if(!*run1) *run1 = decode_eob_token(token1, eb1);
     
     if(val){

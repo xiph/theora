@@ -20,24 +20,18 @@
 #include "codec_internal.h"
 #include "encoder_lookup.h"
 
-static int predict_frag(CP_INSTANCE  *cpi,
-			int wpc,
-			int fi,
-			int fi_down,
-			int fixup){
-  
-  ogg_int16_t   *dc = cpi->frag_dc;
-
-  if(fixup>=0)
-    dc[fixup] -= dc[fi];
+static int predict_frag(int wpc,
+			ogg_int16_t *dc,
+			ogg_int16_t *down,
+			int *last){
   
   if(wpc){
     ogg_int16_t DC = 0;
     
-    if(wpc&0x1) DC += pc[wpc][0]*dc[fi-1];
-    if(wpc&0x2) DC += pc[wpc][1]*dc[fi_down-1];
-    if(wpc&0x4) DC += pc[wpc][2]*dc[fi_down];
-    if(wpc&0x8) DC += pc[wpc][3]*dc[fi_down+1];
+    if(wpc&0x1) DC += pc[wpc][0]* *(dc-1);
+    if(wpc&0x2) DC += pc[wpc][1]* *(down-1);
+    if(wpc&0x4) DC += pc[wpc][2]* *(down);
+    if(wpc&0x8) DC += pc[wpc][3]* *(down+1);
     
     /* if we need to do a shift */
     if(pc[wpc][4]) {
@@ -49,41 +43,49 @@ static int predict_frag(CP_INSTANCE  *cpi,
     
     /* check for outranging on the two predictors that can outrange */
     if((wpc&(PU|PUL|PL)) == (PU|PUL|PL)){
-      if( abs(DC - dc[fi_down]) > 128) {
-	DC = dc[fi_down];
-      } else if( abs(DC - dc[fi-1]) > 128) {
-	DC = dc[fi-1];
-      } else if( abs(DC - dc[fi_down-1]) > 128) {
-	DC = dc[fi_down-1];
+      if( abs(DC - *down) > 128) {
+	DC = *down;
+      } else if( abs(DC - *(dc-1)) > 128) {
+	DC = *(dc-1);
+      } else if( abs(DC - *(down-1)) > 128) {
+	DC = *(down-1);
       }
     }
     
-    dc[fi] -= DC;
-    return -1;
+    *last = *dc;
+    return *dc - DC;
   }else{
-    return fi;
+    int ret = *dc - *last;
+    *last = *dc;
+    return ret;
   }
 }
 
 static void PredictDC(CP_INSTANCE *cpi){
   ogg_int32_t pi;
-  int fixup[3];  /* last value used for given frame */
-  int y,x,fi = cpi->frag_total-1;
+  int last[3];  /* last value used for given frame */
+  int y,x,fi = 0;
   unsigned char *cp = cpi->frag_coded;
 
   /* for y,u,v; handles arbitrary plane subsampling arrangement.  Shouldn't need to be altered for 4:2:2 or 4:4:4 */
-  for (pi=2; pi>=0; pi--) {
+  for (pi=0; pi<3; pi++) {
     int v = cpi->frag_v[pi];
     int h = cpi->frag_h[pi];
     int subh = !(pi && cpi->info.pixelformat != OC_PF_444);
     int subv = !(pi && cpi->info.pixelformat == OC_PF_420);
+    ogg_int16_t dc[h];
+    ogg_int16_t down[h];
 
-    for(x=0;x<3;x++)fixup[x]=-1;
+    for(x=0;x<3;x++)last[x]=0;
 
-    for (y=v-1; y>=0 ; y--) {
+    for (y=0; y<v ; y++) {
       macroblock_t *mb_row = cpi->macro + (y>>subv)*cpi->macro_h;
       macroblock_t *mb_down = cpi->macro + ((y-1)>>subv)*cpi->macro_h;
-      for (x=h-1; x>=0; x--, fi--) {
+
+      memcpy(down,dc,sizeof(down));
+      memcpy(dc,cpi->frag_dc+fi,sizeof(dc));
+
+      for (x=0; x<h; x++, fi++) {
 	if(cp[fi]) {
 	  int wpc=0;
 	  int wf = Mode2Frame[mb_row[x>>subh].mode];
@@ -97,7 +99,7 @@ static void PredictDC(CP_INSTANCE *cpi){
 	    if(x+1<h && cp[fi-h+1] && Mode2Frame[mb_down[(x+1)>>subh].mode] == wf) wpc|=8; /* down right */
 	  }
 
-	  fixup[wf]=predict_frag(cpi,wpc,fi,fi-h,fixup[wf]);
+	  cpi->frag_dc[fi]=predict_frag(wpc,dc+x,down+x,last+wf);
 	}
       }
     }
@@ -306,7 +308,11 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
   }
 }
 
+#include <stdio.h>
 void EncodeData(CP_INSTANCE *cpi){
+  long modebits=0;
+  long mvbits=0;
+  long dctbits;
   long bits;
 
   PredictDC(cpi);
@@ -314,21 +320,88 @@ void EncodeData(CP_INSTANCE *cpi){
 
   /* Mode and MV data not needed for key frames. */
   if ( cpi->FrameType != KEY_FRAME ){
+    int prebits = oggpackB_bits(cpi->oggbuffer);
     PackModes(cpi);
-    bits = oggpackB_bits(cpi->oggbuffer);
+    modebits = oggpackB_bits(cpi->oggbuffer)-prebits;
+    prebits = oggpackB_bits(cpi->oggbuffer);
     PackMotionVectors (cpi);
-    bits = oggpackB_bits(cpi->oggbuffer);
+    mvbits = oggpackB_bits(cpi->oggbuffer)-prebits;
   }
 
   ChooseTokenTables(cpi);
-#ifdef COLLECT_METRICS
-  ModeMetrics(cpi);
-#endif
-  EncodeTokenList(cpi);
-  bits = oggpackB_bits(cpi->oggbuffer);
+  {
+    int prebits = oggpackB_bits(cpi->oggbuffer);
+    EncodeTokenList(cpi);
+    dctbits = oggpackB_bits(cpi->oggbuffer)-prebits;
+  }
   
+  bits = oggpackB_bits(cpi->oggbuffer);
   ReconRefFrames(cpi);
 
+#ifdef COLLECT_METRICS
+  ModeMetrics(cpi);
+  {
+    int total = cpi->frag_total*64;
+    int fi=0,pi,x,y;
+    ogg_int64_t ssd=0;
+    double minimize;
+
+    for(pi=0;pi<3;pi++){
+      int bi = cpi->frag_buffer_index[fi];
+      unsigned char *frame = cpi->frame+bi;
+      unsigned char *recon = cpi->lastrecon+bi;
+      int stride = cpi->stride[pi];
+      int h = cpi->frag_h[pi]*8;
+      int v = cpi->frag_v[pi]*8;
+      
+      for(y=0;y<v;y++){
+	int lssd=0;
+	for(x=0;x<h;x++)
+	  lssd += (frame[x]-recon[x])*(frame[x]-recon[x]);
+	ssd+=lssd;
+	frame+=stride;
+	recon+=stride;
+      }
+      fi+=cpi->frag_n[pi];
+    }
+
+    minimize = ssd + (float)bits*cpi->token_lambda*16;
+
+    fprintf(stdout,"%d %d %d %d %f %f %f %ld %ld %ld %ld %f %f  %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f  %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f  \n",
+	    (int)cpi->CurrentFrame, // 0
+	    cpi->BaseQ,             // 1
+	    cpi->token_lambda,      // 2
+	    cpi->skip_lambda,       // 3
+	    (double)cpi->rho_count[cpi->BaseQ]/total,           // 4
+	    (double)cpi->rho_postop/total,                      // 5
+	    (double)cpi->rho_postop/cpi->rho_count[cpi->BaseQ], // 6
+ 	    modebits,               // 7
+	    mvbits,                 // 8
+	    dctbits,                // 9
+	    oggpackB_bits(cpi->oggbuffer), // 10
+	    (double)ssd,              // 11
+	    (double)0,
+	    (double)cpi->dist_dist[0][0],//13
+	    (double)cpi->dist_dist[0][1],
+	    (double)cpi->dist_dist[0][2],
+	    (double)cpi->dist_dist[0][3],
+	    (double)cpi->dist_dist[0][4],
+	    (double)cpi->dist_dist[0][5],
+	    (double)cpi->dist_dist[0][6],
+	    (double)cpi->dist_dist[0][7],
+	    (double)(cpi->dist_bits[0][0]>>7),//21
+	    (double)(cpi->dist_bits[0][1]>>7),
+	    (double)(cpi->dist_bits[0][2]>>7),
+	    (double)(cpi->dist_bits[0][3]>>7),
+	    (double)(cpi->dist_bits[0][4]>>7),
+	    (double)(cpi->dist_bits[0][5]>>7),
+	    (double)(cpi->dist_bits[0][6]>>7),
+	    (double)(cpi->dist_bits[0][7]>>7)
+	    
+
+	    );               
+  }
+#endif
   dsp_restore_fpu (cpi->dsp);
 }
 

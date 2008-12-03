@@ -33,10 +33,6 @@ static void CompressKeyFrame(CP_INSTANCE *cpi, int recode){
   cpi->FrameType = KEY_FRAME;
   cpi->LastKeyFrame = 0;
 
-  /* code all blocks */
-  for(i=0;i<cpi->frag_total;i++)
-    cpi->frag_coded[i]=1;
-  
   /* mark as video frame */
   oggpackB_write(cpi->oggbuffer,0,1);
   
@@ -53,9 +49,6 @@ static int CompressFrame( CP_INSTANCE *cpi, int recode ) {
   oggpackB_reset(cpi->oggbuffer);
   cpi->FrameType = DELTA_FRAME;
 
-  for ( i = 0; i < cpi->frag_total; i++ ) 
-    cpi->frag_coded[i] = 1; /* TEMPORARY */
-  
   /* mark as video frame */
   oggpackB_write(cpi->oggbuffer,0,1);
 
@@ -67,10 +60,6 @@ static int CompressFrame( CP_INSTANCE *cpi, int recode ) {
     cpi->FrameType = KEY_FRAME;
     cpi->LastKeyFrame = 0;
 
-    /* code all blocks */
-    for(i=0;i<cpi->frag_total;i++)
-      cpi->frag_coded[i]=1;
-  
     /* mark as video frame */
     oggpackB_write(cpi->oggbuffer,0,1);
     
@@ -130,8 +119,8 @@ int theora_encode_init(theora_state *th, theora_info *c){
   cpi->BaseQ = c->quality;
 
   /* temporary while the RD code is only partially complete */
-  cpi->skip_lambda=24;
-  cpi->token_lambda=24;
+  cpi->skip_lambda=50;
+  cpi->token_lambda=50;
   cpi->mv_lambda=0;
 
   /* Set encoder flags. */
@@ -280,7 +269,7 @@ int theora_encode_packetout( theora_state *t, int last_p, ogg_packet *op){
   if(last_p){
     cpi->doneflag=1;
 #ifdef COLLECT_METRICS
-    DumpMetrics(cpi);
+    //DumpMetrics(cpi);
 #endif
   }
   return 1;

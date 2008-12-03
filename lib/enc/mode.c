@@ -71,6 +71,7 @@
 
 */
 
+#include<stdio.h>
 void oc_mode_scheme_chooser_init(CP_INSTANCE *cpi){
   oc_mode_scheme_chooser *chooser = &cpi->chooser;
   int i;
@@ -298,14 +299,13 @@ static int BInterSAD(CP_INSTANCE *cpi, int fi, int plane, int goldenp, mv_t mv){
 }
 
 static int cost_intra(CP_INSTANCE *cpi, int qi, int mbi, ogg_uint32_t *intrabits, int *overhead){
-  unsigned char *cp = cpi->frag_coded;
   macroblock_t *mb = &cpi->macro[mbi];
   int i,j;
   int cost = 0;
   for(i=0;i<3;i++){
     for(j=0;j<4;j++){
       int fi=mb->Ryuv[i][j];
-      if(cp[fi]){
+      if(fi<cpi->frag_total){
 	int sad = BIntraSAD(cpi,fi,i);
 	cost += BINMAP(mode_rate[qi][i][1],sad);
       }
@@ -318,14 +318,13 @@ static int cost_intra(CP_INSTANCE *cpi, int qi, int mbi, ogg_uint32_t *intrabits
 }
 
 static int cost_inter(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv, int mode, int *overhead){
-  unsigned char *cp = cpi->frag_coded;
   macroblock_t *mb = &cpi->macro[mbi];
   int i,j;
   int cost = 0;
   for(i=0;i<3;i++){
     for(j=0;j<4;j++){
       int fi=mb->Ryuv[i][j];
-      if(cp[fi]){
+      if(fi<cpi->frag_total){
 	int sad = BInterSAD(cpi,fi,i,mode==CODE_USING_GOLDEN,mv);
 	cost += BINMAP(mode_rate[qi][i][0],sad);
       }
@@ -336,18 +335,17 @@ static int cost_inter(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv, int mode, int 
 }
 
 static int cost_inter_nomv(CP_INSTANCE *cpi, int qi, int mbi, int *overhead){
-  unsigned char *cp = cpi->frag_coded;
   macroblock_t *mb = &cpi->macro[mbi];
   int i,j;
   int cost = 0;
   for(i=0;i<3;i++){
     for(j=0;j<4;j++){
       int fi=mb->Ryuv[i][j];
-      if(cp[fi]){
+      if(fi<cpi->frag_total){
 	int bi = cpi->frag_buffer_index[fi];
 	int stride = cpi->stride[i];  
 	int sad =  dsp_sad8x8 (cpi->dsp, cpi->frame+bi, cpi->lastrecon+bi, stride);
-
+      
 	if(i)sad<<=2;
 	cost += BINMAP(mode_rate[qi][i][0],sad);
       }
@@ -358,7 +356,6 @@ static int cost_inter_nomv(CP_INSTANCE *cpi, int qi, int mbi, int *overhead){
 }
 
 static int cost_inter1mv(CP_INSTANCE *cpi, int qi, int mbi, int golden, int *bits0, int *overhead){
-  unsigned char *cp = cpi->frag_coded;
   macroblock_t *mb = &cpi->macro[mbi];
   int i,j;
   int cost = 0;
@@ -366,7 +363,7 @@ static int cost_inter1mv(CP_INSTANCE *cpi, int qi, int mbi, int golden, int *bit
   for(i=0;i<3;i++){
     for(j=0;j<4;j++){
       int fi=mb->Ryuv[i][j];
-      if(cp[fi]){
+      if(fi<cpi->frag_total){
 	int sad = BInterSAD(cpi,fi,i,golden,mb->analysis_mv[0][golden]);
 	cost += BINMAP(mode_rate[qi][i][0],sad);
       }
@@ -386,7 +383,6 @@ static int cost_inter1mv(CP_INSTANCE *cpi, int qi, int mbi, int golden, int *bit
 
 static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bits1, int *overhead){
   int pf = cpi->info.pixelformat;
-  unsigned char *cp = cpi->frag_coded;
   macroblock_t *mb = &cpi->macro[mbi];
   int i,j;
   int cost = 0;
@@ -395,15 +391,14 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
 
   for(j=0;j<4;j++){
     int fi=mb->Ryuv[0][j];
-    if(cp[fi]){
+    if(fi<cpi->frag_total){
       int sad = BInterSAD(cpi,fi,0,0,mb->mv[j]);
       cost += BINMAP(mode_rate[qi][0][0],sad);
-
+      
       *bits0 += 
 	MvBits[mb->mv[j].x + MAX_MV_EXTENT] + 
 	MvBits[mb->mv[j].y + MAX_MV_EXTENT];
       *bits1 += 12;
-      
     }
   }
   
@@ -420,10 +415,9 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
       
       for(i=1;i<3;i++){
 	int fi=mb->Ryuv[i][0];
-	if(cp[fi]){
+	if(fi<cpi->frag_total){
 	  int sad = BInterSAD(cpi,fi,i,0,ch);
 	  cost += BINMAP(mode_rate[qi][i][0],sad);
-
 	}
       }
     }
@@ -446,7 +440,7 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
       for(i=1;i<3;i++){
 	for(j=0;j<2;j++){
 	  int fi=mb->Ryuv[i][j];
-	  if(cp[fi]){
+	  if(fi<cpi->frag_total){
 	    int sad = BInterSAD(cpi,fi,i,0,mv[j]);
 	    cost += BINMAP(mode_rate[qi][i][0],sad);
 	  }
@@ -459,7 +453,7 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
     for(i=1;i<3;i++){
       for(j=0;j<4;j++){
 	int fi=mb->Ryuv[i][j];
-	if(cp[fi]){
+	if(fi<cpi->frag_total){
 	  int sad = BInterSAD(cpi,fi,i,0,mb->mv[j]);
 	  cost += BINMAP(mode_rate[qi][i][0],sad);
 	}
@@ -486,9 +480,10 @@ static void uncode_frag(CP_INSTANCE *cpi, int fi, int plane){
 }      
 
 typedef struct{
-  int uncoded_ssd;
-  int coded_ssd;
-  int sad_cost;
+  int uncoded_ac_ssd;
+  int coded_ac_ssd;
+  int ac_cost;
+  int dc_flag;
 } rd_metric_t;
 
 typedef struct{
@@ -547,10 +542,13 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
   int nonzero=63;
   ogg_int16_t *dequant = ps->re_q[mode != CODE_INTRA][ps->plane];
   int uncoded_ssd=0,coded_ssd=0,coded_partial_ssd=0,sad=0;
+  int uncoded_dc=0,coded_dc=0,dc_flag=0;
   int lambda = cpi->skip_lambda;
   token_checkpoint_t *checkpoint=*stack;
-  int sad_cost=0;
+  int sad_cost=0,cost;
   int i;
+
+  cpi->frag_coded[fi]=1;
 
   /* motion comp */
   switch(mode){
@@ -590,18 +588,6 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
     break;
   }
 
-  if(!keyframe){
-    if(mode==CODE_INTER_NO_MV){
-      for(i=0;i<64;i++)
-	uncoded_ssd += data[i]*data[i];
-    }else{
-      dsp_sub8x8(cpi->dsp, frame_ptr, cpi->lastrecon+bi, buffer, stride);
-      for(i=0;i<64;i++)
-	uncoded_ssd += buffer[i]*buffer[i];
-    }
-  }
-  uncoded_ssd <<= 4; /* scale to match DCT domain */
-
   if(mode==CODE_INTRA){
     int acc=0;
     for(i=0;i<64;i++)
@@ -622,15 +608,31 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
   cpi->frag_sad[fi]=sad;
 #endif
 
+  if(!keyframe){
+    if(mode==CODE_INTER_NO_MV){
+      for(i=0;i<64;i++){
+	uncoded_ssd += data[i]*data[i];
+	uncoded_dc += data[i];
+      }
+    }else{
+      dsp_sub8x8(cpi->dsp, frame_ptr, cpi->lastrecon+bi, buffer, stride);
+      for(i=0;i<64;i++){
+	uncoded_ssd += buffer[i]*buffer[i];
+	uncoded_dc += buffer[i];
+      }
+    }
+    uncoded_ssd*=ps->ssdmul;
+    uncoded_ssd <<= 4; /* scale to match DCT domain */
+    sad_cost = BINMAP(mode_rate[qi][ps->plane][mode==CODE_INTRA],sad);  
+  }
+
   /* transform */
   dsp_fdct_short(cpi->dsp, data, buffer);
 
   /* collect rho metrics, quantize */
   {
     int i;
-    int dcshift = (mode==CODE_INTRA?1:0); /* temporary hysteresis
-					     until DC opt is in */
-    quant_tables *qq = ps->qq[mode != CODE_INTRA];
+    //quant_tables *qq = ps->qq[mode != CODE_INTRA];
     
     {
       int d;
@@ -642,9 +644,9 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
       //for(pos=64;pos>0;pos--)
       //if(val < qqq[pos-1])break;
       
-      rho_count[pos]++;
+      //rho_count[pos]++;
 
-      if((abs(buffer[0])<<dcshift)>=dequant[0]){
+      if(abs(buffer[0])>=dequant[0]){
 	int val = (((iq[0]>>15)*buffer[0]) + (1<<15) + (((iq[0]&0x7fff)*buffer[0])>>15)) >>16;
 	val = (val>511?511:(val<-511?-511:val));
 	
@@ -679,10 +681,14 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
 	data[i] = val;
       }
     }
-  }
-  
-  cpi->frag_dc[fi] = data[0];
 
+    /* for undersampled planes */
+    coded_partial_ssd*=ps->ssdmul;
+
+  }
+  cpi->frag_dc[fi] = data[0];
+  
+#if 0
   /* small performance short-circuit:
 
      Because roundoff error means that C2 preservation can't really be
@@ -692,32 +698,31 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
      expect it to be... off... especially at low energies.
 
      If the partial_ssd indicates this block is not worth the bits by
-     some large margin, don't proceed / bother to get a more precise
+     some large margin, don't proceed or bother to get a more precise
      determination */
+
   if(!keyframe){
-    sad_cost = BINMAP(mode_rate[qi][ps->plane][mode==CODE_INTRA],sad);
-    if(sad_cost<0)sad_cost=0; /* some of the trained fits can return a negative cost for zero entropy */
 
-    /* for undersampled planes */
-    coded_partial_ssd*=ps->ssdmul;
-    uncoded_ssd*=ps->ssdmul;
+    /* Don't short circuit if there's a chance of coding a DC component */
+    if( (mode != CODE_INTRA && data[0]==0) ||
+	(mode == CODE_INTRA && abs( buffer[0] - (uncoded_dc>>1) + 4096 ) < (dequant[0]>>1))){
 
-    mo->uncoded_ssd+=uncoded_ssd;
-
-    /* the partial_ssd underreports distortion, so this comparison
-       will only yield false negatives, which are harmless */
-    if(uncoded_ssd <= coded_partial_ssd+coding_overhead*lambda+((sad_cost*lambda)>>OC_BIT_SCALE)){ 
-      /* SKIP */
-      
-      uncode_frag(cpi,fi,ps->plane);
-      mo->coded_ssd+=uncoded_ssd; /* We may still be coding the MB even if not this block */
-      return 0;
-
+      /* the partial_ssd underreports distortion, so this comparison
+	 will only yield false negatives, which are harmless */
+      if(uncoded_ssd <= coded_partial_ssd+coding_overhead*lambda+((sad_cost*lambda)>>OC_BIT_SCALE)){ 
+	/* SKIP */
+	
+	uncode_frag(cpi,fi,ps->plane);
+	mo->coded_ssd+=uncoded_ssd; /* We may still be coding the MB even if not this block */
+	return 0;
+	
+      }
     }
   }
+#endif
 
   /* tokenize */
-  dct_tokenize_AC(cpi, fi, data, dequant, buffer, fi>=cpi->frag_n[0], stack);
+  cost = dct_tokenize_AC(cpi, fi, data, dequant, buffer, fi>=cpi->frag_n[0], stack);
   
   /* reconstruct */
   while(!data[nonzero] && --nonzero);
@@ -746,33 +751,45 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
        which to do so.*/
     /* for now, straight up SSD */
     dsp_sub8x8(cpi->dsp, frame_ptr, thisrecon, buffer, stride);    
-    for(i=0;i<64;i++)
+    for(i=0;i<64;i++){
       coded_ssd += buffer[i]*buffer[i];
+      coded_dc += buffer[i];
+    }
     coded_ssd <<= 4; /* scale to match DCT domain */
-
-    /* for undersampled planes */
-    coded_ssd*=ps->ssdmul;
+    coded_ssd*=ps->ssdmul; /* for undersampled planes */
     
-    if(uncoded_ssd <= coded_ssd+coding_overhead*lambda+((sad_cost*lambda)>>OC_BIT_SCALE)){ 
+    /* We actually only want the AC contribution to the SSDs */
+    uncoded_ssd -= ((uncoded_dc*uncoded_dc)>>2);
+    coded_ssd -= ((coded_dc*coded_dc)>>2);
+    mo->uncoded_ac_ssd+=uncoded_ssd;  
+
+    /* DC is a special visual case; if there's more than a
+       half-quantizer improvement in the effective DC component, code
+       the block */
+    if( abs(uncoded_dc)-abs(coded_dc) > dequant[0]){
+      mo->dc_flag = dc_flag = 1;
+    }
+       
+    if(!dc_flag && uncoded_ssd <= coded_ssd+(coding_overhead+cost)*lambda){
       /* Hm, not worth it.  roll back */
       tokenlog_rollback(cpi, checkpoint, (*stack)-checkpoint);
       *stack = checkpoint;
       uncode_frag(cpi,fi,ps->plane);
-
-      mo->coded_ssd+=uncoded_ssd;
-
+      
+      mo->coded_ac_ssd+=uncoded_ssd;
+      
       return 0;
     }else{
-
-      mo->coded_ssd+=coded_ssd;
-      mo->sad_cost+=sad_cost;
-
+      
+      mo->coded_ac_ssd+=coded_ssd;
+      mo->ac_cost+=cost;
+      
     }
   }
-
+  
   //for(i=0;i<64;i++)
   //if(data[i]!=0)cpi->rho_postop++;
-    
+
   return 1;
 }
 
@@ -816,11 +833,11 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
   
 
   if(cpi->FrameType != KEY_FRAME){
-    if(coded){
+    if(coded && !mo.dc_flag){
       /* block by block, still coding the MB.  Now consider the
 	 macroblock coding cost as a whole (mode and MV) */ 
-      int codecost = mo.sad_cost+(fr_cost4(&fr_checkpoint,fr)<<OC_BIT_SCALE)+mode_overhead;
-      if(mo.uncoded_ssd <= mo.coded_ssd+((cpi->skip_lambda*codecost)>>(OC_BIT_SCALE))){     
+      int codecost = mo.ac_cost+fr_cost4(&fr_checkpoint,fr)+(mode_overhead>>OC_BIT_SCALE);
+      if(mo.uncoded_ac_ssd <= mo.coded_ac_ssd+cpi->skip_lambda*codecost){
 	
 	/* taking macroblock overhead into account, it is not worth coding this MB */
 	tokenlog_rollback(cpi, stack, stackptr-stack);
@@ -884,7 +901,6 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
   int pf = cpi->info.pixelformat;
   int i;
   int coded = 0;
-  unsigned char *cp=cpi->frag_coded;
   rd_metric_t mo;
   token_checkpoint_t stack[64*2]; /* worst case token usage for 1 fragment*/
   memset(&mo,0,sizeof(mo));
@@ -892,12 +908,13 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
   for(i=0;i<16;i++){
     int fi = sb->f[i];
     int mb_phase;
-    if(cp[fi]){
+
+    if(fi<cpi->frag_total){
       token_checkpoint_t *stackptr = stack;
       macroblock_t *mb = &cpi->macro[sb->m[i]];
       mv_t mv;
       if(mb->mode == CODE_INTER_FOURMV){
-
+	
 	switch(pf){
 	case OC_PF_420:
 	  /* sixteen blocks/macroblocks per chroma superblock */
@@ -908,7 +925,7 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
 	  mv.x = ( mv.x >= 0 ? (mv.x + 2) / 4 : (mv.x - 2) / 4);
 	  mv.y = ( mv.y >= 0 ? (mv.y + 2) / 4 : (mv.y - 2) / 4);
 	  break;
-
+	  
 	case OC_PF_422:
 	  /* sixteen blocks / eight macroblocks per chroma superblock */
 	  mb_phase = macroblock_phase_422[i];
@@ -925,7 +942,7 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
 	}
       }else
 	mv = mb->mv[0];
-	
+      
       if(TQB(cpi,ps,mb->mode,fi,mv,fr_cost1(fr),&mo,rc,&stackptr)){
 	fr_codeblock(cpi,fr);
 	tokenlog_commit(cpi, stack, stackptr-stack);
@@ -1167,11 +1184,10 @@ int PickModes(CP_INSTANCE *cpi, int recode){
     fr_finishsb(cpi,&fr);
   }
 
-  for(i=1;i<65;i++)
-    rho_count[i]+=rho_count[i-1];
+  //for(i=1;i<65;i++)
+  //rho_count[i]+=rho_count[i-1];
 
-  memcpy(cpi->rho_count,rho_count,sizeof(rho_count));
-
+  //memcpy(cpi->rho_count,rho_count,sizeof(rho_count));
   if(cpi->FrameType != KEY_FRAME){
     
     if(interbits>intrabits) return 1; /* short circuit */

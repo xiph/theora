@@ -344,7 +344,7 @@ extern void tokenlog_rollback(CP_INSTANCE *cpi,
 			      token_checkpoint_t *stack,
 			      int n);
 extern void dct_tokenize_init (CP_INSTANCE *cpi);
-extern void dct_tokenize_AC (CP_INSTANCE *cpi, 
+extern int dct_tokenize_AC (CP_INSTANCE *cpi, 
 			     int fi, 
 			     ogg_int16_t *dct, 
 			     ogg_int16_t *dequant, 
