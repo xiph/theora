@@ -207,7 +207,6 @@ static int oc_sad16_halfpel(CP_INSTANCE *cpi,
     const unsigned char *ref = (_goldenp ? cpi->golden : cpi->lastrecon) + base_offset;
     
     err+=  dsp_sad8x8_xy2_thres (cpi->dsp, cur, ref+_mvoffset0, ref+_mvoffset1, cpi->stride[0], _best_err-err);
-    //err+=  dsp_inter8x8_err_xy2 (cpi->dsp, cur, ref+_mvoffset0, ref+_mvoffset1, cpi->stride[0]);
 
   }
   
@@ -231,13 +230,12 @@ static int oc_mcenc_ysad_check_mbcandidate_fullpel(CP_INSTANCE *cpi,
   err=0;
   for(bi=0;bi<4;bi++){
     int fi = mb->Ryuv[0][bi];
-    if(fi < cpi->frag_total){ /* last fragment is the 'invalid fragment' */
+    if(fi >= 0){ /* last fragment is the 'invalid fragment' */
       ogg_uint32_t base_offset = cpi->frag_buffer_index[fi];
       const unsigned char *cur = cpi->frame + base_offset;
       const unsigned char *ref = (_goldenp ? cpi->golden : cpi->lastrecon) + base_offset;
       
       _block_err[bi] = dsp_sad8x8_thres (cpi->dsp, cur, ref+mvoffset,stride,9999999); 
-      //_block_err[bi] = dsp_inter8x8_err (cpi->dsp, cur, ref+mvoffset,stride); 
 
       err += _block_err[bi];
     }
@@ -310,7 +308,7 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,
   int err;
   int fi = mb->Ryuv[0][_bi];
 
-  if(fi == cpi->frag_total) return _best_err;
+  if(fi < 0) return _best_err;
 
   mvoffset_base=_vec->x+_vec->y*stride;
   offset_y[0]=offset_y[1]=offset_y[2]=-stride;
@@ -342,7 +340,6 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,
     mvoffset1=mvoffset_base+(dx&~xmask)+(offset_y[site]&~ymask);
 
     err=dsp_sad8x8_xy2_thres (cpi->dsp, cur, ref+mvoffset0, ref+mvoffset1, stride, _best_err);
-    //err=dsp_inter8x8_err_xy2 (cpi->dsp, cur, ref+mvoffset0, ref+mvoffset1, stride);
 
     if(err<_best_err){
       _best_err=err;

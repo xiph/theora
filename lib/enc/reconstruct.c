@@ -17,7 +17,7 @@
 
 #include "codec_internal.h"
 
-static void copy8x8__c (unsigned char *src,
+static void copy8x8__c (const unsigned char *src,
 			unsigned char *dest,
 			unsigned int stride)
 {
@@ -30,8 +30,8 @@ static void copy8x8__c (unsigned char *src,
   }
 }
 
-static void copy8x8_half__c (unsigned char *src1,
-			     unsigned char *src2, 
+static void copy8x8_half__c (const unsigned char *src1,
+			     const unsigned char *src2, 
 			     unsigned char *dest,
 			     unsigned int stride)
 {
@@ -55,7 +55,7 @@ static void copy8x8_half__c (unsigned char *src1,
 
 
 static void recon8x8__c (unsigned char *ReconPtr, 
-			 ogg_int16_t *ChangePtr, ogg_uint32_t LineStep)
+			 const ogg_int16_t *ChangePtr, ogg_uint32_t LineStep)
 {
   ogg_uint32_t i;
 

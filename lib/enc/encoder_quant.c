@@ -171,7 +171,7 @@ void InitQTables( CP_INSTANCE *cpi ){
 	    q=((ogg_uint32_t)qinfo->ac_scale[qi]*base[ci]/100)<<2;
 	    q=OC_CLAMPI(OC_AC_QUANT_MIN[qti],q,OC_QUANT_MAX);
 	    cpi->quant_tables[qti][pli][zigzag_index[ci]][qi]=(ogg_uint16_t)q;
-	    cpi->iquant_tables[qti][pli][qi][ci]=(ogg_int32_t)(((1<<31))/q+1);
+	    cpi->iquant_tables[qti][pli][qi][zigzag_index[ci]]=(ogg_int32_t)(((1<<31))/q+1);
 	  }
 	  
 	  if(++qi>=qi_end)break;

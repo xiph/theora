@@ -3,17 +3,12 @@ AM_CFLAGS = $(OGG_CFLAGS) $(CAIRO_CFLAGS)
 LIBADD = $(OGG_LIBS) 
 
 EXTRA_DIST = \
-        enc/x86_32/dct_decode_mmx.c \
-        enc/x86_32/dsp_mmx.c \
-        enc/x86_32/dsp_mmxext.c \
-        enc/x86_32/recon_mmx.c \
-        enc/x86_32/fdct_mmx.c \
-        enc/x86_32/idct_mmx.c \
-        enc/x86_64/dsp_mmx.c \
-        enc/x86_64/dsp_mmxext.c \
-        enc/x86_64/recon_mmx.c \
-        enc/x86_64/fdct_mmx.c \
-        enc/x86_64/idct_mmx.c \
+        enc/x86/dct_decode_mmx.c \
+        enc/x86/dsp_mmx.c \
+        enc/x86/dsp_mmxext.c \
+        enc/x86/recon_mmx.c \
+        enc/x86/fdct_mmx.c \
+        enc/x86/idct_mmx.c \
         enc/x86_32_vs/dsp_mmx.c \
         enc/x86_32_vs/fdct_mmx.c \
         enc/x86_32_vs/recon_mmx.c \
@@ -43,25 +38,19 @@ encoder_sources = \
 	enc/reconstruct.c \
 	enc/dsp.c
 
+encoder_x86_sources = \
+	enc/x86/dct_decode_mmx.c \
+	enc/x86/dsp_mmx.c \
+	enc/x86/dsp_mmxext.c \
+	enc/x86/recon_mmx.c \
+	enc/x86/idct_mmx.c \
+	enc/x86/fdct_mmx.c
+
 if CPU_x86_64
-enc_arch_dir = enc/x86_64
-encoder_arch_sources= \
-	$(enc_arch_dir)/dct_decode_mmx.c \
-	$(enc_arch_dir)/dsp_mmx.c \
-	$(enc_arch_dir)/dsp_mmxext.c \
-	$(enc_arch_dir)/recon_mmx.c \
-	$(enc_arch_dir)/idct_mmx.c \
-	$(enc_arch_dir)/fdct_mmx.c
+encoder_arch_sources = $(encoder_x86_sources)
 else
 if CPU_x86_32
-enc_arch_dir = enc/x86_32
-encoder_arch_sources= \
-	$(enc_arch_dir)/dct_decode_mmx.c \
-	$(enc_arch_dir)/dsp_mmx.c \
-	$(enc_arch_dir)/dsp_mmxext.c \
-	$(enc_arch_dir)/recon_mmx.c \
-	$(enc_arch_dir)/idct_mmx.c \
-	$(enc_arch_dir)/fdct_mmx.c
+encoder_arch_sources = $(encoder_x86_sources)
 endif
 endif
 

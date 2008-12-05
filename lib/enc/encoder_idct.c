@@ -111,9 +111,9 @@ static void idct_short__c ( ogg_int16_t * InputData, ogg_int16_t * OutputData ) 
 }
 */
 
-static void dequant_slow( ogg_int16_t * dequant_coeffs,
-                   ogg_int16_t * quantized_list,
-                   ogg_int32_t * DCT_block) {
+static void dequant_slow( const ogg_int16_t * dequant_coeffs,
+			  const ogg_int16_t * quantized_list,
+			  ogg_int32_t * DCT_block) {
   int i;
   for(i=0;i<64;i++)
     DCT_block[dezigzag_index[i]] = quantized_list[i] * dequant_coeffs[i];
@@ -121,9 +121,9 @@ static void dequant_slow( ogg_int16_t * dequant_coeffs,
 
 
 
-void IDctSlow__c(  ogg_int16_t * InputData,
-                ogg_int16_t *QuantMatrix,
-                ogg_int16_t * OutputData ) {
+void IDctSlow__c(  const ogg_int16_t * InputData,
+		   const ogg_int16_t *QuantMatrix,
+		   ogg_int16_t * OutputData ) {
   ogg_int32_t IntermediateData[64];
   ogg_int32_t * ip = IntermediateData;
   ogg_int16_t * op = OutputData;
@@ -340,9 +340,9 @@ void IDctSlow__c(  ogg_int16_t * InputData,
   0  0  0  0  0  0  0  0
 *************************/
 
-static void dequant_slow10( ogg_int16_t * dequant_coeffs,
-                     ogg_int16_t * quantized_list,
-                     ogg_int32_t * DCT_block){
+static void dequant_slow10( const ogg_int16_t * dequant_coeffs,
+			    const ogg_int16_t * quantized_list,
+			    ogg_int32_t * DCT_block){
   int i;
   memset(DCT_block,0, 128);
   for(i=0;i<10;i++)
@@ -350,9 +350,9 @@ static void dequant_slow10( ogg_int16_t * dequant_coeffs,
 
 }
 
-void IDct10__c( ogg_int16_t * InputData,
-             ogg_int16_t *QuantMatrix,
-             ogg_int16_t * OutputData ){
+void IDct10__c( const ogg_int16_t * InputData,
+		const ogg_int16_t *QuantMatrix,
+		ogg_int16_t * OutputData ){
   ogg_int32_t IntermediateData[64];
   ogg_int32_t * ip = IntermediateData;
   ogg_int16_t * op = OutputData;
@@ -542,18 +542,18 @@ void IDct10__c( ogg_int16_t * InputData,
   0   0   0  0  0  0  0  0
 **************************/
 
-void IDct1( ogg_int16_t * InputData,
-            ogg_int16_t *QuantMatrix,
+void IDct1( const ogg_int16_t * InputData,
+            const ogg_int16_t *QuantMatrix,
             ogg_int16_t * OutputData ){
   int loop;
 
   ogg_int16_t  OutD;
-
+  
   OutD=(ogg_int16_t) ((ogg_int32_t)(InputData[0]*QuantMatrix[0]+15)>>5);
-
+  
   for(loop=0;loop<64;loop++)
     OutputData[loop]=OutD;
-
+  
 }
 
 void dsp_idct_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)

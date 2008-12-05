@@ -119,8 +119,8 @@ int theora_encode_init(theora_state *th, theora_info *c){
   cpi->BaseQ = c->quality;
 
   /* temporary while the RD code is only partially complete */
-  cpi->skip_lambda=50;
-  cpi->token_lambda=50;
+  cpi->skip_lambda=1000;
+  cpi->token_lambda=2000;
   cpi->mv_lambda=0;
 
   /* Set encoder flags. */

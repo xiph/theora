@@ -29,63 +29,49 @@ typedef struct
   void   (*set8x8)                (unsigned char val, unsigned char *ptr,
 				   ogg_uint32_t stride);
 
-  void   (*sub8x8)                (unsigned char *FiltPtr, unsigned char *ReconPtr,
+  void   (*sub8x8)                (const unsigned char *FiltPtr, const unsigned char *ReconPtr,
 				   ogg_int16_t *DctInputPtr, ogg_uint32_t stride);
 
-  void   (*sub8x8_128)            (unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
+  void   (*sub8x8_128)            (const unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
 				   ogg_uint32_t stride);
 
-  void   (*sub8x8avg2)            (unsigned char *FiltPtr, unsigned char *ReconPtr1,
-				   unsigned char *ReconPtr2, ogg_int16_t *DctInputPtr,
-				   ogg_uint32_t stride);
-
-  void   (*copy8x8)               (unsigned char *src, unsigned char *dest, 
+  void   (*copy8x8)               (const unsigned char *src, unsigned char *dest, 
 				   ogg_uint32_t stride);
   
-  void   (*copy8x8_half)          (unsigned char *src1, unsigned char *src2, 
+  void   (*copy8x8_half)          (const unsigned char *src1, const unsigned char *src2, 
 				   unsigned char *dest, ogg_uint32_t stride);
 
-  void   (*recon8x8)              (unsigned char *ReconPtr, ogg_int16_t *ChangePtr, 
+  void   (*recon8x8)              (unsigned char *ReconPtr, const ogg_int16_t *ChangePtr, 
 				   ogg_uint32_t stride);
 
-  void   (*fdct_short)            (ogg_int16_t *InputData, ogg_int16_t *OutputData);
+  void   (*fdct_short)            (const ogg_int16_t *InputData, ogg_int16_t *OutputData);
 
-  ogg_uint32_t (*row_sad8)        (unsigned char *Src1, unsigned char *Src2);
-
-  ogg_uint32_t (*col_sad8x8)      (unsigned char *Src1, unsigned char *Src2,
-				   ogg_uint32_t stride);
-  
-  ogg_uint32_t (*sad8x8)          (unsigned char *ptr1, unsigned char *ptr2, 
+  ogg_uint32_t (*sad8x8)          (const unsigned char *ptr1, const unsigned char *ptr2, 
 				   ogg_uint32_t stride);
 
-  ogg_uint32_t (*sad8x8_thres)    (unsigned char *ptr1, unsigned char *ptr2, 
+  ogg_uint32_t (*sad8x8_thres)    (const unsigned char *ptr1, const unsigned char *ptr2, 
 				   ogg_uint32_t stride, ogg_uint32_t thres);
 
-  ogg_uint32_t (*sad8x8_xy2_thres)(unsigned char *SrcData, unsigned char *RefDataPtr1,
-				   unsigned char *RefDataPtr2, ogg_uint32_t stride,
+  ogg_uint32_t (*sad8x8_xy2_thres)(const unsigned char *SrcData, const unsigned char *RefDataPtr1,
+				   const unsigned char *RefDataPtr2, ogg_uint32_t stride,
 				   ogg_uint32_t thres);
-  
-  ogg_uint32_t (*intra8x8_err)    (unsigned char *DataPtr, ogg_uint32_t stride);
-  
-  ogg_uint32_t (*inter8x8_err)    (unsigned char *SrcData, unsigned char *RefData, 
-				   ogg_uint32_t stride);
-
-  ogg_uint32_t (*inter8x8_err_xy2)(unsigned char *SrcData, unsigned char *RefDataPtr1,
-				   unsigned char *RefDataPtr2, ogg_uint32_t stride);
-               
+                 
   void (*LoopFilter)              (CP_INSTANCE *cpi, int FLimit);
 
   void (*FilterVert)              (unsigned char * PixelPtr,
 				   ogg_int32_t LineLength, ogg_int16_t *BoundingValuePtr);
   
-  void (*IDctSlow)                (ogg_int16_t *InputData, 
-				   ogg_int16_t *QuantMatrix, ogg_int16_t *OutputData);
+  void (*IDctSlow)                (const ogg_int16_t *InputData, 
+				   const ogg_int16_t *QuantMatrix, 
+				   ogg_int16_t *OutputData);
 
-  void (*IDct3)                   (ogg_int16_t *InputData, 
-				   ogg_int16_t *QuantMatrix, ogg_int16_t *OutputData);
+  void (*IDct3)                   (const ogg_int16_t *InputData, 
+				   const ogg_int16_t *QuantMatrix, 
+				   ogg_int16_t *OutputData);
   
-  void (*IDct10)                  (ogg_int16_t *InputData, 
-				   ogg_int16_t *QuantMatrix, ogg_int16_t *OutputData);
+  void (*IDct10)                  (const ogg_int16_t *InputData, 
+				   const ogg_int16_t *QuantMatrix, 
+				   ogg_int16_t *OutputData);
 } DspFunctions;
 
 extern void dsp_dct_init(DspFunctions *funcs, ogg_uint32_t cpu_flags);
@@ -114,8 +100,6 @@ extern void dsp_mmx_idct_init(DspFunctions *funcs);
 
 #define dsp_sub8x8_128(funcs,a1,a2,a3) (funcs.sub8x8_128 (a1,a2,a3))
 
-#define dsp_sub8x8avg2(funcs,a1,a2,a3,a4,a5) (funcs.sub8x8avg2 (a1,a2,a3,a4,a5))
-
 #define dsp_copy8x8(funcs,ptr1,ptr2,str1) (funcs.copy8x8 (ptr1,ptr2,str1))
 
 #define dsp_copy8x8_half(funcs,ptr1,ptr2,ptr3,str1) (funcs.copy8x8_half (ptr1,ptr2,ptr3,str1))
@@ -124,24 +108,12 @@ extern void dsp_mmx_idct_init(DspFunctions *funcs);
 
 #define dsp_fdct_short(funcs,in,out) (funcs.fdct_short (in,out))
 
-#define dsp_row_sad8(funcs,ptr1,ptr2) (funcs.row_sad8 (ptr1,ptr2))
-
-#define dsp_col_sad8x8(funcs,ptr1,ptr2,str1) (funcs.col_sad8x8 (ptr1,ptr2,str1))
-
 #define dsp_sad8x8(funcs,ptr1,ptr2,str) (funcs.sad8x8 (ptr1,ptr2,str))
 
 #define dsp_sad8x8_thres(funcs,ptr1,ptr2,str,t) (funcs.sad8x8_thres (ptr1,ptr2,str,t))
 
 #define dsp_sad8x8_xy2_thres(funcs,ptr1,ptr2,ptr3,str,t) \
   (funcs.sad8x8_xy2_thres (ptr1,ptr2,ptr3,str,t))
-
-#define dsp_intra8x8_err(funcs,ptr1,str1) (funcs.intra8x8_err (ptr1,str1))
-
-#define dsp_inter8x8_err(funcs,ptr1,ptr2,str) \
-  (funcs.inter8x8_err (ptr1,ptr2,str))
-
-#define dsp_inter8x8_err_xy2(funcs,ptr1,ptr2,ptr3,str) \
-  (funcs.inter8x8_err_xy2 (ptr1,ptr2,ptr3,str))
 
 #define dsp_LoopFilter(funcs, ptr1, i) \
   (funcs.LoopFilter(ptr1, i))

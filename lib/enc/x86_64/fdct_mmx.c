@@ -27,13 +27,6 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t xC5S3 = 0x08e3a8e3a8e
 static const __attribute__ ((aligned(8),used)) ogg_int64_t xC6S2 = 0x061f861f861f861f8LL;
 static const __attribute__ ((aligned(8),used)) ogg_int64_t xC7S1 = 0x031f131f131f131f1LL;
 
-#if defined(__MINGW32__) || defined(__CYGWIN__) || \
-    defined(__OS2__) || (defined (__OpenBSD__) && !defined(__ELF__))
-# define M(a) "_" #a
-#else
-# define M(a) #a
-#endif
-
 /* execute stage 1 of forward DCT */
 #define Fdct_mmx(ip0,ip1,ip2,ip3,ip4,ip5,ip6,ip7,temp)                        \
   "  movq      " #ip0 ", %%mm0      \n\t"                                     \

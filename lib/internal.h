@@ -33,7 +33,7 @@
 # endif
 
 /*This library's version.*/
-# define OC_VENDOR_STRING "Xiph.Org libThusnelda I 20080310"
+# define OC_VENDOR_STRING "Xiph.Org libThusnelda I 20081201"
 
 /*Theora bitstream version.*/
 # define TH_VERSION_MAJOR (3)

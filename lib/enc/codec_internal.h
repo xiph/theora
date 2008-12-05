@@ -318,8 +318,8 @@ struct CP_INSTANCE {
 
 #define clamp255(x) ((unsigned char)((((x)<0)-1) & ((x) | -((x)>255))))
 
-extern void IDct1( ogg_int16_t *InputData,
-                   ogg_int16_t *QuantMatrix,
+extern void IDct1( const ogg_int16_t *InputData,
+                   const ogg_int16_t *QuantMatrix,
                    ogg_int16_t *OutputData );
 
 extern void ReconRefFrames (CP_INSTANCE *cpi);
@@ -345,12 +345,12 @@ extern void tokenlog_rollback(CP_INSTANCE *cpi,
 			      int n);
 extern void dct_tokenize_init (CP_INSTANCE *cpi);
 extern int dct_tokenize_AC (CP_INSTANCE *cpi, 
-			     int fi, 
-			     ogg_int16_t *dct, 
-			     ogg_int16_t *dequant, 
-			     ogg_int16_t *origdct, 
-			     int chroma, 
-			     token_checkpoint_t **stack);
+			    const int fi, 
+			    ogg_int16_t *dct, 
+			    const ogg_int16_t *dequant, 
+			    const ogg_int16_t *origdct, 
+			    const int chroma, 
+			    token_checkpoint_t **stack);
 extern void dct_tokenize_finish (CP_INSTANCE *cpi);
 extern void dct_tokenize_mark_ac_chroma (CP_INSTANCE *cpi);
 

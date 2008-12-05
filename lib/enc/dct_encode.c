@@ -468,80 +468,72 @@ static int tokenize_eobcost(CP_INSTANCE *cpi,int chroma, int coeff){
    simply assume there will be a nonzero DC value and code.  That's
    not a true assumption but it can be fixed-up as DC is tokenized
    later */
-int dct_tokenize_AC(CP_INSTANCE *cpi, int fi, 
-		     ogg_int16_t *dct, ogg_int16_t *dequant, ogg_int16_t *origdct, 
-		     int chroma, token_checkpoint_t **stack){
+int dct_tokenize_AC(CP_INSTANCE *cpi, const int fi, 
+		    ogg_int16_t *dct, const ogg_int16_t *dequant, 
+		    const ogg_int16_t *origdct, const int chroma, 
+		    token_checkpoint_t **stack){
   int coeff = 1; /* skip DC for now */
+  int i = coeff;
   int retcost = 0;
-  while(coeff < BLOCK_SIZE){
-    int i = coeff;
+
+  while( !dct[i] && (++i < BLOCK_SIZE) );
+    
+  while(i < BLOCK_SIZE){
     int ret;
 
-    while( !dct[i] && (++i < BLOCK_SIZE) );
-    
-    if ( i == BLOCK_SIZE ){
-      
-      retcost += tokenize_mark_run(cpi,chroma,fi,coeff>1,coeff,stack);
-      coeff = BLOCK_SIZE;
+    /* determine costs for encoding this value (and any preceeding
+       eobrun/zerorun) as well as the cost for encoding a demoted token */
+    int costA = tokenize_dctcost(cpi,chroma,coeff,i,dct[i]),costB;
+    int costD = costA;
+    int dval = (dct[i]>0 ? dct[i]-1 : dct[i]+1);
+    int j=i+1;
+    while((j < BLOCK_SIZE) && !dct[j] ) j++;
+
+    if(dval){
+      /* demoting will not produce a zero. */
+      costD -= costB = tokenize_dctcost(cpi,chroma,coeff,i,dval);
     }else{
-
-      /* determine costs for encoding this value (and any preceeding
-	 eobrun/zerorun) as well as the cost for encoding a demoted token */
-      int costA = tokenize_dctcost(cpi,chroma,coeff,i,dct[i]),costB;
-      int costD = costA;
-      int dval = (dct[i]>0 ? dct[i]-1 : dct[i]+1);
-      int j=i;
-      if(dval){
-	/* demoting will not produce a zero. */
-	costD -= costB = tokenize_dctcost(cpi,chroma,coeff,i,dval);
+      /* demoting token will produce a zero. */
+      costB = 0;
+      if(j==BLOCK_SIZE){
+	costD += tokenize_eobcost(cpi,chroma,i+1);
+	costD -= tokenize_eobcost(cpi,chroma,coeff);
       }else{
-	/* demoting token will produce a zero. */
-	j=i+1;
-	costB = 0;
-	while((j < BLOCK_SIZE) && !dct[j] ) j++;
-	if(j==BLOCK_SIZE){
-	  costD += tokenize_eobcost(cpi,chroma,i+1);
-	  costD -= tokenize_eobcost(cpi,chroma,coeff);
-	}else{
-	  costD += tokenize_dctcost(cpi,chroma,i+1,j,dct[j]);
-	  costD -= tokenize_dctcost(cpi,chroma,coeff,j,dct[j]);
-	}
+	costD += tokenize_dctcost(cpi,chroma,i+1,j,dct[j]);
+	costD -= tokenize_dctcost(cpi,chroma,coeff,j,dct[j]);
       }
-
-      if(costD>0){
-	/* demoting results in a cheaper token cost.  Is the bit savings worth the added distortion? */
-	int ii = dezigzag_index[i];
-	int od = dct[i]*dequant[i] - origdct[ii];
-	int dd = dval*dequant[i] - origdct[ii];
-	int delta = dd*dd - od*od;
-
-	if(delta < costD*cpi->token_lambda){
-	  /* we have a winner.  Demote token */
-	  dct[i]=dval;
-	  costA=costB;
-
-	  if(dval==0){
-	    if(j==BLOCK_SIZE){
-	      retcost += tokenize_mark_run(cpi,chroma,fi,coeff>1,coeff,stack);
-	      coeff = BLOCK_SIZE;
-	      break;
-	    }else{
-	      i=j;
-	      continue;
-	    }
-	  }
-	}
-      }
-      retcost+=costA;
-	
-      ret = tokenize_dctval(cpi, chroma, fi, coeff, i, dct[i], stack);
-      if(!ret)
-	tokenize_dctval(cpi, chroma, fi, i, i, dct[i], stack);
-      coeff=i+1;
-
     }
+
+    if(costD>0){
+      /* demoting results in a cheaper token cost.  Is the bit savings worth the added distortion? */
+      int ii = dezigzag_index[i];
+      int od = dct[i]*dequant[i] - origdct[ii];
+      int dd = dval*dequant[i] - origdct[ii];
+      int delta = dd*dd - od*od;
+      
+      if(delta < costD*cpi->token_lambda){
+	/* we have a winner.  Demote token */
+	dct[i]=dval;
+	costA=costB;
+	
+	if(dval==0){
+	  if(j==BLOCK_SIZE) break;
+	  i=j;
+	  continue;
+	}
+      }
+    }
+
+    retcost+=costA;
+	
+    ret = tokenize_dctval(cpi, chroma, fi, coeff, i, dct[i], stack);
+    if(!ret)
+      tokenize_dctval(cpi, chroma, fi, i, i, dct[i], stack);
+    coeff=i+1;
+    i=j;
+    
   }
-  return retcost;
+  return retcost+tokenize_mark_run(cpi,chroma,fi,coeff>1,coeff,stack);
 }
 
 /* called after AC tokenization is complete, because DC coding has to

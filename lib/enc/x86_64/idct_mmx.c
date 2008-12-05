@@ -356,8 +356,8 @@ ogg_uint16_t idctconstants[(4+7+1) * 4] = {
  *
  ***************************************************************************************
  */
-void IDctSlow__mmx(ogg_int16_t *in,
-		   ogg_int16_t *q,
+void IDctSlow__mmx(const ogg_int16_t *in,
+		   const ogg_int16_t *q,
 		   ogg_int16_t *out ) {
 
 #   define MID(M,I)     MtoSTR(M+(I)*8)"(%[c])"
@@ -810,9 +810,9 @@ void IDctSlow__mmx(ogg_int16_t *in,
 
 /* --------------------------------------------------------------- */
 /* IDCT 10 */
-void IDct10__mmx( ogg_int16_t *in,
-             ogg_int16_t *q,
-             ogg_int16_t *out ) {
+void IDct10__mmx( const ogg_int16_t *in,
+		  const ogg_int16_t *q,
+		  ogg_int16_t *out ) {
 
     __asm__ __volatile__ (
 
@@ -1063,9 +1063,9 @@ void IDct10__mmx( ogg_int16_t *in,
     "#end ColumnIDCT_3\n"
 //End of ColumnIDCT_3
 
-void IDct3__mmx( ogg_int16_t *in,
-            ogg_int16_t *q,
-            ogg_int16_t *out ) {
+void IDct3__mmx( const ogg_int16_t *in,
+		 const ogg_int16_t *q,
+		 ogg_int16_t *out ) {
 
     __asm__ __volatile__ (
 

@@ -19,11 +19,9 @@
 
 #if defined(USE_ASM)
 
-typedef unsigned long long ogg_uint64_t;
-
 static const __attribute__ ((aligned(8),used)) ogg_int64_t V128 = 0x8080808080808080LL;
 
-static void copy8x8__mmx (unsigned char *src,
+static void copy8x8__mmx (const unsigned char *src,
                           unsigned char *dest,
                           ogg_uint32_t stride)
 {
@@ -57,13 +55,13 @@ static void copy8x8__mmx (unsigned char *src,
     "  movq        %%mm3, (%0, %%rdi)  \n\t"
       : "+a" (dest)
       : "c" (src),
-        "d" ((ogg_uint64_t)stride)
+        "d" ((unsigned long)stride)
       : "memory", "rdi"
   );
 }
 
 static void recon8x8__mmx (unsigned char *ReconPtr, 
-			   ogg_int16_t *ChangePtr, 
+			   const ogg_int16_t *ChangePtr, 
 			   ogg_uint32_t LineStep)
 {
   __asm__ __volatile__ (
@@ -93,7 +91,7 @@ static void recon8x8__mmx (unsigned char *ReconPtr,
     "  jc          1b                  \n\t"
       : "+r" (ReconPtr)
       : "r" (ChangePtr),
-        "r" ((ogg_uint64_t)LineStep)
+        "r" ((unsigned long)LineStep)
       : "memory", "rdi"
   );
 }
