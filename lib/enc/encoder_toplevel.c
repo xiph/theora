@@ -119,8 +119,8 @@ int theora_encode_init(theora_state *th, theora_info *c){
   cpi->BaseQ = c->quality;
 
   /* temporary while the RD code is only partially complete */
-  cpi->skip_lambda=1000;
-  cpi->token_lambda=2000;
+  cpi->skip_lambda=0;
+  cpi->token_lambda=0;
   cpi->mv_lambda=0;
 
   /* Set encoder flags. */
@@ -269,7 +269,7 @@ int theora_encode_packetout( theora_state *t, int last_p, ogg_packet *op){
   if(last_p){
     cpi->doneflag=1;
 #ifdef COLLECT_METRICS
-    //DumpMetrics(cpi);
+    DumpMetrics(cpi);
 #endif
   }
   return 1;

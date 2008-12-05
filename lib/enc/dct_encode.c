@@ -496,7 +496,8 @@ int dct_tokenize_AC(CP_INSTANCE *cpi, const int fi,
       /* demoting token will produce a zero. */
       costB = 0;
       if(j==BLOCK_SIZE){
-	costD += tokenize_eobcost(cpi,chroma,i+1);
+	if(i+1<BLOCK_SIZE) 
+	  costD += tokenize_eobcost(cpi,chroma,i+1);
 	costD -= tokenize_eobcost(cpi,chroma,coeff);
       }else{
 	costD += tokenize_dctcost(cpi,chroma,i+1,j,dct[j]);
@@ -533,7 +534,8 @@ int dct_tokenize_AC(CP_INSTANCE *cpi, const int fi,
     i=j;
     
   }
-  return retcost+tokenize_mark_run(cpi,chroma,fi,coeff>1,coeff,stack);
+  if(coeff<BLOCK_SIZE) retcost+=tokenize_mark_run(cpi,chroma,fi,coeff>1,coeff,stack);
+  return retcost;
 }
 
 /* called after AC tokenization is complete, because DC coding has to
@@ -545,74 +547,69 @@ int dct_tokenize_AC(CP_INSTANCE *cpi, const int fi,
 static void tokenize_DC(CP_INSTANCE *cpi, int fi, int chroma,
 			int *idx1, int *run1){
   
-  unsigned char *cp=cpi->frag_coded;
+  int val = cpi->frag_dc[fi];
+  int token1 = cpi->dct_token[1][*idx1];
+  int eb1 = cpi->dct_token_eb[1][*idx1];
   
-  if ( cp[fi] ) {
-    int val = cpi->frag_dc[fi];
-    int token1 = cpi->dct_token[1][*idx1];
-    int eb1 = cpi->dct_token_eb[1][*idx1];
-
-    if(!*run1) *run1 = decode_eob_token(token1, eb1);
+  if(!*run1) *run1 = decode_eob_token(token1, eb1);
+  
+  if(val){
+    /* nonzero DC val, no coeff 1 stack 'fixup'. */
     
-    if(val){
-      /* nonzero DC val, no coeff 1 stack 'fixup'. */
-      
-      tokenize_dctval(cpi,chroma,fi,0,0,val,NULL);
-
-      /* there was a nonzero DC value, so there's no alteration to the
-	 track1 stack for this fragment; track/regenerate stack 1
+    tokenize_dctval(cpi,chroma,fi,0,0,val,NULL);
+    
+    /* there was a nonzero DC value, so there's no alteration to the
+       track1 stack for this fragment; track/regenerate stack 1
 	 state unchanged */
-      if(*run1){
-	/* in the midst of an EOB run in stack 1 */
-	tokenize_mark_run(cpi,chroma,fi,1,1,NULL);
-	(*run1)--;
-
-      }else{
-
-	/* non-EOB run token to emit for stack 1 */
-	token_add_raw(cpi,chroma,fi,1,token1,eb1);
-
-      }
-
-    }else{
-
-      /* zero DC value; that means the entry in coeff position 1
-	 should have been coded from the DC coeff position. This
-	 requires a stack 1 fixup. */
+    if(*run1){
+      /* in the midst of an EOB run in stack 1 */
+      tokenize_mark_run(cpi,chroma,fi,1,1,NULL);
+      (*run1)--;
       
-      if(*run1){
-
-	/* current stack 1 token an EOB run; conceptually move this fragment's EOBness to stack 0 */
-	tokenize_mark_run(cpi,chroma,fi,0,0,NULL);
-	      
-	/* decrement current EOB run for coeff 1 without adding to coded run */
-	(*run1)--;
-
-      }else{
-	int run,val=0;
-
-	/* stack 1 token is one of: zerorun, dctrun or dctval */
-	/* A zero-run token is expanded and moved to token stack 0 (stack 1 entry dropped) */
-	/* A dctval may be transformed into a single dctrun that is moved to stack 0,
-	   or if it does not fit in a dctrun, we leave the stack 1 entry alone and emit 
-	   a single length-1 zerorun token for stack 0 */
-	/* A dctrun is extended and moved to stack 0.  During AC
-	   coding, we restrict the run lengths on dctruns for stack 1
-	   so we know there's no chance of overrunning the
-	   representable range */
-
-	run = decode_token(token1,eb1,&val)+1;
-
-	if(!tokenize_dctval(cpi,chroma,fi,0,run,val,NULL)){
-	  token_add_raw(cpi,chroma,fi,1,token1,eb1);
-	}
-      }
+    }else{
+      
+      /* non-EOB run token to emit for stack 1 */
+      token_add_raw(cpi,chroma,fi,1,token1,eb1);
+      
     }
     
-    /* update token counter if not in a run */
-    if (!*run1) (*idx1)++;
+  }else{
+
+    /* zero DC value; that means the entry in coeff position 1
+       should have been coded from the DC coeff position. This
+       requires a stack 1 fixup. */
     
+    if(*run1){
+      
+      /* current stack 1 token an EOB run; conceptually move this fragment's EOBness to stack 0 */
+      tokenize_mark_run(cpi,chroma,fi,0,0,NULL);
+      
+      /* decrement current EOB run for coeff 1 without adding to coded run */
+      (*run1)--;
+      
+    }else{
+      int run,val=0;
+      
+      /* stack 1 token is one of: zerorun, dctrun or dctval */
+      /* A zero-run token is expanded and moved to token stack 0 (stack 1 entry dropped) */
+      /* A dctval may be transformed into a single dctrun that is moved to stack 0,
+	 or if it does not fit in a dctrun, we leave the stack 1 entry alone and emit 
+	 a single length-1 zerorun token for stack 0 */
+      /* A dctrun is extended and moved to stack 0.  During AC
+	 coding, we restrict the run lengths on dctruns for stack 1
+	 so we know there's no chance of overrunning the
+	 representable range */
+      
+      run = decode_token(token1,eb1,&val)+1;
+      
+      if(!tokenize_dctval(cpi,chroma,fi,0,run,val,NULL)){
+	token_add_raw(cpi,chroma,fi,1,token1,eb1);
+      }
+    }
   }
+  
+  /* update token counter if not in a run */
+  if (!*run1) (*idx1)++;
 }
 
 void dct_tokenize_init (CP_INSTANCE *cpi){
@@ -654,7 +651,8 @@ void dct_tokenize_mark_ac_chroma (CP_INSTANCE *cpi){
 void dct_tokenize_finish (CP_INSTANCE *cpi){
   int i,sbi;
   int idx1=0,run1=0;
-
+  unsigned char *cp=cpi->frag_coded;
+  
   /* we parse the token stack for coeff1 to stay in sync, and re-use
      the token stack counters to track */
   /* emit an eob run for the end run of stack 1; this is used to
@@ -675,7 +673,8 @@ void dct_tokenize_finish (CP_INSTANCE *cpi){
     int bi;
     for (bi=0; bi<16; bi++, i++ ) {
       int fi = sb->f[bi];
-      tokenize_DC(cpi, fi, 0, &idx1, &run1);
+      if(fi>=0 && cp[fi]) 
+        tokenize_DC(cpi, fi, 0, &idx1, &run1);
     }
   }
 
@@ -691,7 +690,8 @@ void dct_tokenize_finish (CP_INSTANCE *cpi){
     int bi;
     for (bi=0; bi<16; bi++,i++ ) {
       int fi = sb->f[bi];
-      tokenize_DC(cpi, fi, 1, &idx1, &run1);
+      if(fi>=0 && cp[fi]) 
+	tokenize_DC(cpi, fi, 1, &idx1, &run1);
     }
   }
 

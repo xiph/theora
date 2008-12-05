@@ -340,6 +340,8 @@ void EncodeData(CP_INSTANCE *cpi){
 
 #ifdef COLLECT_METRICS
   ModeMetrics(cpi);
+
+#if 0
   {
     int total = cpi->frag_total*64;
     int fi=0,pi,x,y;
@@ -401,6 +403,7 @@ void EncodeData(CP_INSTANCE *cpi){
 
 	    );               
   }
+#endif
 #endif
   dsp_restore_fpu (cpi->dsp);
 }

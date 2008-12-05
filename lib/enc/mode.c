@@ -911,7 +911,6 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
   return coded;  
 }
 
-#include<stdio.h>
 int PickModes(CP_INSTANCE *cpi, int recode){
   unsigned char qi = cpi->BaseQ; // temporary
   superblock_t *sb = cpi->super[0];
@@ -944,7 +943,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
     oc_mcenc_start(cpi, &mcenc); 
 
   dct_tokenize_init(cpi);
-   
+
   /* Choose mvs, modes; must be done in Hilbert order */
   /* quantize and code Luma */
   sb = cpi->super[0];
@@ -981,6 +980,9 @@ int PickModes(CP_INSTANCE *cpi, int recode){
 	/* search golden frame */
 	oc_mcenc_search(cpi, &mcenc, mbi, 1, NULL, &gerror, NULL);
 	
+      }else{
+	aerror = mb->aerror;
+	gerror = mb->gerror;
       }
 
       if(cpi->FrameType == KEY_FRAME){

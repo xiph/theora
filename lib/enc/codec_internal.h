@@ -22,7 +22,7 @@
 # include "config.h"
 #endif
 
-//#define COLLECT_METRICS 
+#define COLLECT_METRICS 
 
 #include "theora/theora.h"
 #include "encoder_huffman.h"
@@ -143,6 +143,7 @@ typedef struct macroblock {
   mv_t   analysis_mv[3][2]; /* [cur,prev,prev2][frame,golden] */
   /*Minimum motion estimation error from the analysis stage.*/
   int    aerror;
+  int    gerror;
 
   char coded;
 } macroblock_t;
