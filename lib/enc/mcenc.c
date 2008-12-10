@@ -230,7 +230,7 @@ static int oc_mcenc_ysad_check_mbcandidate_fullpel(CP_INSTANCE *cpi,
   err=0;
   for(bi=0;bi<4;bi++){
     int fi = mb->Ryuv[0][bi];
-    if(fi >= 0){ /* last fragment is the 'invalid fragment' */
+    if(fi < cpi->frag_total){ /* last fragment is the 'invalid fragment' */
       ogg_uint32_t base_offset = cpi->frag_buffer_index[fi];
       const unsigned char *cur = cpi->frame + base_offset;
       const unsigned char *ref = (_goldenp ? cpi->golden : cpi->lastrecon) + base_offset;
@@ -308,7 +308,7 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,
   int err;
   int fi = mb->Ryuv[0][_bi];
 
-  if(fi < 0) return _best_err;
+  if(fi >= cpi->frag_total) return _best_err;
 
   mvoffset_base=_vec->x+_vec->y*stride;
   offset_y[0]=offset_y[1]=offset_y[2]=-stride;

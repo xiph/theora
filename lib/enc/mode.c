@@ -309,7 +309,7 @@ static int cost_intra(CP_INSTANCE *cpi, int qi, int mbi, ogg_uint32_t *intrabits
   for(i=0;i<3;i++){
     for(j=0;j<4;j++){
       int fi=mb->Ryuv[i][j];
-      if(fi>=0){
+      if(fi<cpi->frag_total){
 	int sad = BIntraSAD(cpi,fi,i);
 	cost += BINMAP(mode_rate[qi][i][1],sad);
       }
@@ -328,7 +328,7 @@ static int cost_inter(CP_INSTANCE *cpi, int qi, int mbi, mv_t mv, int mode, int 
   for(i=0;i<3;i++){
     for(j=0;j<4;j++){
       int fi=mb->Ryuv[i][j];
-      if(fi>=0){
+      if(fi<cpi->frag_total){
 	int sad = BInterSAD(cpi,fi,i,mode==CODE_USING_GOLDEN,mv);
 	cost += BINMAP(mode_rate[qi][i][0],sad);
       }
@@ -345,7 +345,7 @@ static int cost_inter_nomv(CP_INSTANCE *cpi, int qi, int mbi, int *overhead){
   for(i=0;i<3;i++){
     for(j=0;j<4;j++){
       int fi=mb->Ryuv[i][j];
-      if(fi>=0){
+      if(fi<cpi->frag_total){
 	int bi = cpi->frag_buffer_index[fi];
 	int stride = cpi->stride[i];  
 	int sad =  dsp_sad8x8 (cpi->dsp, cpi->frame+bi, cpi->lastrecon+bi, stride);
@@ -367,7 +367,7 @@ static int cost_inter1mv(CP_INSTANCE *cpi, int qi, int mbi, int golden, int *bit
   for(i=0;i<3;i++){
     for(j=0;j<4;j++){
       int fi=mb->Ryuv[i][j];
-      if(fi>=0){
+      if(fi<cpi->frag_total){
 	int sad = BInterSAD(cpi,fi,i,golden,mb->analysis_mv[0][golden]);
 	cost += BINMAP(mode_rate[qi][i][0],sad);
       }
@@ -395,7 +395,7 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
 
   for(j=0;j<4;j++){
     int fi=mb->Ryuv[0][j];
-    if(fi>=0){
+    if(fi<cpi->frag_total){
       int sad = BInterSAD(cpi,fi,0,0,mb->mv[j]);
       cost += BINMAP(mode_rate[qi][0][0],sad);
       
@@ -419,7 +419,7 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
       
       for(i=1;i<3;i++){
 	int fi=mb->Ryuv[i][0];
-	if(fi>=0){
+	if(fi<cpi->frag_total){
 	  int sad = BInterSAD(cpi,fi,i,0,ch);
 	  cost += BINMAP(mode_rate[qi][i][0],sad);
 	}
@@ -444,7 +444,7 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
       for(i=1;i<3;i++){
 	for(j=0;j<2;j++){
 	  int fi=mb->Ryuv[i][j];
-	  if(fi>=0){
+	  if(fi<cpi->frag_total){
 	    int sad = BInterSAD(cpi,fi,i,0,mv[j]);
 	    cost += BINMAP(mode_rate[qi][i][0],sad);
 	  }
@@ -457,7 +457,7 @@ static int cost_inter4mv(CP_INSTANCE *cpi, int qi, int mbi, int *bits0, int *bit
     for(i=1;i<3;i++){
       for(j=0;j<4;j++){
 	int fi=mb->Ryuv[i][j];
-	if(fi>=0){
+	if(fi<cpi->frag_total){
 	  int sad = BInterSAD(cpi,fi,i,0,mb->mv[j]);
 	  cost += BINMAP(mode_rate[qi][i][0],sad);
 	}
@@ -532,7 +532,6 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
 		token_checkpoint_t **stack){
   
   const int keyframe = (cpi->FrameType == KEY_FRAME);
-  const int qi = ps->qi;
   const ogg_int32_t *iq = ps->iq[mode != CODE_INTRA];
   ogg_int16_t buffer[64];
   ogg_int16_t data[64];
@@ -605,10 +604,10 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
   int sad=0;
   if(mode==CODE_INTRA){
     int acc=0;
-    for(i=0;i<64;i++){
+    for(i=0;i<64;i++)
       acc += data[i];
+    for(i=0;i<64;i++)
       sad += abs((data[i]<<6)-acc);
-    }
     sad >>=6;
   }else{
     for(i=0;i<64;i++)
@@ -864,7 +863,7 @@ static int TQSB_UV ( CP_INSTANCE *cpi, superblock_t *sb, plane_state_t *ps, long
     int fi = sb->f[i];
     int mb_phase;
 
-    if(fi>=0){
+    if(fi<cpi->frag_total){
       token_checkpoint_t *stackptr = stack;
       macroblock_t *mb = &cpi->macro[sb->m[i]];
       mv_t mv;
@@ -953,7 +952,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
     for(j = 0; j<4; j++){ /* mode addressing is through Y plane, always 4 MB per SB */
       int mbi = sb->m[j];
 
-      if(mbi < 0) continue;
+      if(mbi >= cpi->macro_total) continue;
 
       int cost[8] = {0,0,0,0, 0,0,0,0};
       int overhead[8] = {0,0,0,0, 0,0,0,0};
@@ -1273,6 +1272,7 @@ static void ModeMetricsGroup(CP_INSTANCE *cpi, int group, int huffY, int huffC, 
       actual_bits[fi] += (bits<<OC_BIT_SCALE);
     }else{
       /* EOB run; its bits should be split up between all the fragments in the run */
+
       int run = parse_eob_run(token, cpi->dct_token_eb[group][ti]);
       int fracbits = ((bits<<OC_BIT_SCALE) + (run>>1))/run;
       
@@ -1344,30 +1344,33 @@ void ModeMetrics(CP_INSTANCE *cpi){
   /* accumulate */
   for(fi=0;fi<v;fi++)
     if(cp[fi]){
-      macroblock_t *mb = &cpi->macro[mp[fi]];
-      int mode = mb->mode;
-      int plane = (fi<y ? 0 : (fi<u ? 1 : 2));
-      int bin = BIN(sp[fi]);
-      mode_metric[qi][plane][mode==CODE_INTRA].frag[bin]++;
-      mode_metric[qi][plane][mode==CODE_INTRA].sad[bin] += sp[fi];
-      mode_metric[qi][plane][mode==CODE_INTRA].bits[bin] += actual_bits[fi];
-
-      {
-	int bi = cpi->frag_buffer_index[fi];
-	unsigned char *frame = cpi->frame+bi;
-	unsigned char *recon = cpi->lastrecon+bi;
-	int stride = cpi->stride[plane];
-	int lssd=0;
-	int xi,yi;
-      
-	for(yi=0;yi<8;yi++){
-	  for(xi=0;xi<8;xi++)
-	    lssd += (frame[xi]-recon[xi])*(frame[xi]-recon[xi]);
-	  frame+=stride;
-	  recon+=stride;
+      int mbi = mp[fi];
+      if(mbi>=0){
+	macroblock_t *mb = &cpi->macro[mbi];
+	int mode = mb->mode;
+	int plane = (fi<y ? 0 : (fi<u ? 1 : 2));
+	int bin = BIN(sp[fi]);
+	mode_metric[qi][plane][mode==CODE_INTRA].frag[bin]++;
+	mode_metric[qi][plane][mode==CODE_INTRA].sad[bin] += sp[fi];
+	mode_metric[qi][plane][mode==CODE_INTRA].bits[bin] += actual_bits[fi];
+	
+	if(0){
+	  int bi = cpi->frag_buffer_index[fi];
+	  unsigned char *frame = cpi->frame+bi;
+	  unsigned char *recon = cpi->lastrecon+bi;
+	  int stride = cpi->stride[plane];
+	  int lssd=0;
+	  int xi,yi;
+	  
+	  for(yi=0;yi<8;yi++){
+	    for(xi=0;xi<8;xi++)
+	      lssd += (frame[xi]-recon[xi])*(frame[xi]-recon[xi]);
+	    frame+=stride;
+	    recon+=stride;
+	  }
+	  cpi->dist_dist[plane][mode] += lssd;
+	  cpi->dist_bits[plane][mode] += actual_bits[fi];
 	}
-	cpi->dist_dist[plane][mode] += lssd;
-	cpi->dist_bits[plane][mode] += actual_bits[fi];
       }
     }
 

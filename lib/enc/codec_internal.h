@@ -22,7 +22,7 @@
 # include "config.h"
 #endif
 
-#define COLLECT_METRICS 
+//#define COLLECT_METRICS 
 
 #include "theora/theora.h"
 #include "encoder_huffman.h"

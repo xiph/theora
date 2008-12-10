@@ -112,11 +112,13 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->super_n[2] = cpi->super_h[2] * cpi->super_v[2];
   cpi->super_total = cpi->super_n[0] + cpi->super_n[1] + cpi->super_n[2];
 
-  cpi->frag_coded = calloc(cpi->frag_total, sizeof(*cpi->frag_coded)); 
+  /* +1; the last entry is the 'invalid' frag, which is always set to not coded as it doesn't really exist */
+  cpi->frag_coded = calloc(cpi->frag_total+1, sizeof(*cpi->frag_coded)); 
   cpi->frag_buffer_index = calloc(cpi->frag_total, sizeof(*cpi->frag_buffer_index));
   cpi->frag_dc = calloc(cpi->frag_total, sizeof(*cpi->frag_dc));
 
-  cpi->macro = calloc(cpi->macro_total, sizeof(*cpi->macro));
+  /* +1; the last entry is the 'invalid' mb, which contains only 'invalid' frags */
+  cpi->macro = calloc(cpi->macro_total+1, sizeof(*cpi->macro));
 
   cpi->super[0] = calloc(cpi->super_total, sizeof(**cpi->super));
   cpi->super[1] = cpi->super[0] + cpi->super_n[0];
@@ -136,8 +138,8 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 #ifdef COLLECT_METRICS
  {
    int i;
-   cpi->frag_mbi = _ogg_calloc(cpi->frag_total, sizeof(*cpi->frag_mbi));
-   cpi->frag_sad = _ogg_calloc(cpi->frag_total, sizeof(*cpi->frag_sad));
+   cpi->frag_mbi = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->frag_mbi));
+   cpi->frag_sad = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->frag_sad));
    cpi->dct_token_frag_storage = _ogg_malloc(cpi->stack_offset*BLOCK_SIZE*sizeof(*cpi->dct_token_frag_storage));
    cpi->dct_eob_fi_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_eob_fi_storage));
  }
@@ -167,7 +169,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	      int fragindex = frow*cpi->frag_h[plane] + fcol + offset;
 	      cpi->super[plane][superindex].f[frag] = fragindex;
 	    }else
-	      cpi->super[plane][superindex].f[frag] = -1; /* 'invalid' */
+	      cpi->super[plane][superindex].f[frag] = cpi->frag_total; /* 'invalid' */
 	  }
 	}
       }
@@ -187,7 +189,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	    cpi->super[0][superindex].m[mb] = macroindex;
 	    cpi->macro[macroindex].ysb = superindex;
 	  }else
-	    cpi->super[0][superindex].m[mb] = -1;
+	    cpi->super[0][superindex].m[mb] = cpi->macro_total;
 	}
       }
     }
@@ -205,7 +207,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	    cpi->super[1][superindex].m[mb] = macroindex;
 	    cpi->macro[macroindex].usb = superindex + cpi->super_n[0];
 	  }else
-	    cpi->super[1][superindex].m[mb] = -1;
+	    cpi->super[1][superindex].m[mb] = cpi->macro_total;
 	}
       }
     }
@@ -223,7 +225,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	    cpi->super[2][superindex].m[mb] = macroindex;
 	    cpi->macro[macroindex].vsb = superindex + cpi->super_n[0] + cpi->super_n[1];
 	  }else
-	    cpi->super[2][superindex].m[mb] = -1;
+	    cpi->super[2][superindex].m[mb] = cpi->macro_total;
 	}
       }
     }
@@ -251,8 +253,8 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	  int Rrow = baserow + ((frag>>1)&1);
 	  int Rcol = basecol + (frag&1);
 
-	  cpi->macro[macroindex].Hyuv[0][frag] = -1;
-	  cpi->macro[macroindex].Ryuv[0][frag] = -1;
+	  cpi->macro[macroindex].Hyuv[0][frag] = cpi->frag_total; // default
+	  cpi->macro[macroindex].Ryuv[0][frag] = cpi->frag_total; //default
 	  if(Hrow<cpi->frag_v[0] && Hcol<cpi->frag_h[0]){
 	    cpi->macro[macroindex].Hyuv[0][frag] = Hrow*cpi->frag_h[0] + Hcol;	    
 #ifdef COLLECT_METRICS
@@ -264,14 +266,14 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	}
 
 	/* U */
-	cpi->macro[macroindex].Ryuv[1][0] = -1;
-	cpi->macro[macroindex].Ryuv[1][1] = -1;
-	cpi->macro[macroindex].Ryuv[1][2] = -1;
-	cpi->macro[macroindex].Ryuv[1][3] = -1;
-	cpi->macro[macroindex].Hyuv[1][0] = -1;
-	cpi->macro[macroindex].Hyuv[1][1] = -1;
-	cpi->macro[macroindex].Hyuv[1][2] = -1;
-	cpi->macro[macroindex].Hyuv[1][3] = -1;
+	cpi->macro[macroindex].Ryuv[1][0] = cpi->frag_total;
+	cpi->macro[macroindex].Ryuv[1][1] = cpi->frag_total;
+	cpi->macro[macroindex].Ryuv[1][2] = cpi->frag_total;
+	cpi->macro[macroindex].Ryuv[1][3] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[1][0] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[1][1] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[1][2] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[1][3] = cpi->frag_total;
 	if(row<cpi->frag_v[1] && col<cpi->frag_h[1]){
 	  cpi->macro[macroindex].Hyuv[1][0] = cpi->frag_n[0] + macroindex;
 	  cpi->macro[macroindex].Ryuv[1][0] = cpi->frag_n[0] + macroindex;
@@ -281,14 +283,14 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	}
 	
 	/* V */
-	cpi->macro[macroindex].Ryuv[2][0] = -1;
-	cpi->macro[macroindex].Ryuv[2][1] = -1;
-	cpi->macro[macroindex].Ryuv[2][2] = -1;
-	cpi->macro[macroindex].Ryuv[2][3] = -1;
-	cpi->macro[macroindex].Hyuv[2][0] = -1;
-	cpi->macro[macroindex].Hyuv[2][1] = -1;
-	cpi->macro[macroindex].Hyuv[2][2] = -1;
-	cpi->macro[macroindex].Hyuv[2][3] = -1;
+	cpi->macro[macroindex].Ryuv[2][0] = cpi->frag_total;
+	cpi->macro[macroindex].Ryuv[2][1] = cpi->frag_total;
+	cpi->macro[macroindex].Ryuv[2][2] = cpi->frag_total;
+	cpi->macro[macroindex].Ryuv[2][3] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[2][0] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[2][1] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[2][2] = cpi->frag_total;
+	cpi->macro[macroindex].Hyuv[2][3] = cpi->frag_total;
 	if(row<cpi->frag_v[2] && col<cpi->frag_h[2]){
 	  cpi->macro[macroindex].Hyuv[2][0] = cpi->frag_n[0] + cpi->frag_n[1] + macroindex;
 	  cpi->macro[macroindex].Ryuv[2][0] = cpi->frag_n[0] + cpi->frag_n[1] + macroindex;
@@ -370,6 +372,21 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 	cpi->macro[macroindex].npneighbors=count;
       }
     }
+  }
+
+  /* fill in 'invalid' macroblock */
+  {
+    int p,f;
+    for(p=0;p<3;p++)
+      for(f=0;f<4;f++){
+	cpi->macro[cpi->macro_total].Ryuv[p][f] = cpi->frag_total;
+	cpi->macro[cpi->macro_total].Hyuv[p][f] = cpi->frag_total;
+      }
+    cpi->macro[cpi->macro_total].ncneighbors=0;
+    cpi->macro[cpi->macro_total].npneighbors=0;
+#ifdef COLLECT_METRICS
+    cpi->frag_mbi[cpi->frag_total] = cpi->macro_total;
+#endif
   }
 
   /* allocate frames */

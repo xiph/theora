@@ -673,7 +673,7 @@ void dct_tokenize_finish (CP_INSTANCE *cpi){
     int bi;
     for (bi=0; bi<16; bi++, i++ ) {
       int fi = sb->f[bi];
-      if(fi>=0 && cp[fi]) 
+      if(cp[fi]) 
         tokenize_DC(cpi, fi, 0, &idx1, &run1);
     }
   }
@@ -690,7 +690,7 @@ void dct_tokenize_finish (CP_INSTANCE *cpi){
     int bi;
     for (bi=0; bi<16; bi++,i++ ) {
       int fi = sb->f[bi];
-      if(fi>=0 && cp[fi]) 
+      if(cp[fi]) 
 	tokenize_DC(cpi, fi, 1, &idx1, &run1);
     }
   }
