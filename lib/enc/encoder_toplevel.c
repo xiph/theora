@@ -119,9 +119,7 @@ int theora_encode_init(theora_state *th, theora_info *c){
   cpi->BaseQ = c->quality;
 
   /* temporary while the RD code is only partially complete */
-  cpi->skip_lambda=0;
-  cpi->token_lambda=0;
-  cpi->mv_lambda=0;
+  cpi->lambda=200;
 
   /* Set encoder flags. */
   /* if not AutoKeyframing cpi->ForceKeyFrameEvery = is frequency */

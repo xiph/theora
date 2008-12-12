@@ -414,9 +414,9 @@ int fr_cost4(fr_state_t *pre, fr_state_t *post){
   fr_skipblock(NULL,&temp);
   fr_skipblock(NULL,&temp);
   fr_skipblock(NULL,&temp);
-  fr_finishsb(NULL,&temp);
+  //fr_finishsb(NULL,&temp);
   cost=temp.cost;
   temp=*post;
-  fr_finishsb(NULL,&temp);
+  //fr_finishsb(NULL,&temp);
   return temp.cost - cost;
 }

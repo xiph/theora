@@ -363,7 +363,6 @@ static int cost_inter1mv(CP_INSTANCE *cpi, int qi, int mbi, int golden, int *bit
   macroblock_t *mb = &cpi->macro[mbi];
   int i,j;
   int cost = 0;
-
   for(i=0;i<3;i++){
     for(j=0;j<4;j++){
       int fi=mb->Ryuv[i][j];
@@ -527,6 +526,7 @@ static void ps_setup_plane(CP_INSTANCE *cpi, plane_state_t *ps, int plane){
 }
 
 /* coding overhead is unscaled */
+#include<stdio.h>
 static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv, 
 		int coding_overhead, rd_metric_t *mo, long *rho_count,
 		token_checkpoint_t **stack){
@@ -544,9 +544,9 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
   unsigned char *thisrecon = cpi->recon+bi;
   int nonzero=0;
   const ogg_int16_t *dequant = ps->re_q[mode != CODE_INTRA][ps->plane];
-  int uncoded_ssd=0,coded_ssd=0,coded_partial_ssd=0;
+  int uncoded_ssd=0,coded_ssd=0;
   int uncoded_dc=0,coded_dc=0,dc_flag=0;
-  int lambda = cpi->skip_lambda;
+  int lambda = cpi->lambda;
   token_checkpoint_t *checkpoint=*stack;
   int cost;
   int i;
@@ -632,7 +632,6 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
 	uncoded_dc += buffer[i];
       }
     }
-    uncoded_ssd*=ps->ssdmul;
     uncoded_ssd <<= 4; /* scale to match DCT domain */
   }
 
@@ -656,26 +655,16 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
       //rho_count[pos]++;
 
       if((abs(v)<<1)>=dequant[i]){
-	int d;
 	int val = (((iq[i]>>15)*v) + (1<<15) + (((iq[i]&0x7fff)*v)>>15)) >>16;
-	val = (val>511?511:(val<-511?-511:val));
-
-	d = val*dequant[i]-v;
-	coded_partial_ssd += d*d;
-	data[i] = val;
+	data[i] = (val>511?511:(val<-511?-511:val));
 	nonzero=i;
       }else{
-	coded_partial_ssd += v*v;
 	data[i] = 0;
       }
     }
-
-    /* for undersampled planes */
-    coded_partial_ssd*=ps->ssdmul;
-
   }
   cpi->frag_dc[fi] = data[0];
-  
+
   /* tokenize */
   cost = dct_tokenize_AC(cpi, fi, data, dequant, buffer, fi>=cpi->frag_n[0], stack);
   
@@ -700,27 +689,27 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
     int i;
 
     /* in retrospect, should we have skipped this block? */
-    /* we are free to apply any distortion measure we like as we have
-       the full original block and fully reconstructed block with
-       which to do so.*/
-    /* for now, straight up SSD */
     dsp_sub8x8(cpi->dsp, frame_ptr, thisrecon, buffer, stride);    
     for(i=0;i<64;i++){
       coded_ssd += buffer[i]*buffer[i];
       coded_dc += buffer[i];
     }
     coded_ssd <<= 4; /* scale to match DCT domain */
-    coded_ssd*=ps->ssdmul; /* for undersampled planes */
     
     /* We actually only want the AC contribution to the SSDs */
     uncoded_ssd -= ((uncoded_dc*uncoded_dc)>>2);
     coded_ssd -= ((coded_dc*coded_dc)>>2);
+
+    /* for undersampled planes */
+    //coded_ssd*=ps->ssdmul; 
+    //uncoded_ssd*=ps->ssdmul;
+
     mo->uncoded_ac_ssd+=uncoded_ssd;  
 
-    /* DC is a special visual case; if there's more than a
-       half-quantizer improvement in the effective DC component, code
+    /* DC is a special case; if there's more than a full-quantizer
+       improvement in the effective DC component, always force-code
        the block */
-    if( abs(uncoded_dc)-abs(coded_dc) > dequant[0]){
+    if( abs(uncoded_dc)-abs(coded_dc) > (dequant[0]<<1)){
       mo->dc_flag = dc_flag = 1;
     }
        
@@ -731,10 +720,13 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
       uncode_frag(cpi,fi,ps->plane);
       
       mo->coded_ac_ssd+=uncoded_ssd;
+      //fprintf(stderr,"skip(%d:%d)",coding_overhead,cost);
       
       return 0;
     }else{
       
+      //fprintf(stderr,"*****(%d:%d)",coding_overhead,cost);
+
       mo->coded_ac_ssd+=coded_ssd;
       mo->ac_cost+=cost;
       
@@ -791,7 +783,7 @@ static int TQMB_Y ( CP_INSTANCE *cpi, macroblock_t *mb, int mb_phase, plane_stat
       /* block by block, still coding the MB.  Now consider the
 	 macroblock coding cost as a whole (mode and MV) */ 
       int codecost = mo.ac_cost+fr_cost4(&fr_checkpoint,fr)+(mode_overhead>>OC_BIT_SCALE);
-      if(mo.uncoded_ac_ssd <= mo.coded_ac_ssd+cpi->skip_lambda*codecost){
+      if(mo.uncoded_ac_ssd <= mo.coded_ac_ssd+cpi->lambda*codecost){
 	
 	/* taking macroblock overhead into account, it is not worth coding this MB */
 	tokenlog_rollback(cpi, stack, stackptr-stack);
@@ -1271,26 +1263,23 @@ static void ModeMetricsGroup(CP_INSTANCE *cpi, int group, int huffY, int huffC, 
       int fi = tfi[ti];
       actual_bits[fi] += (bits<<OC_BIT_SCALE);
     }else{
-      /* EOB run; its bits should be split up between all the fragments in the run */
 
       int run = parse_eob_run(token, cpi->dct_token_eb[group][ti]);
-      int fracbits = ((bits<<OC_BIT_SCALE) + (run>>1))/run;
+      int fi = stack[eobcounts[group]];
+      actual_bits[fi]+=(bits<<OC_BIT_SCALE);
       
       if(ti+1<tn){
 	/* tokens follow EOB so it must be entirely ensconced within this plane/group */
-	while(run--){
-	  int fi = stack[eobcounts[group]++];
-	  actual_bits[fi]+=fracbits;
-	}
+	eobcounts[group]+=run;
       }else{
 	/* EOB is the last token in this plane/group, so it may span into the next plane/group */
 	int n = cpi->dct_eob_fi_count[group];
 	while(run){
-	  while(eobcounts[group] < n && run){
-	    int fi = stack[eobcounts[group]++];
-	    actual_bits[fi]+=fracbits;
-	    run--;
-	  }
+	  int rem = n - eobcounts[group];
+	  if(rem>run)rem=run;
+
+	  eobcounts[group]+=rem;
+	  run -= rem;
 	  if(run){
 	    group++;
 	    n = cpi->dct_eob_fi_count[group];
@@ -1345,34 +1334,33 @@ void ModeMetrics(CP_INSTANCE *cpi){
   for(fi=0;fi<v;fi++)
     if(cp[fi]){
       int mbi = mp[fi];
-      if(mbi>=0){
-	macroblock_t *mb = &cpi->macro[mbi];
-	int mode = mb->mode;
-	int plane = (fi<y ? 0 : (fi<u ? 1 : 2));
-	int bin = BIN(sp[fi]);
-	mode_metric[qi][plane][mode==CODE_INTRA].frag[bin]++;
-	mode_metric[qi][plane][mode==CODE_INTRA].sad[bin] += sp[fi];
-	mode_metric[qi][plane][mode==CODE_INTRA].bits[bin] += actual_bits[fi];
+      macroblock_t *mb = &cpi->macro[mbi];
+      int mode = mb->mode;
+      int plane = (fi<y ? 0 : (fi<u ? 1 : 2));
+      int bin = BIN(sp[fi]);
+      mode_metric[qi][plane][mode==CODE_INTRA].frag[bin]++;
+      mode_metric[qi][plane][mode==CODE_INTRA].sad[bin] += sp[fi];
+      mode_metric[qi][plane][mode==CODE_INTRA].bits[bin] += actual_bits[fi];
+      
+      if(0){
+	int bi = cpi->frag_buffer_index[fi];
+	unsigned char *frame = cpi->frame+bi;
+	unsigned char *recon = cpi->lastrecon+bi;
+	int stride = cpi->stride[plane];
+	int lssd=0;
+	int xi,yi;
 	
-	if(0){
-	  int bi = cpi->frag_buffer_index[fi];
-	  unsigned char *frame = cpi->frame+bi;
-	  unsigned char *recon = cpi->lastrecon+bi;
-	  int stride = cpi->stride[plane];
-	  int lssd=0;
-	  int xi,yi;
-	  
-	  for(yi=0;yi<8;yi++){
-	    for(xi=0;xi<8;xi++)
-	      lssd += (frame[xi]-recon[xi])*(frame[xi]-recon[xi]);
-	    frame+=stride;
-	    recon+=stride;
-	  }
-	  cpi->dist_dist[plane][mode] += lssd;
-	  cpi->dist_bits[plane][mode] += actual_bits[fi];
+	for(yi=0;yi<8;yi++){
+	  for(xi=0;xi<8;xi++)
+	    lssd += (frame[xi]-recon[xi])*(frame[xi]-recon[xi]);
+	  frame+=stride;
+	  recon+=stride;
 	}
+	cpi->dist_dist[plane][mode] += lssd;
+	cpi->dist_bits[plane][mode] += actual_bits[fi];
       }
     }
+
 
 
   /* update global SAD/rate estimation matrix */

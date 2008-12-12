@@ -293,9 +293,7 @@ struct CP_INSTANCE {
   /********************************************************************/
   /* Setup */
   int              keyframe_granule_shift;
-  int              skip_lambda;
-  int              mv_lambda;
-  int              token_lambda;
+  int              lambda;
   int              BaseQ;
   int              GoldenFrameEnabled;
   int              InterPrediction;

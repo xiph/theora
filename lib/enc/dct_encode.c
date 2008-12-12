@@ -480,52 +480,47 @@ int dct_tokenize_AC(CP_INSTANCE *cpi, const int fi,
     
   while(i < BLOCK_SIZE){
     int ret;
+    int od = origdct[dezigzag_index[i]];
+    int bestd=0,d = dct[i];
+    int bestmin;
+    int cost,cost2=0,bestcost=0;
+    int j=i+1,k;
 
-    /* determine costs for encoding this value (and any preceeding
-       eobrun/zerorun) as well as the cost for encoding a demoted token */
-    int costA = tokenize_dctcost(cpi,chroma,coeff,i,dct[i]),costB;
-    int costD = costA;
-    int dval = (dct[i]>0 ? dct[i]-1 : dct[i]+1);
-    int j=i+1;
     while((j < BLOCK_SIZE) && !dct[j] ) j++;
 
-    if(dval){
-      /* demoting will not produce a zero. */
-      costD -= costB = tokenize_dctcost(cpi,chroma,coeff,i,dval);
+    if(j==BLOCK_SIZE){
+      cost = tokenize_eobcost(cpi,chroma,coeff);
+      if(i+1<BLOCK_SIZE) 
+	cost2 = tokenize_eobcost(cpi,chroma,i+1);
     }else{
-      /* demoting token will produce a zero. */
-      costB = 0;
-      if(j==BLOCK_SIZE){
-	if(i+1<BLOCK_SIZE) 
-	  costD += tokenize_eobcost(cpi,chroma,i+1);
-	costD -= tokenize_eobcost(cpi,chroma,coeff);
-      }else{
-	costD += tokenize_dctcost(cpi,chroma,i+1,j,dct[j]);
-	costD -= tokenize_dctcost(cpi,chroma,coeff,j,dct[j]);
+      cost = tokenize_dctcost(cpi,chroma,coeff,j,dct[j]);
+      cost2 = tokenize_dctcost(cpi,chroma,i+1,j,dct[j]);
+    }
+    bestmin = od*od+cost*cpi->lambda;
+    
+
+    for(k=1;k<=abs(d);k++){
+      int dval = (d>0 ? k : -k);
+      int dd = dval*dequant[i] - od;
+      int min = dd*dd;
+      cost = tokenize_dctcost(cpi,chroma,coeff,i,dval);
+
+      min += (cost+cost2)*cpi->lambda;
+      if(min<bestmin){
+	bestmin=min;
+	bestcost=cost;
+	bestd=dval;
       }
     }
 
-    if(costD>0){
-      /* demoting results in a cheaper token cost.  Is the bit savings worth the added distortion? */
-      int ii = dezigzag_index[i];
-      int od = dct[i]*dequant[i] - origdct[ii];
-      int dd = dval*dequant[i] - origdct[ii];
-      int delta = dd*dd - od*od;
-      
-      if(delta < costD*cpi->token_lambda){
-	/* we have a winner.  Demote token */
-	dct[i]=dval;
-	costA=costB;
-	
-	if(dval==0){
-	  if(j==BLOCK_SIZE) break;
-	  i=j;
-	  continue;
-	}
-      }
+    dct[i]=bestd;
+    if(bestd==0){
+      if(j==BLOCK_SIZE) break;
+      i=j;
+      continue;
     }
-
-    retcost+=costA;
+    
+    retcost+=bestcost;
 	
     ret = tokenize_dctval(cpi, chroma, fi, coeff, i, dct[i], stack);
     if(!ret)
