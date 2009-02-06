@@ -186,7 +186,7 @@ int theora_encode_YUVin(theora_state *t,
   CP_INSTANCE *cpi=(CP_INSTANCE *)(t->internal_encode);
 
   if(!cpi->readyflag)return OC_EINVAL;
-  if(cpi->doneflag)return OC_EINVAL;
+  if(cpi->doneflag>0)return OC_EINVAL;
 
   /* If frame size has changed, abort out for now */
   if (yuv->y_height != (int)cpi->info.height ||
