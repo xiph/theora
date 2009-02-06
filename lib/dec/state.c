@@ -6,7 +6,7 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
@@ -20,7 +20,11 @@
 #include "../internal.h"
 #include "idct.h"
 #if defined(USE_ASM)
+#if defined(_MSC_VER)
+# include "x86_vc/x86int.h"
+#else
 # include "x86/x86int.h"
+#endif
 #endif
 #if defined(OC_DUMP_IMAGES)
 # include <stdio.h>
@@ -486,12 +490,12 @@ static void oc_state_ref_bufs_init(oc_theora_state *_state){
   /*Set up the width, height and stride for the image buffers.*/
   _state->ref_frame_bufs[0][0].width=info->frame_width;
   _state->ref_frame_bufs[0][0].height=info->frame_height;
-  _state->ref_frame_bufs[0][0].ystride=yhstride;
+  _state->ref_frame_bufs[0][0].stride=yhstride;
   _state->ref_frame_bufs[0][1].width=_state->ref_frame_bufs[0][2].width=
    info->frame_width>>!(info->pixel_fmt&1);
   _state->ref_frame_bufs[0][1].height=_state->ref_frame_bufs[0][2].height=
    info->frame_height>>!(info->pixel_fmt&2);
-  _state->ref_frame_bufs[0][1].ystride=_state->ref_frame_bufs[0][2].ystride=
+  _state->ref_frame_bufs[0][1].stride=_state->ref_frame_bufs[0][2].stride=
    chstride;
   memcpy(_state->ref_frame_bufs[1],_state->ref_frame_bufs[0],
    sizeof(_state->ref_frame_bufs[0]));
@@ -544,6 +548,7 @@ void oc_state_vtable_init(oc_theora_state *_state){
 
 
 int oc_state_init(oc_theora_state *_state,const th_info *_info){
+  int old_granpos;
   /*First validate the parameters.*/
   if(_info==NULL)return TH_EFAULT;
   /*The width and height of the encoded frame must be multiples of 16.
@@ -579,8 +584,15 @@ int oc_state_init(oc_theora_state *_state,const th_info *_info){
   if(_info->keyframe_granule_shift<0||_info->keyframe_granule_shift>31){
     _state->info.keyframe_granule_shift=31;
   }
-  _state->keyframe_num=0;
-  _state->curframe_num=-1;
+  _state->keyframe_num=1;
+  _state->curframe_num=0;
+  /*3.2.0 streams mark the frame index instead of the frame count.
+    This was changed with stream version 3.2.1 to conform to other Ogg
+     codecs.
+    We subtract an extra one from the frame number for old streams.*/
+  old_granpos=!TH_VERSION_CHECK(_info,3,2,1);
+  _state->curframe_num-=old_granpos;
+  _state->keyframe_num-=old_granpos;
   return 0;
 }
 
@@ -607,15 +619,15 @@ void oc_state_borders_fill_rows(oc_theora_state *_state,int _refi,int _pli,
   int               hpadding;
   hpadding=OC_UMV_PADDING>>(_pli!=0&&!(_state->info.pixel_fmt&1));
   iplane=_state->ref_frame_bufs[_refi]+_pli;
-  apix=iplane->data+_y0*iplane->ystride;
+  apix=iplane->data+_y0*iplane->stride;
   bpix=apix+iplane->width-1;
-  epix=iplane->data+_yend*iplane->ystride;
+  epix=iplane->data+_yend*iplane->stride;
   /*Note the use of != instead of <, which allows ystride to be negative.*/
   while(apix!=epix){
     memset(apix-hpadding,apix[0],hpadding);
     memset(bpix+1,bpix[0],hpadding);
-    apix+=iplane->ystride;
-    bpix+=iplane->ystride;
+    apix+=iplane->stride;
+    bpix+=iplane->stride;
   }
 }
 
@@ -638,13 +650,13 @@ void oc_state_borders_fill_caps(oc_theora_state *_state,int _refi,int _pli){
   iplane=_state->ref_frame_bufs[_refi]+_pli;
   fullw=iplane->width+(hpadding<<1);
   apix=iplane->data-hpadding;
-  bpix=iplane->data+(iplane->height-1)*iplane->ystride-hpadding;
-  epix=apix-iplane->ystride*vpadding;
+  bpix=iplane->data+(iplane->height-1)*iplane->stride-hpadding;
+  epix=apix-iplane->stride*vpadding;
   while(apix!=epix){
-    memcpy(apix-iplane->ystride,apix,fullw);
-    memcpy(bpix+iplane->ystride,bpix,fullw);
-    apix-=iplane->ystride;
-    bpix+=iplane->ystride;
+    memcpy(apix-iplane->stride,apix,fullw);
+    memcpy(bpix+iplane->stride,bpix,fullw);
+    apix-=iplane->stride;
+    bpix+=iplane->stride;
   }
 }
 
@@ -697,7 +709,7 @@ void oc_state_fill_buffer_ptrs(oc_theora_state *_state,int _buf_idx,
         frag->buffer[_buf_idx]=hpix;
         hpix+=8;
       }
-      vpix+=iplane->ystride<<3;
+      vpix+=iplane->stride<<3;
     }
   }
 }
@@ -713,22 +725,19 @@ int oc_state_mbi_for_pos(oc_theora_state *_state,int _mbx,int _mby){
 
 /*Determines the offsets in an image buffer to use for motion compensation.
   _state:   The Theora state the offsets are to be computed with.
-  _offset0: Returns the offset for the first buffer.
-  _offset1: Returns the offset for the second buffer, if the motion vector
-             has non-zero fractional components.
+  _offsets: Returns the offset for the buffer(s).
+            _offsets[0] is always set.
+            _offsets[1] is set if the motion vector has non-zero fractional
+             components.
   _dx:      The X component of the motion vector.
   _dy:      The Y component of the motion vector.
   _ystride: The Y stride in the buffer the motion vector points into.
   _pli:     The color plane index.
   Return: The number of offsets returned: 1 or 2.*/
-int oc_state_get_mv_offsets(oc_theora_state *_state,int *_offset0,
- int *_offset1,int _dx,int _dy,int _ystride,int _pli){
-  int offset0;
-  int offset1;
+int oc_state_get_mv_offsets(oc_theora_state *_state,int _offsets[2],
+ int _dx,int _dy,int _ystride,int _pli){
   int xprec;
   int yprec;
-  int xsign;
-  int ysign;
   int xfrac;
   int yfrac;
   /*Here is a brief description of how Theora handles motion vectors:
@@ -747,67 +756,44 @@ int oc_state_get_mv_offsets(oc_theora_state *_state,int *_offset0,
      appropriate amount, always truncating _away_ from zero.*/
   /*These two variables decide whether we are in half- or quarter-pixel
      precision in each component.*/
-  xprec=1+(!(_state->info.pixel_fmt&1)&!!_pli);
-  yprec=1+(!(_state->info.pixel_fmt&2)&!!_pli);
-  /*These two variables are either 0 for a non-negative vector or all 1's for
-     a negative one.*/
-  xsign=-(_dx<0);
-  ysign=-(_dy<0);
+  xprec=1+(!(_state->info.pixel_fmt&1)&&_pli);
+  yprec=1+(!(_state->info.pixel_fmt&2)&&_pli);
   /*These two variables are either 0 if all the fractional bits are 0 or 1 if
      any of them are non-zero.*/
   xfrac=!!(_dx&(1<<xprec)-1);
   yfrac=!!(_dy&(1<<yprec)-1);
-  /*This branchless code is equivalent to:
-  if(_dx<0){
-    if(_dy<0){
-      offset0=-(-_dx>>xprec)-(-_dy>>yprec)*_ystride;
-    }
-    else{
-      offset0=-(-_dx>>xprec)+(_dy>>yprec)*_ystride;
-    }
-  }
-  else{
-    if(_dy<0){
-      offset0=(_dx>>xprec)-(-_dy>>yprec)*_ystride;
-    }
-    else{
-      offset0=(_dx>>xprec)+(_dy>>yprec)*_ystride;
-    }
-  }*/
-  *_offset0=offset0=(_dx>>xprec)+(xfrac&xsign)+
-   ((_dy>>yprec)+(yfrac&ysign))*_ystride;
+  _offsets[0]=(_dx>>xprec)+(_dy>>yprec)*_ystride;
   if(xfrac||yfrac){
-    int o[2];
     /*This branchless code is equivalent to:
+    if(_dx<0)_offests[0]=-(-_dx>>xprec);
+    else _offsets[0]=(_dx>>xprec);
+    if(_dy<0)_offsets[0]-=(-_dy>>yprec)*_ystride;
+    else _offsets[0]+=(_dy>>yprec)*_ystride;
+    _offsets[1]=_offsets[0];
     if(xfrac){
-      if(_dx<0)offset1=offset0-1;
-      else offset1=offset0+1;
+      if(_dx<0)_offsets[1]++;
+      else _offsets[1]--;
     }
-    else offset1=offset0;*/
-    o[0]=offset0;
-    o[1]=offset0+(xsign|1);
-    offset1=o[xfrac];
-    /*This branchless code is equivalent to:
     if(yfrac){
-      if(_dy<0)offset1-=ref_stride;
-      else offset1+=ref_stride;
+      if(_dy<0)_offsets[1]+=_ystride;
+      else _offsets[1]-=_ystride;
     }*/
-    o[0]=offset1;
-    o[1]=offset1+(_ystride&~ysign)-(_ystride&ysign);
-    *_offset1=o[yfrac];
+    _offsets[1]=_offsets[0];
+    _offsets[_dx>=0]+=xfrac;
+    _offsets[_dy>=0]+=_ystride&-yfrac;
     return 2;
   }
-  return 1;
+  else return 1;
 }
 
-void oc_state_frag_recon(oc_theora_state *_state, oc_fragment *_frag,
+void oc_state_frag_recon(oc_theora_state *_state,oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]){
   _state->opt_vtable.state_frag_recon(_state,_frag,_pli,_dct_coeffs,
    _last_zzi,_ncoefs,_dc_iquant,_ac_iquant);
 }
 
-void oc_state_frag_recon_c(oc_theora_state *_state, oc_fragment *_frag,
+void oc_state_frag_recon_c(oc_theora_state *_state,oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_iquant, const ogg_uint16_t _ac_iquant[64]){
   ogg_int16_t dct_buf[64];
@@ -845,8 +831,8 @@ void oc_state_frag_recon_c(oc_theora_state *_state, oc_fragment *_frag,
     ogg_int16_t p;
     /*Why is the iquant product rounded in this case and no others?
       Who knows.*/
-
     p=(ogg_int16_t)((ogg_int32_t)_frag->dc*_dc_iquant+15>>5);
+    /*LOOP VECTORIZES.*/
     for(ci=0;ci<64;ci++)res_buf[ci]=p;
   }
   else{
@@ -857,7 +843,6 @@ void oc_state_frag_recon_c(oc_theora_state *_state, oc_fragment *_frag,
       ci=OC_FZIG_ZAG[zzi];
       dct_buf[ci]=(ogg_int16_t)((ogg_int32_t)_dct_coeffs[zzi]*_ac_iquant[ci]);
     }
-
     /*Then, fill in the remainder of the coefficients with 0's, and perform
        the iDCT.*/
     if(_last_zzi<10){
@@ -868,11 +853,10 @@ void oc_state_frag_recon_c(oc_theora_state *_state, oc_fragment *_frag,
       for(;zzi<64;zzi++)dct_buf[OC_FZIG_ZAG[zzi]]=0;
       oc_idct8x8_c(res_buf,dct_buf);
     }
-
   }
   /*Fill in the target buffer.*/
   dst_framei=_state->ref_frame_idx[OC_FRAME_SELF];
-  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].ystride;
+  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].stride;
   /*For now ystride values in all ref frames assumed to be equal.*/
   if(_frag->mbmode==OC_MODE_INTRA){
     oc_frag_recon_intra(_state,_frag->buffer[dst_framei],dst_ystride,res_buf);
@@ -880,19 +864,18 @@ void oc_state_frag_recon_c(oc_theora_state *_state, oc_fragment *_frag,
   else{
     int ref_framei;
     int ref_ystride;
-    int mvoffset0;
-    int mvoffset1;
+    int mvoffsets[2];
     ref_framei=_state->ref_frame_idx[OC_FRAME_FOR_MODE[_frag->mbmode]];
-    ref_ystride=_state->ref_frame_bufs[ref_framei][_pli].ystride;
-    if(oc_state_get_mv_offsets(_state,&mvoffset0,&mvoffset1,_frag->mv[0],
-     _frag->mv[1],ref_ystride,_pli)>1){
+    ref_ystride=_state->ref_frame_bufs[ref_framei][_pli].stride;
+    if(oc_state_get_mv_offsets(_state,mvoffsets,_frag->mv[0],_frag->mv[1],
+     ref_ystride,_pli)>1){
       oc_frag_recon_inter2(_state,_frag->buffer[dst_framei],dst_ystride,
-       _frag->buffer[ref_framei]+mvoffset0,ref_ystride,
-       _frag->buffer[ref_framei]+mvoffset1,ref_ystride,res_buf);
+       _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,
+       _frag->buffer[ref_framei]+mvoffsets[1],ref_ystride,res_buf);
     }
     else{
       oc_frag_recon_inter(_state,_frag->buffer[dst_framei],dst_ystride,
-       _frag->buffer[ref_framei]+mvoffset0,ref_ystride,res_buf);
+       _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,res_buf);
     }
   }
   oc_restore_fpu(_state);
@@ -921,8 +904,8 @@ void oc_state_frag_copy_c(const oc_theora_state *_state,const int *_fragis,
   int        src_ystride;
   dst_framei=_state->ref_frame_idx[_dst_frame];
   src_framei=_state->ref_frame_idx[_src_frame];
-  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].ystride;
-  src_ystride=_state->ref_frame_bufs[src_framei][_pli].ystride;
+  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].stride;
+  src_ystride=_state->ref_frame_bufs[src_framei][_pli].stride;
   fragi_end=_fragis+_nfragis;
   for(fragi=_fragis;fragi<fragi_end;fragi++){
     oc_fragment   *frag;
@@ -946,6 +929,9 @@ static void loop_filter_h(unsigned char *_pix,int _ystride,int *_bv){
   for(y=0;y<8;y++){
     int f;
     f=_pix[0]-_pix[3]+3*(_pix[2]-_pix[1]);
+    /*The _bv array is used to compute the function
+      f=OC_CLAMPI(OC_MINI(-_2flimit-f,0),f,OC_MAXI(_2flimit-f,0));
+      where _2flimit=_state->loop_filter_limits[_state->qis[0]]<<1;*/
     f=*(_bv+(f+4>>3));
     _pix[1]=OC_CLAMP255(_pix[1]+f);
     _pix[2]=OC_CLAMP255(_pix[2]-f);
@@ -959,6 +945,9 @@ static void loop_filter_v(unsigned char *_pix,int _ystride,int *_bv){
   for(y=0;y<8;y++){
     int f;
     f=_pix[0]-_pix[_ystride*3]+3*(_pix[_ystride*2]-_pix[_ystride]);
+    /*The _bv array is used to compute the function
+      f=OC_CLAMPI(OC_MINI(-_2flimit-f,0),f,OC_MAXI(_2flimit-f,0));
+      where _2flimit=_state->loop_filter_limits[_state->qis[0]]<<1;*/
     f=*(_bv+(f+4>>3));
     _pix[_ystride]=OC_CLAMP255(_pix[_ystride]+f);
     _pix[_ystride*2]=OC_CLAMP255(_pix[_ystride*2]-f);
@@ -974,12 +963,12 @@ int oc_state_loop_filter_init(oc_theora_state *_state,int *_bv){
   int i;
   flimit=_state->loop_filter_limits[_state->qis[0]];
   if(flimit==0)return 1;
-  memset(_bv,0,sizeof(_bv[0])*512);
+  memset(_bv,0,sizeof(_bv[0])*256);
   for(i=0;i<flimit;i++){
-    _bv[256-i-flimit]=i-flimit;
-    _bv[256-i]=-i;
-    _bv[256+i]=i;
-    _bv[256+i+flimit]=flimit-i;
+    if(127-i-flimit>=0)_bv[127-i-flimit]=i-flimit;
+    _bv[127-i]=-i;
+    _bv[127+i]=i;
+    if(127+i+flimit<256)_bv[127+i+flimit]=flimit-i;
   }
   return 0;
 }
@@ -999,7 +988,7 @@ void oc_state_loop_filter_frag_rows(oc_theora_state *_state,int *_bv,
 }
 
 void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
- int _refi,int _pli,int _fragy0,int _fragy_end){  
+ int _refi,int _pli,int _fragy0,int _fragy_end){
   th_img_plane      *iplane;
   oc_fragment_plane *fplane;
   oc_fragment       *frag_top;
@@ -1008,10 +997,9 @@ void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
   oc_fragment       *frag_end;
   oc_fragment       *frag0_end;
   oc_fragment       *frag_bot;
-  _bv+=256;
+  _bv+=127;
   iplane=_state->ref_frame_bufs[_refi]+_pli;
   fplane=_state->fplanes+_pli;
-
   /*The following loops are constructed somewhat non-intuitively on purpose.
     The main idea is: if a block boundary has at least one coded fragment on
      it, the filter is applied to it.
@@ -1027,20 +1015,19 @@ void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
     while(frag<frag_end){
       if(frag->coded){
         if(frag>frag0){
-          loop_filter_h(frag->buffer[_refi],iplane->ystride,_bv);
+          loop_filter_h(frag->buffer[_refi],iplane->stride,_bv);
         }
         if(frag0>frag_top){
-          loop_filter_v(frag->buffer[_refi],iplane->ystride,_bv);
+          loop_filter_v(frag->buffer[_refi],iplane->stride,_bv);
         }
         if(frag+1<frag_end&&!(frag+1)->coded){
-          loop_filter_h(frag->buffer[_refi]+8,iplane->ystride,_bv);
+          loop_filter_h(frag->buffer[_refi]+8,iplane->stride,_bv);
         }
         if(frag+fplane->nhfrags<frag_bot&&!(frag+fplane->nhfrags)->coded){
           loop_filter_v((frag+fplane->nhfrags)->buffer[_refi],
-           iplane->ystride,_bv);
+           iplane->stride,_bv);
         }
       }
-
       frag++;
     }
     frag0+=fplane->nhfrags;
@@ -1103,9 +1090,9 @@ int oc_state_dump_frame(const oc_theora_state *_state,int _frame,
   y_row=_state->ref_frame_bufs[framei][0].data;
   u_row=_state->ref_frame_bufs[framei][1].data;
   v_row=_state->ref_frame_bufs[framei][2].data;
-  y_stride=_state->ref_frame_bufs[framei][0].ystride;
-  u_stride=_state->ref_frame_bufs[framei][1].ystride;
-  v_stride=_state->ref_frame_bufs[framei][2].ystride;
+  y_stride=_state->ref_frame_bufs[framei][0].stride;
+  u_stride=_state->ref_frame_bufs[framei][1].stride;
+  v_stride=_state->ref_frame_bufs[framei][2].stride;
   /*Chroma up-sampling is just done with a box filter.
     This is very likely what will actually be used in practice on a real
      display, and also removes one more layer to search in for the source of
@@ -1185,14 +1172,11 @@ ogg_int64_t th_granule_frame(void *_encdec,ogg_int64_t _granpos){
     ogg_int64_t pframe;
     iframe=_granpos>>state->info.keyframe_granule_shift;
     pframe=_granpos-(iframe<<state->info.keyframe_granule_shift);
-
-    /* 3.2.0 streams mark the frame index instead of the frame count
-     * this was changed with stream version 3.2.1 */ 
-    if(state->info.version_subminor < 1) {
-      return iframe+pframe + 1;
-    } else {
-      return iframe+pframe;
-    }
+    /*3.2.0 streams store the frame index in the granule position.
+      3.2.1 and later store the frame count.
+      We return the index, so adjust the value if we have a 3.2.1 or later
+       stream.*/
+    return iframe+pframe-TH_VERSION_CHECK(&state->info,3,2,1);
   }
   return -1;
 }
@@ -1201,7 +1185,8 @@ double th_granule_time(void *_encdec,ogg_int64_t _granpos){
   oc_theora_state *state;
   state=(oc_theora_state *)_encdec;
   if(_granpos>=0){
-      return th_granule_frame(_encdec, _granpos)*((double)state->info.fps_denominator/state->info.fps_numerator);
+    return (th_granule_frame(_encdec, _granpos)+1)*(
+     (double)state->info.fps_denominator/state->info.fps_numerator);
   }
   return -1;
 }

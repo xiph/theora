@@ -6,7 +6,7 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
@@ -186,6 +186,7 @@ int oc_frag_pred_dc(const oc_fragment *_frag,
   if(pflags==0)return _pred_last[pred_frame];
   else{
     ret=PRED_SCALE[pflags][0]*p[0];
+    /*LOOP VECTORIZES.*/
     for(i=1;i<np;i++)ret+=PRED_SCALE[pflags][i]*p[i];
     ret=OC_DIV_POW2(ret,PRED_SHIFT[pflags],PRED_RMASK[pflags]);
   }

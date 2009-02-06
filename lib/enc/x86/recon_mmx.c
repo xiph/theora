@@ -15,7 +15,7 @@
 
  ********************************************************************/
 
-#include "codec_internal.h"
+#include "../codec_internal.h"
 #include <stddef.h>
 
 #if defined(USE_ASM)

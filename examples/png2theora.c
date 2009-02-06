@@ -6,7 +6,7 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
@@ -14,7 +14,7 @@
             file from a sequence of png images
   last mod: $Id$
              based on code from Vegard Nossum
-  
+
  ********************************************************************/
 
 #define _FILE_OFFSET_BITS 64
@@ -60,29 +60,27 @@ static theora_info theora_ti;
 
 static char *input_filter;
 
-const char *optstring = "o:h:v:V:s:S:f:F:";
+const char *optstring = "o:hv:V:s:S:f:F:";
 struct option options [] = {
  {"output",required_argument,NULL,'o'},
- {"help",optional_argument,NULL,'h'},
+ {"help",no_argument,NULL,'h'},
  {"video-rate-target",required_argument,NULL,'V'},
  {"video-quality",required_argument,NULL,'v'},
- {"aspect-numerator",optional_argument,NULL,'s'},
- {"aspect-denominator",optional_argument,NULL,'S'},
- {"framerate-numerator",optional_argument,NULL,'f'},
- {"framerate-denominator",optional_argument,NULL,'F'},
+ {"aspect-numerator",required_argument,NULL,'s'},
+ {"aspect-denominator",required_argument,NULL,'S'},
+ {"framerate-numerator",required_argument,NULL,'f'},
+ {"framerate-denominator",required_argument,NULL,'F'},
  {NULL,0,NULL,0}
 };
 
 static void usage(void){
   fprintf(stderr,
           "%s %s\n"
-          "Usage: %s [options] input\n\n"
-          "Output is parsed by scanf and represents a list of files, i.e.\n"
-          "  file-%%06d.png to look for files file000001.png to file9999999.png \n\n"
+          "Usage: %s [options] <input>\n\n"
+          "The input argument uses C printf format to represent a list of files,\n"
+          "  i.e. file-%%06d.png to look for files file000001.png to file9999999.png \n\n"
           "Options: \n\n"
-          "  -o --output <filename.ogv>     file name for encoded output;\n"
-          "                                 If this option is not given, the\n"
-          "                                 compressed data is sent to stdout.\n\n"
+          "  -o --output <filename.ogv>     file name for encoded output (required);\n"
           "  -V --video-rate-target <n>     bitrate target for Theora video\n\n"
           "  -v --video-quality <n>         Theora quality selector fro 0 to 10\n"
           "                                 (0 yields smallest files but lowest\n"
@@ -159,7 +157,7 @@ theora_open(const char *pathname)
 }
 
 static int
-theora_write_frame(unsigned long w, unsigned long h, unsigned char *yuv)
+theora_write_frame(unsigned long w, unsigned long h, unsigned char *yuv, int last)
 {
   yuv_buffer yuv_buf;
   ogg_packet op;
@@ -174,7 +172,7 @@ theora_write_frame(unsigned long w, unsigned long h, unsigned char *yuv)
 
   unsigned int x;
   unsigned int y;
-  
+
   /* Must hold: yuv_w >= w */
   yuv_w = (w + 15) & ~15;
 
@@ -229,7 +227,7 @@ theora_write_frame(unsigned long w, unsigned long h, unsigned char *yuv)
     return 1;
   }
 
-  if(!theora_encode_packetout(&theora_td, 0, &op)) {
+  if(!theora_encode_packetout(&theora_td, last, &op)) {
     fprintf(stderr, "%s: error: could not read packets\n",
       option_output);
     return 1;
@@ -264,14 +262,14 @@ theora_close(void)
       fwrite(og.header, og.header_len, 1, ogg_fp);
       fwrite(og.body, og.body_len, 1, ogg_fp);
     }
-  
+
     theora_info_clear(&theora_ti);
     theora_clear(&theora_td);
-  
+
     fflush(ogg_fp);
     fclose(ogg_fp);
   }
-  
+
   ogg_stream_clear(&ogg_os);
 }
 
@@ -330,7 +328,17 @@ png_read(const char *pathname, unsigned int *w, unsigned int *h, unsigned char *
   png_structp png_ptr;
   png_infop info_ptr;
   png_infop end_ptr;
+  png_bytep row_data;
   png_bytep *row_pointers;
+  png_color_16p bkgd;
+  png_uint_32 width;
+  png_uint_32 height;
+  int bit_depth;
+  int color_type;
+  int interlace_type;
+  int compression_type;
+  int filter_method;
+  png_uint_32 y;
 
   fp = fopen(pathname, "rb");
   if(!fp) {
@@ -374,16 +382,38 @@ png_read(const char *pathname, unsigned int *w, unsigned int *h, unsigned char *
 
   png_init_io(png_ptr, fp);
   png_set_sig_bytes(png_ptr, 8);
+  png_read_info(png_ptr, info_ptr);
+  png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
+   &interlace_type, &compression_type, &filter_method);
+  png_set_expand(png_ptr);
+  if(bit_depth<8)png_set_packing(png_ptr);
+  if(bit_depth==16)png_set_strip_16(png_ptr);
+  if(!(color_type&PNG_COLOR_MASK_COLOR))png_set_gray_to_rgb(png_ptr);
+  if(png_get_bKGD(png_ptr, info_ptr, &bkgd)){
+    png_set_background(png_ptr, bkgd, PNG_BACKGROUND_GAMMA_FILE, 1, 1.0);
+  }
+  /*Note that color_type 2 and 3 can also have alpha, despite not setting the
+     PNG_COLOR_MASK_ALPHA bit.
+    We always strip it to prevent libpng from overrunning our buffer.*/
+  png_set_strip_alpha(png_ptr);
 
-  png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_STRIP_16, NULL);
+  row_data = (png_bytep)png_malloc(png_ptr,
+    3*height*width*png_sizeof(*row_data));
+  row_pointers = (png_bytep *)png_malloc(png_ptr,
+    height*png_sizeof(*row_pointers));
+  for(y = 0; y < height; y++) {
+    row_pointers[y] = row_data + y*(3*width);
+  }
+  png_read_image(png_ptr, row_pointers);
+  png_read_end(png_ptr, end_ptr);
 
-  row_pointers = png_get_rows(png_ptr, info_ptr);
-
-  *w = png_get_image_width(png_ptr, info_ptr);
-  *h = png_get_image_height(png_ptr, info_ptr);
+  *w = width;
+  *h = height;
   *yuv = malloc(*w * *h * 3);
   rgb_to_yuv(row_pointers, *yuv, *w, *h);
 
+  png_free(png_ptr, row_pointers);
+  png_free(png_ptr, row_data);
   png_destroy_read_struct(&png_ptr, &info_ptr, &end_ptr);
 
   fclose(fp);
@@ -408,7 +438,7 @@ main(int argc, char *argv[])
   char *input_directory;
   char *scratch;
   struct dirent **png_files;
-  
+
   while(1) {
 
     c=getopt_long(argc,argv,optstring,options,&long_option_index);
@@ -448,7 +478,8 @@ main(int argc, char *argv[])
        video_fps_numerator=rint(atof(optarg));
        break;
      case 'F':
-       video_fps_denominator=rint(atof(optarg));   
+       video_fps_denominator=rint(atof(optarg));
+       break;
      default:
         usage();
         break;
@@ -460,6 +491,10 @@ main(int argc, char *argv[])
   }
 
   input_mask = argv[optind];
+  if (!input_mask) {
+    fprintf(stderr, "no input files specified; run with -h for help.\n");
+    exit(1);
+  }
   /* dirname and basename must operate on scratch strings */
   scratch = strdup(input_mask);
   input_directory = strdup(dirname(scratch));
@@ -473,20 +508,21 @@ main(int argc, char *argv[])
 	input_directory, input_filter);
 #endif
   n = scandir (input_directory, &png_files, include_files, alphasort);
-  for(i=0;i< n;i++) {
+  for(i=0;i<n;i++) {
     unsigned int w;
     unsigned int h;
     unsigned char *yuv;
     char input_png[1024];
+    int last = 0;
 
     sprintf(input_png, "%s/%s", input_directory, png_files[i]->d_name);
-    
+
     if(png_read(input_png, &w, &h, &yuv)) {
       fprintf(stderr, "could not read %s\n", input_png);
       theora_close();
       exit(1);
     }
-    
+
     if(!theora_initialized) {
       theora_info_init(&theora_ti);
 
@@ -522,7 +558,8 @@ main(int argc, char *argv[])
       theora_initialized = 1;
     }
 
-    if(theora_write_frame(w, h, yuv)) {
+    if(i >= n-1) last = 1;
+    if(theora_write_frame(w, h, yuv, last)) {
       theora_close();
       free(input_directory);
       free(input_filter);

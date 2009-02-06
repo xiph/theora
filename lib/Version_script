@@ -5,7 +5,7 @@
 # applications linking to the libraries.
 #
 
-# We use something that looks like an versioned so filename here 
+# We use something that looks like a versioned so filename here 
 # to define the old API because of a historical confusion. This
 # label must be kept to maintain ABI compatibility.
 

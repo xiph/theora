@@ -17,8 +17,8 @@
 
 #include <stdlib.h>
 
-#include "codec_internal.h"
-#include "dsp.h"
+#include "../codec_internal.h"
+#include "../dsp.h"
 
 #if defined(USE_ASM)
 
@@ -29,12 +29,12 @@ static const __attribute__ ((aligned(8),used)) ogg_int64_t V128 = 0x008000800080
 #define DSP_OP_ABS_DIFF(a,b) abs((((int)(a)) - ((int)(b))))
 
 static void sub8x8__mmx (const unsigned char *FiltPtr, const unsigned char *ReconPtr,
-			 ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine) 
+                         ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine)
 {
   __asm__ __volatile__ (
     "  .balign 16                   \n\t"
 
-    "  pxor        %%mm7, %%mm7     \n\t" 
+    "  pxor        %%mm7, %%mm7     \n\t"
 
     ".rept 8                        \n\t"
     "  movq        (%0), %%mm0      \n\t" /* mm0 = FiltPtr */
@@ -67,13 +67,13 @@ static void sub8x8__mmx (const unsigned char *FiltPtr, const unsigned char *Reco
 }
 
 static void sub8x8_128__mmx (const unsigned char *FiltPtr, ogg_int16_t *DctInputPtr,
-			     ogg_uint32_t PixelsPerLine) 
+                             ogg_uint32_t PixelsPerLine)
 {
 
   __asm__ __volatile__ (
     "  .balign 16                   \n\t"
 
-    "  pxor        %%mm7, %%mm7     \n\t" 
+    "  pxor        %%mm7, %%mm7     \n\t"
     "  movq        %[V128], %%mm1   \n\t"
 
     ".rept 8                        \n\t"

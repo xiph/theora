@@ -9,6 +9,7 @@ EXTRA_PROGRAMS = player_example encoder_example png2theora
 
 AM_CFLAGS = $(OGG_CFLAGS)
 LDADD = ../lib/libtheora.la $(OGG_LIBS)
+LDADDENC = ../lib/libtheoraenc.la ../lib/libtheoradec.la $(OGG_LIBS)
 
 dump_video_SOURCES = dump_video.c
 EXTRA_dump_video_SOURCES = getopt.c getopt1.c getopt.h
@@ -22,7 +23,7 @@ player_example_LDADD = $(LDADD) $(SDL_LIBS) $(VORBIS_LIBS)
 encoder_example_SOURCES = encoder_example.c
 EXTRA_encoder_example_SOURCES = getopt.c getopt1.c getopt.h
 encoder_example_CFLAGS = $(OGG_CFLAGS) $(VORBIS_CFLAGS)
-encoder_example_LDADD = $(GETOPT_OBJS) $(LDADD) $(VORBIS_LIBS) $(VORBISENC_LIBS)
+encoder_example_LDADD = $(GETOPT_OBJS) $(LDADDENC) $(VORBIS_LIBS) $(VORBISENC_LIBS)
 encoder_example_DEPENDENCIES = $(GETOPT_OBJS)
 
 png2theora_SOURCES = png2theora.c

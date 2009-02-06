@@ -6,7 +6,7 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2008                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
@@ -93,7 +93,6 @@ int theora_decode_init(theora_state *_td,theora_info *_ci){
   th_api_info    *apiinfo;
   th_api_wrapper *api;
   th_info         info;
-
   api=(th_api_wrapper *)_ci->codec_setup;
   /*Allocate our own combined API wrapper/theora_info struct.
     We put them both in one malloc'd block so that when the API wrapper is
@@ -131,7 +130,6 @@ int theora_decode_header(theora_info *_ci,theora_comment *_cc,ogg_packet *_op){
   th_api_wrapper *api;
   th_info         info;
   int             ret;
-
   api=(th_api_wrapper *)_ci->codec_setup;
   /*Allocate an API wrapper struct on demand, since it will not also include a
      theora_info struct like the ones that are used in a theora_state struct.*/
@@ -164,9 +162,9 @@ int theora_decode_packetin(theora_state *_td,ogg_packet *_op){
   th_api_wrapper *api;
   ogg_int64_t     gp;
   int             ret;
+  if(!_td||!_td->i||!_td->i->codec_setup)return OC_FAULT;
   api=(th_api_wrapper *)_td->i->codec_setup;
   ret=th_decode_packetin(api->decode,_op,&gp);
-
   if(ret<0)return OC_BADPACKET;
   _td->granulepos=gp;
   return 0;
@@ -177,11 +175,11 @@ int theora_decode_YUVout(theora_state *_td,yuv_buffer *_yuv){
   th_dec_ctx      *decode;
   th_ycbcr_buffer  buf;
   int              ret;
-
+  if(!_td||!_td->i||!_td->i->codec_setup)return OC_FAULT;
   api=(th_api_wrapper *)_td->i->codec_setup;
-  decode = (th_dec_ctx *)api->decode;
+  decode=(th_dec_ctx *)api->decode;
+  if(!decode)return OC_FAULT;
   ret=th_decode_ycbcr_out(decode,buf);
-
 #ifdef HAVE_CAIRO
   /* If telemetry ioctls are active, we need to draw to the output
      buffer.  Stuff the plane into cairo. */
@@ -505,18 +503,16 @@ int theora_decode_YUVout(theora_state *_td,yuv_buffer *_yuv){
     cairo_surface_destroy(cs);
   }
 #endif
-
   if(ret>=0){
     _yuv->y_width=buf[0].width;
     _yuv->y_height=buf[0].height;
-    _yuv->y_stride=buf[0].ystride;
+    _yuv->y_stride=buf[0].stride;
     _yuv->uv_width=buf[1].width;
     _yuv->uv_height=buf[1].height;
-    _yuv->uv_stride=buf[1].ystride;
+    _yuv->uv_stride=buf[1].stride;
     _yuv->y=buf[0].data;
     _yuv->u=buf[1].data;
     _yuv->v=buf[2].data;
   }
-
   return ret;
 }

@@ -25,19 +25,21 @@ extern "C"
 
 #include <stddef.h>	/* for size_t */
 
-#ifndef LIBOGG2
 #include <ogg/ogg.h>
-#else
-#include <ogg2/ogg.h>
-/* This is temporary until libogg2 is more complete */
-ogg_buffer_state *ogg_buffer_create(void);
-#endif
+
+/** \defgroup oldfuncs Legacy pre-1.0 C API */
+/*  @{ */
 
 /** \mainpage
  * 
  * \section intro Introduction
  *
- * This is the documentation for the libtheora C API.
+ * This is the documentation for the libtheora legacy C API, declared in 
+ * the theora.h header, which describes the old interface used before
+ * the 1.0 release. This API was widely deployed for several years and
+ * remains supported, but for new code we recommend the cleaner API 
+ * declared in theoradec.h and theoraenc.h.
+ *
  * libtheora is the reference implementation for
  * <a href="http://www.theora.org/">Theora</a>, a free video codec.
  * Theora is derived from On2's VP3 codec with improved integration for
@@ -125,7 +127,7 @@ ogg_buffer_state *ogg_buffer_create(void);
  */
 
 /** \file
- * The libtheora C API.
+ * The libtheora pre-1.0 legacy C API.
  */
 
 /**
@@ -313,6 +315,20 @@ typedef struct theora_comment{
  */
 #define TH_DECCTL_SET_PPLEVEL (3)
 
+/**Sets the maximum distance between key frames.
+ * This can be changed during an encode, but will be bounded by
+ *  <tt>1<<th_info#keyframe_granule_shift</tt>.
+ * If it is set before encoding begins, th_info#keyframe_granule_shift will
+ *  be enlarged appropriately.
+ *
+ * \param[in]  buf <tt>ogg_uint32_t</tt>: The maximum distance between key
+ *                   frames.
+ * \param[out] buf <tt>ogg_uint32_t</tt>: The actual maximum distance set.
+ * \retval TH_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
+ * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(ogg_uint32_t)</tt>.
+ * \retval TH_IMPL   Not supported by this implementation.*/
+#define TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE (4)
+
 /**Set the granule position.
  * Call this after a seek, to update the internal granulepos
  * in the decoder, to insure that subsequent frames are marked
@@ -332,20 +348,6 @@ typedef struct theora_comment{
  *  \ref decctlcodes "decoder control codes".
  * Keep any experimental or vendor-specific values above \c 0x8000.*/
 /*@{*/
-/**Sets the Huffman tables to use.
- * The tables are copied, not stored by reference, so they can be freed after
- *  this call.
- * <tt>NULL</tt> may be specified to revert to the default tables.
- *
- * \param[in] buf <tt>#th_huff_code[#TH_NHUFFMAN_TABLES][#TH_NDCT_TOKENS]</tt>
- * \retval TH_FAULT  \a theora_state is <tt>NULL</tt>.
- * \retval TH_EINVAL Encoding has already begun or one or more of the given
- *                     tables is not full or prefix-free, \a buf is
- *                     <tt>NULL</tt> and \a buf_sz is not zero, or \a buf is
- *                     non-<tt>NULL</tt> and \a buf_sz is not
- *                     <tt>sizeof(#th_huff_code)*#TH_NHUFFMAN_TABLES*#TH_NDCT_TOKENS</tt>.
- * \retval TH_IMPL   Not supported by this implementation.*/
-#define TH_ENCCTL_SET_HUFFMAN_CODES (0)
 /**Sets the quantization parameters to use.
  * The parameters are copied, not stored by reference, so they can be freed
  *  after this call.
@@ -365,19 +367,6 @@ typedef struct theora_comment{
  *                    <tt>sizeof(#th_quant_info)</tt>.
  * \retval TH_IMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SET_QUANT_PARAMS (2)
-/**Sets the maximum distance between key frames.
- * This can be changed during an encode, but will be bounded by
- *  <tt>1<<th_info#keyframe_granule_shift</tt>.
- * If it is set before encoding begins, th_info#keyframe_granule_shift will
- *  be enlarged appropriately.
- *
- * \param[in]  buf <tt>ogg_uint32_t</tt>: The maximum distance between key
- *                   frames.
- * \param[out] buf <tt>ogg_uint32_t</tt>: The actual maximum distance set.
- * \retval TH_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
- * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(ogg_uint32_t)</tt>.
- * \retval TH_IMPL   Not supported by this implementation.*/
-#define TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE (4)
 /**Disables any encoder features that would prevent lossless transcoding back
  *  to VP3.
  * This primarily means disabling block-level QI values and not using 4MV mode
@@ -434,41 +423,6 @@ typedef struct theora_comment{
  * \retval TH_IMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_SET_SPLEVEL (14)
-/**Puts the encoder in VBR mode.
- * This can be done at any time during the encoding process, with different
- *  configuration parameters, to encode different regions of the video segment
- *  with different qualities.
- * See the #th_info struct documentation for details on how the default
- *  encoding mode is chosen.
- *
- * \param[in] buf <tt>#th_vbr_cfg</tt>: the configuration parameters.
- *                 This may be <tt>NULL</tt>, in which case the current VBR
- *                  configuration is unchanged.
- *                 The default is to use the QI setting passed in via the
- *                  #th_info struct when the encoder was initialized, with a
- *                  full range of admissible quantizers.
- * \retval OC_EFAULT \a theora_state is <tt>NULL</tt>.
- * \retval TH_EINVAL The configuration parameters do not meet one of their
- *                    stated requirements, \a buf is <tt>NULL</tt> and
- *                    \a buf_sz is not zero, or \a buf is non-<tt>NULL</tt>
- *                    and \a buf_sz is not <tt>sizeof(#th_vbr_cfg)</tt>.
- * \retval TH_IMPL   Not supported by this implementation.*/
-#define TH_ENCCTL_SETUP_VBR (16)
-/**Puts the encoder in CQI mode.
- * This can be done at any time during the encoding process, with different QI
- *  values.
- * See the #th_info struct documentation for details on how the default
- *  encoding mode is chosen.
- *
- * \param[in] buf <tt>#th_cqi_cfg</tt>: the configuration parameters.
- *                 This may be <tt>NULL</tt>, in which case the current CQI
- *                  configuration is unchanged.
- *                 The default is to use the QI setting passed in via the
- *                  #th_info struct when the encoder was initialized.
- * \retval OC_EFAULT \a theora_state is <tt>NULL</tt>.
- * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(#th_cqi_cfg)</tt>.
- * \retval TH_IMPL   Not supported by this implementation.*/
-#define TH_ENCCTL_SETUP_CQI (18)
 /*@}*/
 
 #define OC_FAULT       -1       /**< General failure */
@@ -700,12 +654,17 @@ extern int theora_packet_iskeyframe(ogg_packet *op);
 int theora_granule_shift(theora_info *ti);
 
 /**
- * Convert a granulepos to an absolute frame number. The granulepos is
- * interpreted in the context of a given theora_state handle.
+ * Convert a granulepos to an absolute frame index, starting at 0.
+ * The granulepos is interpreted in the context of a given theora_state handle.
+ * 
+ * Note that while the granulepos encodes the frame count (i.e. starting
+ * from 1) this call returns the frame index, starting from zero. Thus
+ * One can calculate the presentation time by multiplying the index by
+ * the rate.
  *
  * \param th A previously initialized theora_state handle (encode or decode)
  * \param granulepos The granulepos to convert.
- * \returns The frame number corresponding to \a granulepos.
+ * \returns The frame index corresponding to \a granulepos.
  * \retval -1 The given granulepos is undefined (i.e. negative)
  *
  * Thus function was added in the 1.0alpha4 release.
@@ -714,10 +673,15 @@ extern ogg_int64_t theora_granule_frame(theora_state *th,ogg_int64_t granulepos)
 
 /**
  * Convert a granulepos to absolute time in seconds. The granulepos is
- * interpreted in the context of a given theora_state handle.
+ * interpreted in the context of a given theora_state handle, and gives
+ * the end time of a frame's presentation as used in Ogg mux ordering.
+ *
  * \param th A previously initialized theora_state handle (encode or decode)
  * \param granulepos The granulepos to convert.
  * \returns The absolute time in seconds corresponding to \a granulepos.
+ *          This is the "end time" for the frame, or the latest time it should
+ *           be displayed.
+ *          It is not the presentation time.
  * \retval -1. The given granulepos is undefined (i.e. negative), or
  * \retval -1. The function has been disabled because floating 
  *              point support is not available.
@@ -822,6 +786,8 @@ extern void  theora_comment_clear(theora_comment *tc);
  * \param buf    The parameters for this control code.
  * \param buf_sz The size of the parameter buffer.*/
 extern int theora_control(theora_state *th,int req,void *buf,size_t buf_sz);
+
+/* @} */ /* end oldfuncs doxygen group */
 
 #ifdef __cplusplus
 }

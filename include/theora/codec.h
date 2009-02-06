@@ -32,14 +32,32 @@
  *
  * \subsection Organization
  *
- * The functions documented here are actually subdivided into two separate
- *  libraries:
- * - <tt>libtheoradec</tt>, contains the decoder and shared routines.
- *   You must link to this if you use any of the functions listed in
- *    this API, i.e., those listed in \ref basefuncs and \ref decfuncs.*/
+ * The functions documented here are actually subdivided into three 
+ * separate libraries:
+ * - <tt>libtheoraenc</tt> contains the encoder interface,
+ *   described in \ref encfuncs.
+ * - <tt>libtheoradec</tt> contains the decoder interface and
+ *   routines shared with the encoder.
+ *   You must also link to this if you link to <tt>libtheoraenc</tt>.
+ *   The routines in this library are described in \ref decfuncs and 
+ *   \ref basefuncs.
+ * - <tt>libtheora</tt> contains the \ref oldfuncs.
+ *
+ * New code should link to <tt>libtheoradec</tt> and, if using encoder
+ * features, <tt>libtheoraenc</tt>. Together these two export both
+ * the standard and the legacy API, so this is all that is needed by
+ * any code. The older <tt>libtheora</tt> library is provided just for
+ * compatibility with older build configurations.
+ *
+ * In general the recommended 1.x API symbols can be distinguished
+ * by their <tt>th_</tt> or <tt>TH_</tt> namespace prefix.
+ * The older, legacy API uses <tt>theora_</tt> or <tt>OC_</tt>
+ * prefixes instead.
+ */
 
 /**\file
- * The shared <tt>libtheoradec</tt> and <tt>libtheoraenc</tt> C API.*/
+ * The shared <tt>libtheoradec</tt> and <tt>libtheoraenc</tt> C API.
+ * You don't need to include this directly.*/
 
 #if !defined(_O_THEORA_CODEC_H_)
 # define _O_THEORA_CODEC_H_ (1)
@@ -94,13 +112,18 @@ typedef enum{
  *  specification</a>, Section 4.4, for details on the precise sample
  *  locations.*/
 typedef enum{
-  /**Chroma decimation by 2 in both the X and Y directions (4:2:0).*/
+  /**Chroma decimation by 2 in both the X and Y directions (4:2:0).
+     The Cb and Cr chroma planes are half the width and half the height of the
+      luma plane.*/
   TH_PF_420,
   /**Currently reserved.*/
   TH_PF_RSVD,
-  /**Chroma decimation by 2 in the X direction (4:2:2).*/
+  /**Chroma decimation by 2 in the X direction (4:2:2).
+     The Cb and Cr chroma planes are half the width of the luma plane, but full
+      height.*/
   TH_PF_422,
-  /**No chroma decimation (4:4:4).*/
+  /**No chroma decimation (4:4:4).
+     The Cb and Cr chroma planes are full width and full height.*/
   TH_PF_444,
   /**The total number of currently defined pixel formats.*/
   TH_PF_NFORMATS
@@ -112,8 +135,8 @@ typedef enum{
  * This contains the image data in a left-to-right, top-down format.
  * Each row of pixels is stored contiguously in memory, but successive rows
  *  need not be.
- * Use \a ystride to compute the offset of the next row.
- * The encoder accepts both positive \a ystride values (top-down in memory) and
+ * Use \a stride to compute the offset of the next row.
+ * The encoder accepts both positive \a stride values (top-down in memory) and
  *  negative (bottom-up in memory).
  * The decoder currently always generates images with positive strides.*/
 typedef struct{
@@ -122,7 +145,7 @@ typedef struct{
   /**The height of this plane.*/
   int            height;
   /**The offset in bytes between successive rows.*/
-  int            ystride;
+  int            stride;
   /**A pointer to the beginning of the first row.*/
   unsigned char *data;
 }th_img_plane;
@@ -444,13 +467,14 @@ extern const char *th_version_string(void);
  * \endcode
  * \return the version number.*/
 extern ogg_uint32_t th_version_number(void);
-/**Converts a granule position to an absolute frame number.
+/**Converts a granule position to an absolute frame index, starting at
+ *  <tt>0</tt>.
  * The granule position is interpreted in the context of a given
  *  #th_enc_ctx or #th_dec_ctx handle (either will suffice).
  * \param _encdec  A previously allocated #th_enc_ctx or #th_dec_ctx
  *                  handle.
  * \param _granpos The granule position to convert.
- * \returns The absolute frame number corresponding to \a _granpos.
+ * \returns The absolute frame index corresponding to \a _granpos.
  * \retval -1 The given granule position was invalid (i.e. negative).*/
 extern ogg_int64_t th_granule_frame(void *_encdec,ogg_int64_t _granpos);
 /**Converts a granule position to an absolute time in seconds.
@@ -460,6 +484,9 @@ extern ogg_int64_t th_granule_frame(void *_encdec,ogg_int64_t _granpos);
  *                  handle.
  * \param _granpos The granule position to convert.
  * \return The absolute time in seconds corresponding to \a _granpos.
+ *         This is the "end time" for the frame, or the latest time it should
+ *          be displayed.
+ *         It is not the presentation time.
  * \retval -1 The given granule position was invalid (i.e. negative).*/
 extern double th_granule_time(void *_encdec,ogg_int64_t _granpos);
 /**Determines whether a Theora packet is a header or not.

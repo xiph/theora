@@ -6,13 +6,13 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2008                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
   function:
     last mod: $Id$
-  
+
  ********************************************************************/
 
 #include <stdlib.h>
@@ -43,70 +43,6 @@
 /*Maximum valid post-processing level.*/
 #define OC_PP_LEVEL_MAX       (7)
 
-/*Read 32 bits.
-  *_ret is set to 0 on failure.
-  Return: 0 on success, or a negative value on failure.*/
-int theora_read32(oggpack_buffer *_opb,long *_ret){
-  long ret1;
-  long ret2;
-  long mask;
-  ret1=oggpackB_read(_opb,16);
-  ret2=oggpackB_read(_opb,16);
-  mask=ret2>>31;
-  *_ret=((ret1<<16)|ret2)&~mask;
-  return (int)mask;
-}
-
-/*Read n bits, where n <= 31 for libogg1.
-  *_ret is set to 0 on failure.
-  Return: 0 on success, or a negative value on failure.*/
-int theora_read(oggpack_buffer *_opb,int _nbits,long *_ret){
-  long mask;
-  *_ret=oggpackB_read(_opb,_nbits);
-  mask=*_ret>>31;
-  *_ret&=~mask;
-  return (int)mask;
-}
-
-/*Read 1 bit,
-  *_ret is set to 0 on failure.
-  Return: 0 on success, or a negative value on failure.*/
-int theora_read1(oggpack_buffer *_opb,long *_ret){
-  int mask;
-  *_ret=oggpackB_read1(_opb);
-  mask=(int)*_ret>>31;
-  *_ret&=~mask;
-  return mask;
-}
-
-/*Look ahead n bits, where n <= 31 for libogg1.
-  In the event that there are some bits remaining, but fewer than n, then the
-   remaining bits are returned, with the missing bits set to 0, and the
-   function succeeds.
-  The stream can be advanced afterwards with oggpackB_adv().
-  *_ret is set to 0 on failure.
-  Return: 0 on success, or a negative value on failure.*/
-int theora_look(oggpack_buffer *_opb,int _nbits,long *_ret){
-  int nbits;
-  *_ret=oggpackB_look(_opb,_nbits);
-  if(*_ret>=0)return 0;
-  /*libogg1 fails if we try to look past the end of the stream.
-    We might be looking ahead more bits than we actually need, however, and so
-     we must return the ones that are actually there.*/
-  /*There's no accessor for the storage field, which we need to figure out
-     how many bits _are_ left in the buffer (without resorting to trial and
-     error, which would be silly).*/
-  nbits=(_opb->storage<<3)-oggpackB_bits(_opb);
-  if(nbits>0){
-    /*If there are some bits left, return them.*/
-    *_ret=oggpackB_look(_opb,nbits)<<_nbits-nbits;
-    /*Success should be guaranteed.*/
-    return 0;
-  }
-  /*If there are no bits left, then we truly should fail.*/
-  *_ret=0;
-  return -1;
-}
 
 
 /*The mode alphabets for the various mode coding schemes.
@@ -165,26 +101,26 @@ static int oc_sb_run_unpack(oggpack_buffer *_opb){
      11110xxx                10-17
      111110xxxx              18-33
      111111xxxxxxxxxxxx      34-4129*/
-  theora_read1(_opb,&bits);
+  theorapackB_read1(_opb,&bits);
   if(bits==0)return 1;
-  theora_read(_opb,2,&bits);
+  theorapackB_read(_opb,2,&bits);
   if((bits&2)==0)return 2+(int)bits;
   else if((bits&1)==0){
-    theora_read1(_opb,&bits);
+    theorapackB_read1(_opb,&bits);
     return 4+(int)bits;
   }
-  theora_read(_opb,3,&bits);
+  theorapackB_read(_opb,3,&bits);
   if((bits&4)==0)return 6+(int)bits;
   else if((bits&2)==0){
     ret=10+((bits&1)<<2);
-    theora_read(_opb,2,&bits);
+    theorapackB_read(_opb,2,&bits);
     return ret+(int)bits;
   }
   else if((bits&1)==0){
-    theora_read(_opb,4,&bits);
+    theorapackB_read(_opb,4,&bits);
     return 18+(int)bits;
   }
-  theora_read(_opb,12,&bits);
+  theorapackB_read(_opb,12,&bits);
   return 34+(int)bits;
 }
 
@@ -199,21 +135,21 @@ static int oc_block_run_unpack(oggpack_buffer *_opb){
      1110xx                  7-10
      11110xx                 11-14
      11111xxxx               15-30*/
-  theora_read(_opb,2,&bits);
+  theorapackB_read(_opb,2,&bits);
   if((bits&2)==0)return 1+(int)bits;
   else if((bits&1)==0){
-    theora_read1(_opb,&bits);
+    theorapackB_read1(_opb,&bits);
     return 3+(int)bits;
   }
-  theora_read(_opb,2,&bits);
+  theorapackB_read(_opb,2,&bits);
   if((bits&2)==0)return 5+(int)bits;
   else if((bits&1)==0){
-    theora_read(_opb,2,&bits);
+    theorapackB_read(_opb,2,&bits);
     return 7+(int)bits;
   }
-  theora_read(_opb,3,&bits);
+  theorapackB_read(_opb,3,&bits);
   if((bits&4)==0)return 11+bits;
-  theora_read(_opb,2,&bits2);
+  theorapackB_read(_opb,2,&bits2);
   return 15+((bits&3)<<2)+bits2;
 }
 
@@ -227,13 +163,14 @@ static int oc_dec_init(oc_dec_ctx *_dec,const th_info *_info,
   int ret;
   ret=oc_state_init(&_dec->state,_info);
   if(ret<0)return ret;
-  oc_huff_trees_copy(_dec->huff_tables,_setup->huff_tables);
+  oc_huff_trees_copy(_dec->huff_tables,
+   (const oc_huff_node *const *)_setup->huff_tables);
   for(qti=0;qti<2;qti++)for(pli=0;pli<3;pli++){
     _dec->state.dequant_tables[qti][pli]=
      _dec->state.dequant_table_data[qti][pli];
   }
   oc_dequant_tables_init(_dec->state.dequant_tables,_dec->pp_dc_scale,
-			 &_setup->qinfo);
+   &_setup->qinfo);
   for(qi=0;qi<64;qi++){
     int qsum;
     qsum=0;
@@ -279,36 +216,34 @@ static void oc_dec_clear(oc_dec_ctx *_dec){
 
 static int oc_dec_frame_header_unpack(oc_dec_ctx *_dec){
   long val;
-
   /*Check to make sure this is a data packet.*/
-  theora_read1(&_dec->opb,&val);
+  theorapackB_read1(&_dec->opb,&val);
   if(val!=0)return TH_EBADPACKET;
   /*Read in the frame type (I or P).*/
-  theora_read1(&_dec->opb,&val);
+  theorapackB_read1(&_dec->opb,&val);
   _dec->state.frame_type=(int)val;
   /*Read in the current qi.*/
-  theora_read(&_dec->opb,6,&val);
+  theorapackB_read(&_dec->opb,6,&val);
   _dec->state.qis[0]=(int)val;
-  theora_read1(&_dec->opb,&val);
+  theorapackB_read1(&_dec->opb,&val);
   if(!val)_dec->state.nqis=1;
   else{
-    theora_read(&_dec->opb,6,&val);
+    theorapackB_read(&_dec->opb,6,&val);
     _dec->state.qis[1]=(int)val;
-    theora_read1(&_dec->opb,&val);
+    theorapackB_read1(&_dec->opb,&val);
     if(!val)_dec->state.nqis=2;
     else{
-      theora_read(&_dec->opb,6,&val);
+      theorapackB_read(&_dec->opb,6,&val);
       _dec->state.qis[2]=(int)val;
       _dec->state.nqis=3;
     }
   }
-
   if(_dec->state.frame_type==OC_INTRA_FRAME){
     /*Keyframes have 3 unused configuration bits, holdovers from VP3 days.
       Most of the other unused bits in the VP3 headers were eliminated.
       I don't know why these remain.*/
     /* I wanted to eliminate wasted bits, but not all config wiggle room --Monty */
-    theora_read(&_dec->opb,3,&val);
+    theorapackB_read(&_dec->opb,3,&val);
     if(val!=0)return TH_EIMPL;
   }
   return 0;
@@ -364,9 +299,8 @@ static int oc_dec_partial_sb_flags_unpack(oc_dec_ctx *_dec){
   int    flag;
   int    npartial;
   int    run_count;
-  theora_read1(&_dec->opb,&val);
+  theorapackB_read1(&_dec->opb,&val);
   flag=(int)val;
-
   sb=_dec->state.sbs;
   sb_end=sb+_dec->state.nsbs;
   run_count=npartial=0;
@@ -380,10 +314,9 @@ static int oc_dec_partial_sb_flags_unpack(oc_dec_ctx *_dec){
       npartial+=flag;
       sb++;
     }
-
     while(--run_count>0&&sb<sb_end);
     if(full_run&&sb<sb_end){
-      theora_read1(&_dec->opb,&val);
+      theorapackB_read1(&_dec->opb,&val);
       flag=(int)val;
     }
     else flag=!flag;
@@ -408,9 +341,8 @@ static void oc_dec_coded_sb_flags_unpack(oc_dec_ctx *_dec){
   sb_end=sb+_dec->state.nsbs;
   /*Skip partially coded super blocks.*/
   for(;sb->coded_partially;sb++);
-  theora_read1(&_dec->opb,&val);
+  theorapackB_read1(&_dec->opb,&val);
   flag=(int)val;
-
   while(sb<sb_end){
     int full_run;
     run_count=oc_sb_run_unpack(&_dec->opb);
@@ -421,7 +353,7 @@ static void oc_dec_coded_sb_flags_unpack(oc_dec_ctx *_dec){
       sb->coded_fully=flag;
     }
     if(full_run&&sb<sb_end){
-      theora_read1(&_dec->opb,&val);
+      theorapackB_read1(&_dec->opb,&val);
       flag=(int)val;
     }
     else flag=!flag;
@@ -445,7 +377,7 @@ static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
   npartial=oc_dec_partial_sb_flags_unpack(_dec);
   if(npartial<_dec->state.nsbs)oc_dec_coded_sb_flags_unpack(_dec);
   if(npartial>0){
-    theora_read1(&_dec->opb,&val);
+    theorapackB_read1(&_dec->opb,&val);
     flag=!(int)val;
   }
   else flag=0;
@@ -499,7 +431,7 @@ static int oc_vlc_mode_unpack(oggpack_buffer *_opb){
   long val;
   int  i;
   for(i=0;i<7;i++){
-    theora_read1(_opb,&val);
+    theorapackB_read1(_opb,&val);
     if(!val)break;
   }
   return i;
@@ -507,56 +439,50 @@ static int oc_vlc_mode_unpack(oggpack_buffer *_opb){
 
 static int oc_clc_mode_unpack(oggpack_buffer *_opb){
   long val;
-  theora_read(_opb,3,&val);
+  theorapackB_read(_opb,3,&val);
   return (int)val;
 }
 
 /*Unpacks the list of macro block modes for INTER frames.*/
-void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
+static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
   oc_mode_unpack_func  mode_unpack;
   oc_mb               *mb;
   oc_mb               *mb_end;
   const int           *alphabet;
-  long                 val,j;
+  long                 val;
   int                  scheme0_alphabet[8];
   int                  mode_scheme;
-  theora_read(&_dec->opb,3,&val);
+  theorapackB_read(&_dec->opb,3,&val);
   mode_scheme=(int)val;
-
   if(mode_scheme==0){
     int mi;
     /*Just in case, initialize the modes to something.
       If the bitstream doesn't contain each index exactly once, it's likely
        corrupt and the rest of the packet is garbage anyway, but this way we
        won't crash, and we'll decode SOMETHING.*/
+    /*LOOP VECTORIZES*/
     for(mi=0;mi<OC_NMODES;mi++)scheme0_alphabet[mi]=OC_MODE_INTER_NOMV;
     for(mi=0;mi<OC_NMODES;mi++){
-      theora_read(&_dec->opb,3,&val);
+      theorapackB_read(&_dec->opb,3,&val);
       scheme0_alphabet[val]=OC_MODE_ALPHABETS[6][mi];
     }
     alphabet=scheme0_alphabet;
-  }else 
-    alphabet=OC_MODE_ALPHABETS[mode_scheme-1];
-  if(mode_scheme==7)
-    mode_unpack=oc_clc_mode_unpack;
-  else 
-    mode_unpack=oc_vlc_mode_unpack;
+  }
+  else alphabet=OC_MODE_ALPHABETS[mode_scheme-1];
+  if(mode_scheme==7)mode_unpack=oc_clc_mode_unpack;
+  else mode_unpack=oc_vlc_mode_unpack;
   mb=_dec->state.mbs;
   mb_end=mb+_dec->state.nmbs;
-
-  for(j=0;mb<mb_end;mb++){
+  for(;mb<mb_end;mb++){
     if(mb->mode!=OC_MODE_INVALID){
       int bi;
       for(bi=0;bi<4;bi++){
-	int fragi;
-	fragi=mb->map[0][bi];
-	if(fragi>=0&&_dec->state.frags[fragi].coded)break;
+        int fragi;
+        fragi=mb->map[0][bi];
+        if(fragi>=0&&_dec->state.frags[fragi].coded)break;
       }
-      if(bi<4){
-	mb->mode=alphabet[(*mode_unpack)(&_dec->opb)];
-	
-      }else 
-	mb->mode=OC_MODE_INTER_NOMV;
+      if(bi<4)mb->mode=alphabet[(*mode_unpack)(&_dec->opb)];
+      else mb->mode=OC_MODE_INTER_NOMV;
     }
   }
 }
@@ -568,32 +494,23 @@ typedef int (*oc_mv_comp_unpack_func)(oggpack_buffer *_opb);
 static int oc_vlc_mv_comp_unpack(oggpack_buffer *_opb){
   long bits;
   int  mvsigned[2];
-  theora_read(_opb,3,&bits);
+  theorapackB_read(_opb,3,&bits);
   switch(bits){
-    case 0:return 0;
-    case 1:return 1;
-    case 2:return -1;
-    case 3:{
-      mvsigned[0]=2;
-      theora_read1(_opb,&bits);
+    case  0:return 0;
+    case  1:return 1;
+    case  2:return -1;
+    case  3:
+    case  4:{
+      mvsigned[0]=(int)(bits-1);
+      theorapackB_read1(_opb,&bits);
     }break;
-    case 4:{
-      mvsigned[0]=3;
-      theora_read1(_opb,&bits);
-    }break;
-    case 5:{
-      theora_read(_opb,3,&bits);
-      mvsigned[0]=4+(bits>>1);
-      bits&=1;
-    }break;
-    case 6:{
-      theora_read(_opb,4,&bits);
-      mvsigned[0]=8+(bits>>1);
-      bits&=1;
-    }break;
-    case 7:{
-      theora_read(_opb,5,&bits);
-      mvsigned[0]=16+(bits>>1);
+    /*case  5:
+    case  6:
+    case  7:*/
+    default:{
+      mvsigned[0]=1<<bits-3;
+      theorapackB_read(_opb,bits-2,&bits);
+      mvsigned[0]+=(int)(bits>>1);
       bits&=1;
     }break;
   }
@@ -604,7 +521,7 @@ static int oc_vlc_mv_comp_unpack(oggpack_buffer *_opb){
 static int oc_clc_mv_comp_unpack(oggpack_buffer *_opb){
   long bits;
   int  mvsigned[2];
-  theora_read(_opb,6,&bits);
+  theorapackB_read(_opb,6,&bits);
   mvsigned[0]=bits>>1;
   mvsigned[1]=-mvsigned[0];
   return mvsigned[bits&1];
@@ -623,7 +540,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
   oc_mv                   last_mv[2];
   oc_mv                   cbmvs[4];
   set_chroma_mvs=OC_SET_CHROMA_MVS_TABLE[_dec->state.info.pixel_fmt];
-  theora_read1(&_dec->opb,&val);
+  theorapackB_read1(&_dec->opb,&val);
   mv_comp_unpack=val?oc_clc_mv_comp_unpack:oc_vlc_mv_comp_unpack;
   map_idxs=OC_MB_MAP_IDXS[_dec->state.info.pixel_fmt];
   map_nidxs=OC_MB_MAP_NIDXS[_dec->state.info.pixel_fmt];
@@ -652,74 +569,62 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
     if(ncoded<=0)continue;
     mb_mode=mb->mode;
     switch(mb_mode){
-    case OC_MODE_INTER_MV_FOUR:
-      {
-	oc_mv       lbmvs[4];
-	int         bi;
-	/*Mark the tail of the list, so we don't accidentally go past it.*/
-	coded[ncoded]=-1;
-	for(bi=codedi=0;bi<4;bi++){
-	  if(coded[codedi]==bi){
-	    codedi++;
-	    frag=_dec->state.frags+mb->map[0][bi];
-	    frag->mbmode=mb_mode;
-	    frag->mv[0]=lbmvs[bi][0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
-	    frag->mv[1]=lbmvs[bi][1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
-	  }
-	  else lbmvs[bi][0]=lbmvs[bi][1]=0;
-	}
-	if(codedi>0){
-	  last_mv[1][0]=last_mv[0][0];
-	  last_mv[1][1]=last_mv[0][1];
-	  last_mv[0][0]=lbmvs[coded[codedi-1]][0];
-	  last_mv[0][1]=lbmvs[coded[codedi-1]][1];
-	}
-	if(codedi<ncoded){
-	  (*set_chroma_mvs)(cbmvs,(const oc_mv *)lbmvs);
-	  for(;codedi<ncoded;codedi++){
-	    mapi=coded[codedi];
-	    bi=mapi&3;
-	    frag=_dec->state.frags+mb->map[mapi>>2][bi];
-	    frag->mbmode=mb_mode;
-	    frag->mv[0]=cbmvs[bi][0];
-	    frag->mv[1]=cbmvs[bi][1];
-	  }
-	}
-      }
-      break;
-    case OC_MODE_INTER_MV:
-      {
-	last_mv[1][0]=last_mv[0][0];
-	last_mv[1][1]=last_mv[0][1];
-	mbmv[0]=last_mv[0][0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
-	mbmv[1]=last_mv[0][1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
-      }
-      break;
-    case OC_MODE_INTER_MV_LAST:
-      {
+      case OC_MODE_INTER_MV_FOUR:{
+        oc_mv       lbmvs[4];
+        int         bi;
+        /*Mark the tail of the list, so we don't accidentally go past it.*/
+        coded[ncoded]=-1;
+        for(bi=codedi=0;bi<4;bi++){
+          if(coded[codedi]==bi){
+            codedi++;
+            frag=_dec->state.frags+mb->map[0][bi];
+            frag->mbmode=mb_mode;
+            frag->mv[0]=lbmvs[bi][0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+            frag->mv[1]=lbmvs[bi][1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+          }
+          else lbmvs[bi][0]=lbmvs[bi][1]=0;
+        }
+        if(codedi>0){
+          last_mv[1][0]=last_mv[0][0];
+          last_mv[1][1]=last_mv[0][1];
+          last_mv[0][0]=lbmvs[coded[codedi-1]][0];
+          last_mv[0][1]=lbmvs[coded[codedi-1]][1];
+        }
+        if(codedi<ncoded){
+          (*set_chroma_mvs)(cbmvs,(const oc_mv *)lbmvs);
+          for(;codedi<ncoded;codedi++){
+            mapi=coded[codedi];
+            bi=mapi&3;
+            frag=_dec->state.frags+mb->map[mapi>>2][bi];
+            frag->mbmode=mb_mode;
+            frag->mv[0]=cbmvs[bi][0];
+            frag->mv[1]=cbmvs[bi][1];
+          }
+        }
+      }break;
+      case OC_MODE_INTER_MV:{
+        last_mv[1][0]=last_mv[0][0];
+        last_mv[1][1]=last_mv[0][1];
+        mbmv[0]=last_mv[0][0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+        mbmv[1]=last_mv[0][1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+      }break;
+      case OC_MODE_INTER_MV_LAST:{
         mbmv[0]=last_mv[0][0];
         mbmv[1]=last_mv[0][1];
-      }
-      break;
-    case OC_MODE_INTER_MV_LAST2:
-      {
+      }break;
+      case OC_MODE_INTER_MV_LAST2:{
         mbmv[0]=last_mv[1][0];
         mbmv[1]=last_mv[1][1];
         last_mv[1][0]=last_mv[0][0];
         last_mv[1][1]=last_mv[0][1];
         last_mv[0][0]=mbmv[0];
         last_mv[0][1]=mbmv[1];
-      }
-      break;
-    case OC_MODE_GOLDEN_MV:
-      {
+      }break;
+      case OC_MODE_GOLDEN_MV:{
         mbmv[0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
         mbmv[1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
-      }
-      break;
-    default:
-      mbmv[0]=mbmv[1]=0;
-      break;
+      }break;
+      default:mbmv[0]=mbmv[1]=0;break;
     }
     /*4MV mode fills in the fragments itself.
       For all other modes we can use this common code.*/
@@ -756,7 +661,7 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
   else{
     long val;
     int  flag;
-    int  nqi0;
+    int  nqi1;
     int  run_count;
     /*Otherwise, we decode a qi index for each fragment, using two passes of
       the same binary RLE scheme used for super-block coded bits.
@@ -766,20 +671,20 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
      At first we just store the qii in the fragment.
      After all the qii's are decoded, we make a final pass to replace them
       with the corresponding qi's for this frame.*/
-    theora_read1(&_dec->opb,&val);
+    theorapackB_read1(&_dec->opb,&val);
     flag=(int)val;
-    run_count=nqi0=0;
+    run_count=nqi1=0;
     while(coded_fragi<coded_fragi_end){
       int full_run;
       run_count=oc_sb_run_unpack(&_dec->opb);
       full_run=run_count>=4129;
       do{
         _dec->state.frags[*coded_fragi++].qi=flag;
-        nqi0+=!flag;
+        nqi1+=flag;
       }
       while(--run_count>0&&coded_fragi<coded_fragi_end);
       if(full_run&&coded_fragi<coded_fragi_end){
-        theora_read1(&_dec->opb,&val);
+        theorapackB_read1(&_dec->opb,&val);
         flag=(int)val;
       }
       else flag=!flag;
@@ -788,11 +693,11 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
       If it's not, we should issue a warning of some kind.*/
     /*If we have 3 different qi's for this frame, and there was at least one
        fragment with a non-zero qi, make the second pass.*/
-    if(_dec->state.nqis==3&&nqi0<ncoded_fragis){
+    if(_dec->state.nqis==3&&nqi1>0){
       /*Skip qii==0 fragments.*/
       for(coded_fragi=_dec->state.coded_fragis;
        _dec->state.frags[*coded_fragi].qi==0;coded_fragi++);
-      theora_read1(&_dec->opb,&val);
+      theorapackB_read1(&_dec->opb,&val);
       flag=(int)val;
       while(coded_fragi<coded_fragi_end){
         int full_run;
@@ -806,7 +711,7 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
           frag->qi+=flag;
         }
         if(full_run&&coded_fragi<coded_fragi_end){
-          theora_read1(&_dec->opb,&val);
+          theorapackB_read1(&_dec->opb,&val);
           flag=(int)val;
         }
         else flag=!flag;
@@ -909,7 +814,7 @@ static const oc_token_dec1val_func OC_TOKEN_DEC1VAL_TABLE[TH_NDCT_TOKENS-
   _token:      The token value to skip.
   _extra_bits: The extra bits attached to this token.
   Return: The decoded coefficient value.*/
-int oc_dct_token_dec1val(int _token,int _extra_bits){
+static int oc_dct_token_dec1val(int _token,int _extra_bits){
   return (*OC_TOKEN_DEC1VAL_TABLE[_token-OC_NDCT_EOB_TOKEN_MAX])(_token,
    _extra_bits);
 }
@@ -959,7 +864,7 @@ static int oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[3],
       _dec->dct_tokens[0][ti++]=(unsigned char)token;
       neb=OC_DCT_TOKEN_EXTRA_BITS[token];
       if(neb){
-        theora_read(&_dec->opb,neb,&val);
+        theorapackB_read(&_dec->opb,neb,&val);
         eb=(int)val;
         _dec->extra_bits[0][ebi++]=(ogg_uint16_t)eb;
       }
@@ -1031,7 +936,7 @@ static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[3],
       _dec->dct_tokens[_zzi][ti++]=(unsigned char)token;
       neb=OC_DCT_TOKEN_EXTRA_BITS[token];
       if(neb){
-        theora_read(&_dec->opb,neb,&val);
+        theorapackB_read(&_dec->opb,neb,&val);
         eb=(int)val;
         _dec->extra_bits[_zzi][ebi++]=(ogg_uint16_t)eb;
       }
@@ -1099,17 +1004,17 @@ static void oc_dec_residual_tokens_unpack(oc_dec_ctx *_dec){
   for(pli=0;pli<3;pli++)for(zzi=0;zzi<64;zzi++){
     ntoks_left[pli][zzi]=_dec->state.ncoded_fragis[pli];
   }
-  theora_read(&_dec->opb,4,&val);
+  theorapackB_read(&_dec->opb,4,&val);
   huffi_y=(int)val;
-  theora_read(&_dec->opb,4,&val);
+  theorapackB_read(&_dec->opb,4,&val);
   huffi_c=(int)val;
   huff_idxs[0]=huffi_y;
   huff_idxs[1]=huff_idxs[2]=huffi_c;
   _dec->eob_runs[0][0]=0;
   eobs=oc_dec_dc_coeff_unpack(_dec,huff_idxs,ntoks_left);
-  theora_read(&_dec->opb,4,&val);
+  theorapackB_read(&_dec->opb,4,&val);
   huffi_y=(int)val;
-  theora_read(&_dec->opb,4,&val);
+  theorapackB_read(&_dec->opb,4,&val);
   huffi_c=(int)val;
   zzi=1;
   for(hgi=1;hgi<5;hgi++){
@@ -1141,7 +1046,7 @@ typedef void (*oc_token_expand_func)(int _token,int _extra_bits,
  ogg_int16_t _dct_coeffs[128],int *_zzi);
 
 /*Expands a zero run token.*/
-void oc_token_expand_zrl(int _token,int _extra_bits,
+static void oc_token_expand_zrl(int _token,int _extra_bits,
  ogg_int16_t _dct_coeffs[128],int *_zzi){
   int zzi;
   zzi=*_zzi;
@@ -1151,38 +1056,39 @@ void oc_token_expand_zrl(int _token,int _extra_bits,
 }
 
 /*Expands a constant, single-value token.*/
-void oc_token_expand_const(int _token,int _extra_bits,
+static void oc_token_expand_const(int _token,int _extra_bits,
  ogg_int16_t _dct_coeffs[128],int *_zzi){
   _dct_coeffs[(*_zzi)++]=(ogg_int16_t)oc_token_dec1val_const(_token);
 }
 
 /*Expands category 2 single-valued tokens.*/
-void oc_token_expand_cat2(int _token,int _extra_bits,
+static void oc_token_expand_cat2(int _token,int _extra_bits,
  ogg_int16_t _dct_coeffs[128],int *_zzi){
   _dct_coeffs[(*_zzi)++]=
    (ogg_int16_t)oc_token_dec1val_cat2(_token,_extra_bits);
 }
 
 /*Expands category 3 through 8 single-valued tokens.*/
-void oc_token_expand_cati(int _token,int _extra_bits,
+static void oc_token_expand_cati(int _token,int _extra_bits,
  ogg_int16_t _dct_coeffs[128],int *_zzi){
   _dct_coeffs[(*_zzi)++]=
    (ogg_int16_t)oc_token_dec1val_cati(_token,_extra_bits);
 }
 
 /*Expands a category 1a zero run/value combo token.*/
-void oc_token_expand_run_cat1a(int _token,int _extra_bits,
+static void oc_token_expand_run_cat1a(int _token,int _extra_bits,
  ogg_int16_t _dct_coeffs[128],int *_zzi){
   int zzi;
   int rl;
   zzi=*_zzi;
+  /*LOOP VECTORIZES.*/
   for(rl=_token-OC_DCT_RUN_CAT1A+1;rl-->0;)_dct_coeffs[zzi++]=0;
   _dct_coeffs[zzi++]=(ogg_int16_t)(1-(_extra_bits<<1));
   *_zzi=zzi;
 }
 
 /*Expands all other zero run/value combo tokens.*/
-void oc_token_expand_run(int _token,int _extra_bits,
+static void oc_token_expand_run(int _token,int _extra_bits,
  ogg_int16_t _dct_coeffs[128],int *_zzi){
   static const int NZEROS_ADJUST[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
     6,10,1,2
@@ -1208,6 +1114,7 @@ void oc_token_expand_run(int _token,int _extra_bits,
   _token-=OC_DCT_RUN_CAT1B;
   rl=(_extra_bits&NZEROS_MASK[_token])+NZEROS_ADJUST[_token];
   zzi=*_zzi;
+  /*LOOP VECTORIZES.*/
   while(rl-->0)_dct_coeffs[zzi++]=0;
   valsigned[0]=VALUE_ADJUST[_token]+
    (_extra_bits>>VALUE_SHIFT[_token]&VALUE_MASK[_token]);
@@ -1318,13 +1225,13 @@ static int oc_dec_postprocess_init(oc_dec_ctx *_dec){
     if(_dec->pp_level<OC_PP_LEVEL_DEBLOCKC){
       _dec->variances=(int *)_ogg_realloc(_dec->variances,
        _dec->state.fplanes[0].nfrags*sizeof(_dec->variances[0]));
-      _dec->pp_frame_data=(unsigned char *)_ogg_realloc( 
+      _dec->pp_frame_data=(unsigned char *)_ogg_realloc(
        _dec->pp_frame_data,frame_sz*sizeof(_dec->pp_frame_data[0]));
       _dec->pp_frame_buf[0].width=_dec->state.info.frame_width;
       _dec->pp_frame_buf[0].height=_dec->state.info.frame_height;
-      _dec->pp_frame_buf[0].ystride=-_dec->pp_frame_buf[0].width;
+      _dec->pp_frame_buf[0].stride=-_dec->pp_frame_buf[0].width;
       _dec->pp_frame_buf[0].data=_dec->pp_frame_data+
-       (1-_dec->pp_frame_buf[0].height)*_dec->pp_frame_buf[0].ystride;
+       (1-_dec->pp_frame_buf[0].height)*_dec->pp_frame_buf[0].stride;
     }
     else{
       size_t y_sz;
@@ -1338,19 +1245,19 @@ static int oc_dec_postprocess_init(oc_dec_ctx *_dec){
       c_h=_dec->state.info.frame_height>>!(_dec->state.info.pixel_fmt&2);
       c_sz=c_w*c_h;
       frame_sz+=c_sz<<1;
-      _dec->pp_frame_data=(unsigned char *)_ogg_realloc( 
+      _dec->pp_frame_data=(unsigned char *)_ogg_realloc(
        _dec->pp_frame_data,frame_sz*sizeof(_dec->pp_frame_data[0]));
       _dec->pp_frame_buf[0].width=_dec->state.info.frame_width;
       _dec->pp_frame_buf[0].height=_dec->state.info.frame_height;
-      _dec->pp_frame_buf[0].ystride=_dec->pp_frame_buf[0].width;
+      _dec->pp_frame_buf[0].stride=_dec->pp_frame_buf[0].width;
       _dec->pp_frame_buf[0].data=_dec->pp_frame_data;
       _dec->pp_frame_buf[1].width=c_w;
       _dec->pp_frame_buf[1].height=c_h;
-      _dec->pp_frame_buf[1].ystride=_dec->pp_frame_buf[1].width;
+      _dec->pp_frame_buf[1].stride=_dec->pp_frame_buf[1].width;
       _dec->pp_frame_buf[1].data=_dec->pp_frame_buf[0].data+y_sz;
       _dec->pp_frame_buf[2].width=c_w;
       _dec->pp_frame_buf[2].height=c_h;
-      _dec->pp_frame_buf[2].ystride=_dec->pp_frame_buf[2].width;
+      _dec->pp_frame_buf[2].stride=_dec->pp_frame_buf[2].width;
       _dec->pp_frame_buf[2].data=_dec->pp_frame_buf[1].data+c_sz;
       oc_ycbcr_buffer_flip(_dec->pp_frame_buf,_dec->pp_frame_buf);
     }
@@ -1371,7 +1278,7 @@ typedef struct{
   int  ti[3][64];
   int  ebi[3][64];
   int  eob_runs[3][64];
-  int  bounding_values[512];
+  int  bounding_values[256];
   int *coded_fragis[3];
   int *uncoded_fragis[3];
   int  fragy0[3];
@@ -1673,48 +1580,48 @@ static void oc_dec_deblock_frag_rows(oc_dec_ctx *_dec,
    (_fragy_end+notdone-_fragy0-notstart)*fplane->nhfrags*sizeof(variance[0]));
   /*Except for the first time, we want to point to the middle of the row.*/
   y=(_fragy0<<3)+(notstart<<2);
-  dst=_dst->data+y*_dst->ystride;
-  src=_src->data+y*_src->ystride;
+  dst=_dst->data+y*_dst->stride;
+  src=_src->data+y*_src->stride;
   for(;y<4;y++){
     memcpy(dst,src,_dst->width*sizeof(dst[0]));
-    dst+=_dst->ystride;
-    src+=_src->ystride;
+    dst+=_dst->stride;
+    src+=_src->stride;
   }
   /*We also want to skip the last row in the frame for this loop.*/
   y_end=_fragy_end-!notdone<<3;
   for(;y<y_end;y+=8){
     qstep=_dec->pp_dc_scale[*dc_qi];
     flimit=(qstep*3)>>2;
-    oc_filter_hedge(dst,_dst->ystride,src-_src->ystride,_src->ystride,
+    oc_filter_hedge(dst,_dst->stride,src-_src->stride,_src->stride,
      qstep,flimit,variance,variance+fplane->nhfrags);
     variance++;
     dc_qi++;
     for(x=8;x<_dst->width;x+=8){
       qstep=_dec->pp_dc_scale[*dc_qi];
       flimit=(qstep*3)>>2;
-      oc_filter_hedge(dst+x,_dst->ystride,src+x-_src->ystride,_src->ystride,
+      oc_filter_hedge(dst+x,_dst->stride,src+x-_src->stride,_src->stride,
        qstep,flimit,variance,variance+fplane->nhfrags);
-      oc_filter_vedge(dst+x-(_dst->ystride<<2)-4,_dst->ystride,
+      oc_filter_vedge(dst+x-(_dst->stride<<2)-4,_dst->stride,
        qstep,flimit,variance-1);
       variance++;
       dc_qi++;
     }
-    dst+=_dst->ystride<<3;
-    src+=_src->ystride<<3;
+    dst+=_dst->stride<<3;
+    src+=_src->stride<<3;
   }
   /*And finally, handle the last row in the frame, if it's in the range.*/
   if(!notdone){
     for(;y<_dst->height;y++){
       memcpy(dst,src,_dst->width*sizeof(dst[0]));
-      dst+=_dst->ystride;
-      src+=_src->ystride;
+      dst+=_dst->stride;
+      src+=_src->stride;
     }
     /*Filter the last row of vertical block edges.*/
     dc_qi++;
     for(x=8;x<_dst->width;x+=8){
       qstep=_dec->pp_dc_scale[*dc_qi++];
       flimit=(qstep*3)>>2;
-      oc_filter_vedge(dst+x-(_dst->ystride<<3)-4,_dst->ystride,
+      oc_filter_vedge(dst+x-(_dst->stride<<3)-4,_dst->stride,
        qstep,flimit,variance++);
     }
   }
@@ -1766,71 +1673,54 @@ static void oc_dering_block(unsigned char *_idata,int _ystride,int _b,
   for(by=0;by<8;by++){
     int a;
     int b;
-    int p;
-    int p1;
-    int a1;
+    int w;
     a=128;
     b=64;
-    p=src[0];
-    p1=*(src-!(_b&1));
-    a1=hmod[(bx<<3)+by];
-    a-=a1;
-    b+=a1*p1;
-    p1=psrc[0];
-    a1=vmod[(by<<3)+bx];
-    a-=a1;
-    b+=a1*p1;
-    p1=nsrc[0];
-    a1=vmod[(by+1<<3)+bx];
-    a-=a1;
-    b+=a1*p1;
-    p1=src[1];
-    a1=hmod[(bx+1<<3)+by];
-    a-=a1;
-    b+=a1*p1;
-    dst[0]=OC_CLAMP255(a*p+b>>7);
+    w=hmod[by];
+    a-=w;
+    b+=w**(src-!(_b&1));
+    w=vmod[(by<<3)];
+    a-=w;
+    b+=w*psrc[0];
+    w=vmod[(by+1<<3)];
+    a-=w;
+    b+=w*nsrc[0];
+    w=hmod[(1<<3)+by];
+    a-=w;
+    b+=w*src[1];
+    dst[0]=OC_CLAMP255(a*src[0]+b>>7);
     for(bx=1;bx<7;bx++){
       a=128;
       b=64;
-      p=src[bx];
-      p1=src[bx-1];
-      a1=hmod[(bx<<3)+by];
-      a-=a1;
-      b+=a1*p1;
-      p1=psrc[bx];
-      a1=vmod[(by<<3)+bx];
-      a-=a1;
-      b+=a1*p1;
-      p1=nsrc[bx];
-      a1=vmod[(by+1<<3)+bx];
-      a-=a1;
-      b+=a1*p1;
-      p1=src[bx+1];
-      a1=hmod[(bx+1<<3)+by];
-      a-=a1;
-      b+=a1*p1;
-      dst[bx]=OC_CLAMP255(a*p+b>>7);
+      w=hmod[(bx<<3)+by];
+      a-=w;
+      b+=w*src[bx-1];
+      w=vmod[(by<<3)+bx];
+      a-=w;
+      b+=w*psrc[bx];
+      w=vmod[(by+1<<3)+bx];
+      a-=w;
+      b+=w*nsrc[bx];
+      w=hmod[(bx+1<<3)+by];
+      a-=w;
+      b+=w*src[bx+1];
+      dst[bx]=OC_CLAMP255(a*src[bx]+b>>7);
     }
     a=128;
     b=64;
-    p=src[7];
-    p1=src[6];
-    a1=hmod[(bx<<3)+by];
-    a-=a1;
-    b+=a1*p1;
-    p1=psrc[7];
-    a1=vmod[(by<<3)+bx];
-    a-=a1;
-    b+=a1*p1;
-    p1=nsrc[7];
-    a1=vmod[(by+1<<3)+bx];
-    a-=a1;
-    b+=a1*p1;
-    p1=src[7+!(_b&2)];
-    a1=hmod[(bx+1<<3)+by];
-    a-=a1;
-    b+=a1*p1;
-    dst[7]=OC_CLAMP255(a*p+b>>7);
+    w=hmod[(7<<3)+by];
+    a-=w;
+    b+=w*src[6];
+    w=vmod[(by<<3)+7];
+    a-=w;
+    b+=w*psrc[7];
+    w=vmod[(by+1<<3)+7];
+    a-=w;
+    b+=w*nsrc[7];
+    w=hmod[(8<<3)+by];
+    a-=w;
+    b+=w*src[7+!(_b&2)];
+    dst[7]=OC_CLAMP255(a*src[7]+b>>7);
     dst+=_ystride;
     psrc=src;
     src=nsrc;
@@ -1845,7 +1735,7 @@ static void oc_dering_block(unsigned char *_idata,int _ystride,int _b,
 
 static void oc_dec_dering_frag_rows(oc_dec_ctx *_dec,th_img_plane *_img,
  int _pli,int _fragy0,int _fragy_end){
-  th_img_plane  *iplane;
+  th_img_plane      *iplane;
   oc_fragment_plane *fplane;
   oc_fragment       *frag;
   int               *variance;
@@ -1864,7 +1754,7 @@ static void oc_dec_dering_frag_rows(oc_dec_ctx *_dec,th_img_plane *_img,
   strong=_dec->pp_level>=(_pli?OC_PP_LEVEL_SDERINGC:OC_PP_LEVEL_SDERINGY);
   sthresh=_pli?OC_DERING_THRESH4:OC_DERING_THRESH3;
   y=_fragy0<<3;
-  idata=iplane->data+y*iplane->ystride;
+  idata=iplane->data+y*iplane->stride;
   y_end=_fragy_end<<3;
   for(;y<y_end;y+=8){
     for(x=0;x<iplane->width;x+=8){
@@ -1875,30 +1765,30 @@ static void oc_dec_dering_frag_rows(oc_dec_ctx *_dec,th_img_plane *_img,
       var=*variance;
       b=(x<=0)|(x+8>=iplane->width)<<1|(y<=0)<<2|(y+8>=iplane->height)<<3;
       if(strong&&var>sthresh){
-        oc_dering_block(idata+x,iplane->ystride,b,
+        oc_dering_block(idata+x,iplane->stride,b,
          _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],1);
-        if(_pli||(b&1)&&*(variance-1)>OC_DERING_THRESH4||
-         (b&2)&&variance[1]>OC_DERING_THRESH4||
-         (b&4)&&*(variance-fplane->nvfrags)>OC_DERING_THRESH4||
-         (b&8)&&variance[fplane->nvfrags]>OC_DERING_THRESH4){
-          oc_dering_block(idata+x,iplane->ystride,b,
+        if(_pli||!(b&1)&&*(variance-1)>OC_DERING_THRESH4||
+         !(b&2)&&variance[1]>OC_DERING_THRESH4||
+         !(b&4)&&*(variance-fplane->nvfrags)>OC_DERING_THRESH4||
+         !(b&8)&&variance[fplane->nvfrags]>OC_DERING_THRESH4){
+          oc_dering_block(idata+x,iplane->stride,b,
            _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],1);
-          oc_dering_block(idata+x,iplane->ystride,b,
+          oc_dering_block(idata+x,iplane->stride,b,
            _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],1);
         }
       }
       else if(var>OC_DERING_THRESH2){
-        oc_dering_block(idata+x,iplane->ystride,b,
+        oc_dering_block(idata+x,iplane->stride,b,
          _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],1);
       }
       else if(var>OC_DERING_THRESH1){
-        oc_dering_block(idata+x,iplane->ystride,b,
+        oc_dering_block(idata+x,iplane->stride,b,
          _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],0);
       }
       frag++;
       variance++;
     }
-    idata+=iplane->ystride<<3;
+    idata+=iplane->stride<<3;
   }
 }
 
@@ -1991,7 +1881,6 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
   /*A completely empty packet indicates a dropped frame and is treated exactly
      like an inter frame with no coded blocks.
     Only proceed if we have a non-empty packet.*/
-
   if(_op->bytes!=0){
     oc_dec_pipeline_state pipe;
     th_ycbcr_buffer       stripe_buf;
@@ -2000,7 +1889,7 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
     int                   pli;
     int                   notstart;
     int                   notdone;
-    oggpackB_readinit(&_dec->opb,_op->packet,_op->bytes);
+    theorapackB_readinit(&_dec->opb,_op->packet,_op->bytes);
     ret=oc_dec_frame_header_unpack(_dec);
     if(ret<0)return ret;
     /*Select a free buffer to use for the reconstructed version of this
@@ -2045,7 +1934,6 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
     }
     oc_dec_block_qis_unpack(_dec);
     oc_dec_residual_tokens_unpack(_dec);
-
     /*Update granule position.
       This must be done before the striped decode callbacks so that the
        application knows what to do with the frame data.*/
@@ -2155,7 +2043,6 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
       }
       notstart=1;
     }
-
     /*Finish filling in the reference frame borders.*/
     for(pli=0;pli<3;pli++)oc_state_borders_fill_caps(&_dec->state,refi,pli);
     /*Update the reference frame indices.*/

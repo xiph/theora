@@ -641,21 +641,21 @@ static int TQB (CP_INSTANCE *cpi, plane_state_t *ps, int mode, int fi, mv_t mv,
   /* collect rho metrics, quantize */
   {
     int i;
-    //quant_tables *qq = ps->qq[mode != CODE_INTRA];
+    quant_tables *qq = ps->qq[mode != CODE_INTRA];
     
     for(i=0;i<64;i++){
       int v = buffer[dezigzag_index[i]];
-      //int pos;
-      //int val = abs(buffer[ii])<<1;
-      //ogg_int16_t *qqq = (*qq)[i];
-      //for(pos=64;pos>0;pos--)
-      //if(val < qqq[pos-1])break;
+      int pos;
+      int val = abs(v)<<1;
+      ogg_int16_t *qqq = (*qq)[i];
+      for(pos=64;pos>0;pos--)
+      if(val < qqq[pos-1])break;
       
       /* rho-domain distribution */
-      //rho_count[pos]++;
+      rho_count[pos]++;
 
-      if((abs(v)<<1)>=dequant[i]){
-	int val = (((iq[i]>>15)*v) + (1<<15) + (((iq[i]&0x7fff)*v)>>15)) >>16;
+      if(val>=dequant[i]){
+	val = (((iq[i]>>15)*v) + (1<<15) + (((iq[i]&0x7fff)*v)>>15)) >>16;
 	data[i] = (val>511?511:(val<-511?-511:val));
 	nonzero=i;
       }else{
@@ -1132,10 +1132,10 @@ int PickModes(CP_INSTANCE *cpi, int recode){
     fr_finishsb(cpi,&fr);
   }
 
-  //for(i=1;i<65;i++)
-  //rho_count[i]+=rho_count[i-1];
+  for(i=1;i<65;i++)
+  rho_count[i]+=rho_count[i-1];
 
-  //memcpy(cpi->rho_count,rho_count,sizeof(rho_count));
+  memcpy(cpi->rho_count,rho_count,sizeof(rho_count));
   if(cpi->FrameType != KEY_FRAME){
     
     if(interbits>intrabits) return 1; /* short circuit */

@@ -6,7 +6,7 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
@@ -19,13 +19,9 @@
   Originally written by Rudolf Marek.*/
 #include "x86int.h"
 #include "../../internal.h"
+#include <stddef.h>
 
 #if defined(USE_ASM)
-
-static const __attribute__((aligned(8),used)) ogg_int64_t OC_V3=
- 0x0003000300030003LL;
-static const __attribute__((aligned(8),used)) ogg_int64_t OC_V4=
- 0x0004000400040004LL;
 
 static const __attribute__((aligned(8),used)) int OC_FZIG_ZAGMMX[64]={
    0, 8, 1, 2, 9,16,24,17,
@@ -40,9 +36,9 @@ static const __attribute__((aligned(8),used)) int OC_FZIG_ZAGMMX[64]={
 
 
 
-void oc_state_frag_recon_mmx(oc_theora_state *_state, oc_fragment *_frag,
-			     int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
-			     ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]){
+void oc_state_frag_recon_mmx(oc_theora_state *_state,oc_fragment *_frag,
+ int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
+ ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]){
   ogg_int16_t  __attribute__((aligned(8))) res_buf[64];
   int dst_framei;
   int dst_ystride;
@@ -150,27 +146,26 @@ void oc_state_frag_recon_mmx(oc_theora_state *_state, oc_fragment *_frag,
   }
   /*Fill in the target buffer.*/
   dst_framei=_state->ref_frame_idx[OC_FRAME_SELF];
-  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].ystride;
+  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].stride;
   /*For now ystride values in all ref frames assumed to be equal.*/
   if(_frag->mbmode==OC_MODE_INTRA){
-    oc_frag_recon_intra(_state,_frag->buffer[dst_framei],dst_ystride,res_buf);
+    oc_frag_recon_intra_mmx(_frag->buffer[dst_framei],dst_ystride,res_buf);
   }
   else{
     int ref_framei;
     int ref_ystride;
-    int mvoffset0;
-    int mvoffset1;
+    int mvoffsets[2];
     ref_framei=_state->ref_frame_idx[OC_FRAME_FOR_MODE[_frag->mbmode]];
-    ref_ystride=_state->ref_frame_bufs[ref_framei][_pli].ystride;
-    if(oc_state_get_mv_offsets(_state,&mvoffset0,&mvoffset1,_frag->mv[0],
-     _frag->mv[1],ref_ystride,_pli)>1){
-      oc_frag_recon_inter2(_state,_frag->buffer[dst_framei],dst_ystride,
-       _frag->buffer[ref_framei]+mvoffset0,ref_ystride,
-       _frag->buffer[ref_framei]+mvoffset1,ref_ystride,res_buf);
+    ref_ystride=_state->ref_frame_bufs[ref_framei][_pli].stride;
+    if(oc_state_get_mv_offsets(_state,mvoffsets,_frag->mv[0],_frag->mv[1],
+     ref_ystride,_pli)>1){
+      oc_frag_recon_inter2_mmx(_frag->buffer[dst_framei],dst_ystride,
+       _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,
+       _frag->buffer[ref_framei]+mvoffsets[1],ref_ystride,res_buf);
     }
     else{
-      oc_frag_recon_inter(_state,_frag->buffer[dst_framei],dst_ystride,
-       _frag->buffer[ref_framei]+mvoffset0,ref_ystride,res_buf);
+      oc_frag_recon_inter_mmx(_frag->buffer[dst_framei],dst_ystride,
+       _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,res_buf);
     }
   }
   oc_restore_fpu(_state);
@@ -188,26 +183,26 @@ void oc_state_frag_copy_mmx(const oc_theora_state *_state,const int *_fragis,
   const int *fragi;
   const int *fragi_end;
   int        dst_framei;
-  long       dst_ystride;
+  ptrdiff_t  dst_ystride;
   int        src_framei;
-  long       src_ystride;
+  ptrdiff_t  src_ystride;
   dst_framei=_state->ref_frame_idx[_dst_frame];
   src_framei=_state->ref_frame_idx[_src_frame];
-  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].ystride;
-  src_ystride=_state->ref_frame_bufs[src_framei][_pli].ystride;
+  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].stride;
+  src_ystride=_state->ref_frame_bufs[src_framei][_pli].stride;
   fragi_end=_fragis+_nfragis;
   for(fragi=_fragis;fragi<fragi_end;fragi++){
     oc_fragment   *frag;
     unsigned char *dst;
     unsigned char *src;
-    long           esi;
+    ptrdiff_t      s;
     frag=_state->frags+*fragi;
     dst=frag->buffer[dst_framei];
     src=frag->buffer[src_framei];
     __asm__ __volatile__(
       /*src+0*src_ystride*/
       "movq (%[src]),%%mm0\n\t"
-      /*esi=src_ystride*3*/
+      /*s=src_ystride*3*/
       "lea (%[src_ystride],%[src_ystride],2),%[s]\n\t"
       /*src+1*src_ystride*/
       "movq (%[src],%[src_ystride]),%%mm1\n\t"
@@ -217,7 +212,7 @@ void oc_state_frag_copy_mmx(const oc_theora_state *_state,const int *_fragis,
       "movq (%[src],%[s]),%%mm3\n\t"
       /*dst+0*dst_ystride*/
       "movq %%mm0,(%[dst])\n\t"
-      /*esi=dst_ystride*3*/
+      /*s=dst_ystride*3*/
       "lea (%[dst_ystride],%[dst_ystride],2),%[s]\n\t"
       /*dst+1*dst_ystride*/
       "movq %%mm1,(%[dst],%[dst_ystride])\n\t"
@@ -231,7 +226,7 @@ void oc_state_frag_copy_mmx(const oc_theora_state *_state,const int *_fragis,
       "lea (%[dst],%[dst_ystride],4),%[dst]\n\t"
       /*src+0*src_ystride*/
       "movq (%[src]),%%mm0\n\t"
-      /*esi=src_ystride*3*/
+      /*s=src_ystride*3*/
       "lea (%[src_ystride],%[src_ystride],2),%[s]\n\t"
       /*src+1*src_ystride*/
       "movq (%[src],%[src_ystride]),%%mm1\n\t"
@@ -241,7 +236,7 @@ void oc_state_frag_copy_mmx(const oc_theora_state *_state,const int *_fragis,
       "movq (%[src],%[s]),%%mm3\n\t"
       /*dst+0*dst_ystride*/
       "movq %%mm0,(%[dst])\n\t"
-      /*esi=dst_ystride*3*/
+      /*s=dst_ystride*3*/
       "lea (%[dst_ystride],%[dst_ystride],2),%[s]\n\t"
       /*dst+1*dst_ystride*/
       "movq %%mm1,(%[dst],%[dst_ystride])\n\t"
@@ -249,7 +244,7 @@ void oc_state_frag_copy_mmx(const oc_theora_state *_state,const int *_fragis,
       "movq %%mm2,(%[dst],%[dst_ystride],2)\n\t"
       /*dst+3*dst_ystride*/
       "movq %%mm3,(%[dst],%[s])\n\t"
-      :[s]"=&S"(esi)
+      :[s]"=&r"(s)
       :[dst]"r"(dst),[src]"r"(src),[dst_ystride]"r"(dst_ystride),
        [src_ystride]"r"(src_ystride)
       :"memory"
@@ -261,12 +256,12 @@ void oc_state_frag_copy_mmx(const oc_theora_state *_state,const int *_fragis,
 
 static void loop_filter_v(unsigned char *_pix,int _ystride,
  const ogg_int16_t *_ll){
-  long esi;
+  ptrdiff_t s;
   _pix-=_ystride*2;
   __asm__ __volatile__(
     /*mm0=0*/
     "pxor %%mm0,%%mm0\n\t"
-    /*esi=_ystride*3*/
+    /*s=_ystride*3*/
     "lea (%[ystride],%[ystride],2),%[s]\n\t"
     /*mm7=_pix[0...8]*/
     "movq (%[pix]),%%mm7\n\t"
@@ -297,19 +292,21 @@ static void loop_filter_v(unsigned char *_pix,int _ystride,
     "punpcklbw %%mm0,%%mm4\n\t"
     "punpckhbw %%mm0,%%mm3\n\t"
     "punpcklbw %%mm0,%%mm2\n\t"
-    /*Preload...*/
-    "movq %[OC_V3],%%mm0\n\t"
-    /*mm3:mm2=_pix[0...8+_ystride*2]-_pix[0...8+_ystride]*/
+    /*mm0=3 3 3 3
+      mm3:mm2=_pix[0...8+_ystride*2]-_pix[0...8+_ystride]*/
+    "pcmpeqw %%mm0,%%mm0\n\t"
     "psubw %%mm5,%%mm3\n\t"
+    "psrlw $14,%%mm0\n\t"
     "psubw %%mm4,%%mm2\n\t"
     /*Scale by 3.*/
     "pmullw %%mm0,%%mm3\n\t"
     "pmullw %%mm0,%%mm2\n\t"
-    /*Preload...*/
-    "movq %[OC_V4],%%mm0\n\t"
-    /*f=mm3:mm2==_pix[0...8]-_pix[0...8+_ystride*3]+
+    /*mm0=4 4 4 4
+      f=mm3:mm2==_pix[0...8]-_pix[0...8+_ystride*3]+
        3*(_pix[0...8+_ystride*2]-_pix[0...8+_ystride])*/
+    "psrlw $1,%%mm0\n\t"
     "paddw %%mm7,%%mm3\n\t"
+    "psllw $2,%%mm0\n\t"
     "paddw %%mm6,%%mm2\n\t"
     /*Add 4.*/
     "paddw %%mm0,%%mm3\n\t"
@@ -431,9 +428,8 @@ static void loop_filter_v(unsigned char *_pix,int _ystride,
     /*Write it back out.*/
     "movq %%mm4,(%[pix],%[ystride])\n\t"
     "movq %%mm1,(%[pix],%[ystride],2)\n\t"
-    :[s]"=&S"(esi)
-    :[pix]"r"(_pix),[ystride]"r"((long)_ystride),[ll]"r"(_ll),
-     [OC_V3]"m"(OC_V3),[OC_V4]"m"(OC_V4)
+    :[s]"=&r"(s)
+    :[pix]"r"(_pix),[ystride]"r"((ptrdiff_t)_ystride),[ll]"r"(_ll)
     :"memory"
   );
 }
@@ -442,14 +438,16 @@ static void loop_filter_v(unsigned char *_pix,int _ystride,
   Data are striped p0 p1 p2 p3 ... p0 p1 p2 p3 ..., so in order to load all
    four p0's to one register we must transpose the values in four mmx regs.
   When half is done we repeat this for the rest.*/
-static void loop_filter_h4(unsigned char *_pix,long _ystride,
+static void loop_filter_h4(unsigned char *_pix,ptrdiff_t _ystride,
  const ogg_int16_t *_ll){
-  long esi;
-  long edi;
+  ptrdiff_t s;
+  /*d doesn't technically need to be 64-bit on x86-64, but making it so will
+     help avoid partial register stalls.*/
+  ptrdiff_t d;
   __asm__ __volatile__(
     /*x x x x 3 2 1 0*/
     "movd (%[pix]),%%mm0\n\t"
-    /*esi=_ystride*3*/
+    /*s=_ystride*3*/
     "lea (%[ystride],%[ystride],2),%[s]\n\t"
     /*x x x x 7 6 5 4*/
     "movd (%[pix],%[ystride]),%%mm1\n\t"
@@ -484,14 +482,20 @@ static void loop_filter_h4(unsigned char *_pix,long _ystride,
     "psubw %%mm3,%%mm1\n\t"
     /*Save a copy of pix[2] for later.*/
     "movq %%mm0,%%mm4\n\t"
-    /*mm0=mm0-mm5==pix[2]-pix[1]*/
+    /*mm2=3 3 3 3
+      mm0=mm0-mm5==pix[2]-pix[1]*/
+    "pcmpeqw %%mm2,%%mm2\n\t"
     "psubw %%mm5,%%mm0\n\t"
+    "psrlw $14,%%mm2\n\t"
     /*Scale by 3.*/
-    "pmullw %[OC_V3],%%mm0\n\t"
-    /*f=mm1==_pix[0]-_pix[3]+ 3*(_pix[2]-_pix[1])*/
+    "pmullw %%mm2,%%mm0\n\t"
+    /*mm2=4 4 4 4
+      f=mm1==_pix[0]-_pix[3]+ 3*(_pix[2]-_pix[1])*/
+    "psrlw $1,%%mm2\n\t"
     "paddw %%mm1,%%mm0\n\t"
+    "psllw $2,%%mm2\n\t"
     /*Add 4.*/
-    "paddw %[OC_V4],%%mm0\n\t"
+    "paddw %%mm2,%%mm0\n\t"
     /*"Divide" by 8, producing the residuals R_i.*/
     "psraw $3,%%mm0\n\t"
     /*Now compute lflim of mm0 cf. Section 7.10 of the sepc.*/
@@ -556,21 +560,21 @@ static void loop_filter_h4(unsigned char *_pix,long _ystride,
     "packuswb %%mm7,%%mm4\n\t"
     /*mm5=E D A 9 6 5 2 1*/
     "punpcklbw %%mm4,%%mm5\n\t"
-    /*edi=6 5 2 1*/
-    "movd %%mm5,%%edi\n\t"
-    "movw %%di,1(%[pix])\n\t"
+    /*d=6 5 2 1*/
+    "movd %%mm5,%[d]\n\t"
+    "movw %w[d],1(%[pix])\n\t"
     /*Why is there such a big stall here?*/
     "psrlq $32,%%mm5\n\t"
-    "shrl $16,%%edi\n\t"
-    "movw %%di,1(%[pix],%[ystride])\n\t"
-    /*edi=E D A 9*/
-    "movd %%mm5,%%edi\n\t"
-    "movw %%di,1(%[pix],%[ystride],2)\n\t"
-    "shrl $16,%%edi\n\t"
-    "movw %%di,1(%[pix],%[s])\n\t"
-    :[s]"=&S"(esi),[d]"=&D"(edi),
+    "shr $16,%[d]\n\t"
+    "movw %w[d],1(%[pix],%[ystride])\n\t"
+    /*d=E D A 9*/
+    "movd %%mm5,%[d]\n\t"
+    "movw %w[d],1(%[pix],%[ystride],2)\n\t"
+    "shr $16,%[d]\n\t"
+    "movw %w[d],1(%[pix],%[s])\n\t"
+    :[s]"=&r"(s),[d]"=&r"(d),
      [pix]"+r"(_pix),[ystride]"+r"(_ystride),[ll]"+r"(_ll)
-    :[OC_V3]"m"(OC_V3),[OC_V4]"m"(OC_V4)
+    :
     :"memory"
   );
 }
@@ -584,8 +588,8 @@ static void loop_filter_h(unsigned char *_pix,int _ystride,
 
 /*We copy the whole function because the MMX routines will be inlined 4 times,
    and we can do just a single emms call at the end this way.
-  We also do not utilize the _bv lookup table, instead computing the values
-   that would lie in it on the fly.*/
+  We also do not use the _bv lookup table, instead computing the values that
+   would lie in it on the fly.*/
 
 /*Apply the loop filter to a given set of fragment rows in the given plane.
   The filter may be run on the bottom edge, affecting pixels in the next row of
@@ -625,17 +629,17 @@ void oc_state_loop_filter_frag_rows_mmx(oc_theora_state *_state,int *_bv,
     while(frag<frag_end){
       if(frag->coded){
         if(frag>frag0){
-          loop_filter_h(frag->buffer[_refi],iplane->ystride,ll);
+          loop_filter_h(frag->buffer[_refi],iplane->stride,ll);
         }
         if(frag0>frag_top){
-          loop_filter_v(frag->buffer[_refi],iplane->ystride,ll);
+          loop_filter_v(frag->buffer[_refi],iplane->stride,ll);
         }
         if(frag+1<frag_end&&!(frag+1)->coded){
-          loop_filter_h(frag->buffer[_refi]+8,iplane->ystride,ll);
+          loop_filter_h(frag->buffer[_refi]+8,iplane->stride,ll);
         }
         if(frag+fplane->nhfrags<frag_bot&&!(frag+fplane->nhfrags)->coded){
           loop_filter_v((frag+fplane->nhfrags)->buffer[_refi],
-           iplane->ystride,ll);
+           iplane->stride,ll);
         }
       }
       frag++;

@@ -6,7 +6,7 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
@@ -354,8 +354,8 @@ void oc_ycbcr_buffer_flip(th_ycbcr_buffer _dst,
   for(pli=0;pli<3;pli++){
     _dst[pli].width=_src[pli].width;
     _dst[pli].height=_src[pli].height;
-    _dst[pli].ystride=-_src[pli].ystride;
-    _dst[pli].data=_src[pli].data+(1-_dst[pli].height)*_dst[pli].ystride;
+    _dst[pli].stride=-_src[pli].stride;
+    _dst[pli].data=_src[pli].data+(1-_dst[pli].height)*_dst[pli].stride;
   }
 }
 
@@ -381,4 +381,3 @@ int th_packet_isheader(ogg_packet *_op){
 int th_packet_iskeyframe(ogg_packet *_op){
   return _op->bytes<=0?0:_op->packet[0]&0x80?-1:!(_op->packet[0]&0x40);
 }
-

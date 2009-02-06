@@ -171,6 +171,8 @@ int theora_encode_init(theora_state *th, theora_info *c){
   cpi->readyflag = 1;
   
   cpi->HeadersWritten = 0;
+  /*We overload this flag to track header output.*/
+  cpi->doneflag=-3;
 
   return 0;
 }

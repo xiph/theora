@@ -1,8 +1,8 @@
-INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/lib -I$(top_srcdir)/lib/dec -I$(top_srcdir)/lib/enc
+INCLUDES = -I$(top_srcdir)/include
 AM_CFLAGS = $(OGG_CFLAGS) $(CAIRO_CFLAGS)
-LIBADD = $(OGG_LIBS) 
 
 EXTRA_DIST = \
+	cpu.c \
         enc/x86/dct_decode_mmx.c \
         enc/x86/dsp_mmx.c \
         enc/x86/dsp_mmxext.c \
@@ -14,12 +14,14 @@ EXTRA_DIST = \
         enc/x86_32_vs/recon_mmx.c \
         enc/dct_encode.c \
         enc/encode.c \
-        enc/encoder_toplevel.c
+        enc/encoder_toplevel.c \
+        dec/x86_vc
 
 lib_LTLIBRARIES = libtheoradec.la libtheoraenc.la libtheora.la
 
 if THEORA_DISABLE_ENCODE
 encoder_sources = \
+	enc/encapiwrapper.c \
 	enc/encoder_disabled.c
 else
 encoder_sources = \
@@ -29,6 +31,7 @@ encoder_sources = \
 	enc/encoder_idct.c \
 	enc/encoder_toplevel.c \
 	enc/encoder_quant.c \
+	enc/encapiwrapper.c \
 	enc/dct.c \
 	enc/dct_decode.c \
 	enc/frarray.c \
@@ -58,6 +61,7 @@ endif
 
 decoder_sources = \
 	dec/apiwrapper.c \
+	dec/bitpack.c \
 	dec/decapiwrapper.c \
 	dec/decinfo.c \
 	dec/decode.c \
@@ -97,10 +101,10 @@ noinst_HEADERS = \
 	enc/toplevel_lookup.h \
 	enc/dsp.h \
 	dec/apiwrapper.h \
+	dec/bitpack.h \
 	dec/dct.h \
 	dec/decint.h \
 	dec/dequant.h \
-	dec/enquant.h \
 	dec/huffdec.h \
 	dec/huffman.h \
 	dec/idct.h \
@@ -109,7 +113,6 @@ noinst_HEADERS = \
 	dec/x86/x86int.h
 
 libtheoradec_la_SOURCES = \
-  cpu.c \
 	$(decoder_arch_sources) \
 	$(decoder_sources) \
   Version_script-dec
@@ -118,24 +121,22 @@ libtheoradec_la_LDFLAGS = \
   @THEORADEC_LDFLAGS@ @CAIRO_LIBS@
 
 libtheoraenc_la_SOURCES = \
-  cpu.c \
 	$(encoder_arch_sources) \
 	$(encoder_sources) \
   Version_script-enc
 libtheoraenc_la_LDFLAGS = \
   -version-info @THENC_LIB_CURRENT@:@THENC_LIB_REVISION@:@THENC_LIB_AGE@ \
-  @THEORAENC_LDFLAGS@
+  @THEORAENC_LDFLAGS@ $(OGG_LIBS)
 
 libtheora_la_SOURCES = \
-  cpu.c \
 	$(decoder_arch_sources) \
 	$(decoder_sources) \
 	$(encoder_arch_sources) \
 	$(encoder_sources) \
-  Version_script-old
+  Version_script
 libtheora_la_LDFLAGS = \
   -version-info @TH_LIB_CURRENT@:@TH_LIB_REVISION@:@TH_LIB_AGE@ \
-  @THEORA_LDFLAGS@ @CAIRO_LIBS@
+  @THEORA_LDFLAGS@ @CAIRO_LIBS@ $(OGG_LIBS)
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@" 

@@ -6,7 +6,7 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
@@ -347,16 +347,16 @@ int main(int argc,char *const *argv){
   /* install signal handler */
   signal (SIGINT, sigint_handler);
 
-  /* Finally the main decode loop. 
+  /* Finally the main decode loop.
 
-     It's one Theora packet per frame, so this is pretty 
+     It's one Theora packet per frame, so this is pretty
      straightforward if we're not trying to maintain sync
      with other multiplexed streams.
 
      the videobuf_ready flag is used to maintain the input
      buffer in the libogg stream state. If there's no output
      frame available at the end of the decode step, we must
-     need more input data. We could simplify this by just 
+     need more input data. We could simplify this by just
      using the return code on ogg_page_packetout(), but the
      flag system extends easily to the case were you care
      about more than one multiplexed stream (like with audio

@@ -6,7 +6,7 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
@@ -16,6 +16,9 @@
 
  ********************************************************************/
 
+#if !defined(_REENTRANT)
+#define _REENTRANT
+#endif
 #if !defined(_GNU_SOURCE)
 #define _GNU_SOURCE
 #endif
@@ -29,22 +32,8 @@
 #define _FILE_OFFSET_BITS 64
 #endif
 
-/* Define to give performance data win32 only*/
-//#define THEORA_PERF_DATA 
-#ifdef THEORA_PERF_DATA
-#include <windows.h>
-#endif
-
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#ifndef _REENTRANT
-# define _REENTRANT
-#endif
-
 #include <stdio.h>
-#ifndef _WIN32
+#if !defined(_WIN32)
 #include <getopt.h>
 #include <unistd.h>
 #else
@@ -56,14 +45,14 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
-#include "theora/theora.h"
+#include "theora/theoraenc.h"
 #include "vorbis/codec.h"
 #include "vorbis/vorbisenc.h"
 
 #ifdef _WIN32
-/* supply missing headers and functions to Win32 */
-
+/*supply missing headers and functions to Win32. going to hell, I know*/
 #include <fcntl.h>
+#include <io.h>
 
 static double rint(double x)
 {
@@ -74,22 +63,18 @@ static double rint(double x)
 }
 #endif
 
-const char *optstring = "b:e:o:a:A:v:V:s:S:f:F:n:m:k:";
+const char *optstring = "o:a:A:v:V:s:S:f:F:c";
 struct option options [] = {
-  {"begin-time",required_argument,NULL,'b'},
-  {"end-time",required_argument,NULL,'e'},
   {"output",required_argument,NULL,'o'},
   {"audio-rate-target",required_argument,NULL,'A'},
   {"video-rate-target",required_argument,NULL,'V'},
   {"audio-quality",required_argument,NULL,'a'},
   {"video-quality",required_argument,NULL,'v'},
-  {"aspect-numerator",optional_argument,NULL,'s'},
-  {"aspect-denominator",optional_argument,NULL,'S'},
-  {"framerate-numerator",optional_argument,NULL,'f'},
-  {"framerate-denominator",optional_argument,NULL,'F'},
-  {"noise-sensitivity",required_argument,NULL,'n'},
-  {"sharpness",required_argument,NULL,'m'},
-  {"keyframe-freq",required_argument,NULL,'k'},
+  {"aspect-numerator",required_argument,NULL,'s'},
+  {"aspect-denominator",required_argument,NULL,'S'},
+  {"framerate-numerator",required_argument,NULL,'f'},
+  {"framerate-denominator",required_argument,NULL,'F'},
+  {"vp3-compatible",no_argument,NULL,'c'},
   {NULL,0,NULL,0}
 };
 
@@ -103,28 +88,41 @@ int audio_hz=0;
 
 float audio_q=.1;
 int audio_r=-1;
+int vp3_compatible=0;
 
-int video_x=0;
-int video_y=0;
-int frame_x=0;
-int frame_y=0;
-int frame_x_offset=0;
-int frame_y_offset=0;
-int video_hzn=-1;
-int video_hzd=-1;
-int video_an=-1;
-int video_ad=-1;
+int frame_w=0;
+int frame_h=0;
+int pic_w=0;
+int pic_h=0;
+int pic_x=0;
+int pic_y=0;
+int video_fps_n=-1;
+int video_fps_d=-1;
+int video_par_n=-1;
+int video_par_d=-1;
+char interlace;
+int src_c_dec_h=2;
+int src_c_dec_v=2;
+int dst_c_dec_h=2;
+int dst_c_dec_v=2;
+char chroma_type[16];
+
+/*The size of each converted frame buffer.*/
+size_t y4m_dst_buf_sz;
+/*The amount to read directly into the converted frame buffer.*/
+size_t y4m_dst_buf_read_sz;
+/*The size of the auxilliary buffer.*/
+size_t y4m_aux_buf_sz;
+/*The amount to read into the auxilliary buffer.*/
+size_t y4m_aux_buf_read_sz;
+
+/*The function used perform chroma conversion.*/
+typedef void (*y4m_convert_func)(unsigned char *_dst,unsigned char *_aux);
+
+y4m_convert_func y4m_convert=NULL;
 
 int video_r=-1;
-int video_q=16;
-int noise_sensitivity=1;
-int sharpness=0;
-int keyframe_frequency=64;
-
-long begin_sec=-1;
-long begin_usec=0;
-long end_sec=-1;
-long end_usec=0;
+int video_q=48;
 
 static void usage(void){
   fprintf(stderr,
@@ -157,31 +155,496 @@ static void usage(void){
           "                                 from YUV input file. ex: 1000000\n"
           "                                 The frame rate nominator divided by this\n"
           "                                 determinates the frame rate in units per tick\n"
-          "   -n --noise-sensitivity <n>    Theora noise sensitivity selector from 0\n"
-          "                                 to 6 (0 yields best quality but larger\n"
-          "                                 files, defaults to 1)\n"
-          "   -m --sharpness <n>            Theora sharpness selector from 0 to 2\n"
-          "                                 (0 yields crispest video at the cost of\n"
-          "                                 larger files, selecting 2 can greatly\n"
-          "                                 reduce file size but resulting video\n"
-          "                                 is blurrier, defaults to 0)\n"
-          "   -k --keyframe-freq <n>        Keyframe frequency from 8 to 1000\n"
-	  "   -b --begin-time <h:m:s.f>     Begin encoding at offset into input\n"
-	  "   -e --end-time <h:m:s.f>       End encoding at offset into input\n"
           "encoder_example accepts only uncompressed RIFF WAV format audio and\n"
           "YUV4MPEG2 uncompressed video.\n\n");
   exit(1);
+}
+
+static int y4m_parse_tags(char *_tags){
+  int   got_w;
+  int   got_h;
+  int   got_fps;
+  int   got_interlace;
+  int   got_par;
+  int   got_chroma;
+  int   tmp_video_fps_n;
+  int   tmp_video_fps_d;
+  int   tmp_video_par_n;
+  int   tmp_video_par_d;
+  char *p;
+  char *q;
+  got_w=got_h=got_fps=got_interlace=got_par=got_chroma=0;
+  for(p=_tags;;p=q){
+    /*Skip any leading spaces.*/
+    while(*p==' ')p++;
+    /*If that's all we have, stop.*/
+    if(p[0]=='\0')break;
+    /*Find the end of this tag.*/
+    for(q=p+1;*q!='\0'&&*q!=' ';q++);
+    /*Process the tag.*/
+    switch(p[0]){
+      case 'W':{
+        if(sscanf(p+1,"%d",&pic_w)!=1)return -1;
+        got_w=1;
+      }break;
+      case 'H':{
+        if(sscanf(p+1,"%d",&pic_h)!=1)return -1;
+        got_h=1;
+      }break;
+      case 'F':{
+        if(sscanf(p+1,"%d:%d",&tmp_video_fps_n,&tmp_video_fps_d)!=2)return -1;
+        got_fps=1;
+      }break;
+      case 'I':{
+        interlace=p[1];
+        got_interlace=1;
+      }break;
+      case 'A':{
+        if(sscanf(p+1,"%d:%d",&tmp_video_par_n,&tmp_video_par_d)!=2)return -1;
+        got_par=1;
+      }break;
+      case 'C':{
+        if(q-p>16)return -1;
+        memcpy(chroma_type,p+1,q-p-1);
+        chroma_type[q-p-1]='\0';
+        got_chroma=1;
+      }break;
+      /*Ignore unknown tags.*/
+    }
+  }
+  if(!got_w||!got_h||!got_fps||!got_interlace||!got_par)return -1;
+  /*Chroma-type is not specified in older files, e.g., those generated by
+     mplayer.*/
+  if(!got_chroma)strcpy(chroma_type,"420");
+  /*Update fps and aspect ratio globals if not specified in the command line.*/
+  if(video_fps_n==-1)video_fps_n=tmp_video_fps_n;
+  if(video_fps_d==-1)video_fps_d=tmp_video_fps_d;
+  if(video_par_n==-1)video_par_n=tmp_video_par_n;
+  if(video_par_d==-1)video_par_d=tmp_video_par_d;
+  return 0;
+}
+
+/*All anti-aliasing filters in the following conversion functions are based on
+   one of two window functions:
+  The 6-tap Lanczos window (for down-sampling and shifts):
+   sinc(\pi*t)*sinc(\pi*t/3), |t|<3  (sinc(t)==sin(t)/t)
+   0,                         |t|>=3
+  The 4-tap Mitchell window (for up-sampling):
+   7|t|^3-12|t|^2+16/3,             |t|<1
+   -(7/3)|x|^3+12|x|^2-20|x|+32/3,  |t|<2
+   0,                               |t|>=2
+  The number of taps is intentionally kept small to reduce computational
+   overhead and limit ringing.
+
+  The taps from these filters are scaled so that their sum is 1, and the result
+   is scaled by 128 and rounded to integers to create a filter whose
+   intermediate values fit inside 16 bits.
+  Coefficients are rounded in such a way as to ensure their sum is still 128,
+   which is usually equivalent to normal rounding.*/
+
+#define OC_MINI(_a,_b)      ((_a)>(_b)?(_b):(_a))
+#define OC_MAXI(_a,_b)      ((_a)<(_b)?(_b):(_a))
+#define OC_CLAMPI(_a,_b,_c) (OC_MAXI(_a,OC_MINI(_b,_c)))
+
+/*420jpeg chroma samples are sited like:
+  Y-------Y-------Y-------Y-------
+  |       |       |       |
+  |   BR  |       |   BR  |
+  |       |       |       |
+  Y-------Y-------Y-------Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+  Y-------Y-------Y-------Y-------
+  |       |       |       |
+  |   BR  |       |   BR  |
+  |       |       |       |
+  Y-------Y-------Y-------Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+
+  420mpeg2 chroma samples are sited like:
+  Y-------Y-------Y-------Y-------
+  |       |       |       |
+  BR      |       BR      |
+  |       |       |       |
+  Y-------Y-------Y-------Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+  Y-------Y-------Y-------Y-------
+  |       |       |       |
+  BR      |       BR      |
+  |       |       |       |
+  Y-------Y-------Y-------Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+
+  We use a resampling filter to shift the site locations one quarter pixel (at
+   the chroma plane's resolution) to the right.
+  The 4:2:2 modes look exactly the same, except there are twice as many chroma
+   lines, and they are vertically co-sited with the luma samples in both the
+   mpeg2 and jpeg cases (thus requiring no vertical resampling).*/
+static void y4m_convert_42xmpeg2_42xjpeg(unsigned char *_dst,
+ unsigned char *_aux){
+  int c_w;
+  int c_h;
+  int pli;
+  int y;
+  int x;
+  /*Skip past the luma data.*/
+  _dst+=pic_w*pic_h;
+  /*Compute the size of each chroma plane.*/
+  c_w=(pic_w+dst_c_dec_h-1)/dst_c_dec_h;
+  c_h=(pic_h+dst_c_dec_v-1)/dst_c_dec_v;
+  for(pli=1;pli<3;pli++){
+    for(y=0;y<c_h;y++){
+      /*Filter: [4 -17 114 35 -9 1]/128, derived from a 6-tap Lanczos
+         window.*/
+      for(x=0;x<OC_MINI(c_w,2);x++){
+        _dst[x]=(unsigned char)OC_CLAMPI(0,4*_aux[0]-17*_aux[OC_MAXI(x-1,0)]+
+         114*_aux[x]+35*_aux[OC_MINI(x+1,c_w-1)]-9*_aux[OC_MINI(x+2,c_w-1)]+
+         _aux[OC_MINI(x+3,c_w-1)]+64>>7,255);
+      }
+      for(;x<c_w-3;x++){
+        _dst[x]=(unsigned char)OC_CLAMPI(0,4*_aux[x-2]-17*_aux[x-1]+
+         114*_aux[x]+35*_aux[x+1]-9*_aux[x+2]+_aux[x+3]+64>>7,255);
+      }
+      for(;x<c_w;x++){
+        _dst[x]=(unsigned char)OC_CLAMPI(0,4*_aux[x-2]-17*_aux[x-1]+
+         114*_aux[x]+35*_aux[OC_MINI(x+1,c_w-1)]-9*_aux[OC_MINI(x+2,c_w-1)]+
+         _aux[c_w-1]+64>>7,255);
+      }
+      _dst+=c_w;
+      _aux+=c_w;
+    }
+  }
+}
+
+/*This format is only used for interlaced content, but is included for
+   completeness.
+
+  420jpeg chroma samples are sited like:
+  Y-------Y-------Y-------Y-------
+  |       |       |       |
+  |   BR  |       |   BR  |
+  |       |       |       |
+  Y-------Y-------Y-------Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+  Y-------Y-------Y-------Y-------
+  |       |       |       |
+  |   BR  |       |   BR  |
+  |       |       |       |
+  Y-------Y-------Y-------Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+
+  420paldv chroma samples are sited like:
+  YR------Y-------YR------Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+  YB------Y-------YB------Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+  YR------Y-------YR------Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+  YB------Y-------YB------Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+
+  We use a resampling filter to shift the site locations one quarter pixel (at
+   the chroma plane's resolution) to the right.
+  Then we use another filter to move the C_r location down one quarter pixel,
+   and the C_b location up one quarter pixel.*/
+static void y4m_convert_42xpaldv_42xjpeg(unsigned char *_dst,
+ unsigned char *_aux){
+  unsigned char *tmp;
+  int            c_w;
+  int            c_h;
+  int            c_sz;
+  int            pli;
+  int            y;
+  int            x;
+  /*Skip past the luma data.*/
+  _dst+=pic_w*pic_h;
+  /*Compute the size of each chroma plane.*/
+  c_w=(pic_w+1)/2;
+  c_h=(pic_h+dst_c_dec_h-1)/dst_c_dec_h;
+  c_sz=c_w*c_h;
+  /*First do the horizontal re-sampling.
+    This is the same as the mpeg2 case, except that after the horizontal case,
+     we need to apply a second vertical filter.*/
+  tmp=_aux+2*c_sz;
+  for(pli=1;pli<3;pli++){
+    for(y=0;y<c_h;y++){
+      /*Filter: [4 -17 114 35 -9 1]/128, derived from a 6-tap Lanczos
+         window.*/
+      for(x=0;x<OC_MINI(c_w,2);x++){
+        tmp[x]=(unsigned char)OC_CLAMPI(0,4*_aux[0]-17*_aux[OC_MAXI(x-1,0)]+
+         114*_aux[x]+35*_aux[OC_MINI(x+1,c_w-1)]-9*_aux[OC_MINI(x+2,c_w-1)]+
+         _aux[OC_MINI(x+3,c_w-1)]+64>>7,255);
+      }
+      for(;x<c_w-3;x++){
+        tmp[x]=(unsigned char)OC_CLAMPI(0,4*_aux[x-2]-17*_aux[x-1]+
+         114*_aux[x]+35*_aux[x+1]-9*_aux[x+2]+_aux[x+3]+64>>7,255);
+      }
+      for(;x<c_w;x++){
+        tmp[x]=(unsigned char)OC_CLAMPI(0,4*_aux[x-2]-17*_aux[x-1]+
+         114*_aux[x]+35*_aux[OC_MINI(x+1,c_w-1)]-9*_aux[OC_MINI(x+2,c_w-1)]+
+         _aux[c_w-1]+64>>7,255);
+      }
+      tmp+=c_w;
+      _aux+=c_w;
+    }
+    switch(pli){
+      case 1:{
+        tmp-=c_sz;
+        /*Slide C_b up a quarter-pel.
+          This is the same filter used above, but in the other order.*/
+        for(x=0;x<c_w;x++){
+          for(y=0;y<OC_MINI(c_h,3);y++){
+            _dst[y*c_w]=(unsigned char)OC_CLAMPI(0,tmp[0]-
+             9*tmp[OC_MAXI(y-2,0)*c_w]+35*tmp[OC_MAXI(y-1,0)*c_w]+
+             114*tmp[y*c_w]-17*tmp[OC_MINI(y+1,c_h-1)*c_w]+
+             4*tmp[OC_MINI(y+2,c_h-1)*c_w]+64>>7,255);
+          }
+          for(;y<c_h-2;y++){
+            _dst[y*c_w]=(unsigned char)OC_CLAMPI(0,tmp[(y-3)*c_w]-
+             9*tmp[(y-2)*c_w]+35*tmp[(y-1)*c_w]+114*tmp[y*c_w]-
+             17*tmp[(y+1)*c_w]+4*tmp[(y+2)*c_w]+64>>7,255);
+          }
+          for(;y<c_h;y++){
+            _dst[y*c_w]=(unsigned char)OC_CLAMPI(0,tmp[(y-3)*c_w]-
+             9*tmp[(y-2)*c_w]+35*tmp[(y-1)*c_w]+114*tmp[y*c_w]-
+             17*tmp[OC_MINI(y+1,c_h-1)*c_w]+4*tmp[(c_h-1)*c_w]+64>>7,255);
+          }
+          _dst++;
+          tmp++;
+        }
+        _dst+=c_sz-c_w;
+        tmp-=c_w;
+      }break;
+      case 2:{
+        tmp-=c_sz;
+        /*Slide C_r down a quarter-pel.
+          This is the same as the horizontal filter.*/
+        for(x=0;x<c_w;x++){
+          for(y=0;y<OC_MINI(c_h,2);y++){
+            _dst[y*c_w]=(unsigned char)OC_CLAMPI(0,4*tmp[0]-
+             17*tmp[OC_MAXI(y-1,0)*c_w]+114*tmp[y*c_w]+
+             35*tmp[OC_MINI(y+1,c_h-1)*c_w]-9*tmp[OC_MINI(y+2,c_h-1)*c_w]+
+             tmp[OC_MINI(y+3,c_h-1)*c_w]+64>>7,255);
+          }
+          for(;y<c_h-3;y++){
+            _dst[y*c_w]=(unsigned char)OC_CLAMPI(0,4*tmp[(y-2)*c_w]-
+             17*tmp[(y-1)*c_w]+114*tmp[y*c_w]+35*tmp[(y+1)*c_w]-
+             9*tmp[(y+2)*c_w]+tmp[(y+3)*c_w]+64>>7,255);
+          }
+          for(;y<c_h;y++){
+            _dst[y*c_w]=(unsigned char)OC_CLAMPI(0,4*tmp[(y-2)*c_w]-
+             17*tmp[(y-1)*c_w]+114*tmp[y*c_w]+35*tmp[OC_MINI(y+1,c_h-1)*c_w]-
+             9*tmp[OC_MINI(y+2,c_h-1)*c_w]+tmp[(c_h-1)*c_w]+64>>7,255);
+          }
+          _dst++;
+          tmp++;
+        }
+      }break;
+    }
+    /*For actual interlaced material, this would have to be done separately on
+       each field, and the shift amounts would be different.
+      C_r moves down 1/8, C_b up 3/8 in the top field, and C_r moves down 3/8,
+       C_b up 1/8 in the bottom field.
+      The corresponding filters would be:
+       Down 1/8 (reverse order for up): [3 -11 125 15 -4 0]/128
+       Down 3/8 (reverse order for up): [4 -19 98 56 -13 2]/128*/
+  }
+}
+
+/*422jpeg chroma samples are sited like:
+  Y---BR--Y-------Y---BR--Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+  Y---BR--Y-------Y---BR--Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+  Y---BR--Y-------Y---BR--Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+  Y---BR--Y-------Y---BR--Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+
+  411 chroma samples are sited like:
+  YBR-----Y-------Y-------Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+  YBR-----Y-------Y-------Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+  YBR-----Y-------Y-------Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+  YBR-----Y-------Y-------Y-------
+  |       |       |       |
+  |       |       |       |
+  |       |       |       |
+
+  We use a filter to resample at site locations one eighth pixel (at the source
+   chroma plane's horizontal resolution) and five eighths of a pixel to the
+   right.*/
+static void y4m_convert_411_422jpeg(unsigned char *_dst,
+ unsigned char *_aux){
+  int c_w;
+  int dst_c_w;
+  int c_h;
+  int pli;
+  int y;
+  int x;
+  /*Skip past the luma data.*/
+  _dst+=pic_w*pic_h;
+  /*Compute the size of each chroma plane.*/
+  c_w=(pic_w+src_c_dec_h-1)/src_c_dec_h;
+  dst_c_w=(pic_w+dst_c_dec_h-1)/dst_c_dec_h;
+  c_h=(pic_h+dst_c_dec_v-1)/dst_c_dec_v;
+  for(pli=1;pli<3;pli++){
+    for(y=0;y<c_h;y++){
+      /*Filters: [1 110 18 -1]/128 and [-3 50 86 -5]/128, both derived from a
+         4-tap Mitchell window.*/
+      for(x=0;x<OC_MINI(c_w,1);x++){
+        _dst[x<<1]=(unsigned char)OC_CLAMPI(0,111*_aux[0]+
+         18*_aux[OC_MINI(1,c_w-1)]-_aux[OC_MINI(2,c_w-1)]+64>>7,255);
+        _dst[x<<1|1]=(unsigned char)OC_CLAMPI(0,47*_aux[0]+
+         86*_aux[OC_MINI(1,c_w-1)]-5*_aux[OC_MINI(2,c_w-1)]+64>>7,255);
+      }
+      for(;x<c_w-2;x++){
+        _dst[x<<1]=(unsigned char)OC_CLAMPI(0,_aux[x-1]+110*_aux[x]+
+         18*_aux[x+1]-_aux[x+2]+64>>7,255);
+        _dst[x<<1|1]=(unsigned char)OC_CLAMPI(0,-3*_aux[x-1]+50*_aux[x]+
+         86*_aux[x+1]-5*_aux[x+2]+64>>7,255);
+      }
+      for(;x<c_w;x++){
+        _dst[x<<1]=(unsigned char)OC_CLAMPI(0,_aux[x-1]+110*_aux[x]+
+         18*_aux[OC_MINI(x+1,c_w-1)]-_aux[c_w-1]+64>>7,255);
+        if((x<<1|1)<dst_c_w){
+          _dst[x<<1|1]=(unsigned char)OC_CLAMPI(0,-3*_aux[x-1]+50*_aux[x]+
+           86*_aux[OC_MINI(x+1,c_w-1)]-5*_aux[c_w-1]+64>>7,255);
+        }
+      }
+      _dst+=dst_c_w;
+      _aux+=c_w;
+    }
+  }
+}
+
+/*The image is padded with empty chroma components at 4:2:0.
+  This costs about 17 bits a frame to code.*/
+static void y4m_convert_mono_420jpeg(unsigned char *_dst,
+ unsigned char *_aux){
+  int c_sz;
+  _dst+=pic_w*pic_h;
+  c_sz=((pic_w+dst_c_dec_h-1)/dst_c_dec_h)*((pic_h+dst_c_dec_v-1)/dst_c_dec_v);
+  memset(_dst,128,c_sz*2);
+}
+
+#if 0
+/*Right now just 444 to 420.
+  Not too hard to generalize.*/
+static void y4m_convert_4xxjpeg_42xjpeg(unsigned char *_dst,
+ unsigned char *_aux){
+  unsigned char *tmp;
+  int            c_w;
+  int            c_h;
+  int            pic_sz;
+  int            tmp_sz;
+  int            c_sz;
+  int            pli;
+  int            y;
+  int            x;
+  /*Compute the size of each chroma plane.*/
+  c_w=(pic_w+dst_c_dec_h-1)/dst_c_dec_h;
+  c_h=(pic_h+dst_c_dec_v-1)/dst_c_dec_v;
+  pic_sz=pic_w*pic_h;
+  tmp_sz=c_w*pic_h;
+  c_sz=c_w*c_h;
+  _dst+=pic_sz;
+  for(pli=1;pli<3;pli++){
+    tmp=_aux+pic_sz;
+    /*In reality, the horizontal and vertical steps could be pipelined, for
+       less memory consumption and better cache performance, but we do them
+       separately for simplicity.*/
+    /*First do horizontal filtering (convert to 4:2:2)*/
+    /*Filter: [3 -17 78 78 -17 3]/128, derived from a 6-tap Lanczos window.*/
+    for(y=0;y<pic_h;y++){
+      for(x=0;x<OC_MINI(pic_w,2);x+=2){
+        tmp[x>>1]=OC_CLAMPI(0,64*_aux[0]+78*_aux[OC_MINI(1,pic_w-1)]-
+         17*_aux[OC_MINI(2,pic_w-1)]+3*_aux[OC_MINI(3,pic_w-1)]+64>>7,255);
+      }
+      for(;x<pic_w-3;x+=2){
+        tmp[x>>1]=OC_CLAMPI(0,3*(_aux[x-2]+_aux[x+3])-17*(_aux[x-1]+_aux[x+2])+
+         78*(_aux[x]+_aux[x+1])+64>>7,255);
+      }
+      for(;x<pic_w;x+=2){
+        tmp[x>>1]=OC_CLAMPI(0,3*(_aux[x-2]+_aux[pic_w-1])-
+         17*(_aux[x-1]+_aux[OC_MINI(x+2,pic_w-1)])+
+         78*(_aux[x]+_aux[OC_MINI(x+1,pic_w-1)])+64>>7,255);
+      }
+      tmp+=c_w;
+      _aux+=pic_w;
+    }
+    _aux-=pic_sz;
+    tmp-=tmp_sz;
+    /*Now do the vertical filtering.*/
+    for(x=0;x<c_w;x++){
+      for(y=0;y<OC_MINI(pic_h,2);y+=2){
+        _dst[(y>>1)*c_w]=OC_CLAMPI(0,64*tmp[0]+78*tmp[OC_MINI(1,pic_h-1)*c_w]-
+         17*tmp[OC_MINI(2,pic_h-1)*c_w]+3*tmp[OC_MINI(3,pic_h-1)*c_w]+
+         64>>7,255);
+      }
+      for(;y<pic_h-3;y+=2){
+        _dst[(y>>1)*c_w]=OC_CLAMPI(0,3*(tmp[(y-2)*c_w]+tmp[(y+3)*c_w])-
+         17*(tmp[(y-1)*c_w]+tmp[(y+2)*c_w])+78*(tmp[y*c_w]+tmp[(y+1)*c_w])+
+         64>>7,255);
+      }
+      for(;y<pic_h;y+=2){
+        _dst[(y>>1)*c_w]=OC_CLAMPI(0,3*(tmp[(y-2)*c_w]+tmp[(pic_h-1)*c_w])-
+         17*(tmp[(y-1)*c_w]+tmp[OC_MINI(y+2,pic_h-1)*c_w])+
+         78*(tmp[y*c_w]+tmp[OC_MINI(y+1,pic_h-1)*c_w])+64>>7,255);
+      }
+      tmp++;
+      _dst++;
+    }
+    _dst-=c_w;
+  }
+}
+#endif
+
+
+/*No conversion function needed.*/
+static void y4m_convert_null(unsigned char *_dst,
+ unsigned char *_aux){
 }
 
 static void id_file(char *f){
   FILE *test;
   unsigned char buffer[80];
   int ret;
-  int tmp_video_hzn = -1,
-      tmp_video_hzd = -1,
-      tmp_video_an = -1,
-      tmp_video_ad = -1;
-  int extra_hdr_bytes;
 
   /* open it, look for magic */
 
@@ -228,9 +691,6 @@ static void id_file(char *f){
           ret=fread(buffer,1,20,test);
           if(ret<20)goto riff_err;
 
-          extra_hdr_bytes = (buffer[0]  + (buffer[1] << 8) +
-                            (buffer[2] << 16) + (buffer[3] << 24)) - 16;
-
           if(memcmp(buffer+4,"\001\000",2)){
             fprintf(stderr,"The WAV file %s is in a compressed format; "
                     "can't read it.\n",f);
@@ -245,18 +705,6 @@ static void id_file(char *f){
           if(buffer[18]+(buffer[19]<<8)!=16){
             fprintf(stderr,"Can only read 16 bit WAV files for now.\n");
             exit(1);
-          }
-
-          /* read past extra header bytes */
-          while(extra_hdr_bytes){
-            int read_size = (extra_hdr_bytes > sizeof(buffer)) ?
-             sizeof(buffer) : extra_hdr_bytes;
-            ret = fread(buffer, 1, read_size, test);
-
-            if (ret < read_size)
-              goto riff_err;
-            else
-              extra_hdr_bytes -= read_size;
           }
 
           /* Now, align things to the beginning of the data */
@@ -286,8 +734,7 @@ static void id_file(char *f){
   if(!memcmp(buffer,"YUV4",4)){
     /* possible YUV2MPEG2 format file */
     /* read until newline, or 80 cols, whichever happens first */
-    /* NB the mjpegtools spec doesn't define a length limit */
-    int i,j;
+    int i;
     for(i=0;i<79;i++){
       ret=fread(buffer+i,1,1,test);
       if(ret<1)goto yuv_err;
@@ -299,7 +746,6 @@ static void id_file(char *f){
     buffer[i]='\0';
 
     if(!memcmp(buffer,"MPEG",4)){
-      char interlace = '?';
 
       if(video){
         /* umm, we already have one */
@@ -311,72 +757,94 @@ static void id_file(char *f){
         fprintf(stderr,"Incorrect YUV input file version; YUV4MPEG2 required.\n");
       }
 
-      /* parse the frame header */
-      j = 5;
-      while (j < i) {
-        if ((buffer[j] != ' ') && (buffer[j-1] == ' ')) 
-          switch (buffer[j]) {
-            case 'W': frame_x = atoi((char*)&buffer[j+1]); break;
-            case 'H': frame_y = atoi((char*)&buffer[j+1]); break;
-            case 'C': /* chroma subsampling */ break;
-            case 'I': interlace = buffer[j+1]; break;
-            case 'F': /* frame rate ratio */
-              tmp_video_hzn = atoi((char*)&buffer[j+1]);
-	      while ((buffer[j] != ':') && (j < i)) j++;
-              tmp_video_hzd = atoi((char*)&buffer[j+1]);
-              break;
-            case 'A': /* sample aspect ratio */
-              tmp_video_an = atoi((char*)&buffer[j+1]);
-	      while ((buffer[j] != ':') && (j < i)) j++;
-              tmp_video_ad = atoi((char*)&buffer[j+1]);
-              break;
-            case 'X': /* metadata */ break;
-            default:
-              fprintf(stderr, "unrecognized stream header tag '%c'\n", buffer[j]);
-              break;
-          }
-        j++;
-      }
-      /* verify data from the stream header */
-      if (frame_x <= 0) {
-        fprintf(stderr,"Error parsing YUV4MPEG2 header:"
-                " missing width tag in file %s.\n", f);
+      ret=y4m_parse_tags((char *)buffer+5);
+      if(ret<0){
+        fprintf(stderr,"Error parsing YUV4MPEG2 header in file %s.\n",f);
         exit(1);
       }
-      if (frame_y <= 0) {
-        fprintf(stderr,"Error parsing YUV4MPEG2 header:"
-                " missing height tag in file %s.\n", f);
-        exit(1);
-      }
-      if (tmp_video_hzn < 0 || tmp_video_hzd < 0) {
-	/* default to 30 fps */
-	tmp_video_hzn = 30; tmp_video_hzd = 1;
-        fprintf(stderr,"Warning: no framerate defined in file %s.\n", f);
-      }
-      if (tmp_video_an < 0 || tmp_video_ad < 0) {
-	/* default to unknown */
-	tmp_video_an = 0; tmp_video_ad = 0;
-      }
 
-      /* update fps and aspect ratio globals if not specified in the command line */
-      if (video_hzn==-1) video_hzn = tmp_video_hzn;
-      if (video_hzd==-1) video_hzd = tmp_video_hzd;
-      if (video_an==-1) video_an = tmp_video_an;
-      if (video_ad==-1) video_ad = tmp_video_ad;
-
-      if(interlace=='?'){
-        fprintf(stderr,"Warning: input video isn't marked for interlacing;"
-          " treating this\nas progressive scan video."
-          " Deinterlace first if you get poor results.\n");
-      }else if(interlace!='p'){
+      if(interlace!='p'){
         fprintf(stderr,"Input video is interlaced; Theora handles only progressive scan\n");
         exit(1);
       }
 
+      if(strcmp(chroma_type,"420")==0||strcmp(chroma_type,"420jpeg")==0){
+        src_c_dec_h=dst_c_dec_h=src_c_dec_v=dst_c_dec_v=2;
+        y4m_dst_buf_read_sz=pic_w*pic_h+2*((pic_w+1)/2)*((pic_h+1)/2);
+        y4m_aux_buf_sz=y4m_aux_buf_read_sz=0;
+        y4m_convert=y4m_convert_null;
+      }
+      else if(strcmp(chroma_type,"420mpeg2")==0){
+        src_c_dec_h=dst_c_dec_h=src_c_dec_v=dst_c_dec_v=2;
+        y4m_dst_buf_read_sz=pic_w*pic_h;
+        /*Chroma filter required: read into the aux buf first.*/
+        y4m_aux_buf_sz=y4m_aux_buf_read_sz=2*((pic_w+1)/2)*((pic_h+1)/2);
+        y4m_convert=y4m_convert_42xmpeg2_42xjpeg;
+      }
+      else if(strcmp(chroma_type,"420paldv")==0){
+        src_c_dec_h=dst_c_dec_h=src_c_dec_v=dst_c_dec_v=2;
+        y4m_dst_buf_read_sz=pic_w*pic_h;
+        /*Chroma filter required: read into the aux buf first.
+          We need to make two filter passes, so we need some extra space in the
+           aux buffer.*/
+        y4m_aux_buf_sz=3*((pic_w+1)/2)*((pic_h+1)/2);
+        y4m_aux_buf_read_sz=2*((pic_w+1)/2)*((pic_h+1)/2);
+        y4m_convert=y4m_convert_42xpaldv_42xjpeg;
+      }
+      else if(strcmp(chroma_type,"422")==0){
+        src_c_dec_h=dst_c_dec_h=2;
+        src_c_dec_v=dst_c_dec_v=1;
+        y4m_dst_buf_read_sz=pic_w*pic_h;
+        /*Chroma filter required: read into the aux buf first.*/
+        y4m_aux_buf_sz=y4m_aux_buf_read_sz=2*((pic_w+1)/2)*pic_h;
+        y4m_convert=y4m_convert_42xmpeg2_42xjpeg;
+      }
+      else if(strcmp(chroma_type,"411")==0){
+        src_c_dec_h=4;
+        /*We don't want to introduce any additional sub-sampling, so we
+           promote 4:1:1 material to 4:2:2, as the closest format Theora can
+           handle.*/
+        dst_c_dec_h=2;
+        src_c_dec_v=dst_c_dec_v=1;
+        y4m_dst_buf_read_sz=pic_w*pic_h;
+        /*Chroma filter required: read into the aux buf first.*/
+        y4m_aux_buf_sz=y4m_aux_buf_read_sz=2*((pic_w+3)/4)*pic_h;
+        y4m_convert=y4m_convert_411_422jpeg;
+      }
+      else if(strcmp(chroma_type,"444")==0){
+        src_c_dec_h=dst_c_dec_h=src_c_dec_v=dst_c_dec_v=1;
+        y4m_dst_buf_read_sz=pic_w*pic_h*3;
+        y4m_aux_buf_sz=y4m_aux_buf_read_sz=0;
+        y4m_convert=y4m_convert_null;
+      }
+      else if(strcmp(chroma_type,"444alpha")==0){
+        src_c_dec_h=dst_c_dec_h=src_c_dec_v=dst_c_dec_v=1;
+        y4m_dst_buf_read_sz=pic_w*pic_h*3;
+        /*Read the extra alpha plane into the aux buf.
+          It will be discarded.*/
+        y4m_aux_buf_sz=y4m_aux_buf_read_sz=pic_w*pic_h;
+        y4m_convert=y4m_convert_null;
+      }
+      else if(strcmp(chroma_type,"mono")==0){
+        src_c_dec_h=src_c_dec_v=0;
+        dst_c_dec_h=dst_c_dec_v=2;
+        y4m_dst_buf_read_sz=pic_w*pic_h;
+        y4m_aux_buf_sz=y4m_aux_buf_read_sz=0;
+        y4m_convert=y4m_convert_mono_420jpeg;
+      }
+      else{
+        fprintf(stderr,"Unknown chroma sampling type: %s\n",chroma_type);
+        exit(1);
+      }
+      /*The size of the final frame buffers is always computed from the
+         destination chroma decimation type.*/
+      y4m_dst_buf_sz=pic_w*pic_h+2*((pic_w+dst_c_dec_h-1)/dst_c_dec_h)*
+       ((pic_h+dst_c_dec_v-1)/dst_c_dec_v);
+
       video=test;
 
-      fprintf(stderr,"File %s is %dx%d %.02f fps YUV12 video.\n",
-              f,frame_x,frame_y,(double)video_hzn/video_hzd);
+      fprintf(stderr,"File %s is %dx%d %.02f fps %s video.\n",
+              f,pic_w,pic_h,(double)video_fps_n/video_fps_d,chroma_type);
 
       return;
     }
@@ -406,11 +874,8 @@ int fetch_and_process_audio(FILE *audio,ogg_page *audiopage,
                             vorbis_dsp_state *vd,
                             vorbis_block *vb,
                             int audioflag){
-  static ogg_int64_t samples_sofar=0;
   ogg_packet op;
   int i,j;
-  ogg_int64_t beginsample = audio_hz*begin_sec + audio_hz*begin_usec/1000000;
-  ogg_int64_t endsample = audio_hz*end_sec + audio_hz*end_usec/1000000;
 
   while(audio && !audioflag){
     /* process any audio already buffered */
@@ -421,63 +886,43 @@ int fetch_and_process_audio(FILE *audio,ogg_page *audiopage,
     {
       /* read and process more audio */
       signed char readbuffer[4096];
-      signed char *readptr=readbuffer;
       int toread=4096/2/audio_ch;
       int bytesread=fread(readbuffer,1,toread*2*audio_ch,audio);
       int sampread=bytesread/2/audio_ch;
       float **vorbis_buffer;
       int count=0;
 
-      if(bytesread<=0 || 
-	 (samples_sofar>=endsample && endsample>0)){
+      if(bytesread<=0){
         /* end of file.  this can be done implicitly, but it's
            easier to see here in non-clever fashion.  Tell the
            library we're at end of stream so that it can handle the
            last frame and mark end of stream in the output properly */
         vorbis_analysis_wrote(vd,0);
       }else{
-	if(samples_sofar < beginsample){
-	  if(samples_sofar+sampread > beginsample){
-	    readptr += (beginsample-samples_sofar)*2*audio_ch;
-	    sampread += samples_sofar-beginsample;
-	    samples_sofar = sampread+beginsample;
-	  }else{
-	    samples_sofar += sampread;
-	    sampread = 0;
-	  }
-	}else{
-	  samples_sofar += sampread;
-	}
-
-	if(samples_sofar > endsample && endsample > 0)
-	  sampread-= (samples_sofar - endsample);
-	
-	if(sampread>0){
-
-	  vorbis_buffer=vorbis_analysis_buffer(vd,sampread);
-	  /* uninterleave samples */
-	  for(i=0;i<sampread;i++){
-	    for(j=0;j<audio_ch;j++){
-	      vorbis_buffer[j][i]=((readptr[count+1]<<8)|
-				   (0x00ff&(int)readptr[count]))/32768.f;
-	      count+=2;
-	    }
-	  }
-        
-	  vorbis_analysis_wrote(vd,sampread);
+        vorbis_buffer=vorbis_analysis_buffer(vd,sampread);
+        /* uninterleave samples */
+        for(i=0;i<sampread;i++){
+          for(j=0;j<audio_ch;j++){
+            vorbis_buffer[j][i]=((readbuffer[count+1]<<8)|
+                                 (0x00ff&(int)readbuffer[count]))/32768.f;
+            count+=2;
+          }
         }
+
+        vorbis_analysis_wrote(vd,sampread);
+
       }
 
       while(vorbis_analysis_blockout(vd,vb)==1){
-        
+
         /* analysis, assume we want to use bitrate management */
         vorbis_analysis(vb,NULL);
         vorbis_bitrate_addblock(vb);
-        
+
         /* weld packets into the bitstream */
         while(vorbis_bitrate_flushpacket(vd,&op))
           ogg_stream_packetin(vo,&op);
-        
+
       }
     }
   }
@@ -487,30 +932,33 @@ int fetch_and_process_audio(FILE *audio,ogg_page *audiopage,
 
 int fetch_and_process_video(FILE *video,ogg_page *videopage,
                             ogg_stream_state *to,
-                            theora_state *td,
+                            th_enc_ctx *td,
                             int videoflag){
   /* You'll go to Hell for using static variables */
-  static ogg_int64_t frames=0;
-  static int          state=-1;
-  static unsigned char *yuvframe[2];
-  unsigned char        *line;
-  yuv_buffer          yuv;
-  ogg_packet          op;
-  int e;
-  ogg_int64_t beginframe = (video_hzn*begin_sec + video_hzn*begin_usec/1000000)/video_hzd;
-  ogg_int64_t endframe = (video_hzn*end_sec + video_hzn*end_usec/1000000)/video_hzd;
+  static int                 state=-1;
+  static unsigned char      *yuvframe[3];
+  static th_ycbcr_buffer     ycbcr;
+  ogg_packet                 op;
+  int                        pic_sz;
+  int                        frame_c_w;
+  int                        frame_c_h;
+  int                        c_w;
+  int                        c_h;
+  int                        c_sz;
+  int                        i;
+
+  pic_sz=pic_w*pic_h;
+  frame_c_w=frame_w/dst_c_dec_h;
+  frame_c_h=frame_h/dst_c_dec_v;
+  c_w=(pic_w+dst_c_dec_h-1)/dst_c_dec_h;
+  c_h=(pic_h+dst_c_dec_v-1)/dst_c_dec_v;
+  c_sz=c_w*c_h;
 
   if(state==-1){
         /* initialize the double frame buffer */
-    yuvframe[0]=malloc(video_x*video_y*3/2);
-    yuvframe[1]=malloc(video_x*video_y*3/2);
-
-        /* clear initial frame as it may be larger than actual video data */
-        /* fill Y plane with 0x10 and UV planes with 0X80, for black data */
-    memset(yuvframe[0],0x10,video_x*video_y);
-    memset(yuvframe[0]+video_x*video_y,0x80,video_x*video_y/2);
-    memset(yuvframe[1],0x10,video_x*video_y);
-    memset(yuvframe[1]+video_x*video_y,0x80,video_x*video_y/2);
+    yuvframe[0]=(unsigned char *)malloc(y4m_dst_buf_sz);
+    yuvframe[1]=(unsigned char *)malloc(y4m_dst_buf_sz);
+    yuvframe[2]=(unsigned char *)malloc(y4m_aux_buf_sz);
 
     state=0;
   }
@@ -533,11 +981,11 @@ int fetch_and_process_video(FILE *video,ogg_page *videopage,
          proceeding.  after first pass and until eos, one will
          always be full when we get here */
 
-      for(;state<2 && (frames<endframe || endframe<0);){
+      for(i=state;i<2;i++){
         char c,frame[6];
         int ret=fread(frame,1,6,video);
-        
-	/* match and skip the frame header */
+
+        /* match and skip the frame header */
         if(ret<6)break;
         if(memcmp(frame,"FRAME",5)){
           fprintf(stderr,"Loss of framing in YUV input data\n");
@@ -552,35 +1000,21 @@ int fetch_and_process_video(FILE *video,ogg_page *videopage,
             exit(1);
           }
         }
-
-        /* read the Y plane into our frame buffer with centering */
-        line=yuvframe[state]+video_x*frame_y_offset+frame_x_offset;
-        for(e=0;e<frame_y;e++){
-          ret=fread(line,1,frame_x,video);
-            if(ret!=frame_x) break;
-          line+=video_x;
+        /*Read the frame data that needs no conversion.*/
+        if(fread(yuvframe[i],1,y4m_dst_buf_read_sz,video)!=
+         y4m_dst_buf_read_sz){
+          fprintf(stderr,"Error reading YUV frame data.\n");
+          exit(1);
         }
-        /* now get U plane*/
-        line=yuvframe[state]+(video_x*video_y)
-          +(video_x/2)*(frame_y_offset/2)+frame_x_offset/2;
-        for(e=0;e<frame_y/2;e++){
-          ret=fread(line,1,frame_x/2,video);
-            if(ret!=frame_x/2) break;
-          line+=video_x/2;
+        /*Read the frame data that does need conversion.*/
+        if(fread(yuvframe[2],1,y4m_aux_buf_read_sz,video)!=
+         y4m_aux_buf_read_sz){
+          fprintf(stderr,"Error reading YUV frame data.\n");
+          exit(1);
         }
-        /* and the V plane*/
-        line=yuvframe[state]+(video_x*video_y*5/4)
-                  +(video_x/2)*(frame_y_offset/2)+frame_x_offset/2;
-        for(e=0;e<frame_y/2;e++){
-          ret=fread(line,1,frame_x/2,video);
-            if(ret!=frame_x/2) break;
-          line+=video_x/2;
-        }
-
-	frames++;
-	if(frames>=beginframe)
-	  state++;
-	
+        /*Now convert the just read frame.*/
+        (*y4m_convert)(yuvframe[i],yuvframe[2]);
+        state++;
       }
 
       if(state<1){
@@ -592,29 +1026,32 @@ int fetch_and_process_video(FILE *video,ogg_page *videopage,
       /* Theora is a one-frame-in,one-frame-out system; submit a frame
          for compression and pull out the packet */
 
-      {
-        yuv.y_width=video_x;
-        yuv.y_height=video_y;
-        yuv.y_stride=video_x;
+      /*We submit the buffer to the library as if it were padded, but we do not
+         actually allocate space for the padding.
+        This is okay, because the library will never read data from the padded
+         region.
+        This is only currently true of the experimental encoder; do NOT do this
+         with the reference encoder.*/
+      ycbcr[0].width=frame_w;
+      ycbcr[0].height=frame_h;
+      ycbcr[0].stride=pic_w;
+      ycbcr[0].data=yuvframe[0]-pic_x-pic_y*pic_w;
+      ycbcr[1].width=frame_c_w;
+      ycbcr[1].height=frame_c_h;
+      ycbcr[1].stride=c_w;
+      ycbcr[1].data=yuvframe[0]+pic_sz-(pic_x/dst_c_dec_h)-
+       (pic_y/dst_c_dec_v)*c_w;
+      ycbcr[2].width=frame_c_w;
+      ycbcr[2].height=frame_c_h;
+      ycbcr[2].stride=c_w;
+      ycbcr[2].data=ycbcr[1].data+c_sz;
 
-        yuv.uv_width=video_x/2;
-        yuv.uv_height=video_y/2;
-        yuv.uv_stride=video_x/2;
-
-        yuv.y= yuvframe[0];
-        yuv.u= yuvframe[0]+ video_x*video_y;
-        yuv.v= yuvframe[0]+ video_x*video_y*5/4 ;
-      }
-
-      theora_encode_YUVin(td,&yuv);
+      th_encode_ycbcr_in(td,ycbcr);
 
       /* if there's only one frame, it's the last in the stream */
-      if(state<2)
-        theora_encode_packetout(td,1,&op);
-      else
-        theora_encode_packetout(td,0,&op);
-
-      ogg_stream_packetin(to,&op);
+      while(th_encode_packetout(td,state<2,&op)){
+        ogg_stream_packetin(to,&op);
+      }
 
       {
         unsigned char *temp=yuvframe[0];
@@ -628,7 +1065,7 @@ int fetch_and_process_video(FILE *video,ogg_page *videopage,
   return videoflag;
 }
 
-int main(int argc,char *const *argv){
+int main(int argc,char *argv[]){
   int c,long_option_index,ret;
 
   ogg_stream_state to; /* take physical pages, weld into a logical
@@ -638,9 +1075,9 @@ int main(int argc,char *const *argv){
   ogg_page         og; /* one Ogg bitstream page.  Vorbis packets are inside */
   ogg_packet       op; /* one raw packet of data for decode */
 
-  theora_state     td;
-  theora_info      ti;
-  theora_comment   tc;
+  th_enc_ctx      *td;
+  th_info          ti;
+  th_comment       tc;
 
   vorbis_info      vi; /* struct that stores all the static vorbis bitstream
                           settings */
@@ -658,30 +1095,15 @@ int main(int argc,char *const *argv){
   ogg_int64_t video_bytesout=0;
   double timebase;
 
-
   FILE *outfile = stdout;
 
-#ifdef _WIN32 
-# ifdef THEORA_PERF_DATA
-    LARGE_INTEGER start_time;
-    LARGE_INTEGER final_time;
-
-    LONGLONG elapsed_ticks;
-    LARGE_INTEGER ticks_per_second;
-    
-    LONGLONG elapsed_secs;
-    LONGLONG elapsed_sec_mod;
-    double elapsed_secs_dbl ;
-# endif
-  /* We need to set stdin/stdout to binary mode. Damn windows. */
+#ifdef _WIN32 /* We need to set stdin/stdout to binary mode. Damn windows. */
   /* if we were reading/writing a file, it would also need to in
      binary mode, eg, fopen("file.wav","wb"); */
   /* Beware the evil ifdef. We avoid these where we can, but this one we
      cannot. Don't add any more, you'll probably go to hell if you do. */
   _setmode( _fileno( stdin ), _O_BINARY );
   _setmode( _fileno( stdout ), _O_BINARY );
-
-
 #endif
 
   while((c=getopt_long(argc,argv,optstring,options,&long_option_index))!=EOF){
@@ -695,7 +1117,7 @@ int main(int argc,char *const *argv){
       break;;
 
     case 'a':
-      audio_q=atof(optarg)*.099;
+      audio_q=(float)(atof(optarg)*.099);
       if(audio_q<-.1 || audio_q>1){
         fprintf(stderr,"Illegal audio quality (choose -1 through 10)\n");
         exit(1);
@@ -704,7 +1126,7 @@ int main(int argc,char *const *argv){
       break;
 
     case 'v':
-      video_q=rint(atof(optarg));
+      video_q=(int)rint(atof(optarg));
       if(video_q<0 || video_q>63){
         fprintf(stderr,"Illegal video quality (choose 0 through 10)\n");
         exit(1);
@@ -713,7 +1135,7 @@ int main(int argc,char *const *argv){
       break;
 
     case 'A':
-      audio_r=atof(optarg)*1000;
+      audio_r=(int)(atof(optarg)*1000);
       if(audio_q<0){
         fprintf(stderr,"Illegal audio quality (choose > 0 please)\n");
         exit(1);
@@ -722,7 +1144,7 @@ int main(int argc,char *const *argv){
       break;
 
     case 'V':
-      video_r=rint(atof(optarg)*1000);
+      video_r=(int)rint(atof(optarg)*1000);
       if(video_r<0){
         fprintf(stderr,"Illegal video bitrate (choose > 0 please)\n");
         exit(1);
@@ -734,91 +1156,25 @@ int main(int argc,char *const *argv){
      break;
 
     case 's':
-      video_an=rint(atof(optarg));
+      video_par_n=(int)rint(atof(optarg));
       break;
 
     case 'S':
-      video_ad=rint(atof(optarg));
+      video_par_d=(int)rint(atof(optarg));
       break;
 
     case 'f':
-      video_hzn=rint(atof(optarg));
+      video_fps_n=(int)rint(atof(optarg));
       break;
 
     case 'F':
-      video_hzd=rint(atof(optarg));
+      video_fps_d=(int)rint(atof(optarg));
       break;
 
-    case 'n':
-      noise_sensitivity=rint(atof(optarg));
-      if(noise_sensitivity<0 || noise_sensitivity>6){
-        fprintf(stderr,"Illegal noise sensitivity (choose 0 through 6)\n");
-        exit(1);
-      }
+    case 'c':
+      vp3_compatible=1;
       break;
 
-    case 'm':
-      sharpness=rint(atof(optarg));
-      if(sharpness<0 || sharpness>2){
-        fprintf(stderr,"Illegal sharpness (choose 0 through 2)\n");
-        exit(1);
-      }
-      break;
-
-    case 'k':
-      keyframe_frequency=rint(atof(optarg));
-      if(keyframe_frequency<8 || keyframe_frequency>1000){
-        fprintf(stderr,"Illegal keyframe frequency (choose 8 through 1000)\n");
-        exit(1);
-      }
-      break;
-
-    case 'b':
-      {
-	char *pos=strchr(optarg,':');
-	begin_sec=atol(optarg);
-	if(pos){
-	  char *pos2=strchr(++pos,':');
-	  begin_sec*=60;
-	  begin_sec+=atol(pos);
-	  if(pos2){
-	    pos2++;
-	    begin_sec*=60;
-	    begin_sec+=atol(pos2);
-	  }else{
-	    pos2=pos;
-	  }
-	  pos2=strchr(pos2,'.');
-	  if(pos2){
-	    pos2++;
-	    begin_usec=atol(pos2);
-	  }
-	}
-      }
-      break;
-    case 'e':
-      {
-	char *pos=strchr(optarg,':');
-	end_sec=atol(optarg);
-	if(pos){
-	  char *pos2=strchr(++pos,':');
-	  end_sec*=60;
-	  end_sec+=atol(pos);
-	  if(pos2){
-	    pos2++;
-	    end_sec*=60;
-	    end_sec+=atol(pos2);
-	  }else{
-	    pos2=pos;
-	  }
-	  pos2=strchr(pos2,'.');
-	  if(pos2){
-	    pos2++;
-	    end_usec=atol(pos2);
-	  }
-	}
-      }
-      break;
     default:
       usage();
     }
@@ -830,71 +1186,62 @@ int main(int argc,char *const *argv){
     optind++;
   }
 
-
-
-#ifdef THEORA_PERF_DATA
-# ifdef WIN32
-    QueryPerformanceCounter(&start_time);
-# endif
-#endif
-
-
   /* yayness.  Set up Ogg output stream */
   srand(time(NULL));
-  {
-    /* need two inequal serial numbers */
-    int serial1, serial2;
-    serial1 = rand();
-    serial2 = rand();
-    if (serial1 == serial2) serial2++;
-    ogg_stream_init(&to,serial1);
-    ogg_stream_init(&vo,serial2);
-  }
+  if(audio)ogg_stream_init(&vo,rand());
+  ogg_stream_init(&to,rand()); /* oops, add one ot the above */
 
   /* Set up Theora encoder */
   if(!video){
     fprintf(stderr,"No video files submitted for compression?\n");
     exit(1);
   }
-  /* Theora has a divisible-by-sixteen restriction for the encoded video size */
-  /* scale the frame size up to the nearest /16 and calculate offsets */
-  video_x=((frame_x + 15) >>4)<<4;
-  video_y=((frame_y + 15) >>4)<<4;
-  /* We force the offset to be even.
-     This ensures that the chroma samples align properly with the luma
-      samples. */
-  frame_x_offset=((video_x-frame_x)/2)&~1;
-  frame_y_offset=((video_y-frame_y)/2)&~1;
+  /* Theora has a divisible-by-sixteen restriction for the encoded frame size */
+  /* scale the picture size up to the nearest /16 and calculate offsets */
+  frame_w=pic_w+15&~0xF;
+  frame_h=pic_h+15&~0xF;
+  /*Force the offsets to be even so that chroma samples line up like we
+     expect.*/
+  pic_x=frame_w-pic_w>>1&~1;
+  pic_y=frame_h-pic_h>>1&~1;
 
-  theora_info_init(&ti);
-  ti.width=video_x;
-  ti.height=video_y;
-  ti.frame_width=frame_x;
-  ti.frame_height=frame_y;
-  ti.offset_x=frame_x_offset;
-  ti.offset_y=frame_y_offset;
-  ti.fps_numerator=video_hzn;
-  ti.fps_denominator=video_hzd;
-  ti.aspect_numerator=video_an;
-  ti.aspect_denominator=video_ad;
-  ti.colorspace=OC_CS_UNSPECIFIED;
-  ti.pixelformat=OC_PF_420;
+  th_info_init(&ti);
+  ti.frame_width=frame_w;
+  ti.frame_height=frame_h;
+  ti.pic_width=pic_w;
+  ti.pic_height=pic_h;
+  ti.pic_x=pic_x;
+  ti.pic_y=pic_y;
+  ti.fps_numerator=video_fps_n;
+  ti.fps_denominator=video_fps_d;
+  ti.aspect_numerator=video_par_n;
+  ti.aspect_denominator=video_par_d;
+  ti.colorspace=TH_CS_UNSPECIFIED;
   ti.target_bitrate=video_r;
   ti.quality=video_q;
+  ti.keyframe_granule_shift=6;
 
-  ti.dropframes_p=0;
-  ti.quick_p=1;
-  ti.keyframe_auto_p=1;
-  ti.keyframe_frequency=keyframe_frequency;
-  ti.keyframe_frequency_force=keyframe_frequency;
-  ti.keyframe_data_target_bitrate=video_r*1.5;
-  ti.keyframe_auto_threshold=80;
-  ti.keyframe_mindistance=8;
-  ti.noise_sensitivity=noise_sensitivity;
-  ti.sharpness=sharpness;
+  if(dst_c_dec_h==2){
+    if(dst_c_dec_v==2)ti.pixel_fmt=TH_PF_420;
+    else ti.pixel_fmt=TH_PF_422;
+  }
+  else ti.pixel_fmt=TH_PF_444;
 
-  theora_encode_init(&td,&ti);
-  theora_info_clear(&ti);
+  td=th_encode_alloc(&ti);
+  th_info_clear(&ti);
+
+  if(vp3_compatible){
+    ret=th_encode_ctl(td,TH_ENCCTL_SET_VP3_COMPATIBLE,&vp3_compatible,
+     sizeof(vp3_compatible));
+    if(ret<0||!vp3_compatible){
+      fprintf(stderr,"Could not enable strict VP3 compatibility.\n");
+      if(ret>=0){
+        fprintf(stderr,"Ensure your source format is supported by VP3.\n");
+        fprintf(stderr,
+         "(4:2:0 pixel format, width and height multiples of 16).\n");
+      }
+    }
+  }
 
   /* initialize Vorbis too, assuming we have audio to compress. */
   if(audio){
@@ -916,8 +1263,13 @@ int main(int argc,char *const *argv){
 
   /* write the bitstream header packets with proper page interleave */
 
+  th_comment_init(&tc);
+
   /* first packet will get its own page automatically */
-  theora_encode_header(&td,&op);
+  if(th_encode_flushheader(td,&tc,&op)<=0){
+    fprintf(stderr,"Internal Theora library error.\n");
+    exit(1);
+  }
   ogg_stream_packetin(&to,&op);
   if(ogg_stream_pageout(&to,&og)!=1){
     fprintf(stderr,"Internal Ogg library error.\n");
@@ -927,17 +1279,15 @@ int main(int argc,char *const *argv){
   fwrite(og.body,1,og.body_len,outfile);
 
   /* create the remaining theora headers */
-  theora_comment_init(&tc);
-  theora_encode_comment(&tc,&op);
-  ogg_stream_packetin(&to,&op);
-  /*theora_encode_comment() doesn't take a theora_state parameter, so it has to
-     allocate its own buffer to pass back the packet data.
-    If we don't free it here, we'll leak.
-    libogg2 makes this much cleaner: the stream owns the buffer after you call
-     packetin in libogg2, but this is not true in libogg1.*/
-  free(op.packet);
-  theora_encode_tables(&td,&op);
-  ogg_stream_packetin(&to,&op);
+  for(;;){
+    ret=th_encode_flushheader(td,&tc,&op);
+    if(ret<0){
+      fprintf(stderr,"Internal Theora library error.\n");
+      exit(1);
+    }
+    else if(!ret)break;
+    ogg_stream_packetin(&to,&op);
+  }
 
   if(audio){
     ogg_packet header;
@@ -962,7 +1312,7 @@ int main(int argc,char *const *argv){
   /* Flush the rest of our headers. This ensures
      the actual data in each stream will start
      on a new page, as per spec. */
-  while(1){
+  for(;;){
     int result = ogg_stream_flush(&to,&og);
       if(result<0){
         /* can't get here */
@@ -974,7 +1324,7 @@ int main(int argc,char *const *argv){
     fwrite(og.body,1,og.body_len,outfile);
   }
   if(audio){
-    while(1){
+    for(;;){
       int result=ogg_stream_flush(&vo,&og);
       if(result<0){
         /* can't get here */
@@ -989,7 +1339,7 @@ int main(int argc,char *const *argv){
 
   /* setup complete.  Raw processing loop */
   fprintf(stderr,"Compressing....\n");
-  while(1){
+  for(;;){
     ogg_page audiopage;
     ogg_page videopage;
 
@@ -997,7 +1347,7 @@ int main(int argc,char *const *argv){
     audioflag=fetch_and_process_audio(audio,&audiopage,&vo,&vd,&vb,audioflag);
 
     /* is there a video page flushed?  If not, fetch one if possible */
-    videoflag=fetch_and_process_video(video,&videopage,&to,&td,videoflag);
+    videoflag=fetch_and_process_video(video,&videopage,&to,td,videoflag);
 
     /* no pages of either?  Must be end of stream. */
     if(!audioflag && !videoflag)break;
@@ -1009,7 +1359,7 @@ int main(int argc,char *const *argv){
       double audiotime=
         audioflag?vorbis_granule_time(&vd,ogg_page_granulepos(&audiopage)):-1;
       double videotime=
-        videoflag?theora_granule_time(&td,ogg_page_granulepos(&videopage)):-1;
+        videoflag?th_granule_time(td,ogg_page_granulepos(&videopage)):-1;
 
       if(!audioflag){
         audio_or_video=1;
@@ -1028,7 +1378,7 @@ int main(int argc,char *const *argv){
         video_bytesout+=fwrite(videopage.body,1,videopage.body_len,outfile);
         videoflag=0;
         timebase=videotime;
-        
+
       }else{
         /* flush an audio page */
         audio_bytesout+=fwrite(audiopage.header,1,audiopage.header_len,outfile);
@@ -1036,18 +1386,18 @@ int main(int argc,char *const *argv){
         audioflag=0;
         timebase=audiotime;
       }
-
-      if(timebase!=-1.){
-        int hundredths=timebase*100-(long)timebase*100;
+      if(timebase > 0)
+      {
+        int hundredths=(int)(timebase*100-(long)timebase*100);
         int seconds=(long)timebase%60;
         int minutes=((long)timebase/60)%60;
         int hours=(long)timebase/3600;
-        
+
         if(audio_or_video)
-          vkbps=rint(video_bytesout*8./timebase*.001);
+          vkbps=(int)rint(video_bytesout*8./timebase*.001);
         else
-          akbps=rint(audio_bytesout*8./timebase*.001);
-        
+          akbps=(int)rint(audio_bytesout*8./timebase*.001);
+
         fprintf(stderr,
                 "\r      %d:%02d:%02d.%02d audio: %dkbps video: %dkbps                 ",
                 hours,minutes,seconds,hundredths,akbps,vkbps);
@@ -1064,32 +1414,18 @@ int main(int argc,char *const *argv){
     vorbis_dsp_clear(&vd);
     vorbis_comment_clear(&vc);
     vorbis_info_clear(&vi);
+    if(audio!=stdin)fclose(audio);
   }
   if(video){
     ogg_stream_clear(&to);
-    theora_clear(&td);
+    th_encode_free(td);
+    th_comment_clear(&tc);
+    if(video!=stdin)fclose(video);
   }
 
   if(outfile && outfile!=stdout)fclose(outfile);
 
   fprintf(stderr,"\r   \ndone.\n\n");
-
-#ifdef THEORA_PERF_DATA
-# ifdef WIN32
-    QueryPerformanceCounter(&final_time);
-    elapsed_ticks = final_time.QuadPart - start_time.QuadPart;
-    ticks_per_second;
-    QueryPerformanceFrequency(&ticks_per_second);
-    elapsed_secs = elapsed_ticks / ticks_per_second.QuadPart;
-    elapsed_sec_mod = elapsed_ticks % ticks_per_second.QuadPart;
-    elapsed_secs_dbl = elapsed_secs;
-    elapsed_secs_dbl += ((double)elapsed_sec_mod / (double)ticks_per_second.QuadPart);
-    printf("Encode time = %lld ticks\n", elapsed_ticks);
-    printf("~%lld and %lld / %lld seconds\n", elapsed_secs, elapsed_sec_mod, ticks_per_second.QuadPart);
-    printf("~%Lf seconds\n", elapsed_secs_dbl);
-# endif
-
-#endif 
 
   return(0);
 

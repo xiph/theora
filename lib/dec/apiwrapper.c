@@ -6,7 +6,7 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
@@ -40,7 +40,7 @@ void theora_info_clear(theora_info *_ci){
   memset(_ci,0,sizeof(*_ci));
   if(api!=NULL){
     if(api->clear!=NULL)(*api->clear)(api);
-    free(api);
+    _ogg_free(api);
   }
 }
 

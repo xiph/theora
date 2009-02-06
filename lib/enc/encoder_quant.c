@@ -21,17 +21,22 @@
 #include "quant_lookup.h"
 
 #define OC_QUANT_MAX        (1024<<2)
-//unsigned OC_DC_QUANT_MIN[2]={4<<2,8<<2};
-//unsigned OC_AC_QUANT_MIN[2]={2<<2,4<<2};
+static const unsigned OC_DC_QUANT_MIN[2]={4<<2,8<<2};
+static const unsigned OC_AC_QUANT_MIN[2]={2<<2,4<<2};
 #define OC_MAXI(_a,_b)      ((_a)<(_b)?(_b):(_a))
 #define OC_MINI(_a,_b)      ((_a)>(_b)?(_b):(_a))
 #define OC_CLAMPI(_a,_b,_c) (OC_MAXI(_a,OC_MINI(_b,_c)))
 
+static int ilog(unsigned _v){
+  int ret;
+  for(ret=0;_v;ret++)_v>>=1;
+  return ret;
+}
 
 void WriteQTables(CP_INSTANCE *cpi,oggpack_buffer* _opb) {
-  
-  th_quant_info *_qinfo = &cpi->quant_info; 
-  
+
+  th_quant_info *_qinfo = &cpi->quant_info;
+
   const th_quant_ranges *qranges;
   const th_quant_base   *base_mats[2*3*64];
   int                    indices[2][3][64];
@@ -46,22 +51,22 @@ void WriteQTables(CP_INSTANCE *cpi,oggpack_buffer* _opb) {
   int                    plj;
   int                    bmi;
   int                    i;
-  
+
   /*Unlike the scale tables, we can't assume the maximum value will be in
      index 0, so search for it here.*/
   i=_qinfo->loop_filter_limits[0];
   for(qi=1;qi<64;qi++)i=OC_MAXI(i,_qinfo->loop_filter_limits[qi]);
-  nbits=oc_ilog(i);
+  nbits=ilog(i);
   oggpackB_write(_opb,nbits,3);
   for(qi=0;qi<64;qi++){
     oggpackB_write(_opb,_qinfo->loop_filter_limits[qi],nbits);
   }
   /* 580 bits for VP3.*/
-  nbits=OC_MAXI(oc_ilog(_qinfo->ac_scale[0]),1);
+  nbits=OC_MAXI(ilog(_qinfo->ac_scale[0]),1);
   oggpackB_write(_opb,nbits-1,4);
   for(qi=0;qi<64;qi++)oggpackB_write(_opb,_qinfo->ac_scale[qi],nbits);
   /* 516 bits for VP3.*/
-  nbits=OC_MAXI(oc_ilog(_qinfo->dc_scale[0]),1);
+  nbits=OC_MAXI(ilog(_qinfo->dc_scale[0]),1);
   oggpackB_write(_opb,nbits-1,4);
   for(qi=0;qi<64;qi++)oggpackB_write(_opb,_qinfo->dc_scale[qi],nbits);
   /*Consolidate any duplicate base matrices.*/
@@ -92,7 +97,7 @@ void WriteQTables(CP_INSTANCE *cpi,oggpack_buffer* _opb) {
   /*Now store quant ranges and their associated indices into the base matrix
      list.
      46 bits for VP3 matrices.*/
-  nbits=oc_ilog(nbase_mats-1);
+  nbits=ilog(nbase_mats-1);
   for(i=0;i<6;i++){
     qti=i/3;
     pli=i%3;
@@ -122,7 +127,7 @@ void WriteQTables(CP_INSTANCE *cpi,oggpack_buffer* _opb) {
     }
     oggpackB_write(_opb,indices[qti][pli][0],nbits);
     for(qi=qri=0;qi<63;qri++){
-      oggpackB_write(_opb,qranges->sizes[qri]-1,oc_ilog(62-qi));
+      oggpackB_write(_opb,qranges->sizes[qri]-1,ilog(62-qi));
       qi+=qranges->sizes[qri];
       oggpackB_write(_opb,indices[qti][pli][qri+1],nbits);
     }
@@ -140,51 +145,51 @@ void InitQTables( CP_INSTANCE *cpi ){
     for(pli=0;pli<3;pli++){
       int qi;  /* quality index */
       int qri; /* range iterator */
-      
-      for(qi=0,qri=0; qri<=qinfo->qi_ranges[qti][pli].nranges; qri++){
-	th_quant_base base;
-	
-	ogg_uint32_t      q;
-	int               qi_start;
-	int               qi_end;
-	int               ci;
-	memcpy(base,qinfo->qi_ranges[qti][pli].base_matrices[qri],
-	       sizeof(base));
-	
-	qi_start=qi;
-	if(qri==qinfo->qi_ranges[qti][pli].nranges)
-	  qi_end=qi+1;
-	else 
-	  qi_end=qi+qinfo->qi_ranges[qti][pli].sizes[qri];
-	
-	/* Iterate over quality indicies in this range */
-	for(;;){
-	  
-	  /*Scale DC the coefficient from the proper table.*/
-	  q=((ogg_uint32_t)qinfo->dc_scale[qi]*base[0]/100)<<2;
-	  q=OC_CLAMPI(OC_DC_QUANT_MIN[qti],q,OC_QUANT_MAX);
-	  cpi->quant_tables[qti][pli][0][qi]=(ogg_uint16_t)q;
-	  cpi->iquant_tables[qti][pli][qi][0]=(ogg_int32_t)(((1<<31))/q+1);
 
-	  /*Now scale AC coefficients from the proper table.*/
-	  for(ci=1;ci<64;ci++){
-	    q=((ogg_uint32_t)qinfo->ac_scale[qi]*base[ci]/100)<<2;
-	    q=OC_CLAMPI(OC_AC_QUANT_MIN[qti],q,OC_QUANT_MAX);
-	    cpi->quant_tables[qti][pli][zigzag_index[ci]][qi]=(ogg_uint16_t)q;
-	    cpi->iquant_tables[qti][pli][qi][zigzag_index[ci]]=(ogg_int32_t)(((1<<31))/q+1);
-	  }
-	  
-	  if(++qi>=qi_end)break;
-	  
-	  /*Interpolate the next base matrix.*/
-	  for(ci=0;ci<64;ci++){
-	    base[ci]=(unsigned char)
-	      ((2*((qi_end-qi)*qinfo->qi_ranges[qti][pli].base_matrices[qri][ci]+
-		   (qi-qi_start)*qinfo->qi_ranges[qti][pli].base_matrices[qri+1][ci])
-		+qinfo->qi_ranges[qti][pli].sizes[qri])/
-	       (2*qinfo->qi_ranges[qti][pli].sizes[qri]));
-	  }
-	}
+      for(qi=0,qri=0; qri<=qinfo->qi_ranges[qti][pli].nranges; qri++){
+        th_quant_base base;
+
+        ogg_uint32_t      q;
+        int               qi_start;
+        int               qi_end;
+        int               ci;
+        memcpy(base,qinfo->qi_ranges[qti][pli].base_matrices[qri],
+               sizeof(base));
+
+        qi_start=qi;
+        if(qri==qinfo->qi_ranges[qti][pli].nranges)
+          qi_end=qi+1;
+        else
+          qi_end=qi+qinfo->qi_ranges[qti][pli].sizes[qri];
+
+        /* Iterate over quality indicies in this range */
+        for(;;){
+
+          /*Scale DC the coefficient from the proper table.*/
+          q=((ogg_uint32_t)qinfo->dc_scale[qi]*base[0]/100)<<2;
+          q=OC_CLAMPI(OC_DC_QUANT_MIN[qti],q,OC_QUANT_MAX);
+          cpi->quant_tables[qti][pli][0][qi]=(ogg_uint16_t)q;
+          cpi->iquant_tables[qti][pli][qi][0]=(ogg_int32_t)(((1<<31))/q+1);
+
+          /*Now scale AC coefficients from the proper table.*/
+          for(ci=1;ci<64;ci++){
+            q=((ogg_uint32_t)qinfo->ac_scale[qi]*base[ci]/100)<<2;
+            q=OC_CLAMPI(OC_AC_QUANT_MIN[qti],q,OC_QUANT_MAX);
+            cpi->quant_tables[qti][pli][zigzag_index[ci]][qi]=(ogg_uint16_t)q;
+            cpi->iquant_tables[qti][pli][qi][zigzag_index[ci]]=(ogg_int32_t)(((1<<31))/q+1);
+          }
+
+          if(++qi>=qi_end)break;
+
+          /*Interpolate the next base matrix.*/
+          for(ci=0;ci<64;ci++){
+            base[ci]=(unsigned char)
+              ((2*((qi_end-qi)*qinfo->qi_ranges[qti][pli].base_matrices[qri][ci]+
+                   (qi-qi_start)*qinfo->qi_ranges[qti][pli].base_matrices[qri+1][ci])
+                +qinfo->qi_ranges[qti][pli].sizes[qri])/
+               (2*qinfo->qi_ranges[qti][pli].sizes[qri]));
+          }
+        }
       }
     }
   }

@@ -6,7 +6,7 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
@@ -27,9 +27,11 @@
 # include "dec/huffman.h"
 # include "dec/quant.h"
 
-/*Thank you Microsoft, I know the order of operations.*/
 # if defined(_MSC_VER)
+/*Thank you Microsoft, I know the order of operations.*/
 #  pragma warning(disable:4554)
+/*Disable missing EMMS warnings.*/
+#  pragma warning(disable:4799)
 # endif
 
 /*This library's version.*/
@@ -39,6 +41,10 @@
 # define TH_VERSION_MAJOR (3)
 # define TH_VERSION_MINOR (2)
 # define TH_VERSION_SUB   (1)
+# define TH_VERSION_CHECK(_info,_maj,_min,_sub) \
+ ((_info)->version_major>(_maj)||(_info)->version_major==(_maj)&& \
+ ((_info)->version_minor>(_min)||(_info)->version_minor==(_min)&& \
+ (_info)->version_subminor>=(_sub)))
 
 /*A keyframe.*/
 #define OC_INTRA_FRAME (0)
@@ -206,10 +212,14 @@ typedef struct{
   unsigned        invalid:1;
   /*The quality index used for this fragment's AC coefficients.*/
   unsigned        qi:6;
-  /*The mode of the macroblock this fragment belongs to.*/
-  int             mbmode:8;
-  /*The prediction-corrected DC component.*/
-  int             dc:16;
+  /*The mode of the macroblock this fragment belongs to.
+    Note that the C standard requires an explicit signed keyword for bitfield
+     types, since some compilers may treat them as unsigned without it.*/
+  signed int      mbmode:8;
+  /*The prediction-corrected DC component.
+    Note that the C standard requires an explicit signed keyword for bitfield
+     types, since some compilers may treat them as unsigned without it.*/
+  signed int      dc:16;
   /*A pointer to the portion of an image covered by this fragment in several
      images.
     The first three are reconstructed frame buffers, while the last is the
@@ -223,7 +233,6 @@ typedef struct{
   oc_border_info *border;
   /*The motion vector used for this fragment.*/
   oc_mv           mv;
-
 }oc_fragment;
 
 
@@ -261,7 +270,7 @@ typedef struct{
    int _src2_ystride,const ogg_int16_t *_residue);
   void (*state_frag_copy)(const oc_theora_state *_state,
    const int *_fragis,int _nfragis,int _dst_frame,int _src_frame,int _pli);
-  void (*state_frag_recon)(oc_theora_state *_state, oc_fragment *_frag,
+  void (*state_frag_recon)(oc_theora_state *_state,oc_fragment *_frag,
    int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
    ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]);
   void (*restore_fpu)(void);
@@ -274,77 +283,77 @@ typedef struct{
 /*Common state information between the encoder and decoder.*/
 struct oc_theora_state{
   /*The stream information.*/
-  th_info           info;
+  th_info             info;
   /*Table for shared accelerated functions.*/
-  oc_base_opt_vtable    opt_vtable;
+  oc_base_opt_vtable  opt_vtable;
   /*CPU flags to detect the presence of extended instruction sets.*/
-  ogg_uint32_t          cpu_flags;
+  ogg_uint32_t        cpu_flags;
   /*The fragment plane descriptions.*/
-  oc_fragment_plane     fplanes[3];
+  oc_fragment_plane   fplanes[3];
   /*The total number of fragments in a single frame.*/
-  int                   nfrags;
+  int                 nfrags;
   /*The list of fragments, indexed in image order.*/
-  oc_fragment          *frags;
+  oc_fragment        *frags;
   /*The total number of super blocks in a single frame.*/
-  int                   nsbs;
+  int                 nsbs;
   /*The list of super blocks, indexed in image order.*/
-  oc_sb                *sbs;
+  oc_sb              *sbs;
   /*The number of macro blocks in the X direction.*/
-  int                   nhmbs;
+  int                 nhmbs;
   /*The number of macro blocks in the Y direction.*/
-  int                   nvmbs;
+  int                 nvmbs;
   /*The total number of macro blocks.*/
-  int                   nmbs;
+  int                 nmbs;
   /*The list of macro blocks, indexed in super block order.
     That is, the macro block corresponding to the macro block mbi in (luma
      plane) super block sbi is (sbi<<2|mbi).*/
-  oc_mb                *mbs;
+  oc_mb              *mbs;
   /*The list of coded fragments, in coded order.*/
-  int                  *coded_fragis;
+  int                *coded_fragis;
   /*The number of coded fragments in each plane.*/
-  int                   ncoded_fragis[3];
+  int                 ncoded_fragis[3];
   /*The list of uncoded fragments.
     This just past the end of the list, which is in reverse order, and
      uses the same block of allocated storage as the coded_fragis list.*/
-  int                  *uncoded_fragis;
+  int                *uncoded_fragis;
   /*The number of uncoded fragments in each plane.*/
-  int                   nuncoded_fragis[3];
+  int                 nuncoded_fragis[3];
   /*The list of coded macro blocks in the Y plane, in coded order.*/
-  int                  *coded_mbis;
+  int                *coded_mbis;
   /*The number of coded macro blocks in the Y plane.*/
-  int                   ncoded_mbis;
+  int                 ncoded_mbis;
   /*A copy of the image data used to fill the input pointers in each fragment.
     If the data pointers or strides change, these input pointers must be
      re-populated.*/
-  th_ycbcr_buffer   input;
+  th_ycbcr_buffer     input;
   /*The number of unique border patterns.*/
-  int                   nborders;
+  int                 nborders;
   /*The storage for the border info for all border fragments.
     This data is pointed to from the appropriate fragments.*/
-  oc_border_info        borders[16];
+  oc_border_info      borders[16];
   /*The index of the buffers being used for each OC_FRAME_* reference frame.*/
-  int                   ref_frame_idx[3];
+  int                 ref_frame_idx[3];
   /*The actual buffers used for the previously decoded frames.*/
-  th_ycbcr_buffer   ref_frame_bufs[3];
+  th_ycbcr_buffer     ref_frame_bufs[3];
   /*The storage for the reference frame buffers.*/
-  unsigned char        *ref_frame_data;
+  unsigned char      *ref_frame_data;
   /*The frame number of the last keyframe.*/
-  ogg_int64_t           keyframe_num;
+  ogg_int64_t         keyframe_num;
   /*The frame number of the current frame.*/
-  ogg_int64_t           curframe_num;
+  ogg_int64_t         curframe_num;
   /*The granpos of the current frame.*/
-  ogg_int64_t           granpos;
+  ogg_int64_t         granpos;
   /*The type of the current frame.*/
-  int                   frame_type;
+  int                 frame_type;
   /*The quality indices of the current frame.*/
-  int                   qis[3];
+  int                 qis[3];
   /*The number of quality indices used in the current frame.*/
-  int                   nqis;
+  int                 nqis;
   /*The dequantization tables.*/
-  oc_quant_table       *dequant_tables[2][3];
-  oc_quant_tables       dequant_table_data[2][3];
+  oc_quant_table     *dequant_tables[2][3];
+  oc_quant_tables     dequant_table_data[2][3];
   /*Loop filter strength parameters.*/
-  unsigned char         loop_filter_limits[64];
+  unsigned char       loop_filter_limits[64];
 };
 
 
@@ -410,8 +419,8 @@ void oc_state_borders_fill(oc_theora_state *_state,int _refi);
 void oc_state_fill_buffer_ptrs(oc_theora_state *_state,int _buf_idx,
  th_ycbcr_buffer _img);
 int oc_state_mbi_for_pos(oc_theora_state *_state,int _mbx,int _mby);
-int oc_state_get_mv_offsets(oc_theora_state *_state,int *_offset0,
- int *_offset1,int _dx,int _dy,int _ystride,int _pli);
+int oc_state_get_mv_offsets(oc_theora_state *_state,int *_offsets,
+ int _dx,int _dy,int _ystride,int _pli);
 
 int oc_state_loop_filter_init(oc_theora_state *_state,int *_bv);
 void oc_state_loop_filter(oc_theora_state *_state,int _frame);
@@ -432,7 +441,7 @@ void oc_frag_recon_inter2(const oc_theora_state *_state,
  int _src2_ystride,const ogg_int16_t *_residue);
 void oc_state_frag_copy(const oc_theora_state *_state,const int *_fragis,
  int _nfragis,int _dst_frame,int _src_frame,int _pli);
-void oc_state_frag_recon(oc_theora_state *_state, oc_fragment *_frag,
+void oc_state_frag_recon(oc_theora_state *_state,oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]);
 void oc_state_loop_filter_frag_rows(oc_theora_state *_state,int *_bv,
@@ -449,14 +458,14 @@ void oc_frag_recon_inter2_c(unsigned char *_dst,int _dst_ystride,
  int _src2_ystride,const ogg_int16_t *_residue);
 void oc_state_frag_copy_c(const oc_theora_state *_state,const int *_fragis,
  int _nfragis,int _dst_frame,int _src_frame,int _pli);
-void oc_state_frag_recon_c(oc_theora_state *_state, oc_fragment *_frag,
+void oc_state_frag_recon_c(oc_theora_state *_state,oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]);
 void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
  int _refi,int _pli,int _fragy0,int _fragy_end);
 void oc_restore_fpu_c(void);
 
-/*We need a way to call a few enocder functions without introducing a link-time
+/*We need a way to call a few encoder functions without introducing a link-time
    dependency into the decoder, while still allowing the old alpha API which
    does not distinguish between encoder and decoder objects to be used.
   We do this by placing a function table at the start of the encoder object
@@ -479,16 +488,5 @@ struct oc_state_dispatch_vtbl{
   oc_state_granule_frame_func granule_frame;
   oc_state_granule_time_func  granule_time;
 };
-
-#if defined(_MSC_VER) && !defined(TH_REALLY_NO_ASSEMBLY)
-# error You are compiling theora without inline assembly.\
- This is probably not what you want.  Instead, please either\
-  (1) download the assembly .lib binaries or\
-  (2) compile them yourself using MinGW, and make Visual Studio\
- link against them.\
-  Please seriously consider this before defining TH_REALLY_NO_ASSEMBLY\
-  to disable this message and compile without inline assembly.\
-  Thank you!
-#endif
 
 #endif
