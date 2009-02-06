@@ -27,15 +27,13 @@
 #include "codec_internal.h"
 
 static void CompressKeyFrame(CP_INSTANCE *cpi, int recode){
-  int i;
-
   oggpackB_reset(cpi->oggbuffer);
   cpi->FrameType = KEY_FRAME;
   cpi->LastKeyFrame = 0;
 
   /* mark as video frame */
   oggpackB_write(cpi->oggbuffer,0,1);
-  
+
   WriteFrameHeader(cpi);
   PickModes(cpi,recode);
   EncodeData(cpi);
@@ -44,8 +42,6 @@ static void CompressKeyFrame(CP_INSTANCE *cpi, int recode){
 }
 
 static int CompressFrame( CP_INSTANCE *cpi, int recode ) {
-  ogg_uint32_t  i;
-
   oggpackB_reset(cpi->oggbuffer);
   cpi->FrameType = DELTA_FRAME;
 
@@ -62,12 +58,12 @@ static int CompressFrame( CP_INSTANCE *cpi, int recode ) {
 
     /* mark as video frame */
     oggpackB_write(cpi->oggbuffer,0,1);
-    
+
     WriteFrameHeader(cpi);
 
     PickModes(cpi,1);
     EncodeData(cpi);
-    
+
     cpi->LastKeyFrame = 1;
 
     return 0;
@@ -78,10 +74,10 @@ static int CompressFrame( CP_INSTANCE *cpi, int recode ) {
     CompressFrame(cpi,1);
     return 0;
   }
-  
+
   cpi->LastKeyFrame++;
   EncodeData(cpi);
-  
+
   return 0;
 }
 
@@ -169,7 +165,7 @@ int theora_encode_init(theora_state *th, theora_info *c){
      current clip. */
   cpi->LastKeyFrame = -1;
   cpi->readyflag = 1;
-  
+
   cpi->HeadersWritten = 0;
   /*We overload this flag to track header output.*/
   cpi->doneflag=-3;
@@ -237,7 +233,7 @@ int theora_encode_YUVin(theora_state *t,
     /* Compress the frame. */
     dropped = CompressFrame(cpi,0);
   }
-  
+
   /* Update stats variables. */
   cpi->CurrentFrame++;
   cpi->packetflag=1;
@@ -285,7 +281,7 @@ static void _tp_writebuffer(oggpack_buffer *opb, const char *buf, const long len
 
 static void _tp_writelsbint(oggpack_buffer *opb, long value)
 {
-  oggpackB_write(opb, value&0xFF, 8); 
+  oggpackB_write(opb, value&0xFF, 8);
   oggpackB_write(opb, value>>8&0xFF, 8);
   oggpackB_write(opb, value>>16&0xFF, 8);
   oggpackB_write(opb, value>>24&0xFF, 8);
@@ -312,7 +308,7 @@ int theora_encode_header(theora_state *t, ogg_packet *op){
   /* Applications use offset_y to mean offset from the top of the image; the
    * meaning in the bitstream is the opposite (from the bottom). Transform.
    */
-  offset_y = cpi->info.height - cpi->info.frame_height - 
+  offset_y = cpi->info.height - cpi->info.frame_height -
     cpi->info.offset_y;
   oggpackB_write(cpi->oggbuffer,offset_y,8);
 
@@ -477,12 +473,12 @@ static int theora_encode_control(theora_state *th,int req,
  void *buf,size_t buf_sz) {
   CP_INSTANCE *cpi;
   int value;
-  
+
   if(th == NULL)
     return TH_EFAULT;
 
   cpi = th->internal_encode;
-  
+
   switch(req) {
     case TH_ENCCTL_SET_QUANT_PARAMS:
       if( ( buf==NULL&&buf_sz!=0 )
@@ -490,45 +486,45 @@ static int theora_encode_control(theora_state *th,int req,
   	   || cpi->HeadersWritten ){
         return TH_EINVAL;
       }
-      
+
       memcpy(&cpi->quant_info, buf, sizeof(th_quant_info));
       InitQTables(cpi);
-      
+
       return 0;
     case TH_ENCCTL_SET_VP3_COMPATIBLE:
       if(cpi->HeadersWritten)
         return TH_EINVAL;
-      
+
       memcpy(&cpi->quant_info, &TH_VP31_QUANT_INFO, sizeof(th_quant_info));
       InitQTables(cpi);
-      
+
       return 0;
     case TH_ENCCTL_SET_SPLEVEL:
       if(buf == NULL || buf_sz != sizeof(int))
         return TH_EINVAL;
-      
+
       memcpy(&value, buf, sizeof(int));
-            
+
       switch(value) {
         case 0:
           cpi->MotionCompensation = 1;
           cpi->info.quick_p = 0;
         break;
-        
+
         case 1:
           cpi->MotionCompensation = 1;
           cpi->info.quick_p = 1;
         break;
-        
+
         case 2:
           cpi->MotionCompensation = 0;
           cpi->info.quick_p = 1;
         break;
-        
+
         default:
-          return TH_EINVAL;    
+          return TH_EINVAL;
       }
-      
+
       return 0;
     case TH_ENCCTL_GET_SPLEVEL_MAX:
       value = 2;
