@@ -251,7 +251,7 @@ int theora_encode_packetout( theora_state *t, int last_p, ogg_packet *op){
 
   if(!bytes)return(0);
   if(!cpi->packetflag)return(0);
-  if(cpi->doneflag)return(-1);
+  if(cpi->doneflag>0)return(-1);
 
   op->packet=oggpackB_get_buffer(cpi->oggbuffer);
   op->bytes=bytes;
