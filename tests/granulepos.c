@@ -103,7 +103,11 @@ granulepos_test_encode (int frequency, int auto_p)
       printf("theora_encode_YUVin() returned %d\n", result);
       FAIL ("negative error code submitting frame for compression");
     }
-    theora_encode_packetout (&th, frame >= frequency * 2, &op);
+    result = theora_encode_packetout (&th, frame >= frequency * 2, &op);
+    if (result <= 0) {
+      printf("theora_encode_packetout() returned %d\n", result);
+      FAIL("failed to retrieve compressed frame");
+    }
     if ((long long int)op.granulepos < last_granule)
       FAIL ("encoder returned a decreasing granulepos value");
     last_granule = op.granulepos;
@@ -115,7 +119,7 @@ granulepos_test_encode (int frequency, int auto_p)
     if (tframe != frame + 1)
       FAIL ("theora_granule_frame returned incorrect results");
 #if DEBUG
-    printf("++ frame %d granulepos %lld %d:%d %d %.3lfs\n", 
+    printf("++ frame %d granulepos %lld %d:%d %d %.3lfs\n",
 	frame, (long long int)op.granulepos, keyframe, keydist,
 	tframe, theora_granule_time (&th, op.granulepos));
 #endif
