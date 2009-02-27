@@ -49,8 +49,10 @@
 #include <signal.h>
 #include "theora/theoradec.h"
 
-const char *optstring = "o:rf";
+const char *optstring = "ys";
 struct option options [] = {
+  {"luma-only",no_argument,NULL,'y'},
+  {"summary",no_argument,NULL,'s'},
   {NULL,0,NULL,0}
 };
 
@@ -1020,9 +1022,11 @@ static void video_input_close(video_input *_vid){
 
 
 static void usage(char *_argv[]){
-  fprintf(stderr,"Usage: %s <video1> <video2>\n"
-   "    <video1> and <video1> may be either YUV4MPEG or Ogg Theora files.\n",
-   _argv[0]);
+  fprintf(stderr,"Usage: %s [options] <video1> <video2>\n"
+   "    <video1> and <video1> may be either YUV4MPEG or Ogg Theora files.\n\n"
+   "    Options:\n\n"
+   "      -y --luma-only  Only output values for the luma channel.\n"
+   "      -s --summary    Only output the summary line.\n",_argv[0]);
 }
 
 int main(int _argc,char *_argv[]){
@@ -1030,8 +1034,12 @@ int main(int _argc,char *_argv[]){
   th_info      ti1;
   video_input  vid2;
   th_info      ti2;
-  ogg_int64_t  sqerr;
-  ogg_int64_t  npixels;
+  ogg_int64_t  gsqerr;
+  ogg_int64_t  gnpixels;
+  ogg_int64_t  gplsqerr[3];
+  ogg_int64_t  gplnpixels[3];
+  int          luma_only;
+  int          summary_only;
   int          frameno;
   FILE        *fin;
   int          long_option_index;
@@ -1043,9 +1051,13 @@ int main(int _argc,char *_argv[]){
     Don't add any more, you'll probably go to hell if you do.*/
   _setmode(_fileno(stdin),_O_BINARY);
 #endif
+  luma_only=0;
+  summary_only=0;
   /*Process option arguments.*/
   while((c=getopt_long(_argc,_argv,optstring,options,&long_option_index))!=EOF){
     switch(c){
+      case 'y':luma_only=1;break;
+      case 's':summary_only=1;break;
       default:usage(_argv);break;
     }
   }
@@ -1091,14 +1103,15 @@ int main(int _argc,char *_argv[]){
    ti2.aspect_numerator*(ogg_int64_t)ti1.aspect_denominator){
     fprintf(stderr,"Warning: aspect ratios do not match.\n");
   }
-  sqerr=npixels=0;
+  gsqerr=gplsqerr[0]=gplsqerr[1]=gplsqerr[2]=0;
+  gnpixels=gplnpixels[0]=gplnpixels[1]=gplnpixels[2]=0;
   for(frameno=0;;frameno++){
     th_ycbcr_buffer f1;
     th_ycbcr_buffer f2;
     ogg_int64_t     plsqerr[3];
     long            plnpixels[3];
-    ogg_int64_t     fsqerr;
-    long            fnpixels;
+    ogg_int64_t     sqerr;
+    long            npixels;
     int             ret1;
     int             ret2;
     int             pli;
@@ -1117,8 +1130,8 @@ int main(int _argc,char *_argv[]){
       break;
     }
     /*Okay, we got one frame from each.*/
-    fsqerr=0;
-    fnpixels=0;
+    sqerr=0;
+    npixels=0;
     for(pli=0;pli<3;pli++){
       int xdec;
       int ydec;
@@ -1141,18 +1154,38 @@ int main(int _argc,char *_argv[]){
           plnpixels[pli]++;
         }
       }
-      fsqerr+=plsqerr[pli];
-      fnpixels+=plnpixels[pli];
+      sqerr+=plsqerr[pli];
+      gplsqerr[pli]+=plsqerr[pli];
+      npixels+=plnpixels[pli];
+      gplnpixels[pli]+=plnpixels[pli];
     }
-    printf("%08i: %-7lG  (Y': %-7lG  Cb: %-7lG  Cr: %-7lG)\n",frameno,
-     10*(log10(255*255)+log10(fnpixels)-log10(fsqerr)),
-     10*(log10(255*255)+log10(plnpixels[0])-log10(plsqerr[0])),
-     10*(log10(255*255)+log10(plnpixels[1])-log10(plsqerr[1])),
-     10*(log10(255*255)+log10(plnpixels[2])-log10(plsqerr[2])));
-    sqerr+=fsqerr;
-    npixels+=fnpixels;
+    if(!summary_only){
+      if(!luma_only){
+        printf("%08i: %-7lG  (Y': %-7lG  Cb: %-7lG  Cr: %-7lG)\n",frameno,
+         10*(log10(255*255)+log10(npixels)-log10(sqerr)),
+         10*(log10(255*255)+log10(plnpixels[0])-log10(plsqerr[0])),
+         10*(log10(255*255)+log10(plnpixels[1])-log10(plsqerr[1])),
+         10*(log10(255*255)+log10(plnpixels[2])-log10(plsqerr[2])));
+      }
+      else{
+        printf("%08i: %-7lG\n",frameno,
+         10*(log10(255*255)+log10(plnpixels[0])-log10(plsqerr[0])));
+      }
+    }
+    gsqerr+=sqerr;
+    gnpixels+=npixels;
   }
-  printf("Total: %lG\n",10*(log10(255*255)+log10(npixels)-log10(sqerr)));
+  if(!luma_only){
+    printf("Total: %-7lG  (Y': %-7lG  Cb: %-7lG  Cr: %-7lG)\n",
+     10*(log10(255*255)+log10(gnpixels)-log10(gsqerr)),
+     10*(log10(255*255)+log10(gplnpixels[0])-log10(gplsqerr[0])),
+     10*(log10(255*255)+log10(gplnpixels[1])-log10(gplsqerr[1])),
+     10*(log10(255*255)+log10(gplnpixels[2])-log10(gplsqerr[2])));
+  }
+  else{
+    printf("Total: %-7lG\n",
+     10*(log10(255*255)+log10(gplnpixels[0])-log10(gplsqerr[0])));
+  }
   video_input_close(&vid1);
   video_input_close(&vid2);
   return 0;
