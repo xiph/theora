@@ -2,19 +2,25 @@
 
 INCLUDES = -I$(top_srcdir)/include 
 
-noinst_PROGRAMS = dump_video $(BUILDABLE_EXAMPLES)
+noinst_PROGRAMS = dump_video dump_psnr $(BUILDABLE_EXAMPLES)
 
 # possible contents of BUILDABLE_EXAMPLES:
 EXTRA_PROGRAMS = player_example encoder_example png2theora
 
 AM_CFLAGS = $(OGG_CFLAGS)
 LDADD = ../lib/libtheora.la $(OGG_LIBS)
+LDADDDEC = ../lib/libtheoradec.la $(OGG_LIBS)
 LDADDENC = ../lib/libtheoraenc.la ../lib/libtheoradec.la $(OGG_LIBS)
 
 dump_video_SOURCES = dump_video.c
 EXTRA_dump_video_SOURCES = getopt.c getopt1.c getopt.h
 dump_video_LDADD = $(GETOPT_OBJS) $(LDADD)
 dump_video_DEPENDENCIES = $(GETOPT_OBJS)
+
+dump_psnr_SOURCES = dump_psnr.c
+EXTRA_dump_psnr_SOURCES = getopt.c getopt1.c getopt.h
+dump_psnr_LDADD = $(GETOPT_OBJS) $(LDADDDEC) -lm
+dump_psnr_DEPENDENCIES = $(GETOPT_OBJS)
 
 player_example_SOURCES = player_example.c
 player_example_CFLAGS = $(SDL_CFLAGS) $(OGG_CFLAGS) $(VORBIS_CFLAGS)
