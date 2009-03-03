@@ -527,7 +527,6 @@ static void oc_state_ref_bufs_clear(oc_theora_state *_state){
 
 
 void oc_state_vtable_init_c(oc_theora_state *_state){
-  _state->opt_vtable.frag_recon_intra=oc_frag_recon_intra_c;
   _state->opt_vtable.frag_recon_inter=oc_frag_recon_inter_c;
   _state->opt_vtable.frag_recon_inter2=oc_frag_recon_inter2_c;
   _state->opt_vtable.state_frag_copy=oc_state_frag_copy_c;
@@ -736,10 +735,6 @@ int oc_state_mbi_for_pos(oc_theora_state *_state,int _mbx,int _mby){
   Return: The number of offsets returned: 1 or 2.*/
 int oc_state_get_mv_offsets(oc_theora_state *_state,int _offsets[2],
  int _dx,int _dy,int _ystride,int _pli){
-  int xprec;
-  int yprec;
-  int xfrac;
-  int yfrac;
   /*Here is a brief description of how Theora handles motion vectors:
     Motion vector components are specified to half-pixel accuracy in
      undecimated directions of each plane, and quarter-pixel accuracy in
@@ -754,36 +749,89 @@ int oc_state_get_mv_offsets(oc_theora_state *_state,int _offsets[2],
      non-zero fractional parts.
     The second offset is computed by dividing (not shifting) by the
      appropriate amount, always truncating _away_ from zero.*/
+#if 0
+  /*This version of the code doesn't use any tables, but is slower.*/
+  int xprec;
+  int yprec;
+  int xfrac;
+  int yfrac;
+  int offs;
   /*These two variables decide whether we are in half- or quarter-pixel
      precision in each component.*/
   xprec=1+(!(_state->info.pixel_fmt&1)&&_pli);
   yprec=1+(!(_state->info.pixel_fmt&2)&&_pli);
-  /*These two variables are either 0 if all the fractional bits are 0 or 1 if
-     any of them are non-zero.*/
-  xfrac=!!(_dx&(1<<xprec)-1);
-  yfrac=!!(_dy&(1<<yprec)-1);
-  _offsets[0]=(_dx>>xprec)+(_dy>>yprec)*_ystride;
+  /*These two variables are either 0 if all the fractional bits are zero or -1
+     if any of them are non-zero.*/
+  xfrac=OC_SIGNMASK(-(_dx&(xprec|1)));
+  yfrac=OC_SIGNMASK(-(_dy&(yprec|1)));
+  offs=(_dx>>xprec)+(_dy>>yprec)*_ystride;
   if(xfrac||yfrac){
-    /*This branchless code is equivalent to:
-    if(_dx<0)_offests[0]=-(-_dx>>xprec);
-    else _offsets[0]=(_dx>>xprec);
-    if(_dy<0)_offsets[0]-=(-_dy>>yprec)*_ystride;
-    else _offsets[0]+=(_dy>>yprec)*_ystride;
-    _offsets[1]=_offsets[0];
-    if(xfrac){
-      if(_dx<0)_offsets[1]++;
-      else _offsets[1]--;
-    }
-    if(yfrac){
-      if(_dy<0)_offsets[1]+=_ystride;
-      else _offsets[1]-=_ystride;
-    }*/
-    _offsets[1]=_offsets[0];
-    _offsets[_dx>=0]+=xfrac;
-    _offsets[_dy>=0]+=_ystride&-yfrac;
+    int xmask;
+    int ymask;
+    xmask=OC_SIGNMASK(_dx);
+    ymask=OC_SIGNMASK(_dy);
+    yfrac&=_ystride;
+    _offsets[0]=offs-(xfrac&xmask)+(yfrac&ymask);
+    _offsets[1]=offs-(xfrac&~xmask)+(yfrac&~ymask);
     return 2;
   }
-  else return 1;
+  else{
+    _offsets[0]=offs;
+    return 1;
+  }
+#else
+  /*Using tables simplifies the code, and there's enough arithmetic to hide the
+     latencies of the memory references.*/
+  static const signed char OC_MVMAP[2][64]={
+    {
+          -15,-15,-14,-14,-13,-13,-12,-12,-11,-11,-10,-10, -9, -9, -8,
+       -8, -7, -7, -6, -6, -5, -5, -4, -4, -3, -3, -2, -2, -1, -1,  0,
+        0,  0,  1,  1,  2,  2,  3,  3,  4,  4,  5,  5,  6,  6,  7,  7,
+        8,  8,  9,  9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15
+    },
+    {
+           -7, -7, -7, -7, -6, -6, -6, -6, -5, -5, -5, -5, -4, -4, -4,
+       -4, -3, -3, -3, -3, -2, -2, -2, -2, -1, -1, -1, -1,  0,  0,  0,
+        0,  0,  0,  0,  1,  1,  1,  1,  2,  2,  2,  2,  3,  3,  3,  3,
+        4,  4,  4,  4,  5,  5,  5,  5,  6,  6,  6,  6,  7,  7,  7,  7
+    }
+  };
+  static const signed char OC_MVMAP2[2][64]={
+    {
+        -1, 0,-1,  0,-1, 0,-1,  0,-1, 0,-1,  0,-1, 0,-1,
+      0,-1, 0,-1,  0,-1, 0,-1,  0,-1, 0,-1,  0,-1, 0,-1,
+      0, 1, 0, 1,  0, 1, 0, 1,  0, 1, 0, 1,  0, 1, 0, 1,
+      0, 1, 0, 1,  0, 1, 0, 1,  0, 1, 0, 1,  0, 1, 0, 1
+    },
+    {
+        -1,-1,-1,  0,-1,-1,-1,  0,-1,-1,-1,  0,-1,-1,-1,
+      0,-1,-1,-1,  0,-1,-1,-1,  0,-1,-1,-1,  0,-1,-1,-1,
+      0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1,
+      0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1
+    }
+  };
+  int qpx;
+  int qpy;
+  int mx;
+  int my;
+  int mx2;
+  int my2;
+  int offs;
+  qpy=!(_state->info.pixel_format&2)&&_pli;
+  my=OC_MVMAP[qpy][_dy+31];
+  my2=OC_MVMAP2[qpy][_dy+31];
+  qpx=!(_state->info.pixel_format&1)&&_pli;
+  mx=OC_MVMAP[qpx][_dx+31];
+  mx2=OC_MVMAP2[qpx][_dx+31];
+  offs=my*_ystride+mx;
+  if(mx2||my2){
+    _offsets[1]=offs+my2*_ystride+mx2;
+    _offsets[0]=offs;
+    return 2;
+  }
+  _offsets[0]=offs;
+  return 1;
+#endif
 }
 
 void oc_state_frag_recon(oc_theora_state *_state,oc_fragment *_frag,
