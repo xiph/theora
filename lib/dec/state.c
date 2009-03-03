@@ -817,10 +817,10 @@ int oc_state_get_mv_offsets(oc_theora_state *_state,int _offsets[2],
   int mx2;
   int my2;
   int offs;
-  qpy=!(_state->info.pixel_format&2)&&_pli;
+  qpy=!(_state->info.pixel_fmt&2)&&_pli;
   my=OC_MVMAP[qpy][_dy+31];
   my2=OC_MVMAP2[qpy][_dy+31];
-  qpx=!(_state->info.pixel_format&1)&&_pli;
+  qpx=!(_state->info.pixel_fmt&1)&&_pli;
   mx=OC_MVMAP[qpx][_dx+31];
   mx2=OC_MVMAP2[qpx][_dx+31];
   offs=my*_ystride+mx;
