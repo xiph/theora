@@ -199,10 +199,10 @@ int theora_decode_YUVout(theora_state *_td,yuv_buffer *_yuv){
     unsigned char *data = cairo_image_surface_get_data(cs);
     unsigned cstride = cairo_image_surface_get_stride(cs);
     for(y=0;y<h;y+=2){
-      unsigned char *Ya = buf[0].data + y*buf[0].ystride;
-      unsigned char *Yb = buf[0].data + (y+1)*buf[0].ystride;
-      unsigned char *U  = buf[1].data + (y>>1)*buf[1].ystride;
-      unsigned char *V  = buf[2].data + (y>>1)*buf[2].ystride;
+      unsigned char *Ya = buf[0].data + y*buf[0].stride;
+      unsigned char *Yb = buf[0].data + (y+1)*buf[0].stride;
+      unsigned char *U  = buf[1].data + (y>>1)*buf[1].stride;
+      unsigned char *V  = buf[2].data + (y>>1)*buf[2].stride;
       unsigned char *Ca = data + y*cstride; 
       unsigned char *Cb = data + (y+1)*cstride; 
       for(x=0;x<w*4;x+=8){
@@ -462,14 +462,14 @@ int theora_decode_YUVout(theora_state *_td,yuv_buffer *_yuv){
 
     /* out of the Cairo plane into the telemetry YUV buffer */
     buf[0].data = decode->telemetry_frame_data;
-    buf[1].data = decode->telemetry_frame_data+h*buf[0].ystride;
-    buf[2].data = decode->telemetry_frame_data+h*buf[0].ystride+h/2*buf[1].ystride;
+    buf[1].data = decode->telemetry_frame_data+h*buf[0].stride;
+    buf[2].data = decode->telemetry_frame_data+h*buf[0].stride+h/2*buf[1].stride;
 
     for(y=0;y<h;y+=2){
-      unsigned char *Ya = buf[0].data + y*buf[0].ystride;
-      unsigned char *Yb = buf[0].data + (y+1)*buf[0].ystride;
-      unsigned char *U  = buf[1].data + (y>>1)*buf[1].ystride;
-      unsigned char *V  = buf[2].data + (y>>1)*buf[2].ystride;
+      unsigned char *Ya = buf[0].data + y*buf[0].stride;
+      unsigned char *Yb = buf[0].data + (y+1)*buf[0].stride;
+      unsigned char *U  = buf[1].data + (y>>1)*buf[1].stride;
+      unsigned char *V  = buf[2].data + (y>>1)*buf[2].stride;
       unsigned char *Ca = data + y*cstride; 
       unsigned char *Cb = data + (y+1)*cstride; 
       for(x=0;x<w*4;x+=8){
