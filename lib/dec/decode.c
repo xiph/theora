@@ -750,15 +750,14 @@ static int oc_token_dec1val_const(int _token){
 
 /*Handles DCT value tokens category 2.*/
 static int oc_token_dec1val_cat2(int _token,int _extra_bits){
-  int valsigned[2];
-  valsigned[0]=_token-OC_DCT_VAL_CAT2+3;
-  valsigned[1]=-valsigned[0];
-  return valsigned[_extra_bits];
+  int mask;
+  mask=-_extra_bits;
+  return (_token-OC_DCT_VAL_CAT2+3+mask)^mask;
 }
 
 /*Handles DCT value tokens categories 3 through 8.*/
 static int oc_token_dec1val_cati(int _token,int _extra_bits){
-  static const int VAL_CAT_OFFS[6]={
+  static const unsigned char  VAL_CAT_OFFS[6]={
     OC_NDCT_VAL_CAT2_SIZE+3,
     OC_NDCT_VAL_CAT2_SIZE+5,
     OC_NDCT_VAL_CAT2_SIZE+9,
@@ -766,16 +765,15 @@ static int oc_token_dec1val_cati(int _token,int _extra_bits){
     OC_NDCT_VAL_CAT2_SIZE+33,
     OC_NDCT_VAL_CAT2_SIZE+65
   };
-  static const int VAL_CAT_MASKS[6]={
+  static const unsigned short VAL_CAT_MASKS[6]={
     0x001,0x003,0x007,0x00F,0x01F,0x1FF
   };
-  static const int VAL_CAT_SHIFTS[6]={1,2,3,4,5,9};
-  int valsigned[2];
+  static const unsigned char  VAL_CAT_SHIFTS[6]={1,2,3,4,5,9};
   int cati;
+  int mask;
   cati=_token-OC_NDCT_VAL_CAT2_MAX;
-  valsigned[0]=VAL_CAT_OFFS[cati]+(_extra_bits&VAL_CAT_MASKS[cati]);
-  valsigned[1]=-valsigned[0];
-  return valsigned[_extra_bits>>VAL_CAT_SHIFTS[cati]&1];
+  mask=-(_extra_bits>>VAL_CAT_SHIFTS[cati]);
+  return (VAL_CAT_OFFS[cati]+(_extra_bits&VAL_CAT_MASKS[cati])+mask)^mask;
 }
 
 /*A jump table for compute the first coefficient value the given token value
@@ -1108,7 +1106,7 @@ static void oc_token_expand_run(int _token,int _extra_bits,
   static const int SIGN_SHIFT[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
     2,3,1,2
   };
-  int valsigned[2];
+  int mask;
   int zzi;
   int rl;
   _token-=OC_DCT_RUN_CAT1B;
@@ -1116,11 +1114,9 @@ static void oc_token_expand_run(int _token,int _extra_bits,
   zzi=*_zzi;
   /*LOOP VECTORIZES.*/
   while(rl-->0)_dct_coeffs[zzi++]=0;
-  valsigned[0]=VALUE_ADJUST[_token]+
-   (_extra_bits>>VALUE_SHIFT[_token]&VALUE_MASK[_token]);
-  valsigned[1]=-valsigned[0];
-  _dct_coeffs[zzi++]=(ogg_int16_t)valsigned[
-   _extra_bits>>SIGN_SHIFT[_token]];
+  mask=-(_extra_bits>>SIGN_SHIFT[_token]);
+  _dct_coeffs[zzi++]=(ogg_int16_t)((VALUE_ADJUST[_token]+
+   (_extra_bits>>VALUE_SHIFT[_token]&VALUE_MASK[_token])+mask)^mask);
   *_zzi=zzi;
 }
 
