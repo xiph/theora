@@ -58,7 +58,7 @@ struct option options [] = {
 
 typedef struct y4m_input y4m_input;
 
-/*The function used perform chroma conversion.*/
+/*The function used to perform chroma conversion.*/
 typedef void (*y4m_convert_func)(y4m_input *_y4m,
  unsigned char *_dst,unsigned char *_aux);
 
@@ -949,8 +949,9 @@ static int th_input_fetch_frame(th_input *_th,FILE *_fin,
       }
       else return -1;
     }
-    do if(th_input_buffer_data(_th,_fin)==0)return feof(_fin)?0:-1;
-    while(ogg_sync_pageout(&_th->oy,&og)<=0);
+    while(ogg_sync_pageout(&_th->oy,&og)<=0){
+      if(th_input_buffer_data(_th,_fin)==0)return feof(_fin)?0:-1;
+    }
     th_input_queue_page(_th,&og);
   }
 }
@@ -1142,11 +1143,11 @@ int main(int _argc,char *_argv[]){
       plsqerr[pli]=0;
       plnpixels[pli]=0;
       for(y1=ti1.pic_y>>ydec,y2=ti2.pic_y>>ydec;
-       y1<ti1.pic_y+ti1.pic_height+1>>ydec;y1++,y2++){
+       y1<ti1.pic_y+ti1.pic_height+ydec>>ydec;y1++,y2++){
         int x1;
         int x2;
         for(x1=ti1.pic_x>>xdec,x2=ti2.pic_x>>xdec;
-         x1<ti1.pic_x+ti1.pic_width+1>>xdec;x1++,x2++){
+         x1<ti1.pic_x+ti1.pic_width+xdec>>xdec;x1++,x2++){
           int d;
           d=*(f1[pli].data+y1*f1[pli].stride+x1)-
            *(f2[pli].data+y2*f2[pli].stride+x2);
