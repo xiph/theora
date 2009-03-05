@@ -16,7 +16,8 @@ SPEC_SRCS = spec.tex spec.bib
 FIG_SRCS = pic-frame.fig hilbert-mb.fig hilbert-block.fig xifish.fig \
            superblock.fig macroblock.fig raster-block.fig reference-frames.fig \
            pixel444.fig pixel422.fig pixel420.fig idct.fig fdct.fig \
-           pic_even.fig pic_even_odd.fig pic_odd.fig pic_odd_even.fig
+           pic_even.fig pic_even_odd.fig pic_odd.fig pic_odd_even.fig \
+           lflim.fig
 
 FIG_TEXS = $(FIG_SRCS:.fig=.tex)
 FIG_AUXS = $(FIG_SRCS:.fig=.aux)

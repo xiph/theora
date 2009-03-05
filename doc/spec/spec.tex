@@ -7100,6 +7100,14 @@ Otherwise, \locvar{\pli} equals 2, so assign
 \section{Loop Filtering}
 \label{sec:loopfilter}
 
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics{lflim}
+\end{center}
+\caption{The loop filter response function.}
+\label{fig:lflim}
+\end{figure}
+
 The loop filter is a simple deblocking filter that is based on running a small
  edge detecting filter over the coded block edges and adjusting the pixel
  values by a tapered response.
@@ -7114,7 +7122,7 @@ The filter response is modulated by the following non-linear function:
 \end{array}\right.
 \end{align*}
 Here \bitvar{L} is a limiting value equal to $\bitvar{LFLIMS}[\idx{qi0}]$.
-It defines the peaks of the function.
+It defines the peaks of the function, illustrated in Figure~\ref{fig:lflim}.
 \bitvar{LFLIMS} is an array of values specified in the setup header and is
  indexed by \idx{qi0}, the first quantization index for the frame, the one used
  for all the DC coefficients.
