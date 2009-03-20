@@ -126,7 +126,7 @@ libtheoraenc_la_SOURCES = \
   Version_script-enc
 libtheoraenc_la_LDFLAGS = \
   -version-info @THENC_LIB_CURRENT@:@THENC_LIB_REVISION@:@THENC_LIB_AGE@ \
-  @THEORAENC_LDFLAGS@ $(OGG_LIBS)
+  @THEORAENC_LDFLAGS@ $(OGG_LIBS) -lm
 
 libtheora_la_SOURCES = \
 	$(decoder_arch_sources) \
@@ -136,7 +136,7 @@ libtheora_la_SOURCES = \
   Version_script
 libtheora_la_LDFLAGS = \
   -version-info @TH_LIB_CURRENT@:@TH_LIB_REVISION@:@TH_LIB_AGE@ \
-  @THEORA_LDFLAGS@ @CAIRO_LIBS@ $(OGG_LIBS)
+  @THEORA_LDFLAGS@ @CAIRO_LIBS@ $(OGG_LIBS) -lm
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@" 

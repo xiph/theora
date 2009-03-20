@@ -21,18 +21,18 @@
 #include "encoder_lookup.h"
 
 static int predict_frag(int wpc,
-			ogg_int16_t *dc,
-			ogg_int16_t *down,
-			int *last){
-  
+                        ogg_int16_t *dc,
+                        ogg_int16_t *down,
+                        int *last){
+
   if(wpc){
     ogg_int16_t DC = 0;
-    
+
     if(wpc&0x1) DC += pc[wpc][0]* *(dc-1);
     if(wpc&0x2) DC += pc[wpc][1]* *(down-1);
     if(wpc&0x4) DC += pc[wpc][2]* *(down);
     if(wpc&0x8) DC += pc[wpc][3]* *(down+1);
-    
+
     /* if we need to do a shift */
     if(pc[wpc][4]) {
       /* If negative add in the negative correction factor */
@@ -40,18 +40,18 @@ static int predict_frag(int wpc,
       /* Shift in lieu of a divide */
       DC >>= pc[wpc][4];
     }
-    
+
     /* check for outranging on the two predictors that can outrange */
     if((wpc&(PU|PUL|PL)) == (PU|PUL|PL)){
       if( abs(DC - *down) > 128) {
-	DC = *down;
+        DC = *down;
       } else if( abs(DC - *(dc-1)) > 128) {
-	DC = *(dc-1);
+        DC = *(dc-1);
       } else if( abs(DC - *(down-1)) > 128) {
-	DC = *(down-1);
+        DC = *(down-1);
       }
     }
-    
+
     *last = *dc;
     return *dc - DC;
   }else{
@@ -86,21 +86,20 @@ static void PredictDC(CP_INSTANCE *cpi){
       memcpy(dc,cpi->frag_dc+fi,sizeof(dc));
 
       for (x=0; x<h; x++, fi++) {
-	if(cp[fi]) {
-	  int wpc=0;
-	  int wf = Mode2Frame[mb_row[x>>subh].mode];
-	  
-	  if(x>0){ 
-	    if(cp[fi-1] && Mode2Frame[mb_row[(x-1)>>subh].mode] == wf) wpc|=1; /* left */
-	    if(y>0 && cp[fi-h-1] && Mode2Frame[mb_down[(x-1)>>subh].mode] == wf) wpc|=2; /* down left */
-	  }
-	  if(y>0){
-	    if(cp[fi-h] && Mode2Frame[mb_down[x>>subh].mode] == wf) wpc|=4; /* down */
-	    if(x+1<h && cp[fi-h+1] && Mode2Frame[mb_down[(x+1)>>subh].mode] == wf) wpc|=8; /* down right */
-	  }
+        if(cp[fi]) {
+          int wpc=0;
+          int wf = Mode2Frame[mb_row[x>>subh].mode];
 
-	  cpi->frag_dc[fi]=predict_frag(wpc,dc+x,down+x,last+wf);
-	}
+          if(x>0){
+            if(cp[fi-1] && Mode2Frame[mb_row[(x-1)>>subh].mode] == wf) wpc|=1; /* left */
+            if(y>0 && cp[fi-h-1] && Mode2Frame[mb_down[(x-1)>>subh].mode] == wf) wpc|=2; /* down left */
+          }
+          if(y>0){
+            if(cp[fi-h] && Mode2Frame[mb_down[x>>subh].mode] == wf) wpc|=4; /* down */
+            if(x+1<h && cp[fi-h+1] && Mode2Frame[mb_down[(x+1)>>subh].mode] == wf) wpc|=8; /* down right */
+          }
+          cpi->frag_dc[fi]=predict_frag(wpc,dc+x,down+x,last+wf);
+        }
       }
     }
   }
@@ -110,7 +109,7 @@ static void ChooseTokenTables (CP_INSTANCE *cpi) {
   int interp = (cpi->FrameType!=KEY_FRAME);
   int i,plane;
   int best;
-  
+
   for(plane = 0; plane<2; plane++){
 
     /* Work out which table options are best for DC */
@@ -118,49 +117,49 @@ static void ChooseTokenTables (CP_INSTANCE *cpi) {
     cpi->huffchoice[interp][0][plane] = DC_HUFF_OFFSET;
     for ( i = 1; i < DC_HUFF_CHOICES; i++ ) {
       if ( cpi->dc_bits[plane][i] < best ) {
-	best = cpi->dc_bits[plane][i];
-	cpi->huffchoice[interp][0][plane] = i + DC_HUFF_OFFSET;
+        best = cpi->dc_bits[plane][i];
+        cpi->huffchoice[interp][0][plane] = i + DC_HUFF_OFFSET;
       }
     }
-  
+
     /* Work out which table options are best for AC */
     best = cpi->ac1_bits[plane][0]+cpi->acN_bits[plane][0];
     cpi->huffchoice[interp][1][plane] = AC_HUFF_OFFSET;
     for ( i = 1; i < AC_HUFF_CHOICES; i++ ) {
       int test = cpi->ac1_bits[plane][i] + cpi->acN_bits[plane][i];
       if ( test < best ){
-	best = test;
-	cpi->huffchoice[interp][1][plane] = i + AC_HUFF_OFFSET;
+        best = test;
+        cpi->huffchoice[interp][1][plane] = i + AC_HUFF_OFFSET;
       }
     }
   }
 }
 
-static void EncodeTokenGroup(CP_INSTANCE *cpi, 
-			     int group, 
-			     int huffY,
-			     int huffC){
+static void EncodeTokenGroup(CP_INSTANCE *cpi,
+                             int group,
+                             int huffY,
+                             int huffC){
 
   int i;
   oggpack_buffer *opb=cpi->oggbuffer;
   unsigned char *token = cpi->dct_token[group];
   ogg_uint16_t *eb = cpi->dct_token_eb[group];
- 
+
   for(i=0; i<cpi->dct_token_ycount[group]; i++){
     if(token[i] < DCT_NOOP){
       oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huffY][token[i]],
-		      cpi->HuffCodeLengthArray_VP3x[huffY][token[i]] );
-      if (cpi->ExtraBitLengths_VP3x[token[i]] > 0) 
-	oggpackB_write( opb, eb[i], cpi->ExtraBitLengths_VP3x[token[i]] );
+                      cpi->HuffCodeLengthArray_VP3x[huffY][token[i]] );
+      if (cpi->ExtraBitLengths_VP3x[token[i]] > 0)
+        oggpackB_write( opb, eb[i], cpi->ExtraBitLengths_VP3x[token[i]] );
     }
   }
 
   for(; i<cpi->dct_token_count[group]; i++){
     if(token[i] < DCT_NOOP){
       oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huffC][token[i]],
-		      cpi->HuffCodeLengthArray_VP3x[huffC][token[i]] );
-      if (cpi->ExtraBitLengths_VP3x[token[i]] > 0) 
-	oggpackB_write( opb, eb[i], cpi->ExtraBitLengths_VP3x[token[i]] );
+                      cpi->HuffCodeLengthArray_VP3x[huffC][token[i]] );
+      if (cpi->ExtraBitLengths_VP3x[token[i]] > 0)
+        oggpackB_write( opb, eb[i], cpi->ExtraBitLengths_VP3x[token[i]] );
     }
   }
 }
@@ -185,22 +184,22 @@ static long EncodeTokenList (CP_INSTANCE *cpi) {
 
   bits1 = oggpackB_bits(opb);
   for(i=1;i<=AC_TABLE_2_THRESH;i++)
-    EncodeTokenGroup(cpi, i,  cpi->huffchoice[interp][1][0], 
-		     cpi->huffchoice[interp][1][1]);
+    EncodeTokenGroup(cpi, i,  cpi->huffchoice[interp][1][0],
+                     cpi->huffchoice[interp][1][1]);
 
   for(;i<=AC_TABLE_3_THRESH;i++)
-    EncodeTokenGroup(cpi, i,  cpi->huffchoice[interp][1][0]+AC_HUFF_CHOICES, 
-		     cpi->huffchoice[interp][1][1]+AC_HUFF_CHOICES);
+    EncodeTokenGroup(cpi, i,  cpi->huffchoice[interp][1][0]+AC_HUFF_CHOICES,
+                     cpi->huffchoice[interp][1][1]+AC_HUFF_CHOICES);
 
   for(;i<=AC_TABLE_4_THRESH;i++)
-    EncodeTokenGroup(cpi, i,  cpi->huffchoice[interp][1][0]+AC_HUFF_CHOICES*2, 
-		     cpi->huffchoice[interp][1][1]+AC_HUFF_CHOICES*2);
+    EncodeTokenGroup(cpi, i,  cpi->huffchoice[interp][1][0]+AC_HUFF_CHOICES*2,
+                     cpi->huffchoice[interp][1][1]+AC_HUFF_CHOICES*2);
 
   for(;i<BLOCK_SIZE;i++)
-    EncodeTokenGroup(cpi, i,  cpi->huffchoice[interp][1][0]+AC_HUFF_CHOICES*3, 
-		     cpi->huffchoice[interp][1][1]+AC_HUFF_CHOICES*3);
+    EncodeTokenGroup(cpi, i,  cpi->huffchoice[interp][1][0]+AC_HUFF_CHOICES*3,
+                     cpi->huffchoice[interp][1][1]+AC_HUFF_CHOICES*3);
   bits1 = oggpackB_bits(opb)-bits1;
-  
+
   return bits1;
 }
 
@@ -249,10 +248,10 @@ static void PackModes (CP_INSTANCE *cpi) {
     for ( MB=0; MB<4; MB++ ) {
       macroblock_t *mbp = &cpi->macro[sp->m[MB]];
       if(mbp->coded){
-	/* Add the appropriate mode entropy token. */
-	int index = ModeScheme[mbp->mode];
-	oggpackB_write( opb, ModeWords[index],
-			(ogg_uint32_t)ModeBits[index] );
+        /* Add the appropriate mode entropy token. */
+        int index = ModeScheme[mbp->mode];
+        oggpackB_write( opb, ModeWords[index],
+                        (ogg_uint32_t)ModeBits[index] );
       }
     }
   }
@@ -286,23 +285,23 @@ static void PackMotionVectors (CP_INSTANCE *cpi) {
       if(!mbp->coded) continue;
 
       if(mbp->mode==CODE_INTER_PLUS_MV || mbp->mode==CODE_GOLDEN_MV){
-	/* One MV for the macroblock */
-	for(B=0; B<4; B++ ){
-	  if(mbp->coded & (1<<B)){
-	    oggpackB_write( opb, MvPatternPtr[mbp->mv[B].x], MvBitsPtr[mbp->mv[B].x] );
-	    oggpackB_write( opb, MvPatternPtr[mbp->mv[B].y], MvBitsPtr[mbp->mv[B].y] );
-	    break;
-	  }
-	}
+        /* One MV for the macroblock */
+        for(B=0; B<4; B++ ){
+          if(mbp->coded & (1<<B)){
+            oggpackB_write( opb, MvPatternPtr[mbp->mv[B][0]], MvBitsPtr[mbp->mv[B][0]] );
+            oggpackB_write( opb, MvPatternPtr[mbp->mv[B][1]], MvBitsPtr[mbp->mv[B][1]] );
+            break;
+          }
+        }
 
       }else if (mbp->mode == CODE_INTER_FOURMV){
-	/* MV for each codedblock */
-	for(B=0; B<4; B++ ){
-	  if(mbp->coded & (1<<B)){
-	    oggpackB_write( opb, MvPatternPtr[mbp->mv[B].x], MvBitsPtr[mbp->mv[B].x] );
-	    oggpackB_write( opb, MvPatternPtr[mbp->mv[B].y], MvBitsPtr[mbp->mv[B].y] );
-	  }
-	}
+        /* MV for each codedblock */
+        for(B=0; B<4; B++ ){
+          if(mbp->coded & (1<<B)){
+            oggpackB_write( opb, MvPatternPtr[mbp->mv[B][0]], MvBitsPtr[mbp->mv[B][0]] );
+            oggpackB_write( opb, MvPatternPtr[mbp->mv[B][1]], MvBitsPtr[mbp->mv[B][1]] );
+          }
+        }
       }
     }
   }
@@ -327,14 +326,12 @@ void EncodeData(CP_INSTANCE *cpi){
     PackMotionVectors (cpi);
     mvbits = oggpackB_bits(cpi->oggbuffer)-prebits;
   }
-
   ChooseTokenTables(cpi);
   {
     int prebits = oggpackB_bits(cpi->oggbuffer);
     EncodeTokenList(cpi);
     dctbits = oggpackB_bits(cpi->oggbuffer)-prebits;
   }
-  
   bits = oggpackB_bits(cpi->oggbuffer);
   ReconRefFrames(cpi);
 
@@ -355,14 +352,14 @@ void EncodeData(CP_INSTANCE *cpi){
       int stride = cpi->stride[pi];
       int h = cpi->frag_h[pi]*8;
       int v = cpi->frag_v[pi]*8;
-      
+
       for(y=0;y<v;y++){
-	int lssd=0;
-	for(x=0;x<h;x++)
-	  lssd += (frame[x]-recon[x])*(frame[x]-recon[x]);
-	ssd+=lssd;
-	frame+=stride;
-	recon+=stride;
+        int lssd=0;
+        for(x=0;x<h;x++)
+          lssd += (frame[x]-recon[x])*(frame[x]-recon[x]);
+        ssd+=lssd;
+        frame+=stride;
+        recon+=stride;
       }
       fi+=cpi->frag_n[pi];
     }
@@ -370,38 +367,38 @@ void EncodeData(CP_INSTANCE *cpi){
     minimize = ssd + (float)bits*cpi->token_lambda*16;
 
     fprintf(stdout,"%d %d %d %d %f %f %f %ld %ld %ld %ld %f %f  %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f  %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f  \n",
-	    (int)cpi->CurrentFrame, // 0
-	    cpi->BaseQ,             // 1
-	    cpi->token_lambda,      // 2
-	    cpi->skip_lambda,       // 3
-	    (double)cpi->rho_count[cpi->BaseQ]/total,           // 4
-	    (double)cpi->rho_postop/total,                      // 5
-	    (double)cpi->rho_postop/cpi->rho_count[cpi->BaseQ], // 6
- 	    modebits,               // 7
-	    mvbits,                 // 8
-	    dctbits,                // 9
-	    oggpackB_bits(cpi->oggbuffer), // 10
-	    (double)ssd,              // 11
-	    (double)0,
-	    (double)cpi->dist_dist[0][0],//13
-	    (double)cpi->dist_dist[0][1],
-	    (double)cpi->dist_dist[0][2],
-	    (double)cpi->dist_dist[0][3],
-	    (double)cpi->dist_dist[0][4],
-	    (double)cpi->dist_dist[0][5],
-	    (double)cpi->dist_dist[0][6],
-	    (double)cpi->dist_dist[0][7],
-	    (double)(cpi->dist_bits[0][0]>>7),//21
-	    (double)(cpi->dist_bits[0][1]>>7),
-	    (double)(cpi->dist_bits[0][2]>>7),
-	    (double)(cpi->dist_bits[0][3]>>7),
-	    (double)(cpi->dist_bits[0][4]>>7),
-	    (double)(cpi->dist_bits[0][5]>>7),
-	    (double)(cpi->dist_bits[0][6]>>7),
-	    (double)(cpi->dist_bits[0][7]>>7)
-	    
+            (int)cpi->CurrentFrame, // 0
+            cpi->BaseQ,             // 1
+            cpi->token_lambda,      // 2
+            cpi->skip_lambda,       // 3
+            (double)cpi->rho_count[cpi->BaseQ]/total,           // 4
+            (double)cpi->rho_postop/total,                      // 5
+            (double)cpi->rho_postop/cpi->rho_count[cpi->BaseQ], // 6
+            modebits,               // 7
+            mvbits,                 // 8
+            dctbits,                // 9
+            oggpackB_bits(cpi->oggbuffer), // 10
+            (double)ssd,              // 11
+            (double)0,
+            (double)cpi->dist_dist[0][0],//13
+            (double)cpi->dist_dist[0][1],
+            (double)cpi->dist_dist[0][2],
+            (double)cpi->dist_dist[0][3],
+            (double)cpi->dist_dist[0][4],
+            (double)cpi->dist_dist[0][5],
+            (double)cpi->dist_dist[0][6],
+            (double)cpi->dist_dist[0][7],
+            (double)(cpi->dist_bits[0][0]>>7),//21
+            (double)(cpi->dist_bits[0][1]>>7),
+            (double)(cpi->dist_bits[0][2]>>7),
+            (double)(cpi->dist_bits[0][3]>>7),
+            (double)(cpi->dist_bits[0][4]>>7),
+            (double)(cpi->dist_bits[0][5]>>7),
+            (double)(cpi->dist_bits[0][6]>>7),
+            (double)(cpi->dist_bits[0][7]>>7)
 
-	    );               
+
+            );
   }
 #endif
 #endif
@@ -413,7 +410,7 @@ void WriteFrameHeader( CP_INSTANCE *cpi) {
 
   /* Output the frame type (base/key frame or inter frame) */
   oggpackB_write( opb, cpi->FrameType, 1 );
-  
+
   /* Write out details of the current value of Q... variable resolution. */
   oggpackB_write( opb, cpi->BaseQ, 6 ); // temporary
 

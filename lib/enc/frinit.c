@@ -51,20 +51,20 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
 
 /* A note to people reading and wondering why malloc returns aren't
    checked:
-   
+
    lines like the following that implement a general strategy of
    'check the return of malloc; a zero pointer means we're out of
    memory!'...:
-   
+
    if(!cpi->extra_fragments) { EDeleteFragmentInfo(cpi); return FALSE; }
-   
+
    ...are not useful.  It's true that many platforms follow this
    malloc behavior, but many do not.  The more modern malloc
    strategy is only to allocate virtual pages, which are not mapped
    until the memory on that page is touched.  At *that* point, if
    the machine is out of heap, the page fails to be mapped and a
    SEGV is generated.
-   
+
    That means that if we want to deal with out of memory conditions,
    we *must* be prepared to process a SEGV.  If we implement the
    SEGV handler, there's no reason to to check malloc return; it is
@@ -113,7 +113,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->super_total = cpi->super_n[0] + cpi->super_n[1] + cpi->super_n[2];
 
   /* +1; the last entry is the 'invalid' frag, which is always set to not coded as it doesn't really exist */
-  cpi->frag_coded = calloc(cpi->frag_total+1, sizeof(*cpi->frag_coded)); 
+  cpi->frag_coded = calloc(cpi->frag_total+1, sizeof(*cpi->frag_coded));
   cpi->frag_buffer_index = calloc(cpi->frag_total, sizeof(*cpi->frag_buffer_index));
   cpi->frag_dc = calloc(cpi->frag_total, sizeof(*cpi->frag_dc));
 
@@ -144,7 +144,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
    cpi->dct_eob_fi_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_eob_fi_storage));
  }
 #endif
-  
+
   /* fill in superblock fragment pointers; hilbert order */
   /* fill in macroblock superblock backpointers */
   {
@@ -159,74 +159,74 @@ void InitFrameInfo(CP_INSTANCE *cpi){
     for(plane=0;plane<3;plane++){
 
       for(row=0;row<cpi->super_v[plane];row++){
-	for(col=0;col<cpi->super_h[plane];col++){
-	  int superindex = row*cpi->super_h[plane] + col;
-	  for(frag=0;frag<16;frag++){
-	    /* translate to fragment index */
-	    int frow = row*4 + fhilberty[frag];
-	    int fcol = col*4 + fhilbertx[frag];
-	    if(frow<cpi->frag_v[plane] && fcol<cpi->frag_h[plane]){
-	      int fragindex = frow*cpi->frag_h[plane] + fcol + offset;
-	      cpi->super[plane][superindex].f[frag] = fragindex;
-	    }else
-	      cpi->super[plane][superindex].f[frag] = cpi->frag_total; /* 'invalid' */
-	  }
-	}
+        for(col=0;col<cpi->super_h[plane];col++){
+          int superindex = row*cpi->super_h[plane] + col;
+          for(frag=0;frag<16;frag++){
+            /* translate to fragment index */
+            int frow = row*4 + fhilberty[frag];
+            int fcol = col*4 + fhilbertx[frag];
+            if(frow<cpi->frag_v[plane] && fcol<cpi->frag_h[plane]){
+              int fragindex = frow*cpi->frag_h[plane] + fcol + offset;
+              cpi->super[plane][superindex].f[frag] = fragindex;
+            }else
+              cpi->super[plane][superindex].f[frag] = cpi->frag_total; /* 'invalid' */
+          }
+        }
       }
       offset+=cpi->frag_n[plane];
     }
-    
+
     /* Y */
     for(row=0;row<cpi->super_v[0];row++){
       for(col=0;col<cpi->super_h[0];col++){
-	int superindex = row*cpi->super_h[0] + col;
-	for(mb=0;mb<4;mb++){
-	  /* translate to macroblock index */
-	  int mrow = row*2 + mhilberty[mb];
-	  int mcol = col*2 + mhilbertx[mb];
-	  if(mrow<cpi->macro_v && mcol<cpi->macro_h){
-	    int macroindex = mrow*cpi->macro_h + mcol;
-	    cpi->super[0][superindex].m[mb] = macroindex;
-	    cpi->macro[macroindex].ysb = superindex;
-	  }else
-	    cpi->super[0][superindex].m[mb] = cpi->macro_total;
-	}
+        int superindex = row*cpi->super_h[0] + col;
+        for(mb=0;mb<4;mb++){
+          /* translate to macroblock index */
+          int mrow = row*2 + mhilberty[mb];
+          int mcol = col*2 + mhilbertx[mb];
+          if(mrow<cpi->macro_v && mcol<cpi->macro_h){
+            int macroindex = mrow*cpi->macro_h + mcol;
+            cpi->super[0][superindex].m[mb] = macroindex;
+            cpi->macro[macroindex].ysb = superindex;
+          }else
+            cpi->super[0][superindex].m[mb] = cpi->macro_total;
+        }
       }
     }
 
     /* U (assuming 4:2:0 for now) */
     for(row=0;row<cpi->super_v[1];row++){
       for(col=0;col<cpi->super_h[1];col++){
-	int superindex = row*cpi->super_h[1] + col;
-	for(mb=0;mb<16;mb++){
-	  /* translate to macroblock index */
-	  int mrow = row*4 + fhilberty[mb];
-	  int mcol = col*4 + fhilbertx[mb];
-	  if(mrow<cpi->macro_v && mcol<cpi->macro_h){
-	    int macroindex = mrow*cpi->macro_h + mcol;
-	    cpi->super[1][superindex].m[mb] = macroindex;
-	    cpi->macro[macroindex].usb = superindex + cpi->super_n[0];
-	  }else
-	    cpi->super[1][superindex].m[mb] = cpi->macro_total;
-	}
+        int superindex = row*cpi->super_h[1] + col;
+        for(mb=0;mb<16;mb++){
+          /* translate to macroblock index */
+          int mrow = row*4 + fhilberty[mb];
+          int mcol = col*4 + fhilbertx[mb];
+          if(mrow<cpi->macro_v && mcol<cpi->macro_h){
+            int macroindex = mrow*cpi->macro_h + mcol;
+            cpi->super[1][superindex].m[mb] = macroindex;
+            cpi->macro[macroindex].usb = superindex + cpi->super_n[0];
+          }else
+            cpi->super[1][superindex].m[mb] = cpi->macro_total;
+        }
       }
     }
 
     /* V (assuming 4:2:0 for now) */
     for(row=0;row<cpi->super_v[2];row++){
       for(col=0;col<cpi->super_h[2];col++){
-	int superindex = row*cpi->super_h[2] + col;
-	for(mb=0;mb<16;mb++){
-	  /* translate to macroblock index */
-	  int mrow = row*4 + fhilberty[mb];
-	  int mcol = col*4 + fhilbertx[mb];
-	  if(mrow<cpi->macro_v && mcol<cpi->macro_h){
-	    int macroindex = mrow*cpi->macro_h + mcol;
-	    cpi->super[2][superindex].m[mb] = macroindex;
-	    cpi->macro[macroindex].vsb = superindex + cpi->super_n[0] + cpi->super_n[1];
-	  }else
-	    cpi->super[2][superindex].m[mb] = cpi->macro_total;
-	}
+        int superindex = row*cpi->super_h[2] + col;
+        for(mb=0;mb<16;mb++){
+          /* translate to macroblock index */
+          int mrow = row*4 + fhilberty[mb];
+          int mcol = col*4 + fhilbertx[mb];
+          if(mrow<cpi->macro_v && mcol<cpi->macro_h){
+            int macroindex = mrow*cpi->macro_h + mcol;
+            cpi->super[2][superindex].m[mb] = macroindex;
+            cpi->macro[macroindex].vsb = superindex + cpi->super_n[0] + cpi->super_n[1];
+          }else
+            cpi->super[2][superindex].m[mb] = cpi->macro_total;
+        }
       }
     }
 
@@ -242,62 +242,62 @@ void InitFrameInfo(CP_INSTANCE *cpi){
     for(row=0;row<cpi->macro_v;row++){
       int baserow = row*2;
       for(col=0;col<cpi->macro_h;col++){
-	int basecol = col*2;
-	int macroindex = row*cpi->macro_h + col;
-	int hpos = (col&1) + (row&1)*2;
+        int basecol = col*2;
+        int macroindex = row*cpi->macro_h + col;
+        int hpos = (col&1) + (row&1)*2;
 
-	/* Y */
-	for(frag=0;frag<4;frag++){
-	  int Hrow = baserow + Hscany[hpos][frag];
-	  int Hcol = basecol + Hscanx[hpos][frag];
-	  int Rrow = baserow + ((frag>>1)&1);
-	  int Rcol = basecol + (frag&1);
+        /* Y */
+        for(frag=0;frag<4;frag++){
+          int Hrow = baserow + Hscany[hpos][frag];
+          int Hcol = basecol + Hscanx[hpos][frag];
+          int Rrow = baserow + ((frag>>1)&1);
+          int Rcol = basecol + (frag&1);
 
-	  cpi->macro[macroindex].Hyuv[0][frag] = cpi->frag_total; // default
-	  cpi->macro[macroindex].Ryuv[0][frag] = cpi->frag_total; //default
-	  if(Hrow<cpi->frag_v[0] && Hcol<cpi->frag_h[0]){
-	    cpi->macro[macroindex].Hyuv[0][frag] = Hrow*cpi->frag_h[0] + Hcol;	    
+          cpi->macro[macroindex].Hyuv[0][frag] = cpi->frag_total; // default
+          cpi->macro[macroindex].Ryuv[0][frag] = cpi->frag_total; //default
+          if(Hrow<cpi->frag_v[0] && Hcol<cpi->frag_h[0]){
+            cpi->macro[macroindex].Hyuv[0][frag] = Hrow*cpi->frag_h[0] + Hcol;
 #ifdef COLLECT_METRICS
-	    cpi->frag_mbi[Hrow*cpi->frag_h[0] + Hcol] = macroindex;
+            cpi->frag_mbi[Hrow*cpi->frag_h[0] + Hcol] = macroindex;
 #endif
-	  }
-	  if(Rrow<cpi->frag_v[0] && Rcol<cpi->frag_h[0])
-	    cpi->macro[macroindex].Ryuv[0][frag] = Rrow*cpi->frag_h[0] + Rcol;	    
-	}
+          }
+          if(Rrow<cpi->frag_v[0] && Rcol<cpi->frag_h[0])
+            cpi->macro[macroindex].Ryuv[0][frag] = Rrow*cpi->frag_h[0] + Rcol;
+        }
 
-	/* U */
-	cpi->macro[macroindex].Ryuv[1][0] = cpi->frag_total;
-	cpi->macro[macroindex].Ryuv[1][1] = cpi->frag_total;
-	cpi->macro[macroindex].Ryuv[1][2] = cpi->frag_total;
-	cpi->macro[macroindex].Ryuv[1][3] = cpi->frag_total;
-	cpi->macro[macroindex].Hyuv[1][0] = cpi->frag_total;
-	cpi->macro[macroindex].Hyuv[1][1] = cpi->frag_total;
-	cpi->macro[macroindex].Hyuv[1][2] = cpi->frag_total;
-	cpi->macro[macroindex].Hyuv[1][3] = cpi->frag_total;
-	if(row<cpi->frag_v[1] && col<cpi->frag_h[1]){
-	  cpi->macro[macroindex].Hyuv[1][0] = cpi->frag_n[0] + macroindex;
-	  cpi->macro[macroindex].Ryuv[1][0] = cpi->frag_n[0] + macroindex;
+        /* U */
+        cpi->macro[macroindex].Ryuv[1][0] = cpi->frag_total;
+        cpi->macro[macroindex].Ryuv[1][1] = cpi->frag_total;
+        cpi->macro[macroindex].Ryuv[1][2] = cpi->frag_total;
+        cpi->macro[macroindex].Ryuv[1][3] = cpi->frag_total;
+        cpi->macro[macroindex].Hyuv[1][0] = cpi->frag_total;
+        cpi->macro[macroindex].Hyuv[1][1] = cpi->frag_total;
+        cpi->macro[macroindex].Hyuv[1][2] = cpi->frag_total;
+        cpi->macro[macroindex].Hyuv[1][3] = cpi->frag_total;
+        if(row<cpi->frag_v[1] && col<cpi->frag_h[1]){
+          cpi->macro[macroindex].Hyuv[1][0] = cpi->frag_n[0] + macroindex;
+          cpi->macro[macroindex].Ryuv[1][0] = cpi->frag_n[0] + macroindex;
 #ifdef COLLECT_METRICS
-	  cpi->frag_mbi[cpi->frag_n[0] + macroindex] = macroindex;
+          cpi->frag_mbi[cpi->frag_n[0] + macroindex] = macroindex;
 #endif
-	}
-	
-	/* V */
-	cpi->macro[macroindex].Ryuv[2][0] = cpi->frag_total;
-	cpi->macro[macroindex].Ryuv[2][1] = cpi->frag_total;
-	cpi->macro[macroindex].Ryuv[2][2] = cpi->frag_total;
-	cpi->macro[macroindex].Ryuv[2][3] = cpi->frag_total;
-	cpi->macro[macroindex].Hyuv[2][0] = cpi->frag_total;
-	cpi->macro[macroindex].Hyuv[2][1] = cpi->frag_total;
-	cpi->macro[macroindex].Hyuv[2][2] = cpi->frag_total;
-	cpi->macro[macroindex].Hyuv[2][3] = cpi->frag_total;
-	if(row<cpi->frag_v[2] && col<cpi->frag_h[2]){
-	  cpi->macro[macroindex].Hyuv[2][0] = cpi->frag_n[0] + cpi->frag_n[1] + macroindex;
-	  cpi->macro[macroindex].Ryuv[2][0] = cpi->frag_n[0] + cpi->frag_n[1] + macroindex;
+        }
+
+        /* V */
+        cpi->macro[macroindex].Ryuv[2][0] = cpi->frag_total;
+        cpi->macro[macroindex].Ryuv[2][1] = cpi->frag_total;
+        cpi->macro[macroindex].Ryuv[2][2] = cpi->frag_total;
+        cpi->macro[macroindex].Ryuv[2][3] = cpi->frag_total;
+        cpi->macro[macroindex].Hyuv[2][0] = cpi->frag_total;
+        cpi->macro[macroindex].Hyuv[2][1] = cpi->frag_total;
+        cpi->macro[macroindex].Hyuv[2][2] = cpi->frag_total;
+        cpi->macro[macroindex].Hyuv[2][3] = cpi->frag_total;
+        if(row<cpi->frag_v[2] && col<cpi->frag_h[2]){
+          cpi->macro[macroindex].Hyuv[2][0] = cpi->frag_n[0] + cpi->frag_n[1] + macroindex;
+          cpi->macro[macroindex].Ryuv[2][0] = cpi->frag_n[0] + cpi->frag_n[1] + macroindex;
 #ifdef COLLECT_METRICS
-	  cpi->frag_mbi[cpi->frag_n[0] + cpi->frag_n[1] + macroindex] = macroindex;
+          cpi->frag_mbi[cpi->frag_n[0] + cpi->frag_n[1] + macroindex] = macroindex;
 #endif
-	}	
+        }
       }
     }
   }
@@ -308,68 +308,68 @@ void InitFrameInfo(CP_INSTANCE *cpi){
 
     for(row=0;row<cpi->macro_v;row++){
       for(col=0;col<cpi->macro_h;col++){
-	int macroindex = row*cpi->macro_h + col;
-	int count=0;
+        int macroindex = row*cpi->macro_h + col;
+        int count=0;
 
-	/* cneighbors are of four possible already-filled-in neighbors
-	   from the eight-neighbor square for doing ME. The
-	   macroblocks are scanned in Hilbert order and the corner
-	   cases here are annoying, so we precompute. */
-	if(row&1){
-	  if(col&1){
-	    /* 2 */
-	    cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
-	    cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h-1;
-	  }else{
-	    /* 1 */
-	    if(col){
-	      cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
-	      cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h-1;
-	    }
-	    cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h;
-	  }
-	}else{
-	  if(col&1){
-	    /* 3; Could have up to six, fill in at most 4 */
-	    if(row && col+1<cpi->macro_h)
-	      cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h+1;
-	    if(row)
-	      cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h;
-	    if(col && row)
-	      cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h-1;
-	    if(col)
-	      cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
-	    if(col && row+1<cpi->macro_v && count<4)
-	      cpi->macro[macroindex].cneighbors[count++]=macroindex+cpi->macro_h-1;
-	    if(row+1<cpi->macro_v && count<4)
-	      cpi->macro[macroindex].cneighbors[count++]=macroindex+cpi->macro_h;
-	  }else{
-	    /* 0; Could have up to five, fill in at most 4 */
-	    if(row && col+1<cpi->macro_h)
-	      cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h+1;
-	    if(row)
-	      cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h;
-	    if(col && row)
-	      cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h-1;
-	    if(col)
-	      cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
-	    if(col && row+1<cpi->macro_v && count<4)
-	      cpi->macro[macroindex].cneighbors[count++]=macroindex+cpi->macro_h-1;
-	  }
-	}
-	cpi->macro[macroindex].ncneighbors=count;
+        /* cneighbors are of four possible already-filled-in neighbors
+           from the eight-neighbor square for doing ME. The
+           macroblocks are scanned in Hilbert order and the corner
+           cases here are annoying, so we precompute. */
+        if(row&1){
+          if(col&1){
+            /* 2 */
+            cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
+            cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h-1;
+          }else{
+            /* 1 */
+            if(col){
+              cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
+              cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h-1;
+            }
+            cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h;
+          }
+        }else{
+          if(col&1){
+            /* 3; Could have up to six, fill in at most 4 */
+            if(row && col+1<cpi->macro_h)
+              cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h+1;
+            if(row)
+              cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h;
+            if(col && row)
+              cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h-1;
+            if(col)
+              cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
+            if(col && row+1<cpi->macro_v && count<4)
+              cpi->macro[macroindex].cneighbors[count++]=macroindex+cpi->macro_h-1;
+            if(row+1<cpi->macro_v && count<4)
+              cpi->macro[macroindex].cneighbors[count++]=macroindex+cpi->macro_h;
+          }else{
+            /* 0; Could have up to five, fill in at most 4 */
+            if(row && col+1<cpi->macro_h)
+              cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h+1;
+            if(row)
+              cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h;
+            if(col && row)
+              cpi->macro[macroindex].cneighbors[count++]=macroindex-cpi->macro_h-1;
+            if(col)
+              cpi->macro[macroindex].cneighbors[count++]=macroindex-1;
+            if(col && row+1<cpi->macro_v && count<4)
+              cpi->macro[macroindex].cneighbors[count++]=macroindex+cpi->macro_h-1;
+          }
+        }
+        cpi->macro[macroindex].ncneighbors=count;
 
-	/* pneighbors are of the four possible direct neighbors (plus pattern), not the same as cneighbors */
-	count=0;
-	if(col)
-	  cpi->macro[macroindex].pneighbors[count++]=macroindex-1;
-	if(row)
-	  cpi->macro[macroindex].pneighbors[count++]=macroindex-cpi->macro_h;
-	if(col+1<cpi->macro_h)
-	  cpi->macro[macroindex].pneighbors[count++]=macroindex+1;
-	if(row+1<cpi->macro_v)
-	  cpi->macro[macroindex].pneighbors[count++]=macroindex+cpi->macro_h;
-	cpi->macro[macroindex].npneighbors=count;
+        /* pneighbors are of the four possible direct neighbors (plus pattern), not the same as cneighbors */
+        count=0;
+        if(col)
+          cpi->macro[macroindex].pneighbors[count++]=macroindex-1;
+        if(row)
+          cpi->macro[macroindex].pneighbors[count++]=macroindex-cpi->macro_h;
+        if(col+1<cpi->macro_h)
+          cpi->macro[macroindex].pneighbors[count++]=macroindex+1;
+        if(row+1<cpi->macro_v)
+          cpi->macro[macroindex].pneighbors[count++]=macroindex+cpi->macro_h;
+        cpi->macro[macroindex].npneighbors=count;
       }
     }
   }
@@ -379,8 +379,8 @@ void InitFrameInfo(CP_INSTANCE *cpi){
     int p,f;
     for(p=0;p<3;p++)
       for(f=0;f<4;f++){
-	cpi->macro[cpi->macro_total].Ryuv[p][f] = cpi->frag_total;
-	cpi->macro[cpi->macro_total].Hyuv[p][f] = cpi->frag_total;
+        cpi->macro[cpi->macro_total].Ryuv[p][f] = cpi->frag_total;
+        cpi->macro[cpi->macro_total].Hyuv[p][f] = cpi->frag_total;
       }
     cpi->macro[cpi->macro_total].ncneighbors=0;
     cpi->macro[cpi->macro_total].npneighbors=0;
@@ -399,14 +399,14 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   {
     ogg_uint32_t plane,row,col;
     ogg_uint32_t *bp = cpi->frag_buffer_index;
-    
+
     for(plane=0;plane<3;plane++){
       ogg_uint32_t offset = cpi->offset[plane];
       for(row=0;row<cpi->frag_v[plane];row++){
-	for(col=0;col<cpi->frag_h[plane];col++,bp++){
-	  *bp = offset+col*8;
-	}
-	offset += cpi->stride[plane]*8;
+        for(col=0;col<cpi->frag_h[plane];col++,bp++){
+          *bp = offset+col*8;
+        }
+        offset += cpi->stride[plane]*8;
       }
     }
   }

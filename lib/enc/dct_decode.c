@@ -216,21 +216,19 @@ static void LoopFilter__c(CP_INSTANCE *cpi, int FLimit){
 }
 
 void ReconRefFrames (CP_INSTANCE *cpi){
-  unsigned char *temp = cpi->lastrecon;
-
-  /* swap */
+  unsigned char *temp;
+  /*Swap.*/
+  temp=cpi->lastrecon;
   cpi->lastrecon=cpi->recon;
   cpi->recon=temp;
-
   /* Apply a loop filter to edge pixels of updated blocks */
   dsp_LoopFilter(cpi->dsp, cpi, cpi->quant_info.loop_filter_limits[cpi->BaseQ] /* temp */);
-
   /* We may need to update the UMV border */
   UpdateUMVBorder(cpi, cpi->lastrecon);
-  
-  if ( cpi->FrameType == KEY_FRAME )
-    memcpy(cpi->golden,cpi->lastrecon,sizeof(*cpi->lastrecon)*cpi->frame_size);
-
+  /*Swap back.*/
+  temp=cpi->lastrecon;
+  cpi->lastrecon=cpi->recon;
+  cpi->recon=temp;
 }
 
 void dsp_dct_decode_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)

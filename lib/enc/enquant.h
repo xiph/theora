@@ -1,0 +1,24 @@
+#if !defined(_enquant_H)
+# define _enquant_H (1)
+# include "../dec/quant.h"
+
+typedef struct oc_iquant oc_iquant;
+
+/*Used to compute x/d via ((x*m>>16)+x>>l)+(x<0))
+   (i.e., one 16x16->16 mul, 2 shifts, and 2 adds).
+  This is not an approximation; for 16-bit x and d, it is exact.*/
+struct oc_iquant{
+  ogg_int16_t m;
+  ogg_int16_t l;
+};
+
+typedef oc_iquant        oc_iquant_table[64];
+typedef oc_iquant_table  oc_iquant_tables[64];
+
+
+
+void oc_quant_params_pack(oggpack_buffer *_opb,const th_quant_info *_qinfo);
+void oc_enquant_tables_init(oc_quant_table *_dequant[2][3],
+ oc_quant_table *_enquant[2][3],const th_quant_info *_qinfo);
+
+#endif

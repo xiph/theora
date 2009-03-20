@@ -116,7 +116,7 @@ size_t y4m_aux_buf_sz;
 /*The amount to read into the auxilliary buffer.*/
 size_t y4m_aux_buf_read_sz;
 
-/*The function used perform chroma conversion.*/
+/*The function used to perform chroma conversion.*/
 typedef void (*y4m_convert_func)(unsigned char *_dst,unsigned char *_aux);
 
 y4m_convert_func y4m_convert=NULL;

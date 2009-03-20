@@ -599,7 +599,7 @@ int main(int argc,char *const *argv){
       int arg = 0xffff;
       theora_control(&td,TH_DECCTL_SET_TELEMETRY_MBMODE,&arg,sizeof(arg));
       theora_control(&td,TH_DECCTL_SET_TELEMETRY_MV,&arg,sizeof(arg));
-      }*/
+    }*/
   }else{
     /* tear down the partial theora setup */
     theora_info_clear(&ti);

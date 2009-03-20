@@ -5,7 +5,7 @@ noinst_HEADERS = tests.h
 AM_CFLAGS = $(OGG_CFLAGS)
 
 THEORADIR = ../lib
-THEORA_LIBS = $(THEORADIR)/libtheora.la $(OGG_LIBS)
+THEORA_LIBS = $(THEORADIR)/libtheora.la $(OGG_LIBS) -lm
 
 test: check
 

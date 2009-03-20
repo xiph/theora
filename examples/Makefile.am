@@ -10,7 +10,7 @@ EXTRA_PROGRAMS = player_example encoder_example png2theora
 AM_CFLAGS = $(OGG_CFLAGS)
 LDADD = ../lib/libtheora.la $(OGG_LIBS)
 LDADDDEC = ../lib/libtheoradec.la $(OGG_LIBS)
-LDADDENC = ../lib/libtheoraenc.la ../lib/libtheoradec.la $(OGG_LIBS)
+LDADDENC = ../lib/libtheoraenc.la ../lib/libtheoradec.la $(OGG_LIBS) -lm
 
 dump_video_SOURCES = dump_video.c
 EXTRA_dump_video_SOURCES = getopt.c getopt1.c getopt.h

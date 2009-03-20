@@ -26,6 +26,7 @@
 
 #include "theora/theora.h"
 #include "encoder_huffman.h"
+#include "../dec/ocintrin.h"
 typedef struct CP_INSTANCE CP_INSTANCE;
 #include "dsp.h"
 
@@ -100,18 +101,15 @@ typedef struct HUFF_ENTRY {
   ogg_uint32_t       Frequency;
 } HUFF_ENTRY;
 
-typedef struct{
-  ogg_int32_t   x;
-  ogg_int32_t   y;
-} mv_t;
+typedef struct mc_state mc_state;
 
-typedef struct {
-  mv_t               candidates[12];
+struct mc_state{
+  int                candidates[12][2];
   int                setb0;
   int                ncandidates;
   ogg_int32_t        mvapw1[2];
   ogg_int32_t        mvapw2[2];
-} mc_state;
+};
 
 typedef struct macroblock {
   /* the blocks comprising this macroblock */
@@ -120,17 +118,21 @@ typedef struct macroblock {
   int ysb;
   int usb;
   int vsb;
-    
-  int cneighbors[4];      
+
+  int cneighbors[4];
   int ncneighbors;
   int pneighbors[4];
   int npneighbors; 
 
   coding_mode_t mode;
 
+  oc_mv block_mv[4];
+  oc_mv ref_mv[4];
   /* per-block final motion vectors */
   /* raster order */
-  mv_t mv[4];
+  oc_mv mv[4];
+  /*Per-block final chroma motion vectors.*/
+  oc_mv cbmvs[4];
 
   /* Motion vectors for a macro block for the current frame and the
      previous two frames.
@@ -140,12 +142,14 @@ typedef struct macroblock {
      and constant acceleration.
 
      Uninitialized MVs are (0,0).*/
-  mv_t   analysis_mv[3][2]; /* [cur,prev,prev2][frame,golden] */
+  oc_mv analysis_mv[3][2]; /* [cur,prev,prev2][frame,golden] */
+  oc_mv unref_mv[2];
   /*Minimum motion estimation error from the analysis stage.*/
   int    aerror;
   int    gerror;
 
   char coded;
+  char refined;
 } macroblock_t;
 
 #define SB_MB_BLFRAG(sb,mbnum) ((sb).f[ ((mbnum)<2? ((mbnum)==0?0:4) : ((mbnum)==2?8:14)) ])
@@ -157,11 +161,11 @@ typedef struct superblock {
 typedef ogg_int16_t    quant_table[64]; 
 typedef quant_table    quant_tables[64]; /* [zigzag][qi] */
 
-typedef ogg_int32_t    iquant_table[64];  
-typedef iquant_table   iquant_tables[64]; /* [qi][coeff] */
+#include "enquant.h"
 
-typedef struct {
-  const unsigned char *mode_bits[8];
+typedef struct oc_mode_scheme_chooser oc_mode_scheme_chooser;
+
+struct oc_mode_scheme_chooser{
   /*Pointers to the a list containing the index of each mode in the mode
     alphabet used by each scheme.
     The first entry points to the dynamic scheme0_ranks, while the remaining
@@ -179,7 +183,21 @@ typedef struct {
   unsigned char        scheme_list[8];
   /*The number of bits used by each mode coding scheme.*/
   int                  scheme_bits[8];
-} oc_mode_scheme_chooser;
+};
+
+void oc_mode_scheme_chooser_init(oc_mode_scheme_chooser *_chooser);
+
+typedef struct oc_rc_state oc_rc_state;
+
+struct oc_rc_state{
+  ogg_int64_t bits_per_frame;
+  ogg_int64_t fullness;
+  ogg_int64_t target;
+  ogg_int64_t max;
+  unsigned    exp[2];
+  unsigned    scale[2];
+  int         buf_delay;
+};
 
 /* Encoder (Compressor) instance -- installed in a theora_state */
 struct CP_INSTANCE {
@@ -241,10 +259,8 @@ struct CP_INSTANCE {
   ogg_uint32_t     dc_bits[2][DC_HUFF_CHOICES];
   ogg_uint32_t     ac1_bits[2][AC_HUFF_CHOICES];
   ogg_uint32_t     acN_bits[2][AC_HUFF_CHOICES];
-
   ogg_uint32_t     MVBits_0; /* count of bits used by MV coding mode 0 */
   ogg_uint32_t     MVBits_1; /* count of bits used by MV coding mode 1 */
-
   oc_mode_scheme_chooser chooser;
 
   /*********************************************************************/
@@ -295,6 +311,7 @@ struct CP_INSTANCE {
   int              keyframe_granule_shift;
   int              lambda;
   int              BaseQ;
+  int              MinQ;
   int              GoldenFrameEnabled;
   int              InterPrediction;
   int              MotionCompensation;
@@ -308,9 +325,23 @@ struct CP_INSTANCE {
 
   th_quant_info    quant_info;
   quant_tables     quant_tables[2][3];
-  iquant_tables    iquant_tables[2][3];
-
-
+  oc_iquant_tables iquant_tables[2][3];
+  /*An "average" quantizer for each quantizer type (INTRA or INTER) and QI
+     value.
+    This is used to paramterize the rate control decisions.
+    It is scaled by a factor of 8, which is necessary to gain sufficient
+     resolution to distinguish the original VP3 quantizers at the low end (even
+     then some INTRA quantizers are indistinguishable, but they really _are_
+     essentially the same, which is an unfortunate effect of VP3 a) using the
+     same DC scale for many QI values and b) lopping off the two fractional
+     bits of quantizer precision for essentially no reason and then spacing its
+     AC scale factors very closely.
+    Keep in mind these are in the DCT domain, and so are scaled by an
+     additional factor of 4 from the pixel domain, for a total scale factor of
+     32.*/
+  ogg_uint16_t     qavg[2][64];
+  /*The buffer state used to drive rate control.*/
+  oc_rc_state      rc;
   DspFunctions     dsp;  /* Selected functions for this platform */
 
 };
@@ -353,7 +384,6 @@ extern int dct_tokenize_AC (CP_INSTANCE *cpi,
 extern void dct_tokenize_finish (CP_INSTANCE *cpi);
 extern void dct_tokenize_mark_ac_chroma (CP_INSTANCE *cpi);
 
-extern void WriteQTables(CP_INSTANCE *cpi,oggpack_buffer *opb);
 extern void InitQTables( CP_INSTANCE *cpi );
 extern void InitHuffmanSet( CP_INSTANCE *cpi );
 extern void ClearHuffmanSet( CP_INSTANCE *cpi );
@@ -371,7 +401,7 @@ extern void oc_mcenc_search(CP_INSTANCE *cpi,
 			    mc_state *_mcenc,
 			    int _mbi,
 			    int _goldenp,
-			    mv_t *_bmvs,
+			    oc_mv _bmvs[4],
 			    int *best_err,
 			    int best_block_err[4]);
 
