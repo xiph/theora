@@ -13,27 +13,30 @@ encoder_sources = """
         enc/encoder_idct.c
         enc/encoder_toplevel.c
         enc/encoder_quant.c
+	enc/encapiwrapper.c
         enc/dct.c
         enc/dct_decode.c
         enc/frarray.c
         enc/frinit.c
-        enc/mcomp.c
+        enc/mcenc.c
+	enc/mode.c
         enc/reconstruct.c
         enc/dsp.c
 """
 
 decoder_sources = """
-        dec/apiwrapper.c \
-        dec/decapiwrapper.c \
-        dec/decinfo.c \
-        dec/decode.c \
-        dec/dequant.c \
-        dec/fragment.c \
-        dec/huffdec.c \
-        dec/idct.c \
-        dec/info.c \
-        dec/internal.c \
-        dec/quant.c \
+        dec/apiwrapper.c
+	dec/bitpack.c
+        dec/decapiwrapper.c
+        dec/decinfo.c
+        dec/decode.c
+        dec/dequant.c
+        dec/fragment.c
+        dec/huffdec.c
+        dec/idct.c
+        dec/info.c
+        dec/internal.c
+        dec/quant.c
         dec/state.c
 """
 
@@ -41,7 +44,7 @@ libtheora_Sources = Split(decoder_sources + encoder_sources + "cpu.c")
 
 env = Environment()
 if env['CC'] == 'gcc':
-  env.Append(CCFLAGS=["-g", "-O2", "-Wall"])
+  env.Append(CCFLAGS=["-g", "-O2", "-Wall", "-Wno-parentheses"])
 #  env.Append(CCFLAGS=["-g", "-Wall"])
 
 def CheckPKGConfig(context, version): 
@@ -124,31 +127,18 @@ if not conf.CheckHeader('sys/soundcard.h'):
 if build_player_example and not conf.CheckSDL():
   build_player_example=False
 
-if conf.CheckHost_x86_32():
+if conf.CheckHost_x86_32() or conf.CheckHost_x86_64:
   libtheora_Sources += Split("""
         dec/x86/mmxidct.c
         dec/x86/mmxfrag.c
         dec/x86/mmxstate.c
         dec/x86/x86state.c
-	enc/x86_32/dct_decode_mmx.c
-	enc/x86_32/dsp_mmx.c
-	enc/x86_32/dsp_mmxext.c
-	enc/x86_32/recon_mmx.c
-	enc/x86_32/idct_mmx.c
-	enc/x86_32/fdct_mmx.c
-  """)
-elif conf.CheckHost_x86_64():
-  libtheora_Sources += Split("""
-        dec/x86/mmxidct.c
-        dec/x86/mmxfrag.c
-        dec/x86/mmxstate.c
-        dec/x86/x86state.c
-	enc/x86_64/dct_decode_mmx.c
-	enc/x86_64/dsp_mmx.c
-	enc/x86_64/dsp_mmxext.c
-	enc/x86_64/recon_mmx.c
-	enc/x86_64/idct_mmx.c
-	enc/x86_64/fdct_mmx.c
+	enc/x86/dct_decode_mmx.c
+	enc/x86/dsp_mmx.c
+	enc/x86/dsp_mmxext.c
+	enc/x86/recon_mmx.c
+	enc/x86/idct_mmx.c
+	enc/x86/fdct_mmx.c
   """)
 env = conf.Finish()
 
@@ -165,23 +155,23 @@ env.Alias('install', prefix)
 env.Install(lib_dir, [libtheora_a, libtheora_so])
 
 # example programs
-dump_video = env.Copy()
+dump_video = env.Clone()
 dump_video_Sources = Split("""dump_video.c ../lib/libtheora.a""")
 dump_video.Program('examples/dump_video', path('examples', dump_video_Sources))
 
 if have_vorbis:
-  encex = dump_video.Copy()
+  encex = dump_video.Clone()
   encex.ParseConfig('pkg-config --cflags --libs vorbisenc vorbis')
   encex_Sources = Split("""encoder_example.c ../lib/libtheora.a""")
   encex.Program('examples/encoder_example', path('examples', encex_Sources))
 
   if build_player_example:
-    plyex = encex.Copy()
+    plyex = encex.Clone()
     plyex_Sources = Split("""player_example.c ../lib/libtheora.a""")
     plyex.ParseConfig('sdl-config --cflags --libs')
     plyex.Program('examples/player_example', path('examples', plyex_Sources))
 
-png2theora = env.Copy()
+png2theora = env.Clone()
 png2theora_Sources = Split("""png2theora.c ../lib/libtheora.a""")
 png2theora.ParseConfig('pkg-config --cflags --libs libpng')
 png2theora.Program('examples/png2theora', path('examples', png2theora_Sources))
