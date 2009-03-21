@@ -25,21 +25,21 @@ encoder_sources = \
 	enc/encoder_disabled.c
 else
 encoder_sources = \
+	enc/dct.c \
+	enc/dct_decode.c \
 	enc/dct_encode.c \
+	enc/dsp.c \
+	enc/encapiwrapper.c \
 	enc/encode.c \
 	enc/encoder_huffman.c \
 	enc/encoder_idct.c \
 	enc/encoder_toplevel.c \
 	enc/encoder_quant.c \
-	enc/encapiwrapper.c \
-	enc/dct.c \
-	enc/dct_decode.c \
 	enc/frarray.c \
 	enc/frinit.c \
 	enc/mcenc.c \
 	enc/mode.c \
-	enc/reconstruct.c \
-	enc/dsp.c
+	enc/reconstruct.c
 
 encoder_x86_sources = \
 	enc/x86/dct_decode_mmx.c \
