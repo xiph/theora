@@ -21,7 +21,7 @@
 #include "cpu.h"
 
 #if !defined(USE_ASM)
-ogg_uint32_t oc_cpu_flags_get(void){
+static ogg_uint32_t oc_cpu_flags_get(void){
   return 0;
 }
 #else
