@@ -22,7 +22,7 @@ EXTRA_DIST = \
 	theora-uninstalled.pc.in
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = theora.pc
+pkgconfig_DATA = theora.pc theoradec.pc theoraenc.pc
 
 # Remove the .svn folders included in the tarball
 dist-hook:
