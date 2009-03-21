@@ -31,12 +31,18 @@
 
 static void oc_enc_calc_lambda(CP_INSTANCE *cpi){
   ogg_int64_t l;
+  int         q;
   /*For now, lambda is fixed depending on the qi value and frame type:
       lambda=1.125*(qavg[qti][qi]**1.5)
     A more adaptive scheme might perform better, but Theora's behavior does not
      seem to conform to existing models in the literature.*/
-  l=oc_blog64(cpi->qavg[cpi->FrameType!=KEY_FRAME][cpi->BaseQ]);
-  l-=(ogg_int64_t)3<<57;
+  /*If rate control is active, use the lambda for the _target_ quantizer.
+    This allows us to scale to rates slightly lower than we'd normally be able
+     to reach, and give the rate control a semblance of "fractional QI"
+     precision.*/
+  if(cpi->info.target_bitrate>0)q=cpi->rc.qtarget;
+  else q=cpi->qavg[cpi->FrameType!=KEY_FRAME][cpi->BaseQ];
+  l=oc_blog64(q)-OC_Q57(3);
   /*Raise to the 1.5 power.*/
   l+=(l>>1);
   /*Multiply by 1.125.*/
@@ -48,12 +54,11 @@ static void oc_enc_calc_lambda(CP_INSTANCE *cpi){
 
 
 static void oc_rc_state_init(oc_rc_state *_rc,const theora_info *_info){
-  unsigned long npixels;
-  unsigned long ibpp;
+  ogg_int64_t npixels;
+  ogg_int64_t ibpp;
   /*TODO: These parameters should be exposed in a th_enc_ctl() API.*/
   _rc->bits_per_frame=(_info->target_bitrate*
-   (ogg_int64_t)_info->fps_denominator+(_info->fps_numerator>>1))/
-   _info->fps_numerator;
+   (ogg_int64_t)_info->fps_denominator)/_info->fps_numerator;
   /*Insane framerates or frame sizes mean insane bitrates.
     Let's not get carried away.*/
   if(_rc->bits_per_frame>0x40000000000000LL){
@@ -77,7 +82,8 @@ static void oc_rc_state_init(oc_rc_state *_rc,const theora_info *_info){
   _rc->target=_rc->fullness=(_rc->max+1>>1)+(_rc->max+2>>2);
   /*Pick exponents and initial scales for quantizer selection.
     TODO: These still need to be tuned.*/
-  npixels=_info->width*(unsigned long)_info->height;
+  npixels=_info->width*(ogg_int64_t)_info->height;
+  _rc->log_npixels=oc_blog64(npixels);
   ibpp=(npixels+(_rc->bits_per_frame>>1))/_rc->bits_per_frame;
   if(ibpp<10){
     _rc->exp[0]=48;
@@ -106,17 +112,15 @@ static unsigned OC_RATE_SMOOTHING[2]={0x80,0x80};
 static void oc_enc_update_rc_state(CP_INSTANCE *cpi,
  long _bits,int _qti,int _qi,int _trial){
   ogg_int64_t   log_scale;
-  ogg_int64_t   log_npixels;
   ogg_int64_t   log_bits;
   ogg_int64_t   log_qexp;
   ogg_uint32_t  scale;
   /*Compute the estimated scale factor for this frame type.*/
   log_bits=oc_blog64(_bits);
-  log_npixels=oc_blog64(cpi->info.width*(ogg_int64_t)cpi->info.height);
-  log_qexp=oc_blog64(cpi->qavg[_qti][_qi])-((ogg_int64_t)5<<57);
+  log_qexp=oc_blog64(cpi->qavg[_qti][_qi])-OC_Q57(5);
   log_qexp=(log_qexp>>6)*(cpi->rc.exp[_qti]);
-  log_scale=((ogg_int64_t)8<<57)+log_bits-log_npixels+log_qexp;
-  scale=(ogg_uint32_t)oc_bexp64(OC_MINI(log_scale,(ogg_int64_t)16<<57));
+  log_scale=OC_Q57(8)+log_bits-cpi->rc.log_npixels+log_qexp;
+  scale=(ogg_uint32_t)oc_bexp64(OC_MINI(log_scale,OC_Q57(16)));
   /*Use it to set that factor directly if this was a trial.*/
   if(_trial)cpi->rc.scale[_qti]=scale;
   /*Otherwise update an exponential moving average.*/
@@ -160,7 +164,6 @@ static int oc_enc_select_qi(CP_INSTANCE *cpi,int _qti,int _trial){
   if(rate_total<=0)qtarget=OC_QUANT_MAX<<3;
   else{
     static const unsigned char KEY_RATIO[2]={29,32};
-    ogg_int64_t   log_npixels;
     ogg_int64_t   log_scale0;
     ogg_int64_t   log_scale1;
     ogg_int64_t   prevr;
@@ -168,10 +171,8 @@ static int oc_enc_select_qi(CP_INSTANCE *cpi,int _qti,int _trial){
     ogg_int64_t   realr;
     ogg_int64_t   log_qtarget;
     int           i;
-    log_npixels=oc_blog64(cpi->info.width*(ogg_int64_t)cpi->info.height);
-    log_scale0=oc_blog64(cpi->rc.scale[_qti])-((ogg_int64_t)8<<57)+log_npixels;
-    log_scale1=oc_blog64(cpi->rc.scale[1-_qti])-((ogg_int64_t)8<<57)
-     +log_npixels;
+    log_scale0=oc_blog64(cpi->rc.scale[_qti])-OC_Q57(8)+cpi->rc.log_npixels;
+    log_scale1=oc_blog64(cpi->rc.scale[1-_qti])-OC_Q57(8)+cpi->rc.log_npixels;
     curr=(rate_total+(buf_delay>>1))/buf_delay;
     realr=curr*KEY_RATIO[_qti]+16>>5;
     for(i=0;i<10;i++){
@@ -199,10 +200,9 @@ static int oc_enc_select_qi(CP_INSTANCE *cpi,int _qti,int _trial){
       realr=curr*KEY_RATIO[_qti]+16>>5;
       if(curr<=0||realr>rate_total||prevr==curr)break;
     }
-    log_qtarget=((ogg_int64_t)5<<57)-
-     ((oc_blog64(realr)-log_scale0+(cpi->rc.exp[_qti]>>1))/
+    log_qtarget=OC_Q57(5)-((oc_blog64(realr)-log_scale0+(cpi->rc.exp[_qti]>>1))/
      cpi->rc.exp[_qti]<<6);
-    qtarget=(int)oc_bexp64(OC_MINI(log_qtarget,(ogg_int64_t)15<<57));
+    qtarget=(int)oc_bexp64(OC_MINI(log_qtarget,OC_Q57(15)));
   }
   /*If this was not one of the initial frames, limit a change in quality.*/
   if(!_trial){
@@ -228,6 +228,8 @@ static int oc_enc_select_qi(CP_INSTANCE *cpi,int _qti,int _trial){
       best_qdiff=qdiff;
     }
   }
+  /*Save these parameters for lambda calculations.*/
+  cpi->rc.qtarget=qtarget;
   return best_qi;
 }
 
@@ -289,8 +291,10 @@ static int CompressFrame( CP_INSTANCE *cpi, int recode ) {
   if(cpi->first_inter_frame == 0){
     cpi->first_inter_frame = 1;
     EncodeData(cpi);
-    oc_enc_update_rc_state(cpi,oggpackB_bytes(cpi->oggbuffer)<<3,
-     1,cpi->BaseQ,1);
+    if(cpi->info.target_bitrate>0){
+      oc_enc_update_rc_state(cpi,oggpackB_bytes(cpi->oggbuffer)<<3,
+       1,cpi->BaseQ,1);
+    }
     CompressFrame(cpi,1);
     return 0;
   }
@@ -434,8 +438,10 @@ int theora_encode_YUVin(theora_state *t,
      cpi->info.keyframe_frequency_force){
 
     CompressKeyFrame(cpi,0);
-    oc_enc_update_rc_state(cpi,oggpackB_bytes(cpi->oggbuffer)<<3,
-     0,cpi->BaseQ,1);
+    if(cpi->info.target_bitrate>0){
+      oc_enc_update_rc_state(cpi,oggpackB_bytes(cpi->oggbuffer)<<3,
+       0,cpi->BaseQ,1);
+    }
 
     /* On first frame, the previous was a initial dry-run to prime
        feed-forward statistics */

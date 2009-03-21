@@ -194,9 +194,11 @@ struct oc_rc_state{
   ogg_int64_t fullness;
   ogg_int64_t target;
   ogg_int64_t max;
+  ogg_int64_t log_npixels;
   unsigned    exp[2];
   unsigned    scale[2];
   int         buf_delay;
+  int         qtarget;
 };
 
 /* Encoder (Compressor) instance -- installed in a theora_state */

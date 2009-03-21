@@ -1217,7 +1217,11 @@ int main(int argc,char *argv[]){
   ti.aspect_numerator=video_par_n;
   ti.aspect_denominator=video_par_d;
   ti.colorspace=TH_CS_UNSPECIFIED;
-  ti.target_bitrate=video_r;
+  /*Account for the Ogg page overhead.
+    This is 1 byte per 255 for lacing values, plus 26 bytes per 4096 bytes for
+     the page header, plus approximately 1/2 byte per packet (not accounted for
+     here).*/
+  ti.target_bitrate=(int)(64870*(ogg_int64_t)video_r>>16);
   ti.quality=video_q;
   ti.keyframe_granule_shift=6;
 
@@ -1249,7 +1253,8 @@ int main(int argc,char *argv[]){
     if(audio_q>-99)
       ret = vorbis_encode_init_vbr(&vi,audio_ch,audio_hz,audio_q);
     else
-      ret = vorbis_encode_init(&vi,audio_ch,audio_hz,-1,audio_r,-1);
+      ret = vorbis_encode_init(&vi,audio_ch,audio_hz,-1,
+       (int)(64870*(ogg_int64_t)audio_r>>16),-1);
     if(ret){
       fprintf(stderr,"The Vorbis encoder could not set up a mode according to\n"
               "the requested quality or bitrate.\n\n");

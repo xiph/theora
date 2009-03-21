@@ -155,7 +155,7 @@ ogg_int64_t oc_bexp64(ogg_int64_t _z){
   ipart=(int)(_z>>57);
   if(ipart<0)return 0;
   if(ipart>=63)return 0x7FFFFFFFFFFFFFFFLL;
-  z=_z-((ogg_int64_t)ipart<<57);
+  z=_z-OC_Q57(ipart);
   if(z){
     ogg_int64_t mask;
     long        wlo;
@@ -292,5 +292,5 @@ ogg_int64_t oc_blog64(ogg_int64_t _w){
     }
     z=z+8>>4;
   }
-  return ((ogg_int64_t)ipart<<57)+z;
+  return OC_Q57(ipart)+z;
 }

@@ -19,33 +19,19 @@
 #include <string.h>
 #include "codec_internal.h"
 #include "quant_lookup.h"
+#include "mathops.h"
 
 #define OC_QUANT_MAX        (1024<<2)
 static const unsigned OC_DC_QUANT_MIN[2]={4<<2,8<<2};
 static const unsigned OC_AC_QUANT_MIN[2]={2<<2,4<<2};
 
-static int ilog(unsigned _v){
-  int ret;
-  for(ret=0;_v;ret++)_v>>=1;
-  return ret;
-}
-
 /*Reciprocal square root.
-  Adapted from libcelt, which is (C) 2002-2008 Jean-Marc Valin.
-  Return: A 4th-order polynomial approximation of 2**15/sqrt(_x).*/
+  Return: 2**15/sqrt(_x).*/
 static ogg_uint16_t oc_rsqrt(ogg_uint32_t _x){
-  ogg_int32_t n;
-  int         k;
-  k=ilog(_x)-1>>1;
-  if(k>7)_x>>=k-7<<1;
-  else _x<<=7-k<<1;
-  n=_x-32768;
-  /*These can be implemented as 16x16->high 16 bit muls, but this is currently
-     not performance critical code.
-    Note the reliance on the arithmetic right shift, which is not guaranteed by
-     ANSI.*/
-  return (ogg_uint16_t)(
-   (n*((n*((n*((n*4100>>15)-9097)>>15)+9812)>>15)-11496)>>15)+23126>>k);
+  /*A simple polynomial approximation of this would be fine, but since we have
+     the routines and this is not performance critical, let's do it
+     accurately.*/
+  return (ogg_uint16_t)oc_bexp64(OC_Q57(15)-(oc_blog64(_x)>>1));
 }
 
 void oc_quant_params_pack(oggpack_buffer *_opb,const th_quant_info *_qinfo){
@@ -67,17 +53,17 @@ void oc_quant_params_pack(oggpack_buffer *_opb,const th_quant_info *_qinfo){
      index 0, so search for it here.*/
   i=_qinfo->loop_filter_limits[0];
   for(qi=1;qi<64;qi++)i=OC_MAXI(i,_qinfo->loop_filter_limits[qi]);
-  nbits=ilog(i);
+  nbits=OC_ILOG_32(i);
   oggpackB_write(_opb,nbits,3);
   for(qi=0;qi<64;qi++){
     oggpackB_write(_opb,_qinfo->loop_filter_limits[qi],nbits);
   }
   /*580 bits for VP3.*/
-  nbits=OC_MAXI(ilog(_qinfo->ac_scale[0]),1);
+  nbits=OC_MAXI(OC_ILOG_32(_qinfo->ac_scale[0]),1);
   oggpackB_write(_opb,nbits-1,4);
   for(qi=0;qi<64;qi++)oggpackB_write(_opb,_qinfo->ac_scale[qi],nbits);
   /*516 bits for VP3.*/
-  nbits=OC_MAXI(ilog(_qinfo->dc_scale[0]),1);
+  nbits=OC_MAXI(OC_ILOG_32(_qinfo->dc_scale[0]),1);
   oggpackB_write(_opb,nbits-1,4);
   for(qi=0;qi<64;qi++)oggpackB_write(_opb,_qinfo->dc_scale[qi],nbits);
   /*Consolidate any duplicate base matrices.*/
@@ -108,7 +94,7 @@ void oc_quant_params_pack(oggpack_buffer *_opb,const th_quant_info *_qinfo){
   /*Now store quant ranges and their associated indices into the base matrix
      list.
     46 bits for VP3 matrices.*/
-  nbits=ilog(nbase_mats-1);
+  nbits=OC_ILOG_32(nbase_mats-1);
   for(i=0;i<6;i++){
     qti=i/3;
     pli=i%3;
@@ -138,7 +124,7 @@ void oc_quant_params_pack(oggpack_buffer *_opb,const th_quant_info *_qinfo){
     }
     oggpackB_write(_opb,indices[qti][pli][0],nbits);
     for(qi=qri=0;qi<63;qri++){
-      oggpackB_write(_opb,qranges->sizes[qri]-1,ilog(62-qi));
+      oggpackB_write(_opb,qranges->sizes[qri]-1,OC_ILOG_32(62-qi));
       qi+=qranges->sizes[qri];
       oggpackB_write(_opb,indices[qti][pli][qri+1],nbits);
     }
@@ -149,7 +135,7 @@ static void oc_iquant_init(oc_iquant *_this,ogg_uint16_t _d){
   ogg_uint32_t t;
   int          l;
   _d<<=1;
-  l=ilog(_d)-1;
+  l=OC_ILOG_32(_d)-1;
   t=1+((ogg_uint32_t)1<<16+l)/_d;
   _this->m=(ogg_int16_t)(t-0x10000);
   _this->l=l;
