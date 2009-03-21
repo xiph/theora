@@ -221,6 +221,7 @@ struct CP_INSTANCE {
   unsigned char   *frag_coded;
   ogg_uint32_t    *frag_buffer_index;
   ogg_int16_t     *frag_dc;
+  ogg_int16_t     *frag_dc_tmp;
 
   macroblock_t    *macro;
   superblock_t    *super[3];

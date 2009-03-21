@@ -73,8 +73,10 @@ static void PredictDC(CP_INSTANCE *cpi){
     int h = cpi->frag_h[pi];
     int subh = !(pi && cpi->info.pixelformat != OC_PF_444);
     int subv = !(pi && cpi->info.pixelformat == OC_PF_420);
-    ogg_int16_t dc[h];
-    ogg_int16_t down[h];
+    ogg_int16_t *dc;
+    ogg_int16_t *down;
+    dc=cpi->frag_dc_tmp;
+    down=cpi->frag_dc_tmp+h;
 
     for(x=0;x<3;x++)last[x]=0;
 
@@ -82,8 +84,8 @@ static void PredictDC(CP_INSTANCE *cpi){
       macroblock_t *mb_row = cpi->macro + (y>>subv)*cpi->macro_h;
       macroblock_t *mb_down = cpi->macro + ((y-1)>>subv)*cpi->macro_h;
 
-      memcpy(down,dc,sizeof(down));
-      memcpy(dc,cpi->frag_dc+fi,sizeof(dc));
+      memcpy(down,dc,h*sizeof(*down));
+      memcpy(dc,cpi->frag_dc+fi,h*sizeof(*dc));
 
       for (x=0; x<h; x++, fi++) {
         if(cp[fi]) {

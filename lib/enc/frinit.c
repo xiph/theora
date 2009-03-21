@@ -31,6 +31,7 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
   if(cpi->frag_coded) _ogg_free(cpi->frag_coded);
   if(cpi->frag_buffer_index) _ogg_free(cpi->frag_buffer_index);
   if(cpi->frag_dc) _ogg_free(cpi->frag_dc);
+  if(cpi->frag_dc_tmp) _ogg_free(cpi->frag_dc_tmp);
 #ifdef COLLECT_METRICS
   if(cpi->frag_mbi) _ogg_free(cpi->frag_mbi);
   if(cpi->frag_sad) _ogg_free(cpi->frag_sad);
@@ -116,6 +117,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->frag_coded = calloc(cpi->frag_total+1, sizeof(*cpi->frag_coded));
   cpi->frag_buffer_index = calloc(cpi->frag_total, sizeof(*cpi->frag_buffer_index));
   cpi->frag_dc = calloc(cpi->frag_total, sizeof(*cpi->frag_dc));
+  cpi->frag_dc_tmp = calloc(2*cpi->frag_h[0], sizeof(*cpi->frag_dc_tmp));
 
   /* +1; the last entry is the 'invalid' mb, which contains only 'invalid' frags */
   cpi->macro = calloc(cpi->macro_total+1, sizeof(*cpi->macro));
