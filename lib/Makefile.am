@@ -93,13 +93,14 @@ noinst_HEADERS = \
 	cpu.h \
 	internal.h \
 	enc/codec_internal.h \
-	enc/encoder_lookup.h \
-	enc/encoder_huffman.h \
-	enc/hufftables.h \
-	enc/quant_lookup.h \
-	enc/mode_select.h \
-	enc/toplevel_lookup.h \
 	enc/dsp.h \
+	enc/encoder_huffman.h \
+	enc/encoder_lookup.h \
+	enc/enquant.h \
+	enc/hufftables.h \
+	enc/mode_select.h \
+	enc/quant_lookup.h \
+	enc/toplevel_lookup.h \
 	dec/apiwrapper.h \
 	dec/bitpack.h \
 	dec/dct.h \
