@@ -69,19 +69,9 @@ WORKDIR = objs
 
 # C source file lists
 
-LIBTHEORABASE_CHEADERS = \
-internal.h \
-dec/apiwrapper.h \
-dec/dct.h \
-dec/idct.h \
-dec/huffman.h \
-dec/ocintrin.h \
-dec/quant.h \
-../include/theora/codec.h \
-../include/theora/theora.h \
-
 LIBTHEORADEC_CSOURCES = \
 dec/apiwrapper.c \
+dec/bitpack.c \
 dec/decapiwrapper.c \
 dec/decinfo.c \
 dec/decode.c \
@@ -94,60 +84,63 @@ dec/internal.c \
 dec/quant.c \
 dec/state.c \
 $(if $(findstring -DUSE_ASM,${CFLAGS}), \
-dec/x86/mmxstate.c \
-dec/x86/x86state.c \
 dec/x86/mmxidct.c \
 dec/x86/mmxfrag.c \
+dec/x86/mmxstate.c \
+dec/x86/x86state.c \
 )
 
 LIBTHEORADEC_CHEADERS =   \
-${LIBTHEORABASE_CHEADERS} \
+internal.h \
 dec/apiwrapper.h \
+dec/bitpack.h \
+dec/dct.h \
 dec/decint.h \
 dec/dequant.h \
 dec/huffdec.h \
+dec/huffman.h \
+dec/idct.h \
+dec/ocintrin.h \
+dec/quant.h \
+../include/theora/codec.h \
+../include/theora/theora.h \
 
 LIBTHEORAENC_CSOURCES = \
-dec/internal.c \
-enc/blockmap.c \
-enc/common.c \
 enc/dct.c \
 enc/dct_decode.c \
 enc/dct_encode.c \
 enc/dsp.c \
+enc/encapiwrapper.c \
 enc/encode.c \
 enc/encoder_huffman.c \
 enc/encoder_idct.c \
-enc/encoder_quant.c \
 enc/encoder_toplevel.c \
+enc/encoder_quant.c \
 enc/frarray.c \
 enc/frinit.c \
-enc/mcomp.c \
-enc/misc_common.c \
-enc/pb.c \
-enc/pp.c \
+enc/mcenc.c \
+enc/mode.c \
 enc/reconstruct.c \
-enc/scan.c \
 $(if $(findstring -DUSE_ASM,${CFLAGS}), \
-enc/x86_32/dct_decode_mmx.c \
-enc/x86_32/dsp_mmx.c \
-enc/x86_32/dsp_mmxext.c \
-enc/x86_32/recon_mmx.c \
-enc/x86_32/idct_mmx.c \
-enc/x86_32/fdct_mmx.c \
+enc/x86/dct_decode_mmx.c \
+enc/x86/dsp_mmx.c \
+enc/x86/dsp_mmxext.c \
+enc/x86/recon_mmx.c \
+enc/x86/idct_mmx.c \
+enc/x86/fdct_mmx.c \
 )
 
 LIBTHEORAENC_CHEADERS = \
 cpu.h \
-enc/block_inline.h \
-enc/hufftables.h \
-enc/codec_internal.h \
-enc/pp.h \
+internal.h \
 enc/dsp.h \
-enc/quant_lookup.h \
 enc/encoder_huffman.h \
-enc/toplevel_lookup.h \
 enc/encoder_lookup.h \
+enc/enquant.h \
+enc/hufftables.h \
+enc/mode_select.h \
+enc/quant_lookup.h \
+enc/toplevel_lookup.h \
 
 
 DUMP_VIDEO_CSOURCES = dump_video.c
@@ -376,7 +369,7 @@ ${PLAYER_EXAMPLE_TARGET}: ${PLAYER_EXAMPLE_OBJS} ${LIBTHEORADEC_TARGET}
 # Remove all targets.
 clean:
 	-rm $(sort ${ALL_OBJS} ${ALL_DEPS} ${ALL_TARGETS} ${IMPLIB_TARGETS})
-	-rmdir ${WORKDIR}/enc/x86_32
+	-rmdir ${WORKDIR}/enc/x86
 	-rmdir ${WORKDIR}/enc
 	-rmdir ${WORKDIR}/dec/x86
 	-rmdir ${WORKDIR}/dec
