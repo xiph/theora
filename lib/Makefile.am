@@ -37,6 +37,7 @@ encoder_sources = \
 	enc/encoder_quant.c \
 	enc/frarray.c \
 	enc/frinit.c \
+	enc/mathops.c \
 	enc/mcenc.c \
 	enc/mode.c \
 	enc/reconstruct.c
@@ -98,6 +99,7 @@ noinst_HEADERS = \
 	enc/encoder_lookup.h \
 	enc/enquant.h \
 	enc/hufftables.h \
+	enc/mathops.h \
 	enc/mode_select.h \
 	enc/quant_lookup.h \
 	enc/toplevel_lookup.h \
@@ -127,7 +129,7 @@ libtheoraenc_la_SOURCES = \
   Version_script-enc
 libtheoraenc_la_LDFLAGS = \
   -version-info @THENC_LIB_CURRENT@:@THENC_LIB_REVISION@:@THENC_LIB_AGE@ \
-  @THEORAENC_LDFLAGS@ $(OGG_LIBS) -lm
+  @THEORAENC_LDFLAGS@ $(OGG_LIBS)
 
 libtheora_la_SOURCES = \
 	$(decoder_arch_sources) \
@@ -137,7 +139,7 @@ libtheora_la_SOURCES = \
   Version_script
 libtheora_la_LDFLAGS = \
   -version-info @TH_LIB_CURRENT@:@TH_LIB_REVISION@:@TH_LIB_AGE@ \
-  @THEORA_LDFLAGS@ @CAIRO_LIBS@ $(OGG_LIBS) -lm
+  @THEORA_LDFLAGS@ @CAIRO_LIBS@ $(OGG_LIBS)
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@" 

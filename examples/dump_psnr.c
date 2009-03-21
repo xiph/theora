@@ -49,12 +49,17 @@
 #include <signal.h>
 #include "theora/theoradec.h"
 
-const char *optstring = "ys";
+const char *optstring = "fsy";
 struct option options [] = {
-  {"luma-only",no_argument,NULL,'y'},
+  {"frame-type",no_argument,NULL,'f'},
   {"summary",no_argument,NULL,'s'},
+  {"luma-only",no_argument,NULL,'y'},
   {NULL,0,NULL,0}
 };
+
+static int show_frame_type;
+static int summary_only;
+static int luma_only;
 
 typedef struct y4m_input y4m_input;
 
@@ -945,6 +950,11 @@ static int th_input_fetch_frame(th_input *_th,FILE *_fin,
     if(ogg_stream_packetout(&_th->to,&op)>0){
       if(th_decode_packetin(_th->td,&op,NULL)>=0){
         th_decode_ycbcr_out(_th->td,_ycbcr);
+        if(!summary_only&&show_frame_type){
+          printf("%c",th_packet_iskeyframe(&op)?'K':'D');
+          if(op.bytes>0)printf("%02i ",op.packet[0]&0x3F);
+          else printf("-- ");
+        }
         return 1;
       }
       else return -1;
@@ -1026,8 +1036,9 @@ static void usage(char *_argv[]){
   fprintf(stderr,"Usage: %s [options] <video1> <video2>\n"
    "    <video1> and <video1> may be either YUV4MPEG or Ogg Theora files.\n\n"
    "    Options:\n\n"
-   "      -y --luma-only  Only output values for the luma channel.\n"
-   "      -s --summary    Only output the summary line.\n",_argv[0]);
+   "      -f --frame-type Show frame type and QI value for each Theora frame.\n"
+   "      -s --summary    Only output the summary line.\n"
+   "      -y --luma-only  Only output values for the luma channel.\n",_argv[0]);
 }
 
 int main(int _argc,char *_argv[]){
@@ -1039,8 +1050,6 @@ int main(int _argc,char *_argv[]){
   ogg_int64_t  gnpixels;
   ogg_int64_t  gplsqerr[3];
   ogg_int64_t  gplnpixels[3];
-  int          luma_only;
-  int          summary_only;
   int          frameno;
   FILE        *fin;
   int          long_option_index;
@@ -1052,13 +1061,12 @@ int main(int _argc,char *_argv[]){
     Don't add any more, you'll probably go to hell if you do.*/
   _setmode(_fileno(stdin),_O_BINARY);
 #endif
-  luma_only=0;
-  summary_only=0;
   /*Process option arguments.*/
   while((c=getopt_long(_argc,_argv,optstring,options,&long_option_index))!=EOF){
     switch(c){
-      case 'y':luma_only=1;break;
+      case 'f':show_frame_type=1;break;
       case 's':summary_only=1;break;
+      case 'y':luma_only=1;break;
       default:usage(_argv);break;
     }
   }
