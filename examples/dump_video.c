@@ -240,17 +240,13 @@ int main(int argc,char *const *argv){
   /* start up Ogg stream synchronization layer */
   ogg_sync_init(&oy);
 
-  /* init supporting Vorbis structures needed in header parsing */
-  /*vorbis_info_init(&vi);*/
-  /*vorbis_comment_init(&vc);*/
-
   /* init supporting Theora structures needed in header parsing */
   theora_comment_init(&tc);
   theora_info_init(&ti);
 
   /* Ogg file open; parse the headers */
 
-  /* Vorbis and Theora both depend on some initial header packets
+  /* Theora (like Vorbis) depends on some initial header packets
      for decoder setup and initialization. We retrieve these first
      before entering the main decode loop. */
 
