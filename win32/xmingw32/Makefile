@@ -31,11 +31,15 @@ PLAYER_EXAMPLE_TARGET = player_example.exe
 ENCODER_EXAMPLE_TARGET = encoder_example.exe
 
 # The compiler tools to use
-CC = i686-mingw32-gcc
-RC = i686-mingw32-windres
-DLLTOOL = i686-mingw32-dlltool
-LD = i686-mingw32-ld
-SDLCONFIG = i686-mingw32-sdl-config
+# The is no standard mingw prefix, so try to guess
+MINGW_PREFIX := $(or $(strip $(foreach exeprefix, \
+	i686-mingw32 i586-mingw32msvc i386-mingw32 no-mingw32, \
+	$(if $(shell which $(exeprefix)-gcc), $(exeprefix) ))))
+CC = $(MINGW_PREFIX)-gcc
+RC = $(MINGW_PREFIX)-windres
+DLLTOOL = $(MINGW_PREFIX)-dlltool
+LD = $(MINGW_PREFIX)-ld
+SDLCONFIG = $(MINGW_PREFIX)-sdl-config
 # The command to use to generate dependency information
 MAKEDEPEND = ${CC} -MM
 #MAKEDEPEND = makedepend -f- -Y --
