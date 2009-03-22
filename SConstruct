@@ -1,4 +1,3 @@
-# SCons build specification
 # see http://www.scons.org if you do not have this tool
 from os.path import join
 import SCons
@@ -68,31 +67,17 @@ def CheckSDL(context):
   return ret
 
 # check for appropriate inline asm support
-host_x86_32_test = """
+host_x86_test = """
     int main(int argc, char **argv) {
-#if !defined(__i386__)
-  #error __i386__ not defined
+#if !defined(__i386__) && !defined(__x86_64__)
+  #error not an x86 host: neither __i386__ nor __x86_64__ defined
 #endif
   return 0;
     }
     """
-def CheckHost_x86_32(context):
-  context.Message('Checking for an x86_32 host...')
-  result = context.TryCompile(host_x86_32_test, '.c')
-  context.Result(result)
-  return result
-
-host_x86_64_test = """
-    int main(int argc, char **argv) {
-#if !defined(__x86_64__)
-  #error __x86_64__ not defined
-#endif
-  return 0;
-    }
-    """
-def CheckHost_x86_64(context):
-  context.Message('Checking for an x86_64 host...')
-  result = context.TryCompile(host_x86_64_test, '.c')
+def CheckHost_x86(context):
+  context.Message('Checking for an x86 host...')
+  result = context.TryCompile(host_x86_test, '.c')
   context.Result(result)
   return result
 
@@ -100,8 +85,7 @@ conf = Configure(env, custom_tests = {
   'CheckPKGConfig' : CheckPKGConfig,
   'CheckPKG' : CheckPKG,
   'CheckSDL' : CheckSDL,
-  'CheckHost_x86_32' : CheckHost_x86_32,
-  'CheckHost_x86_64' : CheckHost_x86_64,
+  'CheckHost_x86' : CheckHost_x86,
   })
   
 if not conf.CheckPKGConfig('0.15.0'): 
@@ -128,7 +112,7 @@ if not conf.CheckHeader('sys/soundcard.h'):
 if build_player_example and not conf.CheckSDL():
   build_player_example=False
 
-if conf.CheckHost_x86_32() or conf.CheckHost_x86_64():
+if conf.CheckHost_x86():
   libtheora_Sources += Split("""
         dec/x86/mmxidct.c
         dec/x86/mmxfrag.c
