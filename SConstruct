@@ -18,6 +18,7 @@ encoder_sources = """
         enc/dct_decode.c
         enc/frarray.c
         enc/frinit.c
+	enc/mathops.c
         enc/mcenc.c
 	enc/mode.c
         enc/reconstruct.c

@@ -118,6 +118,7 @@ enc/encoder_toplevel.c \
 enc/encoder_quant.c \
 enc/frarray.c \
 enc/frinit.c \
+enc/mathops.c \
 enc/mcenc.c \
 enc/mode.c \
 enc/reconstruct.c \
@@ -138,6 +139,7 @@ enc/encoder_huffman.h \
 enc/encoder_lookup.h \
 enc/enquant.h \
 enc/hufftables.h \
+enc/mathops.h \
 enc/mode_select.h \
 enc/quant_lookup.h \
 enc/toplevel_lookup.h \
