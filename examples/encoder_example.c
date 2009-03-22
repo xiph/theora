@@ -1126,7 +1126,7 @@ int main(int argc,char *argv[]){
       break;
 
     case 'v':
-      video_q=(int)rint(atof(optarg));
+      video_q=(int)rint(6.3*atof(optarg));
       if(video_q<0 || video_q>63){
         fprintf(stderr,"Illegal video quality (choose 0 through 10)\n");
         exit(1);
