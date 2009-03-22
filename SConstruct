@@ -128,7 +128,7 @@ if not conf.CheckHeader('sys/soundcard.h'):
 if build_player_example and not conf.CheckSDL():
   build_player_example=False
 
-if conf.CheckHost_x86_32() or conf.CheckHost_x86_64:
+if conf.CheckHost_x86_32() or conf.CheckHost_x86_64():
   libtheora_Sources += Split("""
         dec/x86/mmxidct.c
         dec/x86/mmxfrag.c
