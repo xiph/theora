@@ -32,7 +32,7 @@ static void sub8x8__mmx (const unsigned char *FiltPtr, const unsigned char *Reco
                          ogg_int16_t *DctInputPtr, ogg_uint32_t PixelsPerLine)
 {
   __asm__ __volatile__ (
-    "  .balign 16                   \n\t"
+    "  .p2align 4                   \n\t"
 
     "  pxor        %%mm7, %%mm7     \n\t"
 
@@ -71,7 +71,7 @@ static void sub8x8_128__mmx (const unsigned char *FiltPtr, ogg_int16_t *DctInput
 {
 
   __asm__ __volatile__ (
-    "  .balign 16                   \n\t"
+    "  .p2align 4                   \n\t"
 
     "  pxor        %%mm7, %%mm7     \n\t"
     "  movq        %[V128], %%mm1   \n\t"
