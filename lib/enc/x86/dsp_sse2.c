@@ -26,7 +26,7 @@ static int find_nonzero__sse2(ogg_int16_t *q, int in){
   int ret,tmp,tmp2;
 
   __asm__ (
-	   ".balign 16 \n"
+	   ".p2align 4 \n"
 	   "movd      %[in],%%xmm0\n"
 	   "punpcklwd %%xmm0,%%xmm0\n"
 	   "punpcklwd %%xmm0,%%xmm0\n"

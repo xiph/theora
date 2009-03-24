@@ -22,23 +22,30 @@
 
 #if defined(USE_ASM)
 
+#define SAD_LOOP                                                                    \
+    "  movq (%1), %%mm0             \n\t"       /* take 8 bytes */                  \
+    "  movq (%2), %%mm1             \n\t"                                           \
+    "  psadbw %%mm1, %%mm0          \n\t"                                           \
+    "  add %3, %1                   \n\t"       /* Inc pointer into the new data */ \
+    "  paddw %%mm0, %%mm7           \n\t"       /* accumulate difference... */      \
+    "  add %3, %2                   \n\t"       /* Inc pointer into ref data */
+
 static ogg_uint32_t sad8x8__mmxext (const unsigned char *ptr1, const unsigned char *ptr2, 
                                     ogg_uint32_t stride)
 {
   ogg_uint32_t  DiffVal;
 
   __asm__ __volatile__ (
-    "  .balign 16                   \n\t"
+    "  .p2align 4                   \n\t"
     "  pxor %%mm7, %%mm7            \n\t"       /* mm7 contains the result */
 
-    ".rept 7                        \n\t"
-    "  movq (%1), %%mm0             \n\t"       /* take 8 bytes */
-    "  movq (%2), %%mm1             \n\t"
-    "  psadbw %%mm1, %%mm0          \n\t"
-    "  add %3, %1                   \n\t"       /* Inc pointer into the new data */
-    "  paddw %%mm0, %%mm7           \n\t"       /* accumulate difference... */
-    "  add %3, %2                   \n\t"       /* Inc pointer into ref data */
-    ".endr                          \n\t"
+    SAD_LOOP
+    SAD_LOOP
+    SAD_LOOP
+    SAD_LOOP
+    SAD_LOOP
+    SAD_LOOP
+    SAD_LOOP
 
     "  movq (%1), %%mm0             \n\t"       /* take 8 bytes */
     "  movq (%2), %%mm1             \n\t"
@@ -55,6 +62,14 @@ static ogg_uint32_t sad8x8__mmxext (const unsigned char *ptr1, const unsigned ch
 
   return DiffVal;
 }
+
+#define SAD_THRES_LOOP                                                              \
+    "  movq (%1), %%mm0             \n\t"       /* take 8 bytes */                  \
+    "  movq (%2), %%mm1             \n\t"                                           \
+    "  psadbw %%mm1, %%mm0          \n\t"                                           \
+    "  add %3, %1                   \n\t"       /* Inc pointer into the new data */ \
+    "  paddw %%mm0, %%mm7           \n\t"       /* accumulate difference... */      \
+    "  add %3, %2                   \n\t"       /* Inc pointer into ref data */
 
 static ogg_uint32_t sad8x8_thres__mmxext (const unsigned char *ptr1, const unsigned char *ptr2, 
                                           ogg_uint32_t stride, ogg_uint32_t thres)
@@ -62,17 +77,17 @@ static ogg_uint32_t sad8x8_thres__mmxext (const unsigned char *ptr1, const unsig
   ogg_uint32_t  DiffVal;
 
   __asm__ __volatile__ (
-    "  .balign 16                   \n\t"
+    "  .p2align 4                   \n\t"
     "  pxor %%mm7, %%mm7            \n\t"       /* mm7 contains the result */
 
-    ".rept 8                        \n\t"
-    "  movq (%1), %%mm0             \n\t"       /* take 8 bytes */
-    "  movq (%2), %%mm1             \n\t"
-    "  psadbw %%mm1, %%mm0          \n\t"
-    "  add %3, %1                   \n\t"       /* Inc pointer into the new data */
-    "  paddw %%mm0, %%mm7           \n\t"       /* accumulate difference... */
-    "  add %3, %2                   \n\t"       /* Inc pointer into ref data */
-    ".endr                          \n\t"
+    SAD_THRES_LOOP
+    SAD_THRES_LOOP
+    SAD_THRES_LOOP
+    SAD_THRES_LOOP
+    SAD_THRES_LOOP
+    SAD_THRES_LOOP
+    SAD_THRES_LOOP
+    SAD_THRES_LOOP
 
     "  movd %%mm7, %0               \n\t"
 
@@ -85,6 +100,18 @@ static ogg_uint32_t sad8x8_thres__mmxext (const unsigned char *ptr1, const unsig
 
   return DiffVal;
 }
+
+#define SAD_XY2_THRES_LOOP                                                          \
+    "  movq (%1), %%mm0             \n\t"       /* take 8 bytes */                  \
+    "  movq (%2), %%mm1             \n\t"                                           \
+    "  movq (%3), %%mm2             \n\t"                                           \
+    "  pavgb %%mm2, %%mm1           \n\t"                                           \
+    "  psadbw %%mm1, %%mm0          \n\t"                                           \
+                                                                                    \
+    "  add %4, %1                   \n\t"       /* Inc pointer into the new data */ \
+    "  paddw %%mm0, %%mm7           \n\t"       /* accumulate difference... */      \
+    "  add %4, %2                   \n\t"       /* Inc pointer into ref data */     \
+    "  add %4, %3                   \n\t"       /* Inc pointer into ref data */
 
 static ogg_uint32_t sad8x8_xy2_thres__mmxext (const unsigned char *SrcData, const unsigned char *RefDataPtr1,
                                               const unsigned char *RefDataPtr2, ogg_uint32_t Stride,
@@ -93,20 +120,17 @@ static ogg_uint32_t sad8x8_xy2_thres__mmxext (const unsigned char *SrcData, cons
   ogg_uint32_t  DiffVal;
 
   __asm__ __volatile__ (
-    "  .balign 16                   \n\t"
+    "  .p2align 4                   \n\t"
     "  pxor %%mm7, %%mm7            \n\t"       /* mm7 contains the result */
-    ".rept 8                        \n\t"
-    "  movq (%1), %%mm0             \n\t"       /* take 8 bytes */
-    "  movq (%2), %%mm1             \n\t"
-    "  movq (%3), %%mm2             \n\t"
-    "  pavgb %%mm2, %%mm1           \n\t"
-    "  psadbw %%mm1, %%mm0          \n\t"
 
-    "  add %4, %1                   \n\t"       /* Inc pointer into the new data */
-    "  paddw %%mm0, %%mm7           \n\t"       /* accumulate difference... */
-    "  add %4, %2                   \n\t"       /* Inc pointer into ref data */
-    "  add %4, %3                   \n\t"       /* Inc pointer into ref data */
-    ".endr                          \n\t"
+	SAD_XY2_THRES_LOOP
+    SAD_XY2_THRES_LOOP
+	SAD_XY2_THRES_LOOP
+    SAD_XY2_THRES_LOOP
+	SAD_XY2_THRES_LOOP
+    SAD_XY2_THRES_LOOP
+	SAD_XY2_THRES_LOOP
+    SAD_XY2_THRES_LOOP
 
     "  movd %%mm7, %0               \n\t"
      : "=m" (DiffVal),

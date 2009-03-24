@@ -289,7 +289,7 @@ static void fdct_short__mmx ( ogg_int16_t *InputData, ogg_int16_t *OutputData)
   ogg_int16_t __attribute__((aligned(8))) temp[8*8];
 
   __asm__ __volatile__ (
-    "  .balign 16                   \n\t"
+    "  .p2align 4                   \n\t"
     /*
      * Input data is an 8x8 block.  To make processing of the data more efficent
      * we will transpose the block of data to two 4x8 blocks???
