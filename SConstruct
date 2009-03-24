@@ -111,6 +111,7 @@ if build_player_example and not conf.CheckSDL():
   build_player_example=False
 
 if conf.CheckHost_x86():
+  env.Append(CPPDEFINES='USE_ASM')
   decoder_sources += """
         dec/x86/mmxidct.c
         dec/x86/mmxfrag.c
