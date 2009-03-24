@@ -142,7 +142,7 @@ libtheoradec_so = env.SharedLibrary('lib/theoradec',
 libtheoraenc_a = env.Library('lib/theoraenc',
 	path('lib', libtheoraenc_Sources))
 libtheoraenc_so = env.SharedLibrary('lib/theoraenc',
-	path('lib', libtheoraenc_Sources))
+	path('lib', libtheoraenc_Sources) + [libtheoradec_so])
 
 libtheora_a = env.Library('lib/theora',
 	path('lib', libtheora_Sources))
