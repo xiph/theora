@@ -43,7 +43,6 @@ decoder_sources = """
 env = Environment()
 if env['CC'] == 'gcc':
   env.Append(CCFLAGS=["-g", "-O2", "-Wall", "-Wno-parentheses"])
-#  env.Append(CCFLAGS=["-g", "-Wall"])
 
 def CheckPKGConfig(context, version): 
   context.Message( 'Checking for pkg-config... ' ) 
