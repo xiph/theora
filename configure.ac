@@ -177,14 +177,11 @@ if test "x${ac_enable_asm}" = xyes; then
     if test "x$target_vendor" = "xapple"; then
       THEORA_LDFLAGS="$THEORA_LDFLAGS  -Wl,-read_only_relocs,suppress"
     fi
-    
-    AC_DEFINE([OC_X86ASM], [], [enable x86 assambler optimization])
       ;;
   x86_64)
     cpu_x86_64=yes
     cpu_optimization="64 bit x86"
     AC_DEFINE([USE_ASM], [],  [make use of asm optimization])  
-    AC_DEFINE([OC_X86ASM], [], [enable x86 assambler optimization])
     ;;
   esac
 else
@@ -192,7 +189,6 @@ else
 fi
 AM_CONDITIONAL([CPU_x86_64], [test x$cpu_x86_64 = xyes])
 AM_CONDITIONAL([CPU_x86_32], [test x$cpu_x86_32 = xyes])
-AM_CONDITIONAL(OC_X86ASM,[test x$ac_enable_asm = xyes])
 
 # Test whenever ld supports -version-script
 AC_PROG_LD
