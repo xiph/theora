@@ -85,22 +85,6 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\lib\dec\apiwrapper.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\blockmap.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\common.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\cpu.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\lib\enc\dct.c
 # End Source File
 # Begin Source File
@@ -110,6 +94,78 @@ SOURCE=..\lib\enc\dct_decode.c
 # Begin Source File
 
 SOURCE=..\lib\enc\dct_encode.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\dct_encode.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\encapiwrapper.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\encode.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\encoder_huffman.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\encoder_idct.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\encoder_toplevel.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\encoder_quant.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\frarray.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\frinit.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\mathops.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\mcenc.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\mode.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\reconstruct.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\x86_32_vs\dsp_mmx.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\x86_32_vs\fdct_mmx.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\enc\x86_32_vs\recon_mmx.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\apiwrapper.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\bitpack.c
 # End Source File
 # Begin Source File
 
@@ -129,47 +185,7 @@ SOURCE=..\lib\dec\dequant.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\enc\dsp.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\x86_32_vs\dsp_mmx.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\encode.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\encoder_huffman.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\encoder_idct.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\encoder_quant.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\encoder_toplevel.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\x86_32_vs\fdct_mmx.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\lib\dec\fragment.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\frarray.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\frinit.c
 # End Source File
 # Begin Source File
 
@@ -189,47 +205,7 @@ SOURCE=..\lib\dec\internal.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\enc\mcomp.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\misc_common.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\dec\x86\mmxfrag.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\dec\x86\mmxidct.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\dec\x86\mmxstate.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\pb.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\pp.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\lib\dec\quant.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\x86_32_vs\recon_mmx.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\reconstruct.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\enc\scan.c
 # End Source File
 # Begin Source File
 
@@ -237,7 +213,23 @@ SOURCE=..\lib\dec\state.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\lib\dec\x86\x86state.c
+SOURCE=..\lib\dec\x86_vc\mmxfrag.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\x86_vc\mmxidct.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\x86_vc\mmxloopfilter.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\x86_vc\mmxstate.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dec\x86_vc\x86stat.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -338,10 +330,6 @@ SOURCE=..\include\theora\theoradec.h
 # Begin Source File
 
 SOURCE=..\lib\enc\toplevel_lookup.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\lib\dec\x86\x86int.h
 # End Source File
 # End Group
 # End Target
