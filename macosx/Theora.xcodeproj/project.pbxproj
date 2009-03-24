@@ -123,7 +123,6 @@
 		08BFDF780F796EE7002B7409 /* dct_decode_mmx.c in Sources */ = {isa = PBXBuildFile; fileRef = 08BFDF520F796EE7002B7409 /* dct_decode_mmx.c */; };
 		08BFDF790F796EE7002B7409 /* dsp_mmx.c in Sources */ = {isa = PBXBuildFile; fileRef = 08BFDF530F796EE7002B7409 /* dsp_mmx.c */; };
 		08BFDF7A0F796EE7002B7409 /* dsp_mmxext.c in Sources */ = {isa = PBXBuildFile; fileRef = 08BFDF540F796EE7002B7409 /* dsp_mmxext.c */; };
-		08BFDF7B0F796EE7002B7409 /* dsp_sse2.c in Sources */ = {isa = PBXBuildFile; fileRef = 08BFDF550F796EE7002B7409 /* dsp_sse2.c */; };
 		08BFDF7C0F796EE7002B7409 /* fdct_mmx.c in Sources */ = {isa = PBXBuildFile; fileRef = 08BFDF560F796EE7002B7409 /* fdct_mmx.c */; };
 		08BFDF7D0F796EE7002B7409 /* idct_mmx.c in Sources */ = {isa = PBXBuildFile; fileRef = 08BFDF570F796EE7002B7409 /* idct_mmx.c */; };
 		08BFDF7E0F796EE7002B7409 /* recon_mmx.c in Sources */ = {isa = PBXBuildFile; fileRef = 08BFDF580F796EE7002B7409 /* recon_mmx.c */; };
@@ -156,7 +155,6 @@
 		08BFDF9D0F796EE7002B7409 /* dct_decode_mmx.c in Sources */ = {isa = PBXBuildFile; fileRef = 08BFDF520F796EE7002B7409 /* dct_decode_mmx.c */; };
 		08BFDF9E0F796EE7002B7409 /* dsp_mmx.c in Sources */ = {isa = PBXBuildFile; fileRef = 08BFDF530F796EE7002B7409 /* dsp_mmx.c */; };
 		08BFDF9F0F796EE7002B7409 /* dsp_mmxext.c in Sources */ = {isa = PBXBuildFile; fileRef = 08BFDF540F796EE7002B7409 /* dsp_mmxext.c */; };
-		08BFDFA00F796EE7002B7409 /* dsp_sse2.c in Sources */ = {isa = PBXBuildFile; fileRef = 08BFDF550F796EE7002B7409 /* dsp_sse2.c */; };
 		08BFDFA10F796EE7002B7409 /* fdct_mmx.c in Sources */ = {isa = PBXBuildFile; fileRef = 08BFDF560F796EE7002B7409 /* fdct_mmx.c */; };
 		08BFDFA20F796EE7002B7409 /* idct_mmx.c in Sources */ = {isa = PBXBuildFile; fileRef = 08BFDF570F796EE7002B7409 /* idct_mmx.c */; };
 		08BFDFA30F796EE7002B7409 /* recon_mmx.c in Sources */ = {isa = PBXBuildFile; fileRef = 08BFDF580F796EE7002B7409 /* recon_mmx.c */; };
@@ -234,7 +232,6 @@
 		08BFDF520F796EE7002B7409 /* dct_decode_mmx.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = dct_decode_mmx.c; path = x86/dct_decode_mmx.c; sourceTree = "<group>"; };
 		08BFDF530F796EE7002B7409 /* dsp_mmx.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = dsp_mmx.c; path = x86/dsp_mmx.c; sourceTree = "<group>"; };
 		08BFDF540F796EE7002B7409 /* dsp_mmxext.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = dsp_mmxext.c; path = x86/dsp_mmxext.c; sourceTree = "<group>"; };
-		08BFDF550F796EE7002B7409 /* dsp_sse2.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = dsp_sse2.c; path = x86/dsp_sse2.c; sourceTree = "<group>"; };
 		08BFDF560F796EE7002B7409 /* fdct_mmx.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = fdct_mmx.c; path = x86/fdct_mmx.c; sourceTree = "<group>"; };
 		08BFDF570F796EE7002B7409 /* idct_mmx.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = idct_mmx.c; path = x86/idct_mmx.c; sourceTree = "<group>"; };
 		08BFDF580F796EE7002B7409 /* recon_mmx.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = recon_mmx.c; path = x86/recon_mmx.c; sourceTree = "<group>"; };
@@ -386,7 +383,6 @@
 				08BFDF520F796EE7002B7409 /* dct_decode_mmx.c */,
 				08BFDF530F796EE7002B7409 /* dsp_mmx.c */,
 				08BFDF540F796EE7002B7409 /* dsp_mmxext.c */,
-				08BFDF550F796EE7002B7409 /* dsp_sse2.c */,
 				08BFDF560F796EE7002B7409 /* fdct_mmx.c */,
 				08BFDF570F796EE7002B7409 /* idct_mmx.c */,
 				08BFDF580F796EE7002B7409 /* recon_mmx.c */,
@@ -667,7 +663,6 @@
 				08BFDF9D0F796EE7002B7409 /* dct_decode_mmx.c in Sources */,
 				08BFDF9E0F796EE7002B7409 /* dsp_mmx.c in Sources */,
 				08BFDF9F0F796EE7002B7409 /* dsp_mmxext.c in Sources */,
-				08BFDFA00F796EE7002B7409 /* dsp_sse2.c in Sources */,
 				08BFDFA10F796EE7002B7409 /* fdct_mmx.c in Sources */,
 				08BFDFA20F796EE7002B7409 /* idct_mmx.c in Sources */,
 				08BFDFA30F796EE7002B7409 /* recon_mmx.c in Sources */,
@@ -714,7 +709,6 @@
 				08BFDF780F796EE7002B7409 /* dct_decode_mmx.c in Sources */,
 				08BFDF790F796EE7002B7409 /* dsp_mmx.c in Sources */,
 				08BFDF7A0F796EE7002B7409 /* dsp_mmxext.c in Sources */,
-				08BFDF7B0F796EE7002B7409 /* dsp_sse2.c in Sources */,
 				08BFDF7C0F796EE7002B7409 /* fdct_mmx.c in Sources */,
 				08BFDF7D0F796EE7002B7409 /* idct_mmx.c in Sources */,
 				08BFDF7E0F796EE7002B7409 /* recon_mmx.c in Sources */,
