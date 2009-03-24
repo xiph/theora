@@ -40,8 +40,6 @@ decoder_sources = """
         dec/state.c
 """
 
-libtheora_Sources = Split(decoder_sources + encoder_sources + "cpu.c")
-
 env = Environment()
 if env['CC'] == 'gcc':
   env.Append(CCFLAGS=["-g", "-O2", "-Wall", "-Wno-parentheses"])
@@ -113,25 +111,43 @@ if build_player_example and not conf.CheckSDL():
   build_player_example=False
 
 if conf.CheckHost_x86():
-  libtheora_Sources += Split("""
+  decoder_sources += """
         dec/x86/mmxidct.c
         dec/x86/mmxfrag.c
         dec/x86/mmxstate.c
         dec/x86/x86state.c
+  """
+  encoder_sources += """
 	enc/x86/dct_decode_mmx.c
 	enc/x86/dsp_mmx.c
 	enc/x86/dsp_mmxext.c
 	enc/x86/recon_mmx.c
 	enc/x86/idct_mmx.c
 	enc/x86/fdct_mmx.c
-  """)
+  """
 env = conf.Finish()
 
 env.Append(CPPPATH=['lib', 'include', 'lib/enc'])
 env.ParseConfig('pkg-config --cflags --libs ogg')
 
-libtheora_a = env.Library('lib/theora', path('lib', libtheora_Sources))
-libtheora_so = env.SharedLibrary('lib/theora', path('lib', libtheora_Sources))
+libtheoradec_Sources = Split(decoder_sources)
+libtheoraenc_Sources = Split(encoder_sources)
+libtheora_Sources = Split(decoder_sources + encoder_sources)
+
+libtheoradec_a = env.Library('lib/theoradec',
+	path('lib', libtheoradec_Sources))
+libtheoradec_so = env.SharedLibrary('lib/theoradec',
+	path('lib', libtheoradec_Sources))
+
+libtheoraenc_a = env.Library('lib/theoraenc',
+	path('lib', libtheoraenc_Sources))
+libtheoraenc_so = env.SharedLibrary('lib/theoraenc',
+	path('lib', libtheoraenc_Sources))
+
+libtheora_a = env.Library('lib/theora',
+	path('lib', libtheora_Sources))
+libtheora_so = env.SharedLibrary('lib/theora',
+	path('lib', libtheora_Sources))
 
 #installing
 prefix='/usr'
@@ -141,22 +157,32 @@ env.Install(lib_dir, [libtheora_a, libtheora_so])
 
 # example programs
 dump_video = env.Clone()
-dump_video_Sources = Split("""dump_video.c ../lib/libtheora.a""")
+dump_video_Sources = Split("""dump_video.c ../lib/libtheoradec.a""")
 dump_video.Program('examples/dump_video', path('examples', dump_video_Sources))
 
 if have_vorbis:
   encex = dump_video.Clone()
   encex.ParseConfig('pkg-config --cflags --libs vorbisenc vorbis')
-  encex_Sources = Split("""encoder_example.c ../lib/libtheora.a""")
+  encex_Sources = Split("""
+	encoder_example.c
+	../lib/libtheoraenc.a 
+	../lib/libtheoradec.a
+  """)
   encex.Program('examples/encoder_example', path('examples', encex_Sources))
 
   if build_player_example:
     plyex = encex.Clone()
-    plyex_Sources = Split("""player_example.c ../lib/libtheora.a""")
+    plyex_Sources = Split("""
+	player_example.c
+	../lib/libtheoradec.a
+    """)
     plyex.ParseConfig('sdl-config --cflags --libs')
     plyex.Program('examples/player_example', path('examples', plyex_Sources))
 
 png2theora = env.Clone()
-png2theora_Sources = Split("""png2theora.c ../lib/libtheora.a""")
+png2theora_Sources = Split("""png2theora.c
+	../lib/libtheoraenc.a
+	../lib/libtheoradec.a
+""")
 png2theora.ParseConfig('pkg-config --cflags --libs libpng')
 png2theora.Program('examples/png2theora', path('examples', png2theora_Sources))
