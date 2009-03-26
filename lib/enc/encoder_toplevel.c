@@ -31,7 +31,6 @@
 
 static void oc_enc_calc_lambda(CP_INSTANCE *cpi){
   ogg_int64_t l;
-  int         q;
   /*For now, lambda is fixed depending on the qi value and frame type:
       lambda=1.125*(qavg[qti][qi]**1.5)
     A more adaptive scheme might perform better, but Theora's behavior does not
@@ -40,11 +39,10 @@ static void oc_enc_calc_lambda(CP_INSTANCE *cpi){
     This allows us to scale to rates slightly lower than we'd normally be able
      to reach, and give the rate control a semblance of "fractional QI"
      precision.*/
-  if(cpi->info.target_bitrate>0)q=cpi->rc.qtarget;
-  else q=cpi->qavg[cpi->FrameType!=KEY_FRAME][cpi->BaseQ];
-  l=oc_blog64(q)-OC_Q57(3);
+  if(cpi->info.target_bitrate>0)l=cpi->rc.log_qtarget;
+  else l=cpi->log_qavg[cpi->FrameType!=KEY_FRAME][cpi->BaseQ];
   /*Raise to the 1.5 power.*/
-  l+=(l>>1);
+  l+=l>>1;
   /*Multiply by 1.125.*/
   l+=0x00570068E7EF5A1ELL;
   /*The upper bound here is 0x48000.*/
@@ -84,49 +82,50 @@ static void oc_rc_state_init(oc_rc_state *_rc,const theora_info *_info){
     TODO: These still need to be tuned.*/
   npixels=_info->width*(ogg_int64_t)_info->height;
   _rc->log_npixels=oc_blog64(npixels);
-  ibpp=(npixels+(_rc->bits_per_frame>>1))/_rc->bits_per_frame;
-  if(ibpp<10){
-    _rc->exp[0]=48;
-    _rc->scale[0]=2199;
-    _rc->exp[1]=77;
-    _rc->scale[1]=2500;
+  ibpp=npixels/_rc->bits_per_frame;
+  if(ibpp<1){
+    _rc->exp[0]=59;
+    _rc->log_scale[0]=oc_blog64(1997)-OC_Q57(8);
   }
-  else if(ibpp<20){
-    _rc->exp[0]=51;
-    _rc->scale[0]=1781;
-    _rc->exp[1]=90;
-    _rc->scale[1]=1700;
+  else if(ibpp<2){
+    _rc->exp[0]=55;
+    _rc->log_scale[0]=oc_blog64(1604)-OC_Q57(8);
   }
   else{
-    _rc->exp[0]=54;
-    _rc->scale[0]=870;
-    _rc->exp[1]=102;
-    _rc->scale[1]=1300;
+    _rc->exp[0]=48;
+    _rc->log_scale[0]=oc_blog64(834)-OC_Q57(8);
+  }
+  if(ibpp<4){
+    _rc->exp[1]=100;
+    _rc->log_scale[1]=oc_blog64(2249)-OC_Q57(8);
+  }
+  else if(ibpp<8){
+    _rc->exp[1]=95;
+    _rc->log_scale[1]=oc_blog64(1751)-OC_Q57(8);
+  }
+  else{
+    _rc->exp[1]=73;
+    _rc->log_scale[1]=oc_blog64(1260)-OC_Q57(8);
   }
 }
 
-static unsigned OC_RATE_SMOOTHING[2]={0x80,0x80};
-
-/*TODO: Convert the following entirely to fixed point.*/
-
 static void oc_enc_update_rc_state(CP_INSTANCE *cpi,
  long _bits,int _qti,int _qi,int _trial){
+  static const unsigned OC_SCALE_SMOOTHING[2]={0x13,0x00};
   ogg_int64_t   log_scale;
   ogg_int64_t   log_bits;
   ogg_int64_t   log_qexp;
-  ogg_uint32_t  scale;
   /*Compute the estimated scale factor for this frame type.*/
   log_bits=oc_blog64(_bits);
-  log_qexp=oc_blog64(cpi->qavg[_qti][_qi])-OC_Q57(5);
+  log_qexp=cpi->log_qavg[_qti][_qi]-OC_Q57(2);
   log_qexp=(log_qexp>>6)*(cpi->rc.exp[_qti]);
-  log_scale=OC_Q57(8)+log_bits-cpi->rc.log_npixels+log_qexp;
-  scale=(ogg_uint32_t)oc_bexp64(OC_MINI(log_scale,OC_Q57(16)));
+  log_scale=OC_MINI(log_bits-cpi->rc.log_npixels+log_qexp,OC_Q57(16));
   /*Use it to set that factor directly if this was a trial.*/
-  if(_trial)cpi->rc.scale[_qti]=scale;
+  if(_trial)cpi->rc.log_scale[_qti]=log_scale;
   /*Otherwise update an exponential moving average.*/
   else{
-    cpi->rc.scale[_qti]=(scale<<16)
-     +(cpi->rc.scale[_qti]-scale)*OC_RATE_SMOOTHING[_qti]>>16;
+    cpi->rc.log_scale[_qti]=log_scale
+     +(cpi->rc.log_scale[_qti]-log_scale+128>>8)*OC_SCALE_SMOOTHING[_qti];
   }
   /*Update the buffer fullness level.*/
   if(!_trial){
@@ -141,9 +140,9 @@ static int oc_enc_select_qi(CP_INSTANCE *cpi,int _qti,int _trial){
   ogg_uint32_t next_key_frame;
   int          nframes[2];
   int          buf_delay;
-  int          qtarget;
+  ogg_int64_t  log_qtarget;
   int          best_qi;
-  int          best_qdiff;
+  ogg_int64_t  best_qdiff;
   int          qi;
   /*Figure out how to re-distribute bits so that we hit our fullness target
      before the last keyframe in our current buffer window (after the current
@@ -161,7 +160,7 @@ static int oc_enc_select_qi(CP_INSTANCE *cpi,int _qti,int _trial){
    +buf_delay*cpi->rc.bits_per_frame;
   /*If there aren't enough bits to achieve our desired fullness level, use the
      minimum quality permitted.*/
-  if(rate_total<=0)qtarget=OC_QUANT_MAX<<3;
+  if(rate_total<=0)log_qtarget=OC_QUANT_MAX_LOG;
   else{
     static const unsigned char KEY_RATIO[2]={29,32};
     ogg_int64_t   log_scale0;
@@ -169,10 +168,9 @@ static int oc_enc_select_qi(CP_INSTANCE *cpi,int _qti,int _trial){
     ogg_int64_t   prevr;
     ogg_int64_t   curr;
     ogg_int64_t   realr;
-    ogg_int64_t   log_qtarget;
     int           i;
-    log_scale0=oc_blog64(cpi->rc.scale[_qti])-OC_Q57(8)+cpi->rc.log_npixels;
-    log_scale1=oc_blog64(cpi->rc.scale[1-_qti])-OC_Q57(8)+cpi->rc.log_npixels;
+    log_scale0=cpi->rc.log_scale[_qti]+cpi->rc.log_npixels;
+    log_scale1=cpi->rc.log_scale[1-_qti]+cpi->rc.log_npixels;
     curr=(rate_total+(buf_delay>>1))/buf_delay;
     realr=curr*KEY_RATIO[_qti]+16>>5;
     for(i=0;i<10;i++){
@@ -181,7 +179,6 @@ static int oc_enc_select_qi(CP_INSTANCE *cpi,int _qti,int _trial){
       ogg_int64_t log_rpow;
       ogg_int64_t rscale;
       ogg_int64_t drscale;
-      ogg_int64_t mask;
       ogg_int64_t bias;
       prevr=curr;
       log_rpow=oc_blog64(prevr)-log_scale0;
@@ -194,42 +191,45 @@ static int oc_enc_select_qi(CP_INSTANCE *cpi,int _qti,int _trial){
        cpi->rc.exp[1-_qti]/prevr;
       rderiv=nframes[_qti]*KEY_RATIO[_qti]+drscale;
       if(rderiv==0)break;
-      mask=OC_SIGNMASK(rdiff)^OC_SIGNMASK(rderiv);
-      bias=rderiv+mask^mask;
+      bias=rderiv+OC_SIGNMASK(rdiff^rderiv)^OC_SIGNMASK(rdiff^rderiv);
       curr=prevr-((rdiff<<1)+bias)/(rderiv<<1);
       realr=curr*KEY_RATIO[_qti]+16>>5;
       if(curr<=0||realr>rate_total||prevr==curr)break;
     }
-    log_qtarget=OC_Q57(5)-((oc_blog64(realr)-log_scale0+(cpi->rc.exp[_qti]>>1))/
+    log_qtarget=OC_Q57(2)-((oc_blog64(realr)-log_scale0+(cpi->rc.exp[_qti]>>1))/
      cpi->rc.exp[_qti]<<6);
-    qtarget=(int)oc_bexp64(OC_MINI(log_qtarget,OC_Q57(15)));
+    log_qtarget=OC_MINI(log_qtarget,OC_QUANT_MAX_LOG);
   }
-  /*If this was not one of the initial frames, limit a change in quality.*/
+  /*If this was not one of the initial frames, limit the change in quality.*/
   if(!_trial){
-    int qmin;
-    int qmax;
-    /*TODO: With user-specified quant matrices, we need to enlarge these limits
+    ogg_int64_t log_qmin;
+    ogg_int64_t log_qmax;
+    /*Clamp the target quantizer to within [0.8*Q,1.2*Q], where Q is the
+       current quantizer.
+      TODO: With user-specified quant matrices, we need to enlarge these limits
        if they don't actually let us change qi values.*/
-    qmin=cpi->qavg[_qti][cpi->BaseQ]*13>>4;
-    qmax=cpi->qavg[_qti][cpi->BaseQ]*5>>2;
-    qtarget=OC_CLAMPI(qmin,qtarget,qmax);
+    log_qmin=cpi->log_qavg[_qti][cpi->BaseQ]-0x00A4D3C25E68DC58LL;
+    log_qmax=cpi->log_qavg[_qti][cpi->BaseQ]+0x00A4D3C25E68DC58LL;
+    log_qtarget=OC_CLAMPI(log_qmin,log_qtarget,log_qmax);
   }
   /*Search for the quantizer that matches the target most closely.
     We don't assume a linear ordering, but when there are ties we do pick the
      quantizer closest to the current one.*/
   best_qi=cpi->info.quality;
-  best_qdiff=abs(cpi->qavg[_qti][best_qi]-qtarget);
+  best_qdiff=cpi->log_qavg[_qti][best_qi]-log_qtarget;
+  best_qdiff=best_qdiff+OC_SIGNMASK(best_qdiff)^OC_SIGNMASK(best_qdiff);
   for(qi=cpi->info.quality+1;qi<64;qi++){
-    int qdiff;
-    qdiff=abs(cpi->qavg[_qti][qi]-qtarget);
+    ogg_int64_t qdiff;
+    qdiff=cpi->log_qavg[_qti][qi]-log_qtarget;
+    qdiff=qdiff+OC_SIGNMASK(qdiff)^OC_SIGNMASK(qdiff);
     if(qdiff<best_qdiff||
      qdiff==best_qdiff&&abs(qi-cpi->BaseQ)<abs(best_qi-cpi->BaseQ)){
       best_qi=qi;
       best_qdiff=qdiff;
     }
   }
-  /*Save these parameters for lambda calculations.*/
-  cpi->rc.qtarget=qtarget;
+  /*Save the quantizer target for lambda calculations.*/
+  cpi->rc.log_qtarget=log_qtarget;
   return best_qi;
 }
 

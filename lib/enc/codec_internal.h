@@ -196,9 +196,9 @@ struct oc_rc_state{
   ogg_int64_t max;
   ogg_int64_t log_npixels;
   unsigned    exp[2];
-  unsigned    scale[2];
+  ogg_int64_t log_scale[2];
+  ogg_int64_t log_qtarget;
   int         buf_delay;
-  int         qtarget;
 };
 
 /* Encoder (Compressor) instance -- installed in a theora_state */
@@ -332,17 +332,10 @@ struct CP_INSTANCE {
   /*An "average" quantizer for each quantizer type (INTRA or INTER) and QI
      value.
     This is used to paramterize the rate control decisions.
-    It is scaled by a factor of 8, which is necessary to gain sufficient
-     resolution to distinguish the original VP3 quantizers at the low end (even
-     then some INTRA quantizers are indistinguishable, but they really _are_
-     essentially the same, which is an unfortunate effect of VP3 a) using the
-     same DC scale for many QI values and b) lopping off the two fractional
-     bits of quantizer precision for essentially no reason and then spacing its
-     AC scale factors very closely.
-    Keep in mind these are in the DCT domain, and so are scaled by an
-     additional factor of 4 from the pixel domain, for a total scale factor of
-     32.*/
-  ogg_uint16_t     qavg[2][64];
+    They are kept in the log domain to simplify later processing.
+    Keep in mind these are DCT domain quantizers, and so are scaled by an
+     additional factor of 4 from the pixel domain.*/
+  ogg_int64_t      log_qavg[2][64];
   /*The buffer state used to drive rate control.*/
   oc_rc_state      rc;
   DspFunctions     dsp;  /* Selected functions for this platform */

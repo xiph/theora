@@ -25,15 +25,6 @@
 static const unsigned OC_DC_QUANT_MIN[2]={4<<2,8<<2};
 static const unsigned OC_AC_QUANT_MIN[2]={2<<2,4<<2};
 
-/*Reciprocal square root.
-  Return: 2**15/sqrt(_x).*/
-static ogg_uint16_t oc_rsqrt(ogg_uint32_t _x){
-  /*A simple polynomial approximation of this would be fine, but since we have
-     the routines and this is not performance critical, let's do it
-     accurately.*/
-  return (ogg_uint16_t)oc_bexp64(OC_Q57(15)-(oc_blog64(_x)>>1));
-}
-
 void oc_quant_params_pack(oggpack_buffer *_opb,const th_quant_info *_qinfo){
   const th_quant_ranges *qranges;
   const th_quant_base   *base_mats[2*3*64];
@@ -189,16 +180,16 @@ static ogg_uint16_t OC_RPSD[2][64]={
 };
 
 /*The fraction of the squared magnitude of the residuals in each color channel
-   relative to the total, scaled by 2**11, for each pixel format.
+   relative to the total, scaled by 2**16, for each pixel format.
   These values were measured after motion-compensated prediction, before
    quantization, over a large set of test video encoded at all possible rates.
   TODO: These values are only from INTER frames; it should be re-measured for
    INTRA frames.*/
 static ogg_uint16_t OC_PCD[4][3]={
- {1873,  95,  80},
- {1725, 175, 148},
- {1725, 175, 148},
- {1490, 302, 256}
+  {59926, 3038, 2572},
+  {55201, 5597, 4738},
+  {55201, 5597, 4738},
+  {47682, 9669, 8185}
 };
 
 
@@ -281,8 +272,8 @@ void InitQTables( CP_INSTANCE *cpi ){
       The value Q*lambda completely determines the entropy of the
        coefficients.*/
     for(qi=0;qi<64;qi++){
-      ogg_uint32_t q;
-      q=0;
+      ogg_int64_t q2;
+      q2=0;
       for(pli=0;pli<3;pli++){
         ogg_uint32_t qp;
         qp=0;
@@ -293,9 +284,10 @@ void InitQTables( CP_INSTANCE *cpi ){
           rq=(OC_RPSD[qti][ci]+(qd>>1))/qd;
           qp+=rq*(ogg_uint32_t)rq;
         }
-        q+=OC_PCD[cpi->info.pixelformat][pli]*(qp+128>>8);
+        q2+=OC_PCD[cpi->info.pixelformat][pli]*(ogg_int64_t)qp;
       }
-      cpi->qavg[qti][qi]=oc_rsqrt(q+1024>>11);
+      /*qavg=1.0/sqrt(q2).*/
+      cpi->log_qavg[qti][qi]=OC_Q57(48)-oc_blog64(q2)>>1;
     }
   }
 }
