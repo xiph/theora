@@ -2976,13 +2976,13 @@ This value is then scaled by four, to match the scaling of the DCT output,
 \item
 Assign \locvar{\qri} the index of a quant range such that
 \begin{displaymath}
-\sum_{\qrj=0}^{\locvar{\qri}-1}
- \bitvar{\qi} \ge \bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\qrj],
+\bitvar{\qi} \ge \sum_{\qrj=0}^{\locvar{\qri}-1}
+ \bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\qrj],
 \end{displaymath}
  and
 \begin{displaymath}
-\sum_{\qrj=0}^{\locvar{\qri}}
- \bitvar{\qi} \le \bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\qrj],
+\bitvar{\qi} \le \sum_{\qrj=0}^{\locvar{\qri}}
+ \bitvar{QRSIZES}[\bitvar{\qti}][\bitvar{\pli}][\qrj],
 \end{displaymath}
  where summation from $0$ to $-1$ is defined to be zero.
 If there is more than one such value of $\locvar{\qri}$, i.e., if \bitvar{\qi}
@@ -3750,7 +3750,7 @@ Otherwise, remove the bit at the head of the string \locvar{BITS} and assign it
  block. \\
 \locvar{\bi}       & Integer & 36 & No & The index of the current block in
  coded order. \\
-\locvar{\mi}       & Integer & 32 & No & The index of a Huffman code from
+\locvar{\mi}       & Integer &  3 & No & The index of a Huffman code from
  Table~\ref{tab:mode-codes}, starting from $0$. \\
 \bottomrule\end{tabularx}
 \medskip
@@ -3775,7 +3775,7 @@ $6$   & INTER\_GOLDEN\_MV   \\
 $7$   & INTER\_MV\_FOUR     \\
 \bottomrule\end{tabular}
 \end{center}
-\caption{Coding Modes}
+\caption{Macro Block Coding Modes}
 \label{tab:coding-modes}
 \end{table}
 
@@ -3795,20 +3795,20 @@ Scheme 7 simply codes each mode directly in the bitstream using three bits.
 
 \begin{table}[htbp]
 \begin{center}
-\begin{tabular}{lcccccc}\toprule
-Scheme        & $1$ & $2$ & $3$ & $4$ & $5$ & $6$ \\\cmidrule{2-7}
-Huffman Code  & \multicolumn{6}{c}{Coding Mode}   \\\midrule
-\bin{0}       & $3$ & $3$ & $3$ & $3$ & $0$ & $0$ \\
-\bin{10}      & $4$ & $4$ & $2$ & $2$ & $3$ & $5$ \\
-\bin{110}     & $2$ & $0$ & $4$ & $0$ & $4$ & $3$ \\
-\bin{1110}    & $0$ & $2$ & $0$ & $4$ & $2$ & $4$ \\
-\bin{11110}   & $1$ & $1$ & $1$ & $1$ & $1$ & $2$ \\
-\bin{111110}  & $5$ & $5$ & $5$ & $5$ & $5$ & $1$ \\
-\bin{1111110} & $6$ & $6$ & $6$ & $6$ & $6$ & $6$ \\
-\bin{1111111} & $7$ & $7$ & $7$ & $7$ & $7$ & $7$ \\
+\begin{tabular}{lccccccc}\toprule
+Scheme        & $1$ & $2$ & $3$ & $4$ & $5$ & $6$ & $7$ \\\cmidrule{2-7}
+Huffman Code  & \multicolumn{6}{c}{Coding Mode}   & \locvar{\mi} \\\midrule
+\bin{0}       & $3$ & $3$ & $3$ & $3$ & $0$ & $0$ & $0$ \\
+\bin{10}      & $4$ & $4$ & $2$ & $2$ & $3$ & $5$ & $1$ \\
+\bin{110}     & $2$ & $0$ & $4$ & $0$ & $4$ & $3$ & $2$ \\
+\bin{1110}    & $0$ & $2$ & $0$ & $4$ & $2$ & $4$ & $3$ \\
+\bin{11110}   & $1$ & $1$ & $1$ & $1$ & $1$ & $2$ & $4$ \\
+\bin{111110}  & $5$ & $5$ & $5$ & $5$ & $5$ & $1$ & $5$ \\
+\bin{1111110} & $6$ & $6$ & $6$ & $6$ & $6$ & $6$ & $6$ \\
+\bin{1111111} & $7$ & $7$ & $7$ & $7$ & $7$ & $7$ & $7$ \\
 \bottomrule\end{tabular}
 \end{center}
-\caption{Coding Modes}
+\caption{Macro Block Mode Schemes}
 \label{tab:mode-codes}
 \end{table}
 
@@ -3856,11 +3856,11 @@ If \locvar{MSCHEME} is not 7, read one bit at a time until one of the Huffman
  $\locvar{MALPHABET}[\locvar{\mi}]$, where \locvar{\mi} is the index of the
  Huffman code decoded.
 \item
-Otherwise, if no luma-plane blocks in the macro block are coded, read a 3-bit
- unsigned integer as $\bitvar{MBMODES}[\locvar{\mbi}]$.
+Otherwise, read a 3-bit unsigned integer as $\bitvar{MBMODES}[\locvar{\mbi}]$.
 \end{enumerate}
 \item
-Otherwise, assign $\bitvar{MBMODE}[\locvar{\mbi}]$ the value 0 (INTER\_NOMV).
+Otherwise, if no luma-plane blocks in the macro block are coded, assign
+ $\bitvar{MBMODES}[\locvar{\mbi}]$ the value 0 (INTER\_NOMV).
 \end{enumerate}
 \end{enumerate}
 \end{enumerate}
@@ -4138,39 +4138,40 @@ Let \locvar{A}, \locvar{B}, \locvar{C}, and \locvar{D} be the indices in coded
 Thus, \locvar{A} is the index in coded order of the block in the lower left,
  \locvar{B} the lower right, \locvar{C} the upper left, and \locvar{D} the
  upper right. % TODO: as shown in Figure~REF.
+\item If $\bitvar{BCODED}[\locvar{A}]$ is non-zero:
+\begin{enumerate}
+\item Decode a single motion vector into \locvar{MVX} and \locvar{MVY} using
+ the procedure described in Section~\ref{sub:mv-decode}.
+\item Assign $\bitvar{MVECTS}[\locvar{A}]$ the value
+ $(\locvar{MVX},\locvar{MVY})$.
+\end{enumerate}
+\item Otherwise, assign $\bitvar{MVECTS}[\locvar{A}]$ the value $(0,0)$.
+\item If $\bitvar{BCODED}[\locvar{B}]$ is non-zero:
+\begin{enumerate}
+\item Decode a single motion vector into \locvar{MVX} and \locvar{MVY} using
+ the procedure described in Section~\ref{sub:mv-decode}.
+\item Assign $\bitvar{MVECTS}[\locvar{B}]$ the value
+ $(\locvar{MVX},\locvar{MVY})$.
+\end{enumerate}
 \item
-If $\bitvar{BCODED}[\locvar{A}]$ is non-zero, decode a single motion vector
- into \locvar{MVX} and \locvar{MVY} using the procedure described in
- Section~\ref{sub:mv-decode}.
+Otherwise assign $\bitvar{MVECTS}[\locvar{B}]$ the value $(0,0)$.
+\item If $\bitvar{BCODED}[\locvar{C}]$ is non-zero:
+\begin{enumerate}
+\item Decode a single motion vector into \locvar{MVX} and \locvar{MVY} using
+ the procedure described in Section~\ref{sub:mv-decode}.
+\item Assign $\bitvar{MVECTS}[\locvar{C}]$ the value
+ $(\locvar{MVX},\locvar{MVY})$.
+\end{enumerate}
+\item Otherwise assign $\bitvar{MVECTS}[\locvar{C}]$ the value $(0,0)$.
+\item If $\bitvar{BCODED}[\locvar{D}]$ is non-zero:
+\begin{enumerate}
+\item Decode a single motion vector into \locvar{MVX} and \locvar{MVY} using
+ the procedure described in Section~\ref{sub:mv-decode}.
+\item Assign $\bitvar{MVECTS}[\locvar{D}]$ the value
+ $(\locvar{MVX},\locvar{MVY})$.
+\end{enumerate}
 \item
-Otherwise, assign \locvar{MVX} and \locvar{MVY} both the value zero.
-\item
-Assign $\bitvar{MVECTS}[\locvar{A}]$ the value $(\locvar{MVX},\locvar{MVY})$.
-\item
-If $\bitvar{BCODED}[\locvar{B}]$ is non-zero, decode a single motion vector
- into \locvar{MVX} and \locvar{MVY} using the procedure described in
- Section~\ref{sub:mv-decode}.
-\item
-Otherwise, assign \locvar{MVX} and \locvar{MVY} both the value zero.
-\item
-Assign $\bitvar{MVECTS}[\locvar{B}]$ the value $(\locvar{MVX},\locvar{MVY})$.
-\item
-If $\bitvar{BCODED}[\locvar{C}]$ is non-zero, decode a single motion vector
- into \locvar{MVX} and \locvar{MVY} using the procedure described in
- Section~\ref{sub:mv-decode}.
-\item
-Otherwise, assign \locvar{MVX} and \locvar{MVY} both the value zero.
-\item
-Assign $\bitvar{MVECTS}[\locvar{C}]$ the value $(\locvar{MVX},\locvar{MVY})$.
-\item
-If $\bitvar{BCODED}[\locvar{D}]$ is non-zero, decode a single motion vector
- into \locvar{MVX} and \locvar{MVY} using the procedure described in
- Section~\ref{sub:mv-decode}.
-\item
-Otherwise, assign \locvar{MVX} and \locvar{MVY} both the value zero.
-\item
-Assign $\bitvar{MVECTS}[\locvar{D}]$ the value $(\locvar{MVX},\locvar{MVY})$.
-Note that \locvar{MVX} and \locvar{MVY} retain this last value.
+Otherwise, assign $\bitvar{MVECTS}[\locvar{D}]$ the value $(0,0)$.
 \item
 If \bitvar{PF} is 0 (4:2:0):
 \begin{enumerate}
@@ -4195,27 +4196,27 @@ Assign $\bitvar{MVECTS}[\locvar{E}]$ and $\bitvar{MVECTS}[\locvar{F}]$ the
 If \bitvar{PF} is 2 (4:2:2):
 \begin{enumerate}
 \item
-Let \locvar{E} and \locvar{F} be the indices in coded order of the top and
- bottom blocks in the macro block from the $C_b$ plane, respectively, and
- \locvar{G} and \locvar{H} be the indices in coded order of the top and bottom
+Let \locvar{E} and \locvar{F} be the indices in coded order of the bottom and
+ top blocks in the macro block from the $C_b$ plane, respectively, and
+ \locvar{G} and \locvar{H} be the indices in coded order of the bottom and top
  blocks in the $C_r$ plane, respectively. %TODO: as shown in Figure~REF.
 \item
 Assign $\bitvar{MVECTS}[\locvar{E}]$ and $\bitvar{MVECTS}[\locvar{G}]$ the
  value
 \begin{multline*}
 (\round\left(\frac{
- \bitvar{MVECTS}[\locvar{A}]_x+\bitvar{MVECTS}[\locvar{B}]_x}{4}\right), \\
+ \bitvar{MVECTS}[\locvar{A}]_x+\bitvar{MVECTS}[\locvar{B}]_x}{2}\right), \\
  \round\left(\frac{
- \bitvar{MVECTS}[\locvar{A}]_y+\bitvar{MVECTS}[\locvar{B}]_y}{4}\right))
+ \bitvar{MVECTS}[\locvar{A}]_y+\bitvar{MVECTS}[\locvar{B}]_y}{2}\right))
 \end{multline*}
 \item
 Assign $\bitvar{MVECTS}[\locvar{F}]$ and $\bitvar{MVECTS}[\locvar{H}]$ the
  value
 \begin{multline*}
 (\round\left(\frac{
- \bitvar{MVECTS}[\locvar{C}]_x+\bitvar{MVECTS}[\locvar{D}]_x}{4}\right), \\
+ \bitvar{MVECTS}[\locvar{C}]_x+\bitvar{MVECTS}[\locvar{D}]_x}{2}\right), \\
  \round\left(\frac{
- \bitvar{MVECTS}[\locvar{C}]_y+\bitvar{MVECTS}[\locvar{D}]_y}{4}\right))
+ \bitvar{MVECTS}[\locvar{C}]_y+\bitvar{MVECTS}[\locvar{D}]_y}{2}\right))
 \end{multline*}
 \end{enumerate}
 \item
@@ -4245,6 +4246,10 @@ Assign $\bitvar{MVECTS}[\locvar{H}]$ and $\bitvar{MVECTS}[\locvar{L}]$ the
 Assign \locvar{LAST2} the value \locvar{LAST1}.
 \item
 Assign \locvar{LAST1} the value $(\locvar{MVX},\locvar{MVY})$.
+This is the value of the motion vector decoded from the last coded luma block
+ in raster order.
+There must always be at least one, since macro blocks with no coded luma blocks
+ must use mode 0:~INTER\_NOMV.
 \end{enumerate}
 \item
 Otherwise, if $\bitvar{MBMODES}[\locvar{\mbi}]$ is 6 (INTER\_GOLDEN\_MV),
@@ -6206,13 +6211,15 @@ Only the final division by $16$ is rounded, with ties rounded towards positive
 
 All intermediate values are truncated to a 32-bit signed representation by
  discarding any higher-order bits in their two's complement representation.
-The final output of each 1D transform is truncated to 16-bits in the same
- manner.
+The final output of each 1D transform is truncated to a 16-bit signed value in
+ the same manner.
 In practice, if the high word of a $16\times 16$ bit multiplication can be
  obtained directly, 16 bits is sufficient for every calculation except scaling
  by $C4$.
-Here we specify truncating to 16 bits before the multiplication to simplify
- implementations using hardware or common SIMD instruction sets.
+Thus we truncate to 16 bits before that multiplication to allow an
+ implementation entirely in 16-bit registers.
+Implementations using larger registers must sign-extend the 16-bit value to
+ maintain compatibility.
 
 Note that if 16-bit register are used, overflow in the additions and
  subtractions should be handled using \textit{unsaturated} arithmetic.
@@ -6333,7 +6340,7 @@ $\locvar{C7}$  & $\locvar{S1}$ & $12785$ \\
 \item
 Assign $\locvar{T}[0]$ the value $\bitvar{Y}[0]+\bitvar{Y}[4]$.
 \item
-Truncate $\locvar{T}[0]$ to a 16-bit representation by dropping any
+Truncate $\locvar{T}[0]$ to a 16-bit signed representation by dropping any
  higher-order bits.
 \item
 Assign $\locvar{T}[0]$ the value
@@ -6341,7 +6348,7 @@ Assign $\locvar{T}[0]$ the value
 \item
 Assign $\locvar{T}[1]$ the value $\bitvar{Y}[0]-\bitvar{Y}[4]$.
 \item
-Truncate $\locvar{T}[1]$ to a 16-bit representation by dropping any
+Truncate $\locvar{T}[1]$ to a 16-bit signed representation by dropping any
  higher-order bits.
 \item
 Assign $\locvar{T}[1]$ the value $\locvar{C4}*\locvar{T}[1]>>16$.
@@ -6368,10 +6375,10 @@ Assign \locvar{R} the value $\locvar{T}[4]+\locvar{T}[5]$.
 \item
 Assign $\locvar{T}[5]$ the value $\locvar{T}[4]-\locvar{T}[5]$.
 \item
-Truncate $\locvar{T}[5]$ to a 16-bit representation by dropping any
+Truncate $\locvar{T}[5]$ to a 16-bit signed representation by dropping any
  higher-order bits.
 \item
-Assign $\locvar{T}[5]$ the value $\locvar{C4}*(-\locvar{T}[5])>>16$.
+Assign $\locvar{T}[5]$ the value $\locvar{C4}*\locvar{T}[5]>>16$.
 \item
 Assign $\locvar{T}[4]$ the value $\locvar{R}$.
 \item
@@ -6379,7 +6386,7 @@ Assign \locvar{R} the value $\locvar{T}[7]+\locvar{T}[6]$.
 \item
 Assign $\locvar{T}[6]$ the value $\locvar{T}[7]-\locvar{T}[6]$.
 \item
-Truncate $\locvar{T}[6]$ to a 16-bit representation by dropping any
+Truncate $\locvar{T}[6]$ to a 16-bit signed representation by dropping any
  higher-order bits.
 \item
 Assign $\locvar{T}[6]$ the value $\locvar{C4}*\locvar{T}[6]>>16$.
@@ -6406,57 +6413,57 @@ Assign $\locvar{T}[6]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[0]+\locvar{T}[7]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[0]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[1]+\locvar{T}[6]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[1]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[2]+\locvar{T}[5]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[2]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[3]+\locvar{T}[4]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[3]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[3]-\locvar{T}[4]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[4]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[2]-\locvar{T}[5]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[5]$ the value \locvar{R}.
 \item
-Assign \locvar{X} the value $\locvar{T}[1]-\locvar{T}[6]$.
+Assign \locvar{R} the value $\locvar{T}[1]-\locvar{T}[6]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[6]$ the value \locvar{R}.
 \item
 Assign \locvar{R} the value $\locvar{T}[0]-\locvar{T}[7]$.
 \item
-Truncate \locvar{R} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{R} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 Assign $\bitvar{X}[7]$ the value \locvar{R}.
 \end{enumerate}
@@ -7017,8 +7024,8 @@ Assign \locvar{DC} the value
  (\bitvar{COEFFS}[\bitvar{\bi}][0]*\locvar{QMAT}[0]+15)>>5.
 \end{equation*}
 \item
-Truncate \locvar{DC} to a 16-bit representation by dropping any higher-order
- bits.
+Truncate \locvar{DC} to a 16-bit signed representation by dropping any
+ higher-order bits.
 \item
 For each value of \locvar{\idx{by}} from 0 to 7, and each value of
  \locvar{\idx{bx}} from 0 to 7, assign

@@ -13,7 +13,7 @@ dnl
 AC_ARG_WITH(vorbis,[  --with-vorbis=PFX   Prefix where libvorbis is installed (optional)], vorbis_prefix="$withval", vorbis_prefix="")
 AC_ARG_WITH(vorbis-libraries,[  --with-vorbis-libraries=DIR   Directory where libvorbis library is installed (optional)], vorbis_libraries="$withval", vorbis_libraries="")
 AC_ARG_WITH(vorbis-includes,[  --with-vorbis-includes=DIR   Directory where libvorbis header files are installed (optional)], vorbis_includes="$withval", vorbis_includes="")
-AC_ARG_ENABLE(vorbistest, [  --disable-vorbistest       Do not try to compile and run a test Vorbis program],, enable_vorbistest=yes)
+AC_ARG_ENABLE(vorbistest, [  --disable-vorbistest    Do not try to compile and run a test Vorbis program],, enable_vorbistest=yes)
 
   if test "x$vorbis_libraries" != "x" ; then
     VORBIS_LIBS="-L$vorbis_libraries"
