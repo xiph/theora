@@ -2,7 +2,8 @@ Monty <monty@xiph.org>
 	- Original VP3 port
 
 Ralph Giles
-Timothy B. Terriberry 
+Timothy B. Terriberry
+Monty
 	- Ongoing development
 	
 Dan B. Miller
@@ -10,12 +11,16 @@ Dan B. Miller
 	
 Wim Tayman
 Dan Lenski
+Nils Pipenbrinck
+Monty
 	- MMX optimized functions
 	
 Aaron Colwell
 Thomas Vander Stichele
 Jan Gerber
 Conrad Parker
+Cristian Adam
+Sebastian Pippin
 	- Bug fixes, enhancements, build systems.
 	
 Mauricio Piacentini
@@ -41,4 +46,4 @@ Rodolphe Ortalo
 	- Bug fixes
 
 
-and other xiph.org contributors
+and other Xiph.org contributors
