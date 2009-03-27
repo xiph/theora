@@ -212,6 +212,10 @@ struct CP_INSTANCE {
 
   /* ogg bitpacker for use in packet coding, other API state */
   oggpack_buffer   *oggbuffer;
+  /*The number of duplicates to produce for the next frame.*/
+  int               dup_count;
+  /*The number of duplicates remaining to be emitted for the current frame.*/
+  int               nqueued_dups;
 
   unsigned char   *frame;
   unsigned char   *recon;

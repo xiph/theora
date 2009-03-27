@@ -139,6 +139,32 @@ extern "C" {
  * \retval TH_IMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_SET_SPLEVEL (14)
+/**Sets the number of duplicates of the next frame to produce.
+ * Although libtheora can encode duplicate frames very cheaply, it costs some
+ *  amount of CPU to detect them, and a run of duplicates cannot span a
+ *  keyframe boundary.
+ * This control code tells the encoder to produce the specified number of extra
+ *  duplicates of the next frame.
+ * This allows the encoder to make smarter keyframe placement decisions and
+ *  rate control decisions, as well as reduces CPU usage, when compared to just
+ *  submitting the same frame for encoding multiple times.
+ * This setting only applies to the next frame submitted for encoding.
+ * You MUST call th_encode_packetout() repeatedly until it returns 0, or the
+ *  extra duplicate frames will be lost.
+ *
+ * \param[in] _buf int: The number of duplicates to produce.
+ *                      Unless this is positive, no duplicates will be produced.
+ * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
+ * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(int)</tt>, or the
+ *                    number of duplicates is greater than or equal to the
+ *                    maximum keyframe interval.
+ *                   In the latter case, NO duplicate frames will be produced.
+ *                   You must ensure that the maximum keyframe interval is set
+ *                    larger than the maximum number of duplicates you will
+ *                    ever wish to insert prior to encoding.
+ * \retval TH_IMPL   Not supported by this implementation in the current
+ *                    encoding mode.*/
+#define TH_ENCCTL_SET_DUP_COUNT (18)
 /*@}*/
 
 

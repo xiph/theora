@@ -26,6 +26,7 @@
 #include "dsp.h"
 #include "codec_internal.h"
 #include "mathops.h"
+#include "../dec/ocintrin.h"
 
 
 
@@ -129,7 +130,7 @@ static void oc_enc_update_rc_state(CP_INSTANCE *cpi,
   }
   /*Update the buffer fullness level.*/
   if(!_trial){
-    cpi->rc.fullness+=cpi->rc.bits_per_frame-_bits;
+    cpi->rc.fullness+=cpi->rc.bits_per_frame*(1+cpi->dup_count)-_bits;
     /*If we're too quick filling the buffer, that rate is lost forever.*/
     if(cpi->rc.fullness>cpi->rc.max)cpi->rc.fullness=cpi->rc.max;
   }
@@ -158,6 +159,15 @@ static int oc_enc_select_qi(CP_INSTANCE *cpi,int _qti,int _trial){
   nframes[1]=buf_delay-nframes[0];
   rate_total=cpi->rc.fullness-cpi->rc.target
    +buf_delay*cpi->rc.bits_per_frame;
+  /*Downgrade the frame rate to correspond to the current dup count.
+    This will way over-estimate the bits to use for an occasional dup (as
+     opposed to a consistent dup count, as used with VFR input), but the
+     hysteresis on the quantizer below will keep us from going out of control,
+     and we _do_ have more bits to spend after all.*/
+  if(cpi->dup_count>0){
+    nframes[0]=(nframes[0]+cpi->dup_count)/(cpi->dup_count+1);
+    nframes[1]=(nframes[1]+cpi->dup_count)/(cpi->dup_count+1);
+  }
   /*If there aren't enough bits to achieve our desired fullness level, use the
      minimum quality permitted.*/
   if(rate_total<=0)log_qtarget=OC_QUANT_MAX_LOG;
@@ -361,6 +371,9 @@ int theora_encode_init(theora_state *th, theora_info *c){
   /* Set up an encode buffer */
   cpi->oggbuffer = _ogg_malloc(sizeof(oggpack_buffer));
   oggpackB_writeinit(cpi->oggbuffer);
+  cpi->dup_count=0;
+  cpi->nqueued_dups=0;
+  cpi->packetflag=0;
 
   InitFrameInfo(cpi);
 
@@ -434,7 +447,7 @@ int theora_encode_YUVin(theora_state *t,
 
   /* don't allow generating invalid files that overflow the p-frame
      shift, even if keyframe_auto_p is turned off */
-  if(cpi->LastKeyFrame==-1 || cpi->LastKeyFrame >= (ogg_uint32_t)
+  if(cpi->LastKeyFrame==-1 || cpi->LastKeyFrame+cpi->dup_count>= (ogg_uint32_t)
      cpi->info.keyframe_frequency_force){
 
     CompressKeyFrame(cpi,0);
@@ -474,34 +487,44 @@ int theora_encode_YUVin(theora_state *t,
   t->granulepos=
     ((cpi->CurrentFrame - cpi->LastKeyFrame)<<cpi->keyframe_granule_shift)+
     cpi->LastKeyFrame - 1;
+  cpi->nqueued_dups=cpi->dup_count;
+  cpi->dup_count=0;
 
   return 0;
 }
 
-int theora_encode_packetout( theora_state *t, int last_p, ogg_packet *op){
-  CP_INSTANCE *cpi=(CP_INSTANCE *)(t->internal_encode);
-  long bytes=oggpackB_bytes(cpi->oggbuffer);
-
-  if(!bytes)return(0);
-  if(!cpi->packetflag)return(0);
-  if(cpi->doneflag>0)return(-1);
-
-  op->packet=oggpackB_get_buffer(cpi->oggbuffer);
-  op->bytes=bytes;
-  op->b_o_s=0;
-  op->e_o_s=last_p;
-
-  op->packetno=cpi->CurrentFrame;
-  op->granulepos=t->granulepos;
-
-  cpi->packetflag=0;
-  if(last_p){
-    cpi->doneflag=1;
-#ifdef COLLECT_METRICS
-    DumpMetrics(cpi);
-#endif
+int theora_encode_packetout(theora_state *_t,int _last_p,ogg_packet *_op){
+  CP_INSTANCE *cpi;
+  cpi=(CP_INSTANCE *)_t->internal_encode;
+  if(cpi->doneflag>0)return -1;
+  if(cpi->packetflag){
+    cpi->packetflag=0;
+    _op->packet=oggpackB_get_buffer(cpi->oggbuffer);
+    _op->bytes=oggpackB_bytes(cpi->oggbuffer);
   }
-  return 1;
+  else if(cpi->nqueued_dups>0){
+    cpi->nqueued_dups--;
+    cpi->CurrentFrame++;
+    _t->granulepos=cpi->LastKeyFrame-1
+     +(cpi->CurrentFrame-cpi->LastKeyFrame<<cpi->keyframe_granule_shift);
+    _op->packet=NULL;
+    _op->bytes=0;
+  }
+  else{
+    if(_last_p){
+      cpi->doneflag=1;
+#ifdef COLLECT_METRICS
+      DumpMetrics(cpi);
+#endif
+    }
+    return 0;
+  }
+  _last_p=_last_p&&cpi->nqueued_dups<=0;
+  _op->b_o_s=0;
+  _op->e_o_s=_last_p;
+  _op->packetno=cpi->CurrentFrame;
+  _op->granulepos=_t->granulepos;
+  return 1+cpi->nqueued_dups;
 }
 
 static void _tp_writebuffer(oggpack_buffer *opb, const char *buf, const long len)
@@ -763,6 +786,15 @@ static int theora_encode_control(theora_state *th,int req,
       value = 2;
       memcpy(buf, &value, sizeof(int));
       return 0;
+    case TH_ENCCTL_SET_DUP_COUNT:{
+      int dup_count;
+      if(buf==NULL)return TH_EFAULT;
+      if(buf_sz!=sizeof(int))return TH_EINVAL;
+      dup_count=*(int *)buf;
+      if(dup_count>=cpi->info.keyframe_frequency_force)return TH_EINVAL;
+      cpi->dup_count=OC_MAXI(dup_count,0);
+      return 0;
+    }break;
     default:
       return TH_EIMPL;
   }
