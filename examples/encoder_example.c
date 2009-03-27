@@ -6,13 +6,13 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
   function: example encoder application; makes an Ogg Theora/Vorbis
             file from YUV4MPEG2 and WAV input
-  last mod: $Id: encoder_example.c,v 1.10 2004/03/24 19:12:42 derf Exp $
+  last mod: $Id$
 
  ********************************************************************/
 
@@ -68,11 +68,11 @@ struct option options [] = {
   {"video-rate-target",required_argument,NULL,'V'},
   {"audio-quality",required_argument,NULL,'a'},
   {"video-quality",required_argument,NULL,'v'},
-  {"aspect-numerator",optional_argument,NULL,'s'},
-  {"aspect-denominator",optional_argument,NULL,'S'},
-  {"framerate-numerator",optional_argument,NULL,'f'},
-  {"framerate-denominator",optional_argument,NULL,'F'},
-  {"vp3-compatible",0,NULL,'c'},
+  {"aspect-numerator",required_argument,NULL,'s'},
+  {"aspect-denominator",required_argument,NULL,'S'},
+  {"framerate-numerator",required_argument,NULL,'f'},
+  {"framerate-denominator",required_argument,NULL,'F'},
+  {"vp3-compatible",no_argument,NULL,'c'},
   {NULL,0,NULL,0}
 };
 
@@ -84,7 +84,7 @@ FILE *video=NULL;
 int audio_ch=0;
 int audio_hz=0;
 
-float audio_q=.1F;
+float audio_q=.1;
 int audio_r=-1;
 int vp3_compatible=0;
 
@@ -114,7 +114,7 @@ size_t y4m_aux_buf_sz;
 /*The amount to read into the auxilliary buffer.*/
 size_t y4m_aux_buf_read_sz;
 
-/*The function used perform chroma conversion.*/
+/*The function used to perform chroma conversion.*/
 typedef void (*y4m_convert_func)(unsigned char *_dst,unsigned char *_aux);
 
 y4m_convert_func y4m_convert=NULL;
@@ -1093,7 +1093,7 @@ int main(int argc,char *argv[]){
   ogg_int64_t video_bytesout=0;
   double timebase;
 
-  FILE* outfile = stdout;
+  FILE *outfile = stdout;
 
 #ifdef _WIN32 /* We need to set stdin/stdout to binary mode. Damn windows. */
   /* if we were reading/writing a file, it would also need to in
@@ -1124,7 +1124,7 @@ int main(int argc,char *argv[]){
       break;
 
     case 'v':
-      video_q=(int)rint(atof(optarg)*6.3);
+      video_q=(int)rint(6.3*atof(optarg));
       if(video_q<0 || video_q>63){
         fprintf(stderr,"Illegal video quality (choose 0 through 10)\n");
         exit(1);
@@ -1143,9 +1143,12 @@ int main(int argc,char *argv[]){
 
     case 'V':
       video_r=(int)rint(atof(optarg)*1000);
-      if(video_r<45000 || video_r>2000000){
-        fprintf(stderr,"Illegal video bitrate (choose 45kbps through 2000kbps)\n");
+      if(video_r<0){
+        fprintf(stderr,"Illegal video bitrate (choose > 0 please)\n");
         exit(1);
+      }
+      if(video_r>(1<<24)-1){
+        fprintf(stderr,"Warning: encoder may limit video to 16 Mbps\n");
       }
       video_q=0;
      break;
@@ -1212,7 +1215,11 @@ int main(int argc,char *argv[]){
   ti.aspect_numerator=video_par_n;
   ti.aspect_denominator=video_par_d;
   ti.colorspace=TH_CS_UNSPECIFIED;
-  ti.target_bitrate=video_r;
+  /*Account for the Ogg page overhead.
+    This is 1 byte per 255 for lacing values, plus 26 bytes per 4096 bytes for
+     the page header, plus approximately 1/2 byte per packet (not accounted for
+     here).*/
+  ti.target_bitrate=(int)(64870*(ogg_int64_t)video_r>>16);
   ti.quality=video_q;
   ti.keyframe_granule_shift=6;
 
@@ -1244,7 +1251,8 @@ int main(int argc,char *argv[]){
     if(audio_q>-99)
       ret = vorbis_encode_init_vbr(&vi,audio_ch,audio_hz,audio_q);
     else
-      ret = vorbis_encode_init(&vi,audio_ch,audio_hz,-1,audio_r,-1);
+      ret = vorbis_encode_init(&vi,audio_ch,audio_hz,-1,
+       (int)(64870*(ogg_int64_t)audio_r>>16),-1);
     if(ret){
       fprintf(stderr,"The Vorbis encoder could not set up a mode according to\n"
               "the requested quality or bitrate.\n\n");
