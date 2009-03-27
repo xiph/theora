@@ -1,3 +1,7 @@
+libtheora 1.1alpha2 (unreleased snapshot)
+
+ - no changes recorded
+
 libtheora 1.1alpha1 (2009 March 27)
 
  - Encoder rewrite with much improved vbr quality/bitrate and
