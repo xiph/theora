@@ -937,8 +937,6 @@ int PickModes(CP_INSTANCE *cpi, int recode){
     for(j = 0; j<4; j++){ /* mode addressing is through Y plane, always 4 MB per SB */
       int mbi = sb->m[j];
 
-      if(mbi >= cpi->macro_total) continue;
-
       int cost[8] = {0,0,0,0, 0,0,0,0};
       int overhead[8] = {0,0,0,0, 0,0,0,0};
       int mb_mv_bits_0;
@@ -951,6 +949,8 @@ int PickModes(CP_INSTANCE *cpi, int recode){
       int block_err[4];
 
       macroblock_t *mb = &cpi->macro[mbi];
+
+      if(mbi >= cpi->macro_total) continue;
 
       if(!recode){
         /* Motion estimation */
