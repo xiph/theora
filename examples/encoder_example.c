@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2003                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2009                *
  * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
@@ -84,7 +84,7 @@ FILE *video=NULL;
 int audio_ch=0;
 int audio_hz=0;
 
-float audio_q=.1;
+float audio_q=.1f;
 int audio_r=-1;
 int vp3_compatible=0;
 
