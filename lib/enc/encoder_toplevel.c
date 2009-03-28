@@ -31,7 +31,11 @@
 
 
 static void oc_enc_calc_lambda(CP_INSTANCE *cpi){
+  static const int OC_LAMBDA_MIN[2]={42,78};
   ogg_int64_t l;
+  int         lambda;
+  int         qti;
+  qti=cpi->FrameType!=KEY_FRAME;
   /*For now, lambda is fixed depending on the qi value and frame type:
       lambda=1.125*(qavg[qti][qi]**1.5)
     A more adaptive scheme might perform better, but Theora's behavior does not
@@ -41,13 +45,24 @@ static void oc_enc_calc_lambda(CP_INSTANCE *cpi){
      to reach, and give the rate control a semblance of "fractional QI"
      precision.*/
   if(cpi->info.target_bitrate>0)l=cpi->rc.log_qtarget;
-  else l=cpi->log_qavg[cpi->FrameType!=KEY_FRAME][cpi->BaseQ];
+  else l=cpi->log_qavg[qti][cpi->BaseQ];
   /*Raise to the 1.5 power.*/
   l+=l>>1;
   /*Multiply by 1.125.*/
   l+=0x00570068E7EF5A1ELL;
   /*The upper bound here is 0x48000.*/
-  cpi->lambda=(int)oc_bexp64(l);
+  lambda=(int)oc_bexp64(l);
+  /*Theora has a very high minimum quantizer (thanks to VP3 and the inability
+     to store arbitrarily large DCT coefficients), and the R-D optimal lambda
+     to use with those quantizers is still very large.
+    If we want even higher quality, we _should_ use a smaller quantizer, but
+     since we can't, we just reduce lambda instead.*/
+  if(lambda<OC_LAMBDA_MIN[qti]<<1){
+    /*The max is for saftey, should someone change some other part of the code.
+      It should not be possible to go below the minimum with current tunings.*/
+    lambda=OC_MAXI(lambda-OC_LAMBDA_MIN[qti],0)<<1;
+  }
+  cpi->lambda=lambda;
 }
 
 
