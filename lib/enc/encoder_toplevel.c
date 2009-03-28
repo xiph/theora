@@ -719,7 +719,7 @@ static ogg_int64_t theora_encode_granule_frame(theora_state *th,
     ogg_int64_t iframe=granulepos>>cpi->keyframe_granule_shift;
     ogg_int64_t pframe=granulepos-(iframe<<cpi->keyframe_granule_shift);
 
-    return (iframe+pframe);
+    return (iframe+pframe-1);
   }
 
   return(-1);
