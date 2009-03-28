@@ -94,7 +94,11 @@ granulepos_test_encode (int frequency)
       printf("th_encode_ycbcr_in() returned %d\n", result);
       FAIL ("negative error code submitting frame for compression");
     }
-    th_encode_packetout (te, frame >= frequency * 2, &op);
+    result = theora_encode_packetout (&th, frame >= frequency * 2, &op);
+    if (result <= 0) {
+      printf("theora_encode_packetout() returned %d\n", result);
+      FAIL("failed to retrieve compressed frame");
+    }
     if ((long long int)op.granulepos < last_granule)
       FAIL ("encoder returned a decreasing granulepos value");
     last_granule = op.granulepos;
@@ -103,7 +107,7 @@ granulepos_test_encode (int frequency)
     tframe = th_granule_frame (te, op.granulepos);
     ttime = th_granule_time(te, op.granulepos);
 #if DEBUG
-    printf("++ frame %d granulepos %lld %d:%d %d %.3lfs\n", 
+    printf("++ frame %d granulepos %lld %d:%d %d %.3lfs\n",
 	frame, (long long int)op.granulepos, keyframe, keydist,
 	tframe, th_granule_time (te, op.granulepos));
 #endif
