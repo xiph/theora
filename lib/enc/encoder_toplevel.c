@@ -505,6 +505,7 @@ int theora_encode_packetout(theora_state *_t,int _last_p,ogg_packet *_op){
   else if(cpi->nqueued_dups>0){
     cpi->nqueued_dups--;
     cpi->CurrentFrame++;
+    cpi->LastKeyFrame++;
     _t->granulepos=cpi->LastKeyFrame-1
      +(cpi->CurrentFrame-cpi->LastKeyFrame<<cpi->keyframe_granule_shift);
     _op->packet=NULL;
