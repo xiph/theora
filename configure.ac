@@ -71,52 +71,55 @@ if test $HAVE_DOXYGEN = "false"; then
 fi
 
 dnl Check for tools used to build the format specification
-AC_CHECK_PROG(HAVE_PDFLATEX, pdflatex, yes)
-AC_CHECK_PROG(HAVE_BIBTEX, bibtex, yes)
-AC_CHECK_PROG(HAVE_TRANSFIG, fig2dev, yes)
 BUILD_SPEC="false"
-if test -r doc/spec/spec.tex; then
- if test "x$HAVE_PDFLATEX" = "xyes"; then
-  if test "x$HAVE_BIBTEX" = "xyes"; then
-    if test "x$HAVE_TRANSFIG" = "xyes"; then
-      tex_pkg_list=`fgrep usepackage doc/spec/spec.tex | grep \{ | grep -v ltablex`
-      tex_pkg_ok="yes"
-      for pkg_line in $tex_pkg_list; do
-	pkg_name=`echo $pkg_line | sed -e 's/.*{\(.*\)}.*/\1/'`
-	AC_MSG_CHECKING([for Tex package $pkg_name])
-        cat >conftest.tex <<_ACEOF
+ac_build_spec=yes
+AC_ARG_ENABLE(spec,
+     [--disable-spec      do not build spec ],
+     [
+       if test "x$enableval" = "xno"; then
+         ac_build_spec=$enableval
+       fi
+     ], [
+       ac_build_spec=yes
+     ] )
+if test "x$ac_build_spec" = "xyes"; then
+  AC_CHECK_PROG(HAVE_PDFLATEX, pdflatex, yes)
+  AC_CHECK_PROG(HAVE_BIBTEX, bibtex, yes)
+  AC_CHECK_PROG(HAVE_TRANSFIG, fig2dev, yes)
+  if test -r doc/spec/spec.tex; then
+   if test "x$HAVE_PDFLATEX" = "xyes"; then
+    if test "x$HAVE_BIBTEX" = "xyes"; then
+      if test "x$HAVE_TRANSFIG" = "xyes"; then
+        tex_pkg_list=`fgrep usepackage doc/spec/spec.tex | grep \{ | grep -v ltablex`
+        tex_pkg_ok="yes"
+        for pkg_line in $tex_pkg_list; do
+	  pkg_name=`echo $pkg_line | sed -e 's/.*{\(.*\)}.*/\1/'`
+	  AC_MSG_CHECKING([for Tex package $pkg_name])
+          cat >conftest.tex <<_ACEOF
 \\documentclass{book}
 $pkg_line
 \\begin{document}
 Hello World.
 \\end{document}
 _ACEOF
-	if pdflatex -interaction batchmode -halt-on-error conftest < /dev/null > /dev/null 2>&1; then
-          AC_MSG_RESULT([ok])
-        else
-	  tex_pkg_ok="no"
-	  AC_MSG_RESULT([no])
+	  if pdflatex -interaction batchmode -halt-on-error conftest < /dev/null > /dev/null 2>&1; then
+            AC_MSG_RESULT([ok])
+          else
+	    tex_pkg_ok="no"
+	    AC_MSG_RESULT([no])
+          fi
+        done
+        if test -w conftest.tex; then rm conftest.tex; fi
+        if test -w conftest.tex; then rm conftest.aux; fi
+        if test -w conftest.pdf; then rm conftest.pdf; fi
+        if test "x$tex_pkg_ok" = "xyes"; then
+          BUILD_SPEC="true"
         fi
-      done
-      if test -w conftest.tex; then rm conftest.tex; fi
-      if test -w conftest.tex; then rm conftest.aux; fi
-      if test -w conftest.pdf; then rm conftest.pdf; fi
-      if test "x$tex_pkg_ok" = "xyes"; then
-        BUILD_SPEC="true"
       fi
     fi
+   fi
   fi
- fi
 fi
-ac_build_spec=yes
-AC_ARG_ENABLE(build_spec,
-     [  --disable-spec      do not build spec ],
-     [ 
-       ac_build_spec=$enableval
-       if test "x$tac_build_spec" = "xno"; then
-         BUILD_SPEC="false"
-       fi
-    ], [ ac_build_spec=yes] )
 AM_CONDITIONAL(BUILD_SPEC, $BUILD_SPEC)
 if test $BUILD_SPEC = "false"; then
 	AC_MSG_WARN([*** Format Specification will not built.])
