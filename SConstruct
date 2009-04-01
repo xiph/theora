@@ -160,6 +160,11 @@ dump_video = env.Clone()
 dump_video_Sources = Split("""dump_video.c ../lib/libtheoradec.a""")
 dump_video.Program('examples/dump_video', path('examples', dump_video_Sources))
 
+dump_psnr = env.Clone()
+dump_psnr.Append(LIBS='m')
+dump_psnr_Sources = Split("""dump_psnr.c ../lib/libtheoradec.a""")
+dump_psnr.Program('examples/dump_psnr', path('examples', dump_psnr_Sources))
+
 if have_vorbis:
   encex = dump_video.Clone()
   encex.ParseConfig('pkg-config --cflags --libs vorbisenc vorbis')
