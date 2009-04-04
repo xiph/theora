@@ -1563,6 +1563,10 @@
 			Name="lib"
 			>
 			<File
+				RelativePath="..\..\..\lib\cpu.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\lib\cpu.h"
 				>
 			</File>
@@ -1573,218 +1577,6 @@
 			<Filter
 				Name="enc"
 				>
-				<File
-					RelativePath="..\..\..\lib\enc\block_inline.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\lib\enc\blockmap.c"
-					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_RTL_dll|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_RTL_dll|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_RTL_dll|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_RTL_dll|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-				</File>
 				<File
 					RelativePath="..\..\..\lib\enc\codec_internal.h"
 					>
@@ -2838,6 +2630,170 @@
 					</FileConfiguration>
 				</File>
 				<File
+					RelativePath="..\..\..\lib\enc\encoder_disabled.c"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE2|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE2|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
 					RelativePath="..\..\..\lib\enc\encoder_huffman.c"
 					>
 				</File>
@@ -3064,6 +3020,10 @@
 							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 						/>
 					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\..\..\lib\enc\enquant.h"
+					>
 				</File>
 				<File
 					RelativePath="..\..\..\lib\enc\frarray.c"
@@ -3486,839 +3446,23 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\mcomp.c"
+					RelativePath="..\..\..\lib\enc\mathops.c"
 					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_RTL_dll|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_RTL_dll|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_RTL_dll|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_RTL_dll|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\misc_common.c"
+					RelativePath="..\..\..\lib\enc\mathops.h"
 					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_RTL_dll|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_RTL_dll|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_RTL_dll|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_RTL_dll|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\pb.c"
+					RelativePath="..\..\..\lib\enc\mcenc.c"
 					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_RTL_dll|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_RTL_dll|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_RTL_dll|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_RTL_dll|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\pp.c"
+					RelativePath="..\..\..\lib\enc\mode.c"
 					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_RTL_dll|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_RTL_dll|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_RTL_dll|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_RTL_dll|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\pp.h"
+					RelativePath="..\..\..\lib\enc\mode_select.h"
 					>
 				</File>
 				<File
@@ -4534,257 +3678,17 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\scan.c"
-					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_RTL_dll|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_RTL_dll|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_RTL_dll|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_RTL_dll|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-				</File>
-				<File
 					RelativePath="..\..\..\lib\enc\toplevel_lookup.h"
 					>
 				</File>
 				<Filter
-					Name="x86_32"
+					Name="x86"
 					>
 					<File
-						RelativePath="..\..\..\lib\enc\x86_32\dct_decode_mmx.c"
+						RelativePath="..\..\..\lib\enc\x86\dct_decode_mmx.c"
 						>
 						<FileConfiguration
 							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
 							ExcludedFromBuild="true"
 							>
 							<Tool
@@ -4800,38 +3704,6 @@
 							/>
 						</FileConfiguration>
 						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
 							Name="Release_SSE|Win32"
 							ExcludedFromBuild="true"
 							>
@@ -4840,103 +3712,7 @@
 							/>
 						</FileConfiguration>
 						<FileConfiguration
-							Name="Release_SSE|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
 							Name="Release_SSE2|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|x64"
 							ExcludedFromBuild="true"
 							>
 							<Tool
@@ -4945,42 +3721,10 @@
 						</FileConfiguration>
 					</File>
 					<File
-						RelativePath="..\..\..\lib\enc\x86_32\dsp_mmx.c"
+						RelativePath="..\..\..\lib\enc\x86\dsp_mmx.c"
 						>
 						<FileConfiguration
 							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
 							ExcludedFromBuild="true"
 							>
 							<Tool
@@ -4996,38 +3740,6 @@
 							/>
 						</FileConfiguration>
 						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
 							Name="Release_SSE|Win32"
 							ExcludedFromBuild="true"
 							>
@@ -5036,103 +3748,7 @@
 							/>
 						</FileConfiguration>
 						<FileConfiguration
-							Name="Release_SSE|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
 							Name="Release_SSE2|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|x64"
 							ExcludedFromBuild="true"
 							>
 							<Tool
@@ -5141,42 +3757,10 @@
 						</FileConfiguration>
 					</File>
 					<File
-						RelativePath="..\..\..\lib\enc\x86_32\dsp_mmxext.c"
+						RelativePath="..\..\..\lib\enc\x86\dsp_mmxext.c"
 						>
 						<FileConfiguration
 							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
 							ExcludedFromBuild="true"
 							>
 							<Tool
@@ -5192,38 +3776,6 @@
 							/>
 						</FileConfiguration>
 						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
 							Name="Release_SSE|Win32"
 							ExcludedFromBuild="true"
 							>
@@ -5232,103 +3784,7 @@
 							/>
 						</FileConfiguration>
 						<FileConfiguration
-							Name="Release_SSE|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
 							Name="Release_SSE2|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|x64"
 							ExcludedFromBuild="true"
 							>
 							<Tool
@@ -5337,42 +3793,10 @@
 						</FileConfiguration>
 					</File>
 					<File
-						RelativePath="..\..\..\lib\enc\x86_32\fdct_mmx.c"
+						RelativePath="..\..\..\lib\enc\x86\fdct_mmx.c"
 						>
 						<FileConfiguration
 							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
 							ExcludedFromBuild="true"
 							>
 							<Tool
@@ -5388,38 +3812,6 @@
 							/>
 						</FileConfiguration>
 						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
 							Name="Release_SSE|Win32"
 							ExcludedFromBuild="true"
 							>
@@ -5428,103 +3820,7 @@
 							/>
 						</FileConfiguration>
 						<FileConfiguration
-							Name="Release_SSE|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
 							Name="Release_SSE2|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|x64"
 							ExcludedFromBuild="true"
 							>
 							<Tool
@@ -5533,42 +3829,10 @@
 						</FileConfiguration>
 					</File>
 					<File
-						RelativePath="..\..\..\lib\enc\x86_32\idct_mmx.c"
+						RelativePath="..\..\..\lib\enc\x86\idct_mmx.c"
 						>
 						<FileConfiguration
 							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
 							ExcludedFromBuild="true"
 							>
 							<Tool
@@ -5584,38 +3848,6 @@
 							/>
 						</FileConfiguration>
 						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
 							Name="Release_SSE|Win32"
 							ExcludedFromBuild="true"
 							>
@@ -5624,103 +3856,7 @@
 							/>
 						</FileConfiguration>
 						<FileConfiguration
-							Name="Release_SSE|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
 							Name="Release_SSE2|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|x64"
 							ExcludedFromBuild="true"
 							>
 							<Tool
@@ -5729,42 +3865,10 @@
 						</FileConfiguration>
 					</File>
 					<File
-						RelativePath="..\..\..\lib\enc\x86_32\recon_mmx.c"
+						RelativePath="..\..\..\lib\enc\x86\recon_mmx.c"
 						>
 						<FileConfiguration
 							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
 							ExcludedFromBuild="true"
 							>
 							<Tool
@@ -5780,38 +3884,6 @@
 							/>
 						</FileConfiguration>
 						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
 							Name="Release_SSE|Win32"
 							ExcludedFromBuild="true"
 							>
@@ -5820,103 +3892,7 @@
 							/>
 						</FileConfiguration>
 						<FileConfiguration
-							Name="Release_SSE|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
 							Name="Release_SSE2|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|x64"
 							ExcludedFromBuild="true"
 							>
 							<Tool
@@ -5933,6 +3909,7 @@
 						>
 						<FileConfiguration
 							Name="Debug|Win32"
+							ExcludedFromBuild="true"
 							>
 							<Tool
 								Name="VCCLCompilerTool"
@@ -5979,6 +3956,7 @@
 						</FileConfiguration>
 						<FileConfiguration
 							Name="Release|Win32"
+							ExcludedFromBuild="true"
 							>
 							<Tool
 								Name="VCCLCompilerTool"
@@ -6025,6 +4003,7 @@
 						</FileConfiguration>
 						<FileConfiguration
 							Name="Release_SSE|Win32"
+							ExcludedFromBuild="true"
 							>
 							<Tool
 								Name="VCCLCompilerTool"
@@ -6071,6 +4050,7 @@
 						</FileConfiguration>
 						<FileConfiguration
 							Name="Release_SSE2|Win32"
+							ExcludedFromBuild="true"
 							>
 							<Tool
 								Name="VCCLCompilerTool"
@@ -6157,6 +4137,7 @@
 						>
 						<FileConfiguration
 							Name="Debug|Win32"
+							ExcludedFromBuild="true"
 							>
 							<Tool
 								Name="VCCLCompilerTool"
@@ -6203,6 +4184,7 @@
 						</FileConfiguration>
 						<FileConfiguration
 							Name="Release|Win32"
+							ExcludedFromBuild="true"
 							>
 							<Tool
 								Name="VCCLCompilerTool"
@@ -6249,6 +4231,7 @@
 						</FileConfiguration>
 						<FileConfiguration
 							Name="Release_SSE|Win32"
+							ExcludedFromBuild="true"
 							>
 							<Tool
 								Name="VCCLCompilerTool"
@@ -6295,6 +4278,7 @@
 						</FileConfiguration>
 						<FileConfiguration
 							Name="Release_SSE2|Win32"
+							ExcludedFromBuild="true"
 							>
 							<Tool
 								Name="VCCLCompilerTool"
@@ -6381,234 +4365,6 @@
 						>
 						<FileConfiguration
 							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-					</File>
-				</Filter>
-				<Filter
-					Name="x86_64"
-					>
-					<File
-						RelativePath="..\..\..\lib\enc\x86_64\dct_decode_mmx.c"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
 							ExcludedFromBuild="true"
 							>
 							<Tool
@@ -6797,7 +4553,6 @@
 						</FileConfiguration>
 						<FileConfiguration
 							Name="Debug_RTL_dll|Win32"
-							ExcludedFromBuild="true"
 							>
 							<Tool
 								Name="VCCLCompilerTool"
@@ -6807,7 +4562,6 @@
 						</FileConfiguration>
 						<FileConfiguration
 							Name="Debug_RTL_dll|x64"
-							ExcludedFromBuild="true"
 							>
 							<Tool
 								Name="VCCLCompilerTool"
@@ -6817,7 +4571,6 @@
 						</FileConfiguration>
 						<FileConfiguration
 							Name="Release_RTL_dll|Win32"
-							ExcludedFromBuild="true"
 							>
 							<Tool
 								Name="VCCLCompilerTool"
@@ -6827,1172 +4580,11 @@
 						</FileConfiguration>
 						<FileConfiguration
 							Name="Release_RTL_dll|x64"
-							ExcludedFromBuild="true"
 							>
 							<Tool
 								Name="VCCLCompilerTool"
 								ObjectFile="$(IntDir)\$(InputName)1.obj"
 								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\..\lib\enc\x86_64\dsp_mmx.c"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\..\lib\enc\x86_64\dsp_mmxext.c"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\..\lib\enc\x86_64\fdct_mmx.c"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\..\lib\enc\x86_64\idct_mmx.c"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)1.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\..\lib\enc\x86_64\recon_mmx.c"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release_RTL_dll|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\$(InputName)2.obj"
-								XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
 							/>
 						</FileConfiguration>
 					</File>
@@ -8011,6 +4603,10 @@
 				</File>
 				<File
 					RelativePath="..\..\..\lib\dec\bitpack.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\lib\dec\bitpack.h"
 					>
 				</File>
 				<File
