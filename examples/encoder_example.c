@@ -139,7 +139,7 @@ static void usage(void){
           "                                 fidelity; 10 yields highest fidelity\n"
           "                                 but large files. '2' is a reasonable\n"
           "                                 default).\n\n"
-          "   -v --video-quality <n>        Theora quality selector fro 0 to 10\n"
+          "   -v --video-quality <n>        Theora quality selector from 0 to 10\n"
           "                                 (0 yields smallest files but lowest\n"
           "                                 video quality. 10 yields highest\n"
           "                                 fidelity but large files).\n\n"
