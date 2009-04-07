@@ -61,7 +61,7 @@ static double rint(double x)
 }
 #endif
 
-const char *optstring = "o:a:A:v:V:s:S:f:F:c";
+const char *optstring = "o:a:A:v:V:s:S:f:F:ck:";
 struct option options [] = {
   {"output",required_argument,NULL,'o'},
   {"audio-rate-target",required_argument,NULL,'A'},
@@ -73,6 +73,7 @@ struct option options [] = {
   {"framerate-numerator",required_argument,NULL,'f'},
   {"framerate-denominator",required_argument,NULL,'F'},
   {"vp3-compatible",no_argument,NULL,'c'},
+  {"keyframe-freq",required_argument,NULL,'k'},
   {NULL,0,NULL,0}
 };
 
@@ -121,38 +122,40 @@ y4m_convert_func y4m_convert=NULL;
 
 int video_r=-1;
 int video_q=48;
+ogg_uint32_t keyframe_frequency=64;
 
 static void usage(void){
   fprintf(stderr,
           "Usage: encoder_example [options] [audio_file] video_file\n\n"
           "Options: \n\n"
-          "  -o --output <filename.ogv>     file name for encoded output;\n"
-          "                                 If this option is not given, the\n"
-          "                                 compressed data is sent to stdout.\n\n"
-          "  -A --audio-rate-target <n>     bitrate target for Vorbis audio;\n"
-          "                                 use -a and not -A if at all possible,\n"
-          "                                 as -a gives higher quality for a given\n"
-          "                                 bitrate.\n\n"
-          "  -V --video-rate-target <n>     bitrate target for Theora video\n\n"
-          "  -a --audio-quality <n>         Vorbis quality selector from -1 to 10\n"
-          "                                 (-1 yields smallest files but lowest\n"
-          "                                 fidelity; 10 yields highest fidelity\n"
-          "                                 but large files. '2' is a reasonable\n"
-          "                                 default).\n\n"
-          "   -v --video-quality <n>        Theora quality selector from 0 to 10\n"
-          "                                 (0 yields smallest files but lowest\n"
-          "                                 video quality. 10 yields highest\n"
-          "                                 fidelity but large files).\n\n"
-          "   -s --aspect-numerator <n>     Aspect ratio numerator, default is 0\n"
-          "                                 or extracted from YUV input file\n"
-          "   -S --aspect-denominator <n>   Aspect ratio denominator, default is 0\n"
-          "                                 or extracted from YUV input file\n"
-          "   -f --framerate-numerator <n>  Frame rate numerator, can be extracted\n"
-          "                                 from YUV input file. ex: 30000000\n"
-          "   -F --framerate-denominator <n>Frame rate denominator, can be extracted\n"
-          "                                 from YUV input file. ex: 1000000\n"
-          "                                 The frame rate nominator divided by this\n"
-          "                                 determinates the frame rate in units per tick\n"
+          "  -o --output <filename.ogv>      file name for encoded output;\n"
+          "                                  If this option is not given, the\n"
+          "                                  compressed data is sent to stdout.\n\n"
+          "  -A --audio-rate-target <n>      bitrate target for Vorbis audio;\n"
+          "                                  use -a and not -A if at all possible,\n"
+          "                                  as -a gives higher quality for a given\n"
+          "                                  bitrate.\n\n"
+          "  -V --video-rate-target <n>      bitrate target for Theora video\n\n"
+          "  -a --audio-quality <n>          Vorbis quality selector from -1 to 10\n"
+          "                                  (-1 yields smallest files but lowest\n"
+          "                                  fidelity; 10 yields highest fidelity\n"
+          "                                  but large files. '2' is a reasonable\n"
+          "                                  default).\n\n"
+          "   -v --video-quality <n>         Theora quality selector from 0 to 10\n"
+          "                                  (0 yields smallest files but lowest\n"
+          "                                  video quality. 10 yields highest\n"
+          "                                  fidelity but large files).\n\n"
+          "   -s --aspect-numerator <n>      Aspect ratio numerator, default is 0\n"
+          "                                  or extracted from YUV input file\n"
+          "   -S --aspect-denominator <n>    Aspect ratio denominator, default is 0\n"
+          "                                  or extracted from YUV input file\n"
+          "   -f --framerate-numerator <n>   Frame rate numerator, can be extracted\n"
+          "                                  from YUV input file. ex: 30000000\n"
+          "   -F --framerate-denominator <n> Frame rate denominator, can be extracted\n"
+          "                                  from YUV input file. ex: 1000000\n"
+          "                                  The frame rate nominator divided by this\n"
+          "                                  determinates the frame rate in units per tick\n"
+          "   -k --keyframe-freq <n>         Keyframe frequency from 8 to 1000\n"
           "encoder_example accepts only uncompressed RIFF WAV format audio and\n"
           "YUV4MPEG2 uncompressed video.\n\n");
   exit(1);
@@ -1063,6 +1066,12 @@ int fetch_and_process_video(FILE *video,ogg_page *videopage,
   return videoflag;
 }
 
+static int ilog(unsigned _v){
+  int ret;
+  for(ret=0;_v;ret++)_v>>=1;
+  return ret;
+}
+
 int main(int argc,char *argv[]){
   int c,long_option_index,ret;
 
@@ -1173,6 +1182,14 @@ int main(int argc,char *argv[]){
       vp3_compatible=1;
       break;
 
+    case 'k':
+      keyframe_frequency=rint(atof(optarg));
+      if(keyframe_frequency<8 || keyframe_frequency>1000){
+        fprintf(stderr,"Illegal keyframe frequency (choose 8 through 1000)\n");
+        exit(1);
+      }
+      break;
+
     default:
       usage();
     }
@@ -1221,7 +1238,7 @@ int main(int argc,char *argv[]){
      here).*/
   ti.target_bitrate=(int)(64870*(ogg_int64_t)video_r>>16);
   ti.quality=video_q;
-  ti.keyframe_granule_shift=6;
+  ti.keyframe_granule_shift=ilog(keyframe_frequency-1);
 
   if(dst_c_dec_h==2){
     if(dst_c_dec_v==2)ti.pixel_fmt=TH_PF_420;
@@ -1231,6 +1248,14 @@ int main(int argc,char *argv[]){
 
   td=th_encode_alloc(&ti);
   th_info_clear(&ti);
+
+  /* setting just the granule shift only allows power-of-two keyframe
+     spacing.  Set the actual requested spacing. */
+  ret=th_encode_ctl(td,TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE,&keyframe_frequency,
+                    sizeof(keyframe_frequency-1));
+  if(ret<0){
+    fprintf(stderr,"Could not set keyframe interval to %d.\n",(int)keyframe_frequency);
+  }
 
   if(vp3_compatible){
     ret=th_encode_ctl(td,TH_ENCCTL_SET_VP3_COMPATIBLE,&vp3_compatible,
