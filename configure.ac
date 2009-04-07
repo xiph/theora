@@ -74,7 +74,7 @@ dnl Check for tools used to build the format specification
 BUILD_SPEC="false"
 ac_build_spec=yes
 AC_ARG_ENABLE(spec,
-     [--disable-spec      do not build spec ],
+     [  --disable-spec          do not build spec ],
      [
        if test "x$enableval" = "xno"; then
          ac_build_spec=$enableval
@@ -327,7 +327,7 @@ AC_SUBST(PNG_LIBS)
 dnl check for libcairo
 HAVE_CAIRO=no
 AC_ARG_ENABLE(telemetry,
-    [  --disable-telemetry           disable debugging output controls ],
+    [  --disable-telemetry     disable debugging output controls ],
     [ ac_enable_telemetry=$enableval ], [ ac_enable_telemetry=no] )
 
 if test "x${ac_enable_telemetry}" = xyes; then
