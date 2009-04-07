@@ -1,6 +1,10 @@
 libtheora 1.1alpha2 (unreleased snapshot)
 
- - no changes recorded
+ - MSVC project files updated, but assembly is disabled.
+ - Reduce lambda for small quantizers.
+ - New configure option --disable-spec to work around toolchain
+   detection failures.
+ - Port remaining unit tests from the 1.0 release.
 
 libtheora 1.1alpha1 (2009 March 27)
 
