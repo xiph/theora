@@ -61,8 +61,10 @@ static double rint(double x)
 }
 #endif
 
-const char *optstring = "o:a:A:v:V:s:S:f:F:ck:";
+const char *optstring = "b:e:o:a:A:v:V:s:S:f:F:ck:";
 struct option options [] = {
+  {"begin-time",required_argument,NULL,'b'},
+  {"end-time",required_argument,NULL,'e'},
   {"output",required_argument,NULL,'o'},
   {"audio-rate-target",required_argument,NULL,'A'},
   {"video-rate-target",required_argument,NULL,'V'},
@@ -124,6 +126,11 @@ int video_r=-1;
 int video_q=48;
 ogg_uint32_t keyframe_frequency=64;
 
+long begin_sec=-1;
+long begin_usec=0;
+long end_sec=-1;
+long end_usec=0;
+
 static void usage(void){
   fprintf(stderr,
           "Usage: encoder_example [options] [audio_file] video_file\n\n"
@@ -156,6 +163,8 @@ static void usage(void){
           "                                  The frame rate nominator divided by this\n"
           "                                  determinates the frame rate in units per tick\n"
           "   -k --keyframe-freq <n>         Keyframe frequency from 8 to 1000\n"
+          "   -b --begin-time <h:m:s.f>     Begin encoding at offset into input\n"
+          "   -e --end-time <h:m:s.f>       End encoding at offset into input\n"
           "encoder_example accepts only uncompressed RIFF WAV format audio and\n"
           "YUV4MPEG2 uncompressed video.\n\n");
   exit(1);
@@ -875,8 +884,11 @@ int fetch_and_process_audio(FILE *audio,ogg_page *audiopage,
                             vorbis_dsp_state *vd,
                             vorbis_block *vb,
                             int audioflag){
+  static ogg_int64_t samples_sofar=0;
   ogg_packet op;
   int i,j;
+  ogg_int64_t beginsample = audio_hz*begin_sec + audio_hz*begin_usec/1000000;
+  ogg_int64_t endsample = audio_hz*end_sec + audio_hz*end_usec/1000000;
 
   while(audio && !audioflag){
     /* process any audio already buffered */
@@ -887,31 +899,51 @@ int fetch_and_process_audio(FILE *audio,ogg_page *audiopage,
     {
       /* read and process more audio */
       signed char readbuffer[4096];
+      signed char *readptr=readbuffer;
       int toread=4096/2/audio_ch;
       int bytesread=fread(readbuffer,1,toread*2*audio_ch,audio);
       int sampread=bytesread/2/audio_ch;
       float **vorbis_buffer;
       int count=0;
 
-      if(bytesread<=0){
+      if(bytesread<=0 ||
+         (samples_sofar>=endsample && endsample>0)){
         /* end of file.  this can be done implicitly, but it's
            easier to see here in non-clever fashion.  Tell the
            library we're at end of stream so that it can handle the
            last frame and mark end of stream in the output properly */
         vorbis_analysis_wrote(vd,0);
       }else{
-        vorbis_buffer=vorbis_analysis_buffer(vd,sampread);
-        /* uninterleave samples */
-        for(i=0;i<sampread;i++){
-          for(j=0;j<audio_ch;j++){
-            vorbis_buffer[j][i]=((readbuffer[count+1]<<8)|
-                                 (0x00ff&(int)readbuffer[count]))/32768.f;
-            count+=2;
+        if(samples_sofar < beginsample){
+          if(samples_sofar+sampread > beginsample){
+            readptr += (beginsample-samples_sofar)*2*audio_ch;
+            sampread += samples_sofar-beginsample;
+            samples_sofar = sampread+beginsample;
+          }else{
+            samples_sofar += sampread;
+            sampread = 0;
           }
+        }else{
+          samples_sofar += sampread;
         }
 
-        vorbis_analysis_wrote(vd,sampread);
+        if(samples_sofar > endsample && endsample > 0)
+          sampread-= (samples_sofar - endsample);
 
+        if(sampread>0){
+
+          vorbis_buffer=vorbis_analysis_buffer(vd,sampread);
+          /* uninterleave samples */
+          for(i=0;i<sampread;i++){
+            for(j=0;j<audio_ch;j++){
+              vorbis_buffer[j][i]=((readptr[count+1]<<8)|
+                                   (0x00ff&(int)readptr[count]))/32768.f;
+              count+=2;
+            }
+          }
+
+          vorbis_analysis_wrote(vd,sampread);
+        }
       }
 
       while(vorbis_analysis_blockout(vd,vb)==1){
@@ -936,6 +968,7 @@ int fetch_and_process_video(FILE *video,ogg_page *videopage,
                             th_enc_ctx *td,
                             int videoflag){
   /* You'll go to Hell for using static variables */
+  static ogg_int64_t         frames=0;
   static int                 state=-1;
   static unsigned char      *yuvframe[3];
   static th_ycbcr_buffer     ycbcr;
@@ -946,7 +979,10 @@ int fetch_and_process_video(FILE *video,ogg_page *videopage,
   int                        c_w;
   int                        c_h;
   int                        c_sz;
-  int                        i;
+  ogg_int64_t                beginframe = (video_fps_n*begin_sec +
+                                           video_fps_n*begin_usec/1000000)/video_fps_d;
+  ogg_int64_t                endframe = (video_fps_n*end_sec +
+                                         video_fps_n*end_usec/1000000)/video_fps_d;
 
   pic_sz=pic_w*pic_h;
   frame_c_w=frame_w/dst_c_dec_h;
@@ -982,7 +1018,7 @@ int fetch_and_process_video(FILE *video,ogg_page *videopage,
          proceeding.  after first pass and until eos, one will
          always be full when we get here */
 
-      for(i=state;i<2;i++){
+      for(;state<2 && (frames<endframe || endframe<0);){
         char c,frame[6];
         int ret=fread(frame,1,6,video);
 
@@ -1002,20 +1038,24 @@ int fetch_and_process_video(FILE *video,ogg_page *videopage,
           }
         }
         /*Read the frame data that needs no conversion.*/
-        if(fread(yuvframe[i],1,y4m_dst_buf_read_sz,video)!=
-         y4m_dst_buf_read_sz){
+        if(fread(yuvframe[state],1,y4m_dst_buf_read_sz,video)!=
+           y4m_dst_buf_read_sz){
           fprintf(stderr,"Error reading YUV frame data.\n");
           exit(1);
         }
         /*Read the frame data that does need conversion.*/
         if(fread(yuvframe[2],1,y4m_aux_buf_read_sz,video)!=
-         y4m_aux_buf_read_sz){
+           y4m_aux_buf_read_sz){
           fprintf(stderr,"Error reading YUV frame data.\n");
           exit(1);
         }
         /*Now convert the just read frame.*/
-        (*y4m_convert)(yuvframe[i],yuvframe[2]);
-        state++;
+        (*y4m_convert)(yuvframe[state],yuvframe[2]);
+
+        frames++;
+        if(frames>=beginframe)
+          state++;
+
       }
 
       if(state<1){
@@ -1187,6 +1227,53 @@ int main(int argc,char *argv[]){
       if(keyframe_frequency<8 || keyframe_frequency>1000){
         fprintf(stderr,"Illegal keyframe frequency (choose 8 through 1000)\n");
         exit(1);
+      }
+      break;
+
+    case 'b':
+      {
+        char *pos=strchr(optarg,':');
+        begin_sec=atol(optarg);
+        if(pos){
+          char *pos2=strchr(++pos,':');
+          begin_sec*=60;
+          begin_sec+=atol(pos);
+          if(pos2){
+            pos2++;
+            begin_sec*=60;
+            begin_sec+=atol(pos2);
+          }else{
+            pos2=pos;
+          }
+          pos2=strchr(pos2,'.');
+          if(pos2){
+            pos2++;
+            begin_usec=atol(pos2);
+          }
+        }
+      }
+      break;
+    case 'e':
+      {
+        char *pos=strchr(optarg,':');
+        end_sec=atol(optarg);
+        if(pos){
+          char *pos2=strchr(++pos,':');
+          end_sec*=60;
+          end_sec+=atol(pos);
+          if(pos2){
+            pos2++;
+            end_sec*=60;
+            end_sec+=atol(pos2);
+          }else{
+            pos2=pos;
+          }
+          pos2=strchr(pos2,'.');
+          if(pos2){
+            pos2++;
+            end_usec=atol(pos2);
+          }
+        }
       }
       break;
 
