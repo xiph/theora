@@ -374,9 +374,6 @@ int theora_encode_init(theora_state *th, theora_info *c){
     c->keyframe_mindistance=c->keyframe_frequency_force;
   cpi->keyframe_granule_shift=OC_ILOG_32(c->keyframe_frequency_force-1);
 
-  /* clamp the target_bitrate to a maximum of 24 bits so we get a
-     more meaningful value when we write this out in the header. */
-  if(c->target_bitrate>(1<<24)-1)c->target_bitrate=(1<<24)-1;
 
   /* copy in config */
   memcpy(&cpi->info,c,sizeof(*c));
@@ -590,7 +587,10 @@ int theora_encode_header(theora_state *t, ogg_packet *op){
   oggpackB_write(cpi->oggbuffer,cpi->info.aspect_denominator,24);
 
   oggpackB_write(cpi->oggbuffer,cpi->info.colorspace,8);
-  oggpackB_write(cpi->oggbuffer,cpi->info.target_bitrate,24);
+
+  /* The header target_bitrate is limited to 24 bits, so we clamp here */
+  oggpackB_write(cpi->oggbuffer,(cpi->info.target_bitrate>(1<<24)-1) ? ((1<<24)-1) : cpi->info.target_bitrate ,24);
+
   oggpackB_write(cpi->oggbuffer,cpi->info.quality,6);
 
   oggpackB_write(cpi->oggbuffer,cpi->keyframe_granule_shift,5);

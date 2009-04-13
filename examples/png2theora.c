@@ -462,8 +462,8 @@ main(int argc, char *argv[])
         break;
       case 'V':
         video_rate=rint(atof(optarg)*1000);
-        if(video_rate<45000 || video_rate>2000000){
-          fprintf(stderr,"Illegal video bitrate (choose 45kbps through 2000kbps)\n");
+        if(video_rate<1){
+          fprintf(stderr,"Illegal video bitrate (choose > 0 please)\n");
           exit(1);
         }
         video_quality=0;

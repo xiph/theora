@@ -2211,12 +2211,13 @@ $255$    &                                           \\
 \label{tab:colorspaces}
 \end{table}
 \item
-Read a 24-bit unsigned integer as \bitvar{NOMBR}.
+Read a 24-bit unsigned integer as \bitvar{NOMBR} signifying a rate in bits
+per second. Rates equal to or greater than $2^{24}-1$ bits per second are
+represented as $2^{24}-1$. 
 The \bitvar{NOMBR} field is used only as a hint.
 For pure VBR streams, this value may be considerably off.
 The field MAY be set to zero to indicate that the encoder did not care to
- speculate.
- %TODO: units?
+speculate. 
 \item
 Read a 6-bit unsigned integer as \bitvar{QUAL}.
 This value is used to provide a hint as to the relative quality of the stream
