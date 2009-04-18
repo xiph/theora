@@ -18,11 +18,13 @@
 #ifndef DSP_H
 #define DSP_H
 
+typedef struct DspFunctions DspFunctions;
+
 #include "theora/theora.h"
+#include "codec_internal.h"
 #include "../cpu.h"
 
-typedef struct
-{
+struct DspFunctions{
   void   (*save_fpu)              (void);
   void   (*restore_fpu)           (void);
 
@@ -72,7 +74,7 @@ typedef struct
   void (*IDct10)                  (const ogg_int16_t *InputData, 
 				   const ogg_int16_t *QuantMatrix, 
 				   ogg_int16_t *OutputData);
-} DspFunctions;
+};
 
 extern void dsp_dct_init(DspFunctions *funcs, ogg_uint32_t cpu_flags);
 extern void dsp_recon_init (DspFunctions *funcs, ogg_uint32_t cpu_flags);
@@ -88,6 +90,9 @@ extern void dsp_mmx_fdct_init(DspFunctions *funcs);
 extern void dsp_mmx_recon_init(DspFunctions *funcs);
 extern void dsp_mmx_dct_decode_init(DspFunctions *funcs);
 extern void dsp_mmx_idct_init(DspFunctions *funcs);
+# if defined(__amd64__)||defined(__x86_64__)
+extern void dsp_sse2_fdct_init(DspFunctions *funcs);
+# endif
 #endif
 
 #define dsp_save_fpu(funcs) (funcs.save_fpu ())

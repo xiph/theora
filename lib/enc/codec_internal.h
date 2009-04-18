@@ -25,6 +25,7 @@
 //#define COLLECT_METRICS 
 
 #include "theora/theora.h"
+#include "../internal.h"
 #include "encoder_huffman.h"
 #include "../dec/ocintrin.h"
 typedef struct CP_INSTANCE CP_INSTANCE;

@@ -8,6 +8,7 @@ EXTRA_DIST = \
         enc/x86/dsp_mmxext.c \
         enc/x86/recon_mmx.c \
         enc/x86/fdct_mmx.c \
+        enc/x86/fdct_sse2.c \
         enc/x86/idct_mmx.c \
         enc/x86_32_vs/dsp_mmx.c \
         enc/x86_32_vs/fdct_mmx.c \
@@ -48,7 +49,8 @@ encoder_x86_sources = \
 	enc/x86/dsp_mmxext.c \
 	enc/x86/recon_mmx.c \
 	enc/x86/idct_mmx.c \
-	enc/x86/fdct_mmx.c
+	enc/x86/fdct_mmx.c \
+	enc/x86/fdct_sse2.c
 
 if CPU_x86_64
 encoder_arch_sources = $(encoder_x86_sources)

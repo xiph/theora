@@ -2,6 +2,7 @@
 #include "theora/theoraenc.h"
 #include "theora/theora.h"
 #include "codec_internal.h"
+#include "mathops.h"
 #include "../dec/ocintrin.h"
 
 /*Wrapper to translate the new API into the old API.
@@ -862,12 +863,6 @@ static void th_info2theora_info(theora_info *_ci,const th_info *_info){
   _ci->quick_p=1;
 }
 
-static int _ilog(unsigned _v){
-  int ret;
-  for(ret=0;_v;ret++)_v>>=1;
-  return ret;
-}
-
 
 
 struct th_enc_ctx{
@@ -920,7 +915,8 @@ th_enc_ctx *th_encode_alloc(const th_info *_info){
       enc->info.target_bitrate=ci.target_bitrate;
       enc->info.fps_numerator=ci.fps_numerator;
       enc->info.fps_denominator=ci.fps_denominator;
-      enc->info.keyframe_granule_shift=_ilog(ci.keyframe_frequency_force-1);
+      enc->info.keyframe_granule_shift=
+       OC_ILOG_32(ci.keyframe_frequency_force-1);
     }
   }
   return enc;
