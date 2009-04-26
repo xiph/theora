@@ -162,7 +162,7 @@ static void usage(void){
           "                                  from YUV input file. ex: 1000000\n"
           "                                  The frame rate nominator divided by this\n"
           "                                  determinates the frame rate in units per tick\n"
-          "   -k --keyframe-freq <n>         Keyframe frequency from 8 to 1000\n"
+          "   -k --keyframe-freq <n>         Keyframe frequency\n"
           "   -b --begin-time <h:m:s.f>     Begin encoding at offset into input\n"
           "   -e --end-time <h:m:s.f>       End encoding at offset into input\n"
           "encoder_example accepts only uncompressed RIFF WAV format audio and\n"
@@ -1221,8 +1221,8 @@ int main(int argc,char *argv[]){
 
     case 'k':
       keyframe_frequency=rint(atof(optarg));
-      if(keyframe_frequency<8 || keyframe_frequency>1000){
-        fprintf(stderr,"Illegal keyframe frequency (choose 8 through 1000)\n");
+      if(keyframe_frequency<1 || keyframe_frequency>2147483647){
+        fprintf(stderr,"Illegal keyframe frequency\n");
         exit(1);
       }
       break;
