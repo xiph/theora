@@ -152,25 +152,25 @@ static int oc_sad16_halfpel(CP_INSTANCE *cpi,int mbi,
  int _mvoffset0,int _mvoffset1,int _goldenp,int _best_err){
   macroblock_t *mb;
   int           err;
-  int           i;
+  int           bi;
   mb=cpi->macro+mbi;
   err=0;
-  for(i=0;i<4;i++){
-    int fi = mb->Ryuv[0][i];
-    ogg_uint32_t base_offset = cpi->frag_buffer_index[fi];
-    const unsigned char *cur = cpi->frame + base_offset;
-    const unsigned char *ref = (_goldenp ? cpi->golden : cpi->lastrecon) + base_offset;
-    fi=mb->Ryuv[0][i];
+  for(bi=0;bi<4;bi++){
+    const unsigned char *cur;
+    const unsigned char *ref;
+    ogg_uint32_t         base_offset;
+    int                  fi;
+    fi=mb->Ryuv[0][bi];
     base_offset=cpi->frag_buffer_index[fi];
     cur=cpi->frame+base_offset;
     ref=(_goldenp?cpi->golden:cpi->lastrecon)+base_offset;
-    err+=dsp_sad8x8_xy2_thres(cpi->dsp,cur,
+    err+=oc_enc_frag_sad2_thresh(cpi,cur,
      ref+_mvoffset0,ref+_mvoffset1,cpi->stride[0],_best_err-err);
   }
   return err;
 }
 
-static int oc_mcenc_ysad_check_mbcandidate_fullpel(CP_INSTANCE *cpi, 
+static int oc_mcenc_ysad_check_mbcandidate_fullpel(CP_INSTANCE *cpi,
  mc_state *_mcenc,int _mbi,int _dx,int _dy,int _goldenp,int _block_err[4]){
   int           stride;
   int           mvoffset;
@@ -183,19 +183,16 @@ static int oc_mcenc_ysad_check_mbcandidate_fullpel(CP_INSTANCE *cpi,
   mvoffset=_dx+_dy*stride;
   err=0;
   for(bi=0;bi<4;bi++){
-    int fi;
+    const unsigned char *cur;
+    const unsigned char *ref;
+    ogg_uint32_t         base_offset;
+    int                  fi;
     fi=mb->Ryuv[0][bi];
-    /*Only check valid fragments.*/
-    if(fi<cpi->frag_total){
-      ogg_uint32_t         base_offset;
-      const unsigned char *cur;
-      const unsigned char *ref;
-      base_offset=cpi->frag_buffer_index[fi];
-      cur=cpi->frame+base_offset;
-      ref=(_goldenp?cpi->golden:cpi->lastrecon)+base_offset;
-      _block_err[bi]=dsp_sad8x8_thres(cpi->dsp,cur,ref+mvoffset,stride,16384);
-      err+=_block_err[bi];
-    }
+    base_offset=cpi->frag_buffer_index[fi];
+    cur=cpi->frame+base_offset;
+    ref=(_goldenp?cpi->golden:cpi->lastrecon)+base_offset;
+    _block_err[bi]=oc_enc_frag_sad(cpi,cur,ref+mvoffset,stride);
+    err+=_block_err[bi];
   }
   return err;
 }
@@ -259,7 +256,6 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,int _mbi,
   mb=cpi->macro+_mbi;
   stride=cpi->stride[0];
   fi=mb->Ryuv[0][_bi];
-  if(fi>=cpi->frag_total)return _best_err;
   mvoffset_base=_vec[0]+_vec[1]*stride;
   offset_y[0]=offset_y[1]=offset_y[2]=-stride;
   offset_y[3]=offset_y[5]=0;
@@ -292,7 +288,7 @@ static int oc_mcenc_ysad_halfpel_brefine(CP_INSTANCE *cpi,int _mbi,
     ymask=OC_SIGNMASK(((_vec[1]<<1)+dy)^dy);
     mvoffset0=mvoffset_base+(dx&xmask)+(offset_y[site]&ymask);
     mvoffset1=mvoffset_base+(dx&~xmask)+(offset_y[site]&~ymask);
-    err=dsp_sad8x8_xy2_thres(cpi->dsp,cur,
+    err=oc_enc_frag_sad2_thresh(cpi,cur,
      ref+mvoffset0,ref+mvoffset1,stride,_best_err);
     if(err<_best_err){
       _best_err=err;

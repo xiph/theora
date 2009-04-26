@@ -21,8 +21,7 @@
 #include "dequant.h"
 #include "decint.h"
 
-int oc_quant_params_unpack(oggpack_buffer *_opb,
- th_quant_info *_qinfo){
+int oc_quant_params_unpack(oggpack_buffer *_opb,th_quant_info *_qinfo){
   th_quant_base *base_mats;
   long           val;
   int            nbase_mats;
@@ -127,7 +126,6 @@ int oc_quant_params_unpack(oggpack_buffer *_opb,
     }
     while(qri-->0);
   }
-
   _ogg_free(base_mats);
   return 0;
 }

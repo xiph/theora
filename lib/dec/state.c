@@ -18,8 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../internal.h"
-#include "idct.h"
-#if defined(USE_ASM)
+#if defined(OC_X86_ASM)
 #if defined(_MSC_VER)
 # include "x86_vc/x86int.h"
 #else
@@ -30,12 +29,6 @@
 # include <stdio.h>
 # include "png.h"
 #endif
-
-void oc_restore_fpu(const oc_theora_state *_state){
-  _state->opt_vtable.restore_fpu();
-}
-
-void oc_restore_fpu_c(void){}
 
 /*Returns the fragment index of the top-left block in a macro block.
   This can be used to test whether or not the whole macro block is coded.
@@ -527,10 +520,13 @@ static void oc_state_ref_bufs_clear(oc_theora_state *_state){
 
 
 void oc_state_vtable_init_c(oc_theora_state *_state){
+  _state->opt_vtable.frag_copy=oc_frag_copy_c;
+  _state->opt_vtable.frag_recon_intra=oc_frag_recon_intra_c;
   _state->opt_vtable.frag_recon_inter=oc_frag_recon_inter_c;
   _state->opt_vtable.frag_recon_inter2=oc_frag_recon_inter2_c;
-  _state->opt_vtable.state_frag_copy=oc_state_frag_copy_c;
+  _state->opt_vtable.dequant_idct8x8=oc_dequant_idct8x8_c;
   _state->opt_vtable.state_frag_recon=oc_state_frag_recon_c;
+  _state->opt_vtable.state_frag_copy_list=oc_state_frag_copy_list_c;
   _state->opt_vtable.state_loop_filter_frag_rows=
    oc_state_loop_filter_frag_rows_c;
   _state->opt_vtable.restore_fpu=oc_restore_fpu_c;
@@ -538,7 +534,7 @@ void oc_state_vtable_init_c(oc_theora_state *_state){
 
 /*Initialize the accelerated function pointers.*/
 void oc_state_vtable_init(oc_theora_state *_state){
-#if defined(USE_ASM)
+#if defined(OC_X86_ASM)
   oc_state_vtable_init_x86(_state);
 #else
   oc_state_vtable_init_c(_state);
@@ -733,7 +729,7 @@ int oc_state_mbi_for_pos(oc_theora_state *_state,int _mbx,int _mby){
   _ystride: The Y stride in the buffer the motion vector points into.
   _pli:     The color plane index.
   Return: The number of offsets returned: 1 or 2.*/
-int oc_state_get_mv_offsets(oc_theora_state *_state,int _offsets[2],
+int oc_state_get_mv_offsets(const oc_theora_state *_state,int _offsets[2],
  int _dx,int _dy,int _ystride,int _pli){
   /*Here is a brief description of how Theora handles motion vectors:
     Motion vector components are specified to half-pixel accuracy in
@@ -834,96 +830,42 @@ int oc_state_get_mv_offsets(oc_theora_state *_state,int _offsets[2],
 #endif
 }
 
-void oc_state_frag_recon(oc_theora_state *_state,oc_fragment *_frag,
+void oc_state_frag_recon(const oc_theora_state *_state,oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
- ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]){
+ ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]){
   _state->opt_vtable.state_frag_recon(_state,_frag,_pli,_dct_coeffs,
-   _last_zzi,_ncoefs,_dc_iquant,_ac_iquant);
+   _last_zzi,_ncoefs,_dc_quant,_ac_quant);
 }
 
-void oc_state_frag_recon_c(oc_theora_state *_state,oc_fragment *_frag,
+void oc_state_frag_recon_c(const oc_theora_state *_state,oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
- ogg_uint16_t _dc_iquant, const ogg_uint16_t _ac_iquant[64]){
-  ogg_int16_t dct_buf[64];
+ ogg_uint16_t _dc_quant, const ogg_uint16_t _ac_quant[64]){
   ogg_int16_t res_buf[64];
   int dst_framei;
-  int dst_ystride;
-  int zzi;
-  int ci;
-  /*_last_zzi is subtly different from an actual count of the number of
-     coefficients we decoded for this block.
-    It contains the value of zzi BEFORE the final token in the block was
-     decoded.
-    In most cases this is an EOB token (the continuation of an EOB run from a
-     previous block counts), and so this is the same as the coefficient count.
-    However, in the case that the last token was NOT an EOB token, but filled
-     the block up with exactly 64 coefficients, _last_zzi will be less than 64.
-    Provided the last token was not a pure zero run, the minimum value it can
-     be is 46, and so that doesn't affect any of the cases in this routine.
-    However, if the last token WAS a pure zero run of length 63, then _last_zzi
-     will be 1 while the number of coefficients decoded is 64.
-    Thus, we will trigger the following special case, where the real
-     coefficient count would not.
-    Note also that a zero run of length 64 will give _last_zzi a value of 0,
-     but we still process the DC coefficient, which might have a non-zero value
-     due to DC prediction.
-    Although convoluted, this is arguably the correct behavior: it allows us to
-     dequantize fewer coefficients and use a smaller transform when the block
-     ends with a long zero run instead of a normal EOB token.
-    It could be smarter... multiple separate zero runs at the end of a block
-     will fool it, but an encoder that generates these really deserves what it
-     gets.
-    Needless to say we inherited this approach from VP3.*/
-  /*Special case only having a DC component.*/
-  if(_last_zzi<2){
-    ogg_int16_t p;
-    /*Why is the iquant product rounded in this case and no others?
-      Who knows.*/
-    p=(ogg_int16_t)((ogg_int32_t)_frag->dc*_dc_iquant+15>>5);
-    /*LOOP VECTORIZES.*/
-    for(ci=0;ci<64;ci++)res_buf[ci]=p;
-  }
-  else{
-    /*First, dequantize the coefficients.*/
-    dct_buf[0]=(ogg_int16_t)((ogg_int32_t)_frag->dc*_dc_iquant);
-    for(zzi=1;zzi<_ncoefs;zzi++){
-      int ci;
-      ci=OC_FZIG_ZAG[zzi];
-      dct_buf[ci]=(ogg_int16_t)((ogg_int32_t)_dct_coeffs[zzi]*_ac_iquant[ci]);
-    }
-    /*Then, fill in the remainder of the coefficients with 0's, and perform
-       the iDCT.*/
-    if(_last_zzi<10){
-      for(;zzi<10;zzi++)dct_buf[OC_FZIG_ZAG[zzi]]=0;
-      oc_idct8x8_10_c(res_buf,dct_buf);
-    }
-    else{
-      for(;zzi<64;zzi++)dct_buf[OC_FZIG_ZAG[zzi]]=0;
-      oc_idct8x8_c(res_buf,dct_buf);
-    }
-  }
+  int ystride;
+  /*Dequantize and apply the inverse transform.*/
+  oc_dequant_idct8x8(_state,res_buf,_dct_coeffs,
+   _last_zzi,_ncoefs,_dc_quant,_ac_quant);
   /*Fill in the target buffer.*/
   dst_framei=_state->ref_frame_idx[OC_FRAME_SELF];
-  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].stride;
+  ystride=_state->ref_frame_bufs[dst_framei][_pli].stride;
   /*For now ystride values in all ref frames assumed to be equal.*/
   if(_frag->mbmode==OC_MODE_INTRA){
-    oc_frag_recon_intra(_state,_frag->buffer[dst_framei],dst_ystride,res_buf);
+    oc_frag_recon_intra(_state,_frag->buffer[dst_framei],ystride,res_buf);
   }
   else{
     int ref_framei;
-    int ref_ystride;
     int mvoffsets[2];
     ref_framei=_state->ref_frame_idx[OC_FRAME_FOR_MODE[_frag->mbmode]];
-    ref_ystride=_state->ref_frame_bufs[ref_framei][_pli].stride;
-    if(oc_state_get_mv_offsets(_state,mvoffsets,_frag->mv[0],_frag->mv[1],
-     ref_ystride,_pli)>1){
-      oc_frag_recon_inter2(_state,_frag->buffer[dst_framei],dst_ystride,
-       _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,
-       _frag->buffer[ref_framei]+mvoffsets[1],ref_ystride,res_buf);
+    if(oc_state_get_mv_offsets(_state,mvoffsets,
+     _frag->mv[0],_frag->mv[1],ystride,_pli)>1){
+      oc_frag_recon_inter2(_state,_frag->buffer[dst_framei],
+       _frag->buffer[ref_framei]+mvoffsets[0],
+       _frag->buffer[ref_framei]+mvoffsets[1],ystride,res_buf);
     }
     else{
-      oc_frag_recon_inter(_state,_frag->buffer[dst_framei],dst_ystride,
-       _frag->buffer[ref_framei]+mvoffsets[0],ref_ystride,res_buf);
+      oc_frag_recon_inter(_state,_frag->buffer[dst_framei],
+       _frag->buffer[ref_framei]+mvoffsets[0],ystride,res_buf);
     }
   }
   oc_restore_fpu(_state);
@@ -936,38 +878,28 @@ void oc_state_frag_recon_c(oc_theora_state *_state,oc_fragment *_frag,
   _dst_frame: The reference frame to copy to.
   _src_frame: The reference frame to copy from.
   _pli:       The color plane the fragments lie in.*/
-void oc_state_frag_copy(const oc_theora_state *_state,const int *_fragis,
+void oc_state_frag_copy_list(const oc_theora_state *_state,const int *_fragis,
  int _nfragis,int _dst_frame,int _src_frame,int _pli){
-  _state->opt_vtable.state_frag_copy(_state,_fragis,_nfragis,_dst_frame,
+  _state->opt_vtable.state_frag_copy_list(_state,_fragis,_nfragis,_dst_frame,
    _src_frame,_pli);
 }
 
-void oc_state_frag_copy_c(const oc_theora_state *_state,const int *_fragis,
- int _nfragis,int _dst_frame,int _src_frame,int _pli){
+void oc_state_frag_copy_list_c(const oc_theora_state *_state,
+ const int *_fragis,int _nfragis,int _dst_frame,int _src_frame,int _pli){
   const int *fragi;
   const int *fragi_end;
   int        dst_framei;
-  int        dst_ystride;
   int        src_framei;
-  int        src_ystride;
+  int        ystride;
   dst_framei=_state->ref_frame_idx[_dst_frame];
   src_framei=_state->ref_frame_idx[_src_frame];
-  dst_ystride=_state->ref_frame_bufs[dst_framei][_pli].stride;
-  src_ystride=_state->ref_frame_bufs[src_framei][_pli].stride;
+  ystride=_state->ref_frame_bufs[dst_framei][_pli].stride;
   fragi_end=_fragis+_nfragis;
   for(fragi=_fragis;fragi<fragi_end;fragi++){
     oc_fragment   *frag;
-    unsigned char *dst;
-    unsigned char *src;
-    int            j;
     frag=_state->frags+*fragi;
-    dst=frag->buffer[dst_framei];
-    src=frag->buffer[src_framei];
-    for(j=0;j<8;j++){
-      memcpy(dst,src,sizeof(dst[0])*8);
-      dst+=dst_ystride;
-      src+=src_ystride;
-    }
+    oc_frag_copy(_state,frag->buffer[dst_framei],
+     frag->buffer[src_framei],ystride);
   }
 }
 
@@ -1029,22 +961,22 @@ int oc_state_loop_filter_init(oc_theora_state *_state,int *_bv){
   _pli:       The color plane to filter.
   _fragy0:    The Y coordinate of the first fragment row to filter.
   _fragy_end: The Y coordinate of the fragment row to stop filtering at.*/
-void oc_state_loop_filter_frag_rows(oc_theora_state *_state,int *_bv,
+void oc_state_loop_filter_frag_rows(const oc_theora_state *_state,int *_bv,
  int _refi,int _pli,int _fragy0,int _fragy_end){
   _state->opt_vtable.state_loop_filter_frag_rows(_state,_bv,_refi,_pli,
    _fragy0,_fragy_end);
 }
 
-void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
+void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,int *_bv,
  int _refi,int _pli,int _fragy0,int _fragy_end){
-  th_img_plane      *iplane;
-  oc_fragment_plane *fplane;
-  oc_fragment       *frag_top;
-  oc_fragment       *frag0;
-  oc_fragment       *frag;
-  oc_fragment       *frag_end;
-  oc_fragment       *frag0_end;
-  oc_fragment       *frag_bot;
+  const th_img_plane      *iplane;
+  const oc_fragment_plane *fplane;
+  oc_fragment             *frag_top;
+  oc_fragment             *frag0;
+  oc_fragment             *frag;
+  oc_fragment             *frag_end;
+  oc_fragment             *frag0_end;
+  oc_fragment             *frag_bot;
   _bv+=127;
   iplane=_state->ref_frame_bufs[_refi]+_pli;
   fplane=_state->fplanes+_pli;

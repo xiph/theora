@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "codec_internal.h"
-#include "dsp.h"
 #include "quant_lookup.h"
 
 static void make_eobrun_token(int run, int *token, int *eb){
@@ -227,7 +226,7 @@ static int acoffset[64]={
 /* only counts bits */
 static int tokencost(CP_INSTANCE *cpi, int huff, int coeff, int token){
   huff += acoffset[coeff];
-  return cpi->HuffCodeLengthArray_VP3x[huff][token] + cpi->ExtraBitLengths_VP3x[token];
+  return cpi->huff_codes[huff][token].nbits+OC_DCT_TOKEN_EXTRA_BITS[token];
 }
 
 void tokenlog_rollback(CP_INSTANCE *cpi, token_checkpoint_t *stack,int n){
@@ -248,17 +247,17 @@ static void tokenlog_metrics(CP_INSTANCE *cpi, int coeff, int chroma, int token)
     /* DC */
     int i;
     for ( i = 0; i < DC_HUFF_CHOICES; i++)
-      cpi->dc_bits[chroma][i] += cpi->HuffCodeLengthArray_VP3x[i][token];
+      cpi->dc_bits[chroma][i] += cpi->huff_codes[i][token].nbits;
   }else if (coeff == 1){
     /* AC == 1*/
     int i,offset = acoffset[1]+AC_HUFF_OFFSET;
     for ( i = 0; i < AC_HUFF_CHOICES; i++)
-      cpi->ac1_bits[chroma][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
+      cpi->ac1_bits[chroma][i] += cpi->huff_codes[offset+i][token].nbits;
   }else{
     /* AC > 1*/
     int i,offset = acoffset[coeff]+AC_HUFF_OFFSET;
     for ( i = 0; i < AC_HUFF_CHOICES; i++)
-      cpi->acN_bits[chroma][i] += cpi->HuffCodeLengthArray_VP3x[offset+i][token];
+      cpi->acN_bits[chroma][i] += cpi->huff_codes[offset+i][token].nbits;
   }
 }
 

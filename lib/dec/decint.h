@@ -25,7 +25,6 @@
 typedef struct th_setup_info oc_setup_info;
 typedef struct th_dec_ctx    oc_dec_ctx;
 
-# include "idct.h"
 # include "huffdec.h"
 # include "dequant.h"
 

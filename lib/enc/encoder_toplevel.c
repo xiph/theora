@@ -23,10 +23,12 @@
 #include <string.h>
 #include "toplevel_lookup.h"
 #include "../internal.h"
-#include "dsp.h"
 #include "codec_internal.h"
 #include "mathops.h"
 #include "../dec/ocintrin.h"
+#if defined(OC_X86_ASM)
+# include "x86/x86enc.h"
+#endif
 
 
 
@@ -174,15 +176,12 @@ static int oc_enc_select_qi(CP_INSTANCE *cpi,int _qti,int _trial){
   nframes[1]=buf_delay-nframes[0];
   rate_total=cpi->rc.fullness-cpi->rc.target
    +buf_delay*cpi->rc.bits_per_frame;
-  /*Downgrade the frame rate to correspond to the current dup count.
+  /*Downgrade the delta frame rate to correspond to the current dup count.
     This will way over-estimate the bits to use for an occasional dup (as
      opposed to a consistent dup count, as used with VFR input), but the
      hysteresis on the quantizer below will keep us from going out of control,
      and we _do_ have more bits to spend after all.*/
-  if(cpi->dup_count>0){
-    nframes[0]=(nframes[0]+cpi->dup_count)/(cpi->dup_count+1);
-    nframes[1]=(nframes[1]+cpi->dup_count)/(cpi->dup_count+1);
-  }
+  if(cpi->dup_count>0)nframes[1]=(nframes[1]+cpi->dup_count)/(cpi->dup_count+1);
   /*If there aren't enough bits to achieve our desired fullness level, use the
      minimum quality permitted.*/
   if(rate_total<=0)log_qtarget=OC_QUANT_MAX_LOG;
@@ -343,8 +342,11 @@ int theora_encode_init(theora_state *th, theora_info *c){
   th->internal_encode=cpi=_ogg_calloc(1,sizeof(*cpi));
   theora_encode_dispatch_init(cpi);
   oc_mode_scheme_chooser_init(&cpi->chooser);
-
-  dsp_static_init (&cpi->dsp);
+#if defined(OC_X86_ASM)
+  oc_enc_vtable_init_x86(cpi);
+#else
+  oc_enc_vtable_init_c(cpi);
+#endif
 
   c->version_major=TH_VERSION_MAJOR;
   c->version_minor=TH_VERSION_MINOR;
@@ -393,7 +395,7 @@ int theora_encode_init(theora_state *th, theora_info *c){
   /* We always start at frame 1 */
   cpi->CurrentFrame = 1;
 
-  InitHuffmanSet(cpi);
+  memcpy(cpi->huff_codes,TH_VP31_HUFF_CODES,sizeof(cpi->huff_codes));
 
   /* This makes sure encoder version specific tables are initialised */
   memcpy(&cpi->quant_info, &TH_VP31_QUANT_INFO, sizeof(th_quant_info));
@@ -668,7 +670,7 @@ int theora_encode_tables(theora_state *t, ogg_packet *op){
   _tp_writebuffer(cpi->oggbuffer,"theora",6);
 
   oc_quant_params_pack(cpi->oggbuffer,&cpi->quant_info);
-  WriteHuffmanTrees(cpi->HuffRoot_VP3x,cpi->oggbuffer);
+  oc_huff_codes_pack(cpi->oggbuffer,(const th_huff_table *)cpi->huff_codes);
 
   op->packet=oggpackB_get_buffer(cpi->oggbuffer);
   op->bytes=oggpackB_bytes(cpi->oggbuffer);
@@ -691,7 +693,6 @@ static void theora_encode_clear (theora_state  *th){
   cpi=(CP_INSTANCE *)th->internal_encode;
   if(cpi){
 
-    ClearHuffmanSet(cpi);
     ClearFrameInfo(cpi);
 
     oggpackB_writeclear(cpi->oggbuffer);
@@ -763,6 +764,21 @@ static int theora_encode_control(theora_state *th,int req,
       InitQTables(cpi);
 
       return 0;
+    case TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE:{
+      ogg_uint32_t keyframe_frequency_force;
+      if(buf==NULL)return TH_EFAULT;
+      if(buf_sz!=sizeof(keyframe_frequency_force))return TH_EINVAL;
+      keyframe_frequency_force=*(ogg_uint32_t *)buf;
+      if(cpi->HeadersWritten){
+        /*It's still early enough to enlarge keyframe_granule_shift.*/
+        cpi->keyframe_granule_shift=OC_CLAMPI(cpi->keyframe_granule_shift,
+         OC_ILOG_32(keyframe_frequency_force-1),31);
+      }
+      cpi->info.keyframe_frequency_force=OC_MINI(keyframe_frequency_force,
+       (ogg_uint32_t)1U<<cpi->keyframe_granule_shift);
+      *(ogg_uint32_t *)buf=cpi->info.keyframe_frequency_force;
+      return 0;
+    }
     case TH_ENCCTL_SET_VP3_COMPATIBLE:
       if(cpi->HeadersWritten)
         return TH_EINVAL;

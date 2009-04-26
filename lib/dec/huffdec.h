@@ -75,7 +75,7 @@ struct oc_huff_node{
     The ACTUAL size of this array is 1<<nbits, despite what the declaration
      below claims.
     The exception is that for leaf nodes the size is 0.*/
-  oc_huff_node  *nodes[1];
+  oc_huff_node  *nodes[2];
 };
 
 

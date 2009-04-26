@@ -11,15 +11,14 @@
  ********************************************************************/
 /*SSE2 fDCT implementation for x86_64.*/
 /*$Id: fdct_ses2.c 14579 2008-03-12 06:42:40Z xiphmont $*/
+#include <stddef.h>
+#include "x86enc.h"
 
-#include "../codec_internal.h"
-#include "../dsp.h"
-
-#if defined(USE_ASM)
+#if defined(OC_X86_64_ASM)
 
 # define OC_FDCT8x8 \
- /*Note: xmm15={0,0,0,0,0,0,0,0} and xmm14={-1,-1,-1,-1,-1,-1,-1,-1} */ \
- "#OC_FDCT8\n\t" \
+ /*Note: xmm15={0}x8 and xmm14={-1}x8.*/ \
+ "#OC_FDCT8x8\n\t" \
  /*Stage 1:*/ \
  "movdqa %%xmm0,%%xmm11\n\t" \
  "movdqa %%xmm1,%%xmm10\n\t" \
@@ -44,20 +43,20 @@
  /*xmm2,3,6,7 are now free.*/ \
  /*Stage 2:*/ \
  "movdqa %%xmm0,%%xmm3\n\t" \
- "mov $0x6A0A6A0A,%k[a]\n\t" \
+ "mov $0x5A806A0A,%[a]\n\t" \
  "movdqa %%xmm1,%%xmm2\n\t" \
- "movd %k[a],%%xmm13\n\t" \
+ "movd %[a],%%xmm13\n\t" \
  "movdqa %%xmm10,%%xmm6\n\t" \
  "pshufd $00,%%xmm13,%%xmm13\n\t" \
  /*xmm2=t2''=t1'-t2'*/ \
  "psubw %%xmm5,%%xmm2\n\t" \
- "mov $0xB500,%k[a]\n\t" \
+ "pxor %%xmm12,%%xmm12\n\t" \
  /*xmm3=t3''=t0'-t3'*/ \
  "psubw %%xmm4,%%xmm3\n\t" \
- "movd %k[a],%%xmm12\n\t" \
+ "psubw %%xmm14,%%xmm12\n\t" \
  /*xmm10=t5''=t6'-t5'*/ \
  "psubw %%xmm9,%%xmm10\n\t" \
- "pshufd $00,%%xmm12,%%xmm12\n\t" \
+ "paddw %%xmm12,%%xmm12\n\t" \
  /*xmm4=t0''=t0'+t3'*/ \
  "paddw %%xmm0,%%xmm4\n\t" \
  /*xmm1=t1''=t1'+t2'*/ \
@@ -66,23 +65,18 @@
  "paddw %%xmm9,%%xmm6\n\t" \
  /*xmm0,xmm5,xmm9 are now free.*/ \
  /*Stage 3:*/ \
- /*Just think, the next 12 instructions would be 1 or 2 instructions on a \
-    proper DSP with a signed 16x16->32 MAC.*/ \
- /*xmm10/xmm5=t5''*27146*/ \
+ /*xmm10:xmm5=t5''*27146+0xB500 \
+   xmm0=t5''*/ \
  "movdqa %%xmm10,%%xmm5\n\t" \
  "movdqa %%xmm10,%%xmm0\n\t" \
- "pmullw %%xmm13,%%xmm5\n\t" \
- "pmulhw %%xmm13,%%xmm10\n\t" \
- /*xmm7,xmm5=t5''*27146+0xB500*/ \
- "movdqa %%xmm5,%%xmm7\n\t" \
- "punpcklwd %%xmm10,%%xmm5\n\t" \
- "punpckhwd %%xmm10,%%xmm7\n\t" \
- "paddd %%xmm12,%%xmm5\n\t" \
- "paddd %%xmm12,%%xmm7\n\t" \
+ "punpckhwd %%xmm12,%%xmm10\n\t" \
+ "pmaddwd %%xmm13,%%xmm10\n\t" \
+ "punpcklwd %%xmm12,%%xmm5\n\t" \
+ "pmaddwd %%xmm13,%%xmm5\n\t" \
  /*xmm5=(t5''*27146+0xB500>>16)+t5''*/ \
+ "psrad $16,%%xmm10\n\t" \
  "psrad $16,%%xmm5\n\t" \
- "psrad $16,%%xmm7\n\t" \
- "packssdw %%xmm7,%%xmm5\n\t" \
+ "packssdw %%xmm10,%%xmm5\n\t" \
  "paddw %%xmm0,%%xmm5\n\t" \
  /*xmm0=s=(t5''*27146+0xB500>>16)+t5''+(t5''!=0)>>1*/ \
  "pcmpeqw %%xmm15,%%xmm0\n\t" \
@@ -90,26 +84,22 @@
  "paddw %%xmm5,%%xmm0\n\t" \
  "movdqa %%xmm8,%%xmm5\n\t" \
  "psraw $1,%%xmm0\n\t" \
- /*xmm5=t5'''=t4''-s*/ \
+ /*xmm5=t5'''=t4'-s*/ \
  "psubw %%xmm0,%%xmm5\n\t" \
- /*xmm8=t4'''=t4''+s*/ \
+ /*xmm8=t4''=t4'+s*/ \
  "paddw %%xmm0,%%xmm8\n\t" \
- /*xmm0,10 are now free.*/ \
- /*xmm7/xmm9=t6''*27146*/ \
+ /*xmm0,xmm7,xmm9,xmm10 are free.*/ \
+ /*xmm7:xmm9=t6''*27146+0xB500*/ \
  "movdqa %%xmm6,%%xmm7\n\t" \
  "movdqa %%xmm6,%%xmm9\n\t" \
- "pmulhw %%xmm13,%%xmm7\n\t" \
- "pmullw %%xmm13,%%xmm9\n\t" \
- /*xmm0,xmm9=t6''*27146+0xB500*/ \
- "movdqa %%xmm9,%%xmm0\n\t" \
- "punpcklwd %%xmm7,%%xmm9\n\t" \
- "punpckhwd %%xmm7,%%xmm0\n\t" \
- "paddd %%xmm12,%%xmm9\n\t" \
- "paddd %%xmm12,%%xmm0\n\t" \
+ "punpckhwd %%xmm12,%%xmm7\n\t" \
+ "pmaddwd %%xmm13,%%xmm7\n\t" \
+ "punpcklwd %%xmm12,%%xmm9\n\t" \
+ "pmaddwd %%xmm13,%%xmm9\n\t" \
  /*xmm9=(t6''*27146+0xB500>>16)+t6''*/ \
+ "psrad $16,%%xmm7\n\t" \
  "psrad $16,%%xmm9\n\t" \
- "psrad $16,%%xmm0\n\t" \
- "packssdw %%xmm0,%%xmm9\n\t" \
+ "packssdw %%xmm7,%%xmm9\n\t" \
  "paddw %%xmm6,%%xmm9\n\t" \
  /*xmm9=s=(t6''*27146+0xB500>>16)+t6''+(t6''!=0)>>1*/ \
  "pcmpeqw %%xmm15,%%xmm6\n\t" \
@@ -121,144 +111,131 @@
  "psubw %%xmm9,%%xmm7\n\t" \
  /*xmm9=t7''=t7'+s*/ \
  "paddw %%xmm11,%%xmm9\n\t" \
- /*xmm6,xmm11 are free.*/ \
+ /*xmm0,xmm6,xmm10,xmm11 are free.*/ \
  /*Stage 4:*/ \
- /*xmm11/xmm0=t1''*27146*/ \
+ /*xmm10:xmm0=t1''*27146+0xB500*/ \
  "movdqa %%xmm1,%%xmm0\n\t" \
- "movdqa %%xmm1,%%xmm11\n\t" \
- "pmullw %%xmm13,%%xmm0\n\t" \
- "pmulhw %%xmm13,%%xmm11\n\t" \
- /*xmm10,xmm0=t1''*27146+0xB500*/ \
- "movdqa %%xmm0,%%xmm10\n\t" \
- "punpcklwd %%xmm11,%%xmm0\n\t" \
- "punpckhwd %%xmm11,%%xmm10\n\t" \
- "paddd %%xmm12,%%xmm0\n\t" \
- "paddd %%xmm12,%%xmm10\n\t" \
+ "movdqa %%xmm1,%%xmm10\n\t" \
+ "punpcklwd %%xmm12,%%xmm0\n\t" \
+ "pmaddwd %%xmm13,%%xmm0\n\t" \
+ "punpckhwd %%xmm12,%%xmm10\n\t" \
+ "pmaddwd %%xmm13,%%xmm10\n\t" \
  /*xmm0=(t1''*27146+0xB500>>16)+t1''*/ \
  "psrad $16,%%xmm0\n\t" \
  "psrad $16,%%xmm10\n\t" \
+ "mov $0x20006A0A,%[a]\n\t" \
  "packssdw %%xmm10,%%xmm0\n\t" \
+ "movd %[a],%%xmm13\n\t" \
  "paddw %%xmm1,%%xmm0\n\t" \
  /*xmm0=s=(t1''*27146+0xB500>>16)+t1''+(t1''!=0)*/ \
  "pcmpeqw %%xmm15,%%xmm1\n\t" \
+ "pshufd $00,%%xmm13,%%xmm13\n\t" \
  "psubw %%xmm14,%%xmm1\n\t" \
  "paddw %%xmm1,%%xmm0\n\t" \
- /*xmm11/xmm4=t0''*27146*/ \
+ /*xmm10:xmm4=t0''*27146+0x4000*/ \
  "movdqa %%xmm4,%%xmm1\n\t" \
- "movdqa %%xmm4,%%xmm11\n\t" \
- "mov $0x4000,%k[a]\n\t" \
- "pmullw %%xmm13,%%xmm4\n\t" \
- "pmulhw %%xmm13,%%xmm11\n\t" \
- "movd %k[a],%%xmm12\n\t" \
- /*xmm10,xmm4=t0''*27146+0x4000*/ \
  "movdqa %%xmm4,%%xmm10\n\t" \
- "pshufd $00,%%xmm12,%%xmm12\n\t" \
- "punpcklwd %%xmm11,%%xmm4\n\t" \
- "punpckhwd %%xmm11,%%xmm10\n\t" \
- "paddd %%xmm12,%%xmm4\n\t" \
- "paddd %%xmm12,%%xmm10\n\t" \
+ "punpcklwd %%xmm12,%%xmm4\n\t" \
+ "pmaddwd %%xmm13,%%xmm4\n\t" \
+ "punpckhwd %%xmm12,%%xmm10\n\t" \
+ "pmaddwd %%xmm13,%%xmm10\n\t" \
  /*xmm4=(t0''*27146+0x4000>>16)+t0''*/ \
  "psrad $16,%%xmm4\n\t" \
  "psrad $16,%%xmm10\n\t" \
- "mov $0xEC83EC83,%k[a]\n\t" \
+ "mov $0x6CB7,%[a]\n\t" \
  "packssdw %%xmm10,%%xmm4\n\t" \
- "movd %k[a],%%xmm12\n\t" \
+ "movd %[a],%%xmm12\n\t" \
  "paddw %%xmm1,%%xmm4\n\t" \
  /*xmm4=r=(t0''*27146+0x4000>>16)+t0''+(t0''!=0)*/ \
  "pcmpeqw %%xmm15,%%xmm1\n\t" \
  "pshufd $00,%%xmm12,%%xmm12\n\t" \
  "psubw %%xmm14,%%xmm1\n\t" \
- "mov $0x61F861F8,%k[a]\n\t" \
+ "mov $0x7FFF6C84,%[a]\n\t" \
  "paddw %%xmm1,%%xmm4\n\t" \
- "movd %k[a],%%xmm13\n\t" \
  /*xmm0=_y[0]=u=r+s>>1*/ \
  "paddw %%xmm4,%%xmm0\n\t" \
- "pshufd $00,%%xmm13,%%xmm13\n\t" \
+ "movd %[a],%%xmm13\n\t" \
  "psraw $1,%%xmm0\n\t" \
  /*xmm4=_y[4]=v=r-u*/ \
- "movdqa %%xmm3,%%xmm1\n\t" \
+ "pshufd $00,%%xmm13,%%xmm13\n\t" \
  "psubw %%xmm0,%%xmm4\n\t" \
  /*xmm1,xmm6,xmm10,xmm11 are free.*/ \
- /*xmm11,xmm10=60547*t3'''*/ \
+ /*xmm6:xmm10=60547*t3''+0x6CB7*/ \
  "movdqa %%xmm3,%%xmm10\n\t" \
- "pmulhw %%xmm12,%%xmm1\n\t" \
- "pmullw %%xmm12,%%xmm10\n\t" \
- "paddw %%xmm3,%%xmm1\n\t" \
- "movdqa %%xmm10,%%xmm11\n\t" \
- "punpcklwd %%xmm1,%%xmm10\n\t" \
- "punpckhwd %%xmm1,%%xmm11\n\t" \
- /*xmm2,xmm1=25080*t2'' \
+ "movdqa %%xmm3,%%xmm6\n\t" \
+ "punpcklwd %%xmm3,%%xmm10\n\t" \
+ "pmaddwd %%xmm13,%%xmm10\n\t" \
+ "mov $0x61F861F8,%[a]\n\t" \
+ "punpckhwd %%xmm3,%%xmm6\n\t" \
+ "pmaddwd %%xmm13,%%xmm6\n\t" \
+ "movd %[a],%%xmm13\n\t" \
+ "paddd %%xmm12,%%xmm10\n\t" \
+ "pshufd $00,%%xmm13,%%xmm13\n\t" \
+ "paddd %%xmm12,%%xmm6\n\t" \
+ /*xmm1:xmm2=25080*t2'' \
    xmm12=t2''*/ \
- "movdqa %%xmm2,%%xmm6\n\t" \
+ "movdqa %%xmm2,%%xmm11\n\t" \
  "movdqa %%xmm2,%%xmm12\n\t" \
  "pmullw %%xmm13,%%xmm2\n\t" \
- "pmulhw %%xmm13,%%xmm6\n\t" \
+ "pmulhw %%xmm13,%%xmm11\n\t" \
  "movdqa %%xmm2,%%xmm1\n\t" \
- "mov $0x6CB7,%k[a]\n\t" \
- "punpckhwd %%xmm6,%%xmm2\n\t" \
- "punpcklwd %%xmm6,%%xmm1\n\t" \
- /*xmm11,xmm10=25080*t2''+60547*t3'''+0x6CB7*/ \
- "movd %k[a],%%xmm6\n\t" \
- "paddd %%xmm1,%%xmm10\n\t" \
- "pshufd $00,%%xmm6,%%xmm6\n\t" \
- "paddd %%xmm2,%%xmm11\n\t" \
- "paddd %%xmm6,%%xmm10\n\t" \
- "paddd %%xmm6,%%xmm11\n\t" \
- /*xmm10=u=(25080*t2''+60547*t3'''+0x6CB7>>16)+(t3'''!=0)*/ \
+ "punpcklwd %%xmm11,%%xmm2\n\t" \
+ "punpckhwd %%xmm11,%%xmm1\n\t" \
+ /*xmm10=u=(25080*t2''+60547*t3''+0x6CB7>>16)+(t3''!=0)*/ \
+ "paddd %%xmm2,%%xmm10\n\t" \
+ "paddd %%xmm1,%%xmm6\n\t" \
  "psrad $16,%%xmm10\n\t" \
  "pcmpeqw %%xmm15,%%xmm3\n\t" \
- "psrad $16,%%xmm11\n\t" \
+ "psrad $16,%%xmm6\n\t" \
  "psubw %%xmm14,%%xmm3\n\t" \
- "packssdw %%xmm11,%%xmm10\n\t" \
+ "packssdw %%xmm6,%%xmm10\n\t" \
  "paddw %%xmm3,%%xmm10\n\t" \
  /*xmm2=_y[2]=u \
    xmm10=s=(25080*u>>16)-t2''*/ \
  "movdqa %%xmm10,%%xmm2\n\t" \
- "mov $0x54605460,%k[a]\n\t" \
  "pmulhw %%xmm13,%%xmm10\n\t" \
- "movd %k[a],%%xmm13\n\t" \
  "psubw %%xmm12,%%xmm10\n\t" \
+ /*xmm1:xmm6=s*21600+0x2800*/ \
+ "pxor %%xmm12,%%xmm12\n\t" \
+ "psubw %%xmm14,%%xmm12\n\t" \
+ "mov $0x28005460,%[a]\n\t" \
+ "movd %[a],%%xmm13\n\t" \
  "pshufd $00,%%xmm13,%%xmm13\n\t" \
- /*xmm11/xmm6=s*21600*/ \
  "movdqa %%xmm10,%%xmm6\n\t" \
- "mov $0x2800,%k[a]\n\t" \
- "movdqa %%xmm10,%%xmm11\n\t" \
- "movd %k[a],%%xmm12\n\t" \
- "pmullw %%xmm13,%%xmm6\n\t" \
- "pshufd $00,%%xmm12,%%xmm12\n\t" \
- "pmulhw %%xmm13,%%xmm11\n\t" \
- /*xmm1,xmm6=s*21600+0x2800*/ \
- "movdqa %%xmm6,%%xmm1\n\t" \
- "punpcklwd %%xmm11,%%xmm6\n\t" \
- "punpckhwd %%xmm11,%%xmm1\n\t" \
- "paddd %%xmm12,%%xmm6\n\t" \
- "paddd %%xmm12,%%xmm1\n\t" \
+ "movdqa %%xmm10,%%xmm1\n\t" \
+ "punpcklwd %%xmm12,%%xmm6\n\t" \
+ "pmaddwd %%xmm13,%%xmm6\n\t" \
+ "mov $0x0E3D,%[a]\n\t" \
+ "punpckhwd %%xmm12,%%xmm1\n\t" \
+ "pmaddwd %%xmm13,%%xmm1\n\t" \
  /*xmm6=(s*21600+0x2800>>18)+s*/ \
  "psrad $18,%%xmm6\n\t" \
  "psrad $18,%%xmm1\n\t" \
- "mov $0xD4DBD4DB,%k[a]\n\t" \
+ "movd %[a],%%xmm12\n\t" \
  "packssdw %%xmm1,%%xmm6\n\t" \
- "movd %k[a],%%xmm12\n\t" \
- "paddw %%xmm10,%%xmm6\n\t" \
  "pshufd $00,%%xmm12,%%xmm12\n\t" \
+ "paddw %%xmm10,%%xmm6\n\t" \
  /*xmm6=_y[6]=v=(s*21600+0x2800>>18)+s+(s!=0)*/ \
+ "mov $0x7FFF54DC,%[a]\n\t" \
  "pcmpeqw %%xmm15,%%xmm10\n\t" \
- "mov $0x8E3A8E3A,%k[a]\n\t" \
+ "movd %[a],%%xmm13\n\t" \
  "psubw %%xmm14,%%xmm10\n\t" \
- "movd %k[a],%%xmm13\n\t" \
- "paddw %%xmm10,%%xmm6\n\t " \
  "pshufd $00,%%xmm13,%%xmm13\n\t" \
+ "paddw %%xmm10,%%xmm6\n\t " \
  /*xmm1,xmm3,xmm10,xmm11 are free.*/ \
- /*xmm11,xmm10=54491*t5'''*/ \
- "movdqa %%xmm5,%%xmm1\n\t" \
+ /*xmm11:xmm10=54491*t5'''+0x0E3D*/ \
  "movdqa %%xmm5,%%xmm10\n\t" \
- "pmulhw %%xmm12,%%xmm1\n\t" \
- "pmullw %%xmm12,%%xmm10\n\t" \
- "paddw %%xmm5,%%xmm1\n\t" \
- "movdqa %%xmm10,%%xmm11\n\t" \
- "punpcklwd %%xmm1,%%xmm10\n\t" \
- "punpckhwd %%xmm1,%%xmm11\n\t" \
- /*xmm7,xmm12=36410*t6''' \
+ "movdqa %%xmm5,%%xmm11\n\t" \
+ "punpcklwd %%xmm5,%%xmm10\n\t" \
+ "pmaddwd %%xmm13,%%xmm10\n\t" \
+ "mov $0x8E3A8E3A,%[a]\n\t" \
+ "punpckhwd %%xmm5,%%xmm11\n\t" \
+ "pmaddwd %%xmm13,%%xmm11\n\t" \
+ "movd %[a],%%xmm13\n\t" \
+ "paddd %%xmm12,%%xmm10\n\t" \
+ "pshufd $00,%%xmm13,%%xmm13\n\t" \
+ "paddd %%xmm12,%%xmm11\n\t" \
+ /*xmm7:xmm12=36410*t6''' \
    xmm1=t6'''*/ \
  "movdqa %%xmm7,%%xmm3\n\t" \
  "movdqa %%xmm7,%%xmm1\n\t" \
@@ -266,122 +243,103 @@
  "pmullw %%xmm13,%%xmm7\n\t" \
  "paddw %%xmm1,%%xmm3\n\t" \
  "movdqa %%xmm7,%%xmm12\n\t" \
- "mov $0x0E3D,%k[a]\n\t" \
  "punpckhwd %%xmm3,%%xmm7\n\t" \
  "punpcklwd %%xmm3,%%xmm12\n\t" \
- /*xmm11,xmm10=54491*t5''+36410*t6'''+0x0E3D*/ \
- "movd %k[a],%%xmm3\n\t" \
+ /*xmm10=u=(54491*t5'''+36410*t6'''+0x0E3D>>16)+(t5'''!=0)*/ \
  "paddd %%xmm12,%%xmm10\n\t" \
- "pshufd $00,%%xmm3,%%xmm3\n\t" \
  "paddd %%xmm7,%%xmm11\n\t" \
- "paddd %%xmm3,%%xmm10\n\t" \
- "paddd %%xmm3,%%xmm11\n\t" \
- /*xmm10=u=(54491*t5''+36410*t6'''+0x0E3D>>16)+(t5'''!=0)*/ \
  "psrad $16,%%xmm10\n\t" \
  "pcmpeqw %%xmm15,%%xmm5\n\t" \
  "psrad $16,%%xmm11\n\t" \
  "psubw %%xmm14,%%xmm5\n\t" \
  "packssdw %%xmm11,%%xmm10\n\t" \
+ "pxor %%xmm12,%%xmm12\n\t" \
  "paddw %%xmm5,%%xmm10\n\t" \
  /*xmm5=_y[5]=u \
    xmm1=s=t6'''-(36410*u>>16)*/ \
+ "psubw %%xmm14,%%xmm12\n\t" \
  "movdqa %%xmm10,%%xmm5\n\t" \
- "mov $0x67C867C8,%k[a]\n\t" \
+ "mov $0x340067C8,%[a]\n\t" \
  "pmulhw %%xmm13,%%xmm10\n\t" \
+ "movd %[a],%%xmm13\n\t" \
  "paddw %%xmm5,%%xmm10\n\t" \
- "movd %k[a],%%xmm13\n\t" \
- "psubw %%xmm10,%%xmm1\n\t" \
  "pshufd $00,%%xmm13,%%xmm13\n\t" \
- /*xmm11/xmm3=s*26568*/ \
+ "psubw %%xmm10,%%xmm1\n\t" \
+ /*xmm11:xmm3=s*26568+0x3400*/ \
  "movdqa %%xmm1,%%xmm3\n\t" \
- "mov $0x3400,%k[a]\n\t" \
  "movdqa %%xmm1,%%xmm11\n\t" \
- "movd %k[a],%%xmm7\n\t" \
- "pmullw %%xmm13,%%xmm3\n\t" \
- "pmulhw %%xmm13,%%xmm11\n\t" \
- /*xmm12,xmm3=s*26568+0x3400*/ \
- "pshufd $00,%%xmm7,%%xmm7\n\t" \
- "movdqa %%xmm3,%%xmm12\n\t" \
- "punpcklwd %%xmm11,%%xmm3\n\t" \
- "punpckhwd %%xmm11,%%xmm12\n\t" \
- "paddd %%xmm7,%%xmm3\n\t" \
- "paddd %%xmm7,%%xmm12\n\t" \
+ "punpcklwd %%xmm12,%%xmm3\n\t" \
+ "pmaddwd %%xmm13,%%xmm3\n\t" \
+ "mov $0x7B1B,%[a]\n\t" \
+ "punpckhwd %%xmm12,%%xmm11\n\t" \
+ "pmaddwd %%xmm13,%%xmm11\n\t" \
  /*xmm3=(s*26568+0x3400>>17)+s*/ \
  "psrad $17,%%xmm3\n\t" \
- "psrad $17,%%xmm12\n\t" \
- "mov $0xFB15FB15,%k[a]\n\t" \
- "packssdw %%xmm12,%%xmm3\n\t" \
- "movd %k[a],%%xmm12\n\t" \
- "paddw %%xmm1,%%xmm3\n\t" \
+ "psrad $17,%%xmm11\n\t" \
+ "movd %[a],%%xmm12\n\t" \
+ "packssdw %%xmm11,%%xmm3\n\t" \
  "pshufd $00,%%xmm12,%%xmm12\n\t" \
+ "paddw %%xmm1,%%xmm3\n\t" \
  /*xmm3=_y[3]=v=(s*26568+0x3400>>17)+s+(s!=0)*/ \
+ "mov $0x7FFF7B16,%[a]\n\t" \
  "pcmpeqw %%xmm15,%%xmm1\n\t" \
- "mov $0x31F131F1,%k[a]\n\t" \
+ "movd %[a],%%xmm13\n\t" \
  "psubw %%xmm14,%%xmm1\n\t" \
- "movd %k[a],%%xmm13\n\t" \
- "paddw %%xmm1,%%xmm3\n\t " \
  "pshufd $00,%%xmm13,%%xmm13\n\t" \
+ "paddw %%xmm1,%%xmm3\n\t " \
  /*xmm1,xmm7,xmm10,xmm11 are free.*/ \
- /*xmm11,xmm10=64277*t7''*/ \
- "movdqa %%xmm9,%%xmm1\n\t" \
+ /*xmm11:xmm10=64277*t7''+0x7B1B*/ \
  "movdqa %%xmm9,%%xmm10\n\t" \
- "pmulhw %%xmm12,%%xmm1\n\t" \
- "pmullw %%xmm12,%%xmm10\n\t" \
- "paddw %%xmm9,%%xmm1\n\t" \
- "movdqa %%xmm10,%%xmm11\n\t" \
- "punpcklwd %%xmm1,%%xmm10\n\t" \
- "punpckhwd %%xmm1,%%xmm11\n\t" \
- /*xmm8,xmm1=12785*t4''' \
-   xmm12=t2''*/ \
+ "movdqa %%xmm9,%%xmm11\n\t" \
+ "punpcklwd %%xmm9,%%xmm10\n\t" \
+ "pmaddwd %%xmm13,%%xmm10\n\t" \
+ "mov $0x31F131F1,%[a]\n\t" \
+ "punpckhwd %%xmm9,%%xmm11\n\t" \
+ "pmaddwd %%xmm13,%%xmm11\n\t" \
+ "movd %[a],%%xmm13\n\t" \
+ "paddd %%xmm12,%%xmm10\n\t" \
+ "pshufd $00,%%xmm13,%%xmm13\n\t" \
+ "paddd %%xmm12,%%xmm11\n\t" \
+ /*xmm12:xmm7=12785*t4''*/ \
  "movdqa %%xmm8,%%xmm7\n\t" \
- "movdqa %%xmm8,%%xmm12\n\t" \
- "pmullw %%xmm13,%%xmm8\n\t" \
- "pmulhw %%xmm13,%%xmm7\n\t" \
  "movdqa %%xmm8,%%xmm1\n\t" \
- "mov $0x7B1B,%k[a]\n\t" \
- "punpckhwd %%xmm7,%%xmm8\n\t" \
- "punpcklwd %%xmm7,%%xmm1\n\t" \
- /*xmm11,xmm10=12785*t4'''+64277*t7''+0x7B1B*/ \
- "movd %k[a],%%xmm7\n\t" \
- "paddd %%xmm1,%%xmm10\n\t" \
- "pshufd $00,%%xmm7,%%xmm7\n\t" \
- "paddd %%xmm8,%%xmm11\n\t" \
+ "pmullw %%xmm13,%%xmm7\n\t" \
+ "pmulhw %%xmm13,%%xmm1\n\t" \
+ "movdqa %%xmm7,%%xmm12\n\t" \
+ "punpcklwd %%xmm1,%%xmm7\n\t" \
+ "punpckhwd %%xmm1,%%xmm12\n\t" \
+ /*xmm10=u=(12785*t4''+64277*t7''+0x7B1B>>16)+(t7''!=0)*/ \
  "paddd %%xmm7,%%xmm10\n\t" \
- "paddd %%xmm7,%%xmm11\n\t" \
- /*xmm10=u=(12785*t4'''+64277*t7''+0x7B1B>>16)+(t7''!=0)*/ \
+ "paddd %%xmm12,%%xmm11\n\t" \
  "psrad $16,%%xmm10\n\t" \
  "pcmpeqw %%xmm15,%%xmm9\n\t" \
  "psrad $16,%%xmm11\n\t" \
  "psubw %%xmm14,%%xmm9\n\t" \
  "packssdw %%xmm11,%%xmm10\n\t" \
+ "pxor %%xmm12,%%xmm12\n\t" \
  "paddw %%xmm9,%%xmm10\n\t" \
  /*xmm1=_y[1]=u \
-   xmm10=s=(12785*u>>16)-t2''*/ \
+   xmm10=s=(12785*u>>16)-t4''*/ \
+ "psubw %%xmm14,%%xmm12\n\t" \
  "movdqa %%xmm10,%%xmm1\n\t" \
- "mov $0x503B503B,%k[a]\n\t" \
+ "mov $0x3000503B,%[a]\n\t" \
  "pmulhw %%xmm13,%%xmm10\n\t" \
- "movd %k[a],%%xmm13\n\t" \
- "psubw %%xmm12,%%xmm10\n\t" \
+ "movd %[a],%%xmm13\n\t" \
+ "psubw %%xmm8,%%xmm10\n\t" \
  "pshufd $00,%%xmm13,%%xmm13\n\t" \
- /*xmm7=_y[7]=v=(s*20539+0x3000>>20)+s+(s!=0)*/ \
+ /*xmm8:xmm7=s*20539+0x3000*/ \
  "movdqa %%xmm10,%%xmm7\n\t" \
- "mov $0x3000,%k[a]\n\t" \
- "movdqa %%xmm10,%%xmm11\n\t" \
- "movd %k[a],%%xmm12\n\t" \
- "pmullw %%xmm13,%%xmm7\n\t" \
- "pshufd $00,%%xmm12,%%xmm12\n\t" \
- "pmulhw %%xmm13,%%xmm11\n\t" \
- /*xmm7=_y[7]=v=(s*20539+0x3000>>20)+s+(s!=0)*/ \
- "movdqa %%xmm7,%%xmm8\n\t" \
- "punpcklwd %%xmm11,%%xmm7\n\t" \
- "punpckhwd %%xmm11,%%xmm8\n\t" \
- "paddd %%xmm12,%%xmm7\n\t" \
- "paddd %%xmm12,%%xmm8\n\t" \
- /*xmm7=_y[7]=v=(s*20539+0x3000>>20)+s+(s!=0)*/ \
+ "movdqa %%xmm10,%%xmm8\n\t" \
+ "punpcklwd %%xmm12,%%xmm7\n\t" \
+ "pmaddwd %%xmm13,%%xmm7\n\t" \
+ "punpckhwd %%xmm12,%%xmm8\n\t" \
+ "pmaddwd %%xmm13,%%xmm8\n\t" \
+ /*xmm7=(s*20539+0x3000>>20)+s*/ \
  "psrad $20,%%xmm7\n\t" \
  "psrad $20,%%xmm8\n\t" \
  "packssdw %%xmm8,%%xmm7\n\t" \
  "paddw %%xmm10,%%xmm7\n\t" \
+ /*xmm7=_y[7]=v=(s*20539+0x3000>>20)+s+(s!=0)*/ \
  "pcmpeqw %%xmm15,%%xmm10\n\t" \
  "psubw %%xmm14,%%xmm10\n\t" \
  "paddw %%xmm10,%%xmm7\n\t " \
@@ -464,23 +422,22 @@
 /*SSE2 implementation of the fDCT for x86-64 only.
   Because of the 8 extra XMM registers on x86-64, this version can operate
    without any temporary stack access at all.*/
-static void oc_fdct8x8_x86_64sse2(const ogg_int16_t _x[64],ogg_int16_t _y[64]){
+void oc_enc_fdct8x8_x86_64sse2(ogg_int16_t _y[64],const ogg_int16_t _x[64]){
   ptrdiff_t a;
   __asm__ __volatile__(
     /*Load the input.*/
-    "lea %[x],%[a]\n\t"
-    "movdqa 0x00(%[a]),%%xmm0\n\t"
-    "movdqa 0x10(%[a]),%%xmm1\n\t"
-    "movdqa 0x20(%[a]),%%xmm2\n\t"
-    "movdqa 0x30(%[a]),%%xmm3\n\t"
-    "movdqa 0x40(%[a]),%%xmm4\n\t"
-    "movdqa 0x50(%[a]),%%xmm5\n\t"
-    "movdqa 0x60(%[a]),%%xmm6\n\t"
-    "movdqa 0x70(%[a]),%%xmm7\n\t"
+    "movdqa 0x00(%[x]),%%xmm0\n\t"
+    "movdqa 0x10(%[x]),%%xmm1\n\t"
+    "movdqa 0x20(%[x]),%%xmm2\n\t"
+    "movdqa 0x30(%[x]),%%xmm3\n\t"
+    "movdqa 0x40(%[x]),%%xmm4\n\t"
+    "movdqa 0x50(%[x]),%%xmm5\n\t"
+    "movdqa 0x60(%[x]),%%xmm6\n\t"
+    "movdqa 0x70(%[x]),%%xmm7\n\t"
     /*Add two extra bits of working precision to improve accuracy; any more and
        we could overflow.*/
-    /*We also add biases to correct for some systematic error that remains in
-       the full fDCT->iDCT round trip.*/
+    /*We also add a few biases to correct for some systematic error that
+       remains in the full fDCT->iDCT round trip.*/
     /*xmm15={0}x8*/
     "pxor %%xmm15,%%xmm15\n\t"
     /*xmm14={-1}x8*/
@@ -496,22 +453,22 @@ static void oc_fdct8x8_x86_64sse2(const ogg_int16_t _x[64],ogg_int16_t _y[64]){
     "psubw %%xmm14,%%xmm8\n\t"
     "psllw $2,%%xmm3\n\t"
     /*%[a]=1*/
-    "mov $1,%k[a]\n\t"
+    "mov $1,%[a]\n\t"
     /*xmm8={_x[6]!=0,0,_x[4]!=0,0,_x[2]!=0,0,_x[0]!=0,0}*/
     "pslld $16,%%xmm8\n\t"
     "psllw $2,%%xmm4\n\t"
     /*xmm9={0,0,0,0,0,0,0,1}*/
-    "movd %k[a],%%xmm9\n\t"
+    "movd %[a],%%xmm9\n\t"
     /*xmm8={0,0,_x[2]!=0,0,_x[0]!=0,0}*/
     "pshufhw $0x00,%%xmm8,%%xmm8\n\t"
     "psllw $2,%%xmm5\n\t"
     /*%[a]={1}x2*/
-    "mov $0x10001,%k[a]\n\t"
+    "mov $0x10001,%[a]\n\t"
     /*xmm8={0,0,0,0,0,0,0,_x[0]!=0}*/
     "pshuflw $0x01,%%xmm8,%%xmm8\n\t"
     "psllw $2,%%xmm6\n\t"
     /*xmm10={0,0,0,0,0,0,1,1}*/
-    "movd %k[a],%%xmm10\n\t"
+    "movd %[a],%%xmm10\n\t"
     /*xmm0=_x[7...0]+{0,0,0,0,0,0,0,_x[0]!=0}*/
     "paddw %%xmm8,%%xmm0\n\t"
     "psllw $2,%%xmm7\n\t"
@@ -527,7 +484,7 @@ static void oc_fdct8x8_x86_64sse2(const ogg_int16_t _x[64],ogg_int16_t _y[64]){
     /*TODO: zig-zag ordering?*/
     OC_TRANSPOSE8x8
     /*xmm14={-2,-2,-2,-2,-2,-2,-2,-2}*/
-    "psllw $1,%%xmm14\n\t"
+    "paddw %%xmm14,%%xmm14\n\t"
     "psubw %%xmm14,%%xmm0\n\t"
     "psubw %%xmm14,%%xmm1\n\t"
     "psraw $2,%%xmm0\n\t"
@@ -543,27 +500,19 @@ static void oc_fdct8x8_x86_64sse2(const ogg_int16_t _x[64],ogg_int16_t _y[64]){
     "psraw $2,%%xmm5\n\t"
     "psubw %%xmm14,%%xmm7\n\t"
     "psraw $2,%%xmm6\n\t"
-    "lea %[y],%[a]\n\t"
     "psraw $2,%%xmm7\n\t"
     /*Store the result.*/
-    "movdqa %%xmm0,0x00(%[a])\n\t"
-    "movdqa %%xmm1,0x10(%[a])\n\t"
-    "movdqa %%xmm2,0x20(%[a])\n\t"
-    "movdqa %%xmm3,0x30(%[a])\n\t"
-    "movdqa %%xmm4,0x40(%[a])\n\t"
-    "movdqa %%xmm5,0x50(%[a])\n\t"
-    "movdqa %%xmm6,0x60(%[a])\n\t"
-    "movdqa %%xmm7,0x70(%[a])\n\t"
+    "movdqa %%xmm0,0x00(%[y])\n\t"
+    "movdqa %%xmm1,0x10(%[y])\n\t"
+    "movdqa %%xmm2,0x20(%[y])\n\t"
+    "movdqa %%xmm3,0x30(%[y])\n\t"
+    "movdqa %%xmm4,0x40(%[y])\n\t"
+    "movdqa %%xmm5,0x50(%[y])\n\t"
+    "movdqa %%xmm6,0x60(%[y])\n\t"
+    "movdqa %%xmm7,0x70(%[y])\n\t"
     :[a]"=&r"(a)
-    :[x]"m"(*_x),[y]"m"(*_y)
+    :[y]"r"(_y),[x]"r"(_x)
+    :"memory"
   );
 }
-
-/*Install our implementation in the function table.*/
-void dsp_sse2_fdct_init(DspFunctions *funcs){
-# if defined(__amd64__)||defined(__x86_64__)
-  funcs->fdct_short=oc_fdct8x8_x86_64sse2;
-# endif
-}
-
 #endif

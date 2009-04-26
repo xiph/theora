@@ -149,19 +149,20 @@ static void EncodeTokenGroup(CP_INSTANCE *cpi,
 
   for(i=0; i<cpi->dct_token_ycount[group]; i++){
     if(token[i] < DCT_NOOP){
-      oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huffY][token[i]],
-                      cpi->HuffCodeLengthArray_VP3x[huffY][token[i]] );
-      if (cpi->ExtraBitLengths_VP3x[token[i]] > 0)
-        oggpackB_write( opb, eb[i], cpi->ExtraBitLengths_VP3x[token[i]] );
+      oggpackB_write(opb,cpi->huff_codes[huffY][token[i]].pattern,
+       cpi->huff_codes[huffY][token[i]].nbits);
+      if(OC_DCT_TOKEN_EXTRA_BITS[token[i]]>0){
+        oggpackB_write(opb,eb[i],OC_DCT_TOKEN_EXTRA_BITS[token[i]]);
+      }
     }
   }
 
   for(; i<cpi->dct_token_count[group]; i++){
     if(token[i] < DCT_NOOP){
-      oggpackB_write( opb, cpi->HuffCodeArray_VP3x[huffC][token[i]],
-                      cpi->HuffCodeLengthArray_VP3x[huffC][token[i]] );
-      if (cpi->ExtraBitLengths_VP3x[token[i]] > 0)
-        oggpackB_write( opb, eb[i], cpi->ExtraBitLengths_VP3x[token[i]] );
+      oggpackB_write(opb,cpi->huff_codes[huffC][token[i]].pattern,
+       cpi->huff_codes[huffC][token[i]].nbits);
+      if (OC_DCT_TOKEN_EXTRA_BITS[token[i]] > 0)
+        oggpackB_write( opb, eb[i], OC_DCT_TOKEN_EXTRA_BITS[token[i]] );
     }
   }
 }
@@ -404,7 +405,7 @@ void EncodeData(CP_INSTANCE *cpi){
   }
 #endif
 #endif
-  dsp_restore_fpu (cpi->dsp);
+  oc_enc_restore_fpu(cpi);
 }
 
 void WriteFrameHeader( CP_INSTANCE *cpi) {
@@ -426,3 +427,31 @@ void WriteFrameHeader( CP_INSTANCE *cpi) {
   }
 }
 
+void oc_enc_dequant_idct8x8(const CP_INSTANCE *_cpi,ogg_int16_t _y[64],
+ const ogg_int16_t _x[64],int _last_zzi,int _ncoefs,
+ ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]){
+  (*_cpi->opt_vtable.dequant_idct8x8)(_y,_x,_last_zzi,_ncoefs,
+   _dc_quant,_ac_quant);
+}
+
+void oc_enc_loop_filter(CP_INSTANCE *_cpi,int _flimit){
+  (*_cpi->opt_vtable.enc_loop_filter)(_cpi,_flimit);
+}
+
+void oc_enc_vtable_init_c(CP_INSTANCE *_cpi){
+  /*The implementations prefixed with oc_enc_ are encoder-specific.
+    The rest we re-use from the decoder.*/
+  _cpi->opt_vtable.frag_sad=oc_enc_frag_sad_c;
+  _cpi->opt_vtable.frag_sad_thresh=oc_enc_frag_sad_thresh_c;
+  _cpi->opt_vtable.frag_sad2_thresh=oc_enc_frag_sad2_thresh_c;
+  _cpi->opt_vtable.frag_sub=oc_enc_frag_sub_c;
+  _cpi->opt_vtable.frag_sub_128=oc_enc_frag_sub_128_c;
+  _cpi->opt_vtable.frag_copy=oc_frag_copy_c;
+  _cpi->opt_vtable.frag_copy2=oc_enc_frag_copy2_c;
+  _cpi->opt_vtable.frag_recon_intra=oc_frag_recon_intra_c;
+  _cpi->opt_vtable.frag_recon_inter=oc_frag_recon_inter_c;
+  _cpi->opt_vtable.fdct8x8=oc_enc_fdct8x8_c;
+  _cpi->opt_vtable.dequant_idct8x8=oc_dequant_idct8x8_c;
+  _cpi->opt_vtable.enc_loop_filter=oc_enc_loop_filter_c;
+  _cpi->opt_vtable.restore_fpu=oc_restore_fpu_c;
+}

@@ -186,7 +186,7 @@ if test "x${ac_enable_asm}" = xyes; then
   i[[3456]]86)
     cpu_x86_32=yes 
     cpu_optimization="32 bit x86"
-    AC_DEFINE([USE_ASM], [],  [make use of asm optimization])
+    AC_DEFINE([OC_X86_ASM], [],  [make use of x86 asm optimization])
     if test "x$target_vendor" = "xapple"; then
       THEORA_LDFLAGS="$THEORA_LDFLAGS  -Wl,-read_only_relocs,suppress"
     fi
@@ -194,7 +194,8 @@ if test "x${ac_enable_asm}" = xyes; then
   x86_64)
     cpu_x86_64=yes
     cpu_optimization="64 bit x86"
-    AC_DEFINE([USE_ASM], [],  [make use of asm optimization])  
+    AC_DEFINE([OC_X86_ASM], [],  [make use of x86 asm optimization])
+    AC_DEFINE([OC_X86_64_ASM], [],  [make use of x86_64 asm optimization])
     ;;
   esac
 else

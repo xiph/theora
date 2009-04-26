@@ -131,40 +131,42 @@ static void oc_huff_tree_free(oc_huff_node *_node){
 }
 
 /*Unpacks a sub-tree from the given buffer.
-  _opb:    The buffer to unpack from.
-  _binode: The location to store a pointer to the sub-tree in.
-  _depth:  The current depth of the tree.
-           This is used to prevent infinite recursion.
+  _opb:      The buffer to unpack from.
+  _binodes:  The nodes to store the sub-tree in.
+  _nbinodes: The number of nodes available for the sub-tree.
   Return: 0 on success, or a negative value on error.*/
 static int oc_huff_tree_unpack(oggpack_buffer *_opb,
- oc_huff_node **_binode,int _depth){
+ oc_huff_node *_binodes,int _nbinodes){
   oc_huff_node *binode;
   long          bits;
-  /*Prevent infinite recursion.*/
-  if(++_depth>32)return TH_EBADHEADER;
+  int           nused;
+  if(_nbinodes<1)return TH_EBADHEADER;
+  binode=_binodes;
+  nused=1;
   if(theorapackB_read1(_opb,&bits)<0)return TH_EBADHEADER;
   /*Read an internal node:*/
   if(!bits){
     int ret;
-    binode=oc_huff_node_alloc(1);
-    binode->depth=(unsigned char)(_depth>1);
-    ret=oc_huff_tree_unpack(_opb,binode->nodes,_depth);
-    if(ret>=0)ret=oc_huff_tree_unpack(_opb,binode->nodes+1,_depth);
-    if(ret<0){
-      oc_huff_tree_free(binode);
-      *_binode=NULL;
-      return ret;
+    binode->nbits=1;
+    binode->depth=1;
+    binode->nodes[0]=_binodes+nused;
+    ret=oc_huff_tree_unpack(_opb,_binodes+nused,_nbinodes-nused);
+    if(ret>=0){
+      nused+=ret;
+      binode->nodes[1]=_binodes+nused;
+      ret=oc_huff_tree_unpack(_opb,_binodes+nused,_nbinodes-nused);
     }
+    if(ret<0)return ret;
+    nused+=ret;
   }
   /*Read a leaf node:*/
   else{
     if(theorapackB_read(_opb,OC_NDCT_TOKEN_BITS,&bits)<0)return TH_EBADHEADER;
-    binode=oc_huff_node_alloc(0);
-    binode->depth=(unsigned char)(_depth>1);
+    binode->nbits=0;
+    binode->depth=1;
     binode->token=(unsigned char)bits;
   }
-  *_binode=binode;
-  return 0;
+  return nused;
 }
 
 /*Finds the depth of shortest branch of the given sub-tree.
@@ -197,6 +199,28 @@ static int oc_huff_tree_occupancy(oc_huff_node *_binode,int _depth){
   }
 }
 
+/*Makes a copy of the given Huffman tree.
+  _node: The Huffman tree to copy.
+  Return: The copy of the Huffman tree.*/
+static oc_huff_node *oc_huff_tree_copy(const oc_huff_node *_node){
+  oc_huff_node *ret;
+  ret=oc_huff_node_alloc(_node->nbits);
+  ret->depth=_node->depth;
+  if(_node->nbits){
+    int nchildren;
+    int i;
+    int inext;
+    nchildren=1<<_node->nbits;
+    for(i=0;i<nchildren;){
+      ret->nodes[i]=oc_huff_tree_copy(_node->nodes[i]);
+      inext=i+(1<<_node->nbits-ret->nodes[i]->depth);
+      while(++i<inext)ret->nodes[i]=ret->nodes[i-1];
+    }
+  }
+  else ret->token=_node->token;
+  return ret;
+}
+
 static oc_huff_node *oc_huff_tree_collapse(oc_huff_node *_binode);
 
 /*Fills the given nodes table with all the children in the sub-tree at the
@@ -224,7 +248,6 @@ static void oc_huff_node_fill(oc_huff_node **_nodes,
     _level--;
     oc_huff_node_fill(_nodes,_binode->nodes[0],_level,_depth);
     oc_huff_node_fill(_nodes+(1<<_level),_binode->nodes[1],_level,_depth);
-    oc_huff_node_free(_binode);
   }
 }
 
@@ -248,33 +271,11 @@ static oc_huff_node *oc_huff_tree_collapse(oc_huff_node *_binode){
   }
   while(occupancy>loccupancy&&occupancy>=1<<OC_MAXI(depth-OC_HUFF_SLUSH,0));
   depth--;
-  if(depth<=1)return _binode;
+  if(depth<=1)return oc_huff_tree_copy(_binode);
   root=oc_huff_node_alloc(depth);
   root->depth=_binode->depth;
   oc_huff_node_fill(root->nodes,_binode,depth,depth);
   return root;
-}
-
-/*Makes a copy of the given Huffman tree.
-  _node: The Huffman tree to copy.
-  Return: The copy of the Huffman tree.*/
-static oc_huff_node *oc_huff_tree_copy(const oc_huff_node *_node){
-  oc_huff_node *ret;
-  ret=oc_huff_node_alloc(_node->nbits);
-  ret->depth=_node->depth;
-  if(_node->nbits){
-    int nchildren;
-    int i;
-    int inext;
-    nchildren=1<<_node->nbits;
-    for(i=0;i<nchildren;){
-      ret->nodes[i]=oc_huff_tree_copy(_node->nodes[i]);
-      inext=i+(1<<_node->nbits-ret->nodes[i]->depth);
-      while(++i<inext)ret->nodes[i]=ret->nodes[i-1];
-    }
-  }
-  else ret->token=_node->token;
-  return ret;
 }
 
 /*Unpacks a set of Huffman trees, and reduces them to a collapsed
@@ -286,10 +287,12 @@ int oc_huff_trees_unpack(oggpack_buffer *_opb,
  oc_huff_node *_nodes[TH_NHUFFMAN_TABLES]){
   int i;
   for(i=0;i<TH_NHUFFMAN_TABLES;i++){
-    int ret;
-    ret=oc_huff_tree_unpack(_opb,_nodes+i,0);
+    oc_huff_node nodes[63];
+    int          ret;
+    /*Unpack the full tree into a temporary buffer.*/
+    ret=oc_huff_tree_unpack(_opb,nodes,63);
     if(ret<0)return ret;
-    _nodes[i]=oc_huff_tree_collapse(_nodes[i]);
+    _nodes[i]=oc_huff_tree_collapse(nodes);
   }
   return 0;
 }

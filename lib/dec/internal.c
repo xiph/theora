@@ -19,7 +19,6 @@
 #include <limits.h>
 #include <string.h>
 #include "../internal.h"
-#include "idct.h"
 
 
 
@@ -100,7 +99,7 @@ const int OC_MB_MAP_NIDXS[TH_PF_NFORMATS]={6,8,8,12};
   Each DCT token has some fixed number of additional bits (possibly 0) stored
    after the token itself, containing, for example, coefficient magnitude,
    sign bits, etc.*/
-const int OC_DCT_TOKEN_EXTRA_BITS[TH_NDCT_TOKENS]={
+const unsigned char OC_DCT_TOKEN_EXTRA_BITS[TH_NDCT_TOKENS]={
   0,0,0,2,3,4,12,3,6,
   0,0,0,0,
   1,1,1,1,2,3,4,5,6,10,

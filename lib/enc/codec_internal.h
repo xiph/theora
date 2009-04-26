@@ -27,29 +27,50 @@
 #include "theora/theora.h"
 #include "../internal.h"
 #include "encoder_huffman.h"
+#include "huffenc.h"
 #include "../dec/ocintrin.h"
-typedef struct CP_INSTANCE CP_INSTANCE;
-#include "dsp.h"
 
-#define theora_read(x,y,z) ( oggpackB_read(x,y,z) )
 
-#define CURRENT_ENCODE_VERSION   1
-#define HUGE_ERROR              (1<<28)  /*  Out of range test value */
+
+typedef struct oc_enc_opt_vtable oc_enc_opt_vtable;
+typedef struct CP_INSTANCE       CP_INSTANCE;
+
+
+struct oc_enc_opt_vtable{
+  unsigned (*frag_sad)(const unsigned char *_src,
+   const unsigned char *_ref,int _ystride);
+  unsigned (*frag_sad_thresh)(const unsigned char *_src,
+   const unsigned char *_ref,int _ystride,unsigned _thresh);
+  unsigned (*frag_sad2_thresh)(const unsigned char *_src,
+   const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
+   unsigned _thresh);
+  void     (*frag_sub)(ogg_int16_t _diff[64],const unsigned char *_src,
+   const unsigned char *_ref,int _ystride);
+  void     (*frag_sub_128)(ogg_int16_t _diff[64],
+   const unsigned char *_src,int _ystride);
+  void     (*frag_copy)(unsigned char *_dst,
+   const unsigned char *_src,int _ystride);
+  void     (*frag_copy2)(unsigned char *_dst,
+   const unsigned char *_src1,const unsigned char *_src2,int _ystride);
+  void     (*frag_recon_intra)(unsigned char *_dst,int _ystride,
+   const ogg_int16_t _residue[64]);
+  void     (*frag_recon_inter)(unsigned char *_dst,
+   const unsigned char *_src,int _ystride,const ogg_int16_t _residue[64]);
+  void     (*fdct8x8)(ogg_int16_t _y[64],const ogg_int16_t _x[64]);
+  void     (*dequant_idct8x8)(ogg_int16_t _y[64],const ogg_int16_t _x[64],
+   int _last_zzi,int _ncoefs,ogg_uint16_t _dc_quant,
+   const ogg_uint16_t _ac_quant[64]);
+  void     (*enc_loop_filter)(CP_INSTANCE *cpi,int _flimit);
+  void     (*restore_fpu)(void);
+};
+
+
+void oc_enc_vtable_init(CP_INSTANCE *_cpi);
 
 /* Baseline dct height and width. */
 #define BLOCK_HEIGHT_WIDTH          8
 #define HFRAGPIXELS                 8
 #define VFRAGPIXELS                 8
-
-/* Blocks on INTRA/INTER Y/U/V planes */
-enum BlockMode {
-  BLOCK_Y,
-  BLOCK_U,
-  BLOCK_V,
-  BLOCK_INTER_Y,
-  BLOCK_INTER_U,
-  BLOCK_INTER_V
-};
 
 /* Baseline dct block size */
 #define BLOCK_SIZE              (BLOCK_HEIGHT_WIDTH * BLOCK_HEIGHT_WIDTH)
@@ -58,8 +79,6 @@ enum BlockMode {
 #define UMV_BORDER              16
 #define STRIDE_EXTRA            (UMV_BORDER * 2)
 
-#define Q_TABLE_SIZE            64
-
 #define KEY_FRAME               0
 #define DELTA_FRAME             1
 
@@ -67,14 +86,6 @@ enum BlockMode {
 #define MODE_BITS               3
 #define MODE_METHODS            8
 #define MODE_METHOD_BITS        3
-
-/* Different key frame types/methods */
-#define DCT_KEY_FRAME           0
-
-#define KEY_FRAME_CONTEXT       5
-
-/* Number of search sites for a 4-step search (at pixel accuracy) */
-#define MAX_SEARCH_SITES       33
 
 #define MAX_MV_EXTENT 31  /* Max search distance in half pixel increments */
 
@@ -159,7 +170,7 @@ typedef struct superblock {
   int m[16]; // hilbert order: only 4 for luma, but 16 for U/V (to match f) */
 } superblock_t;
 
-typedef ogg_int16_t    quant_table[64]; 
+typedef ogg_int16_t    quant_table[64];
 typedef quant_table    quant_tables[64]; /* [zigzag][qi] */
 
 #include "enquant.h"
@@ -207,155 +218,149 @@ struct CP_INSTANCE {
   /*This structure must be first.
     It contains entry points accessed by the decoder library's API wrapper, and
      is the only assumption that library makes about our internal format.*/
-  oc_state_dispatch_vtbl dispatch_vtbl;
+  oc_state_dispatch_vtable  dispatch_vtbl;
 
-  theora_info      info;
+  theora_info               info;
 
   /* ogg bitpacker for use in packet coding, other API state */
-  oggpack_buffer   *oggbuffer;
+  oggpack_buffer           *oggbuffer;
   /*The number of duplicates to produce for the next frame.*/
-  int               dup_count;
+  int                       dup_count;
   /*The number of duplicates remaining to be emitted for the current frame.*/
-  int               nqueued_dups;
+  int                       nqueued_dups;
 
-  unsigned char   *frame;
-  unsigned char   *recon;
-  unsigned char   *golden;
-  unsigned char   *lastrecon;
-  ogg_uint32_t     frame_size;
+  unsigned char            *frame;
+  unsigned char            *recon;
+  unsigned char            *golden;
+  unsigned char            *lastrecon;
+  ogg_uint32_t              frame_size;
 
-  /* SuperBlock, MacroBLock and Fragment Information */
-  unsigned char   *frag_coded;
-  ogg_uint32_t    *frag_buffer_index;
-  ogg_int16_t     *frag_dc;
-  ogg_int16_t     *frag_dc_tmp;
+  /*Superblock, macroblock and fragment Information.*/
+  unsigned char            *frag_coded;
+  ogg_uint32_t             *frag_buffer_index;
+  ogg_int16_t              *frag_dc;
+  ogg_int16_t              *frag_dc_tmp;
 
-  macroblock_t    *macro;
-  superblock_t    *super[3];
+  macroblock_t             *macro;
+  superblock_t             *super[3];
 
-  ogg_uint32_t     frag_h[3];
-  ogg_uint32_t     frag_v[3];
-  ogg_uint32_t     frag_n[3];
-  ogg_uint32_t     frag_total;
+  ogg_uint32_t              frag_h[3];
+  ogg_uint32_t              frag_v[3];
+  ogg_uint32_t              frag_n[3];
+  ogg_uint32_t              frag_total;
 
-  ogg_uint32_t     macro_h;
-  ogg_uint32_t     macro_v;
-  ogg_uint32_t     macro_total;
+  ogg_uint32_t              macro_h;
+  ogg_uint32_t              macro_v;
+  ogg_uint32_t              macro_total;
   
-  ogg_uint32_t     super_h[3];
-  ogg_uint32_t     super_v[3];
-  ogg_uint32_t     super_n[3];
-  ogg_uint32_t     super_total;
+  ogg_uint32_t              super_h[3];
+  ogg_uint32_t              super_v[3];
+  ogg_uint32_t              super_n[3];
+  ogg_uint32_t              super_total;
 
-  ogg_uint32_t     stride[3]; // stride of image and recon planes, accounting for borders
-  ogg_uint32_t     offset[3]; // data offset of first coded pixel in plane
+  /*Stride of image and recon planes, accounting for borders.*/
+  ogg_uint32_t              stride[3];
+  /*Data offset of first coded pixel in plane.*/
+  ogg_uint32_t              offset[3];
 
   /*********************************************************************/
   /* state and stats */
-  
-  int              HeadersWritten;
-  ogg_uint32_t     LastKeyFrame;
-  ogg_int64_t      CurrentFrame;
-  unsigned char    FrameType;
-  int              readyflag;
-  int              packetflag;
-  int              doneflag;
-  int              first_inter_frame;
 
-  int              huffchoice[2][2][2]; /* [key/inter][dc/ac][luma/chroma] */
+  int                       HeadersWritten;
+  ogg_uint32_t              LastKeyFrame;
+  ogg_int64_t               CurrentFrame;
+  unsigned char             FrameType;
+  int                       readyflag;
+  int                       packetflag;
+  int                       doneflag;
+  int                       first_inter_frame;
 
-  ogg_uint32_t     dc_bits[2][DC_HUFF_CHOICES];
-  ogg_uint32_t     ac1_bits[2][AC_HUFF_CHOICES];
-  ogg_uint32_t     acN_bits[2][AC_HUFF_CHOICES];
-  ogg_uint32_t     MVBits_0; /* count of bits used by MV coding mode 0 */
-  ogg_uint32_t     MVBits_1; /* count of bits used by MV coding mode 1 */
-  oc_mode_scheme_chooser chooser;
+  /*Indexed via [key/inter][dc/ac][luma/chroma].*/
+  int                       huffchoice[2][2][2];
+
+  ogg_uint32_t              dc_bits[2][DC_HUFF_CHOICES];
+  ogg_uint32_t              ac1_bits[2][AC_HUFF_CHOICES];
+  ogg_uint32_t              acN_bits[2][AC_HUFF_CHOICES];
+  /*Count of bits used by MV coding mode 0.*/
+  ogg_uint32_t              MVBits_0;
+  /*Count of bits used by MV coding mode 1.*/
+  ogg_uint32_t              MVBits_1;
+  oc_mode_scheme_chooser    chooser;
 
   /*********************************************************************/
   /* Token Buffers */
-  int             *fr_partial;
-  unsigned char   *fr_partial_bits;
-  int             *fr_full;
-  unsigned char   *fr_full_bits;
-  ogg_int16_t     *fr_block;
-  unsigned char   *fr_block_bits;
-  int              fr_partial_count;
-  int              fr_full_count;
-  int              fr_block_count;
+  int                      *fr_partial;
+  unsigned char            *fr_partial_bits;
+  int                      *fr_full;
+  unsigned char            *fr_full_bits;
+  ogg_int16_t              *fr_block;
+  unsigned char            *fr_block_bits;
+  int                       fr_partial_count;
+  int                       fr_full_count;
+  int                       fr_block_count;
 
 
-  int              stack_offset;
-  unsigned char   *dct_token_storage;
-  ogg_uint16_t    *dct_token_eb_storage;
-  unsigned char   *dct_token[64];
-  ogg_uint16_t    *dct_token_eb[64];
+  int                       stack_offset;
+  unsigned char            *dct_token_storage;
+  ogg_uint16_t             *dct_token_eb_storage;
+  unsigned char            *dct_token[64];
+  ogg_uint16_t             *dct_token_eb[64];
 
-  ogg_int32_t      dct_token_count[64];
-  ogg_int32_t      dct_token_ycount[64];
+  ogg_int32_t               dct_token_count[64];
+  ogg_int32_t               dct_token_ycount[64];
 
-  int              eob_run[64];
-  int              eob_pre[64];
-  int              eob_ypre[64];
+  int                       eob_run[64];
+  int                       eob_pre[64];
+  int                       eob_ypre[64];
 
   /********************************************************************/
   /* Fragment SAD->bitrate estimation tracking metrics */
-  long             rho_count[65]; 
+  long                      rho_count[65]; 
 
 #ifdef COLLECT_METRICS
-  long             rho_postop; 
-  int             *frag_mbi;
-  int             *frag_sad;
-  int             *dct_token_frag_storage;
-  int             *dct_token_frag[64];
-  int             *dct_eob_fi_storage;
-  int             *dct_eob_fi_stack[64];
-  int              dct_eob_fi_count[64];
-  ogg_int64_t     dist_dist[3][8];
-  ogg_int64_t     dist_bits[3][8];
+  long                      rho_postop;
+  int                      *frag_mbi;
+  int                      *frag_sad;
+  int                      *dct_token_frag_storage;
+  int                      *dct_token_frag[64];
+  int                      *dct_eob_fi_storage;
+  int                      *dct_eob_fi_stack[64];
+  int                       dct_eob_fi_count[64];
+  ogg_int64_t               dist_dist[3][8];
+  ogg_int64_t               dist_bits[3][8];
 #endif
 
   /********************************************************************/
   /* Setup */
-  int              keyframe_granule_shift;
-  int              lambda;
-  int              BaseQ;
-  int              MinQ;
-  int              GoldenFrameEnabled;
-  int              InterPrediction;
-  int              MotionCompensation;
+  int                     keyframe_granule_shift;
+  int                     lambda;
+  int                     BaseQ;
+  int                     MinQ;
+  int                     GoldenFrameEnabled;
+  int                     InterPrediction;
+  int                     MotionCompensation;
 
   /* hufftables and quant setup ****************************************/
 
-  HUFF_ENTRY      *HuffRoot_VP3x[NUM_HUFF_TABLES];
-  ogg_uint32_t    *HuffCodeArray_VP3x[NUM_HUFF_TABLES];
-  unsigned char   *HuffCodeLengthArray_VP3x[NUM_HUFF_TABLES];
-  const unsigned char *ExtraBitLengths_VP3x;
+  th_huff_code            huff_codes[TH_NHUFFMAN_TABLES][TH_NDCT_TOKENS];
 
-  th_quant_info    quant_info;
-  quant_tables     quant_tables[2][3];
-  oc_iquant_tables iquant_tables[2][3];
+  th_quant_info           quant_info;
+  quant_tables            quant_tables[2][3];
+  oc_iquant_tables        iquant_tables[2][3];
   /*An "average" quantizer for each quantizer type (INTRA or INTER) and QI
      value.
     This is used to paramterize the rate control decisions.
     They are kept in the log domain to simplify later processing.
     Keep in mind these are DCT domain quantizers, and so are scaled by an
      additional factor of 4 from the pixel domain.*/
-  ogg_int64_t      log_qavg[2][64];
+  ogg_int64_t             log_qavg[2][64];
   /*The buffer state used to drive rate control.*/
-  oc_rc_state      rc;
-  DspFunctions     dsp;  /* Selected functions for this platform */
-
+  oc_rc_state             rc;
+  /*Table for encoder acceleration functions.*/
+  oc_enc_opt_vtable       opt_vtable;
 };
 
-#define clamp255(x) ((unsigned char)((((x)<0)-1) & ((x) | -((x)>255))))
-
-extern void IDct1( const ogg_int16_t *InputData,
-                   const ogg_int16_t *QuantMatrix,
-                   ogg_int16_t *OutputData );
-
 extern void ReconRefFrames (CP_INSTANCE *cpi);
-
-extern void fdct_short ( ogg_int16_t *InputData, ogg_int16_t *OutputData );
 
 typedef struct {
   int coeff;
@@ -386,10 +391,6 @@ extern void dct_tokenize_finish (CP_INSTANCE *cpi);
 extern void dct_tokenize_mark_ac_chroma (CP_INSTANCE *cpi);
 
 extern void InitQTables( CP_INSTANCE *cpi );
-extern void InitHuffmanSet( CP_INSTANCE *cpi );
-extern void ClearHuffmanSet( CP_INSTANCE *cpi );
-extern void WriteHuffmanTrees(HUFF_ENTRY *HuffRoot[NUM_HUFF_TABLES],
-                              oggpack_buffer *opb);
 
 extern void WriteFrameHeader( CP_INSTANCE *cpi) ;
 
@@ -452,5 +453,54 @@ extern int fr_cost4(fr_state_t *pre, fr_state_t *post);
 extern void ModeMetrics(CP_INSTANCE *cpi);
 extern void DumpMetrics(CP_INSTANCE *cpi);
 #endif
+
+/*Encoder-specific accelerated functions.*/
+void oc_enc_frag_sub(const CP_INSTANCE *_cpi,ogg_int16_t _diff[64],
+ const unsigned char *_src,const unsigned char *_ref,int _ystride);
+void oc_enc_frag_sub_128(const CP_INSTANCE *_cpi,ogg_int16_t _diff[64],
+ const unsigned char *_src,int _ystride);
+unsigned oc_enc_frag_sad(const CP_INSTANCE *_cpi,const unsigned char *_src,
+ const unsigned char *_ref,int _ystride);
+unsigned oc_enc_frag_sad_thresh(const CP_INSTANCE *_cpi,
+ const unsigned char *_src,const unsigned char *_ref,int _ystride,
+ unsigned _thresh);
+unsigned oc_enc_frag_sad2_thresh(const CP_INSTANCE *_cpi,
+ const unsigned char *_src,const unsigned char *_ref1,
+ const unsigned char *_ref2,int _ystride,unsigned _thresh);
+void oc_enc_frag_copy(const CP_INSTANCE *_cpi,unsigned char *_dst,
+ const unsigned char *_src,int _ystride);
+void oc_enc_frag_copy2(const CP_INSTANCE *_cpi,unsigned char *_dst,
+ const unsigned char *_src1,const unsigned char *_src2,int _ystride);
+void oc_enc_frag_recon_intra(const CP_INSTANCE *_cpi,
+ unsigned char *_dst,int _ystride,const ogg_int16_t _residue[64]);
+void oc_enc_frag_recon_inter(const CP_INSTANCE *_cpi,unsigned char *_dst,
+ const unsigned char *_src,int _ystride,const ogg_int16_t _residue[64]);
+void oc_enc_fdct8x8(const CP_INSTANCE *_cpi,ogg_int16_t _y[64],
+ const ogg_int16_t _x[64]);
+void oc_enc_dequant_idct8x8(const CP_INSTANCE *_cpi,ogg_int16_t _y[64],
+ const ogg_int16_t _x[64],int _last_zzi,int _ncoefs,
+ ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]);
+void oc_enc_loop_filter(CP_INSTANCE *_cpi,int _flimit);
+void oc_enc_restore_fpu(const CP_INSTANCE *_cpi);
+
+/*Default pure-C implementations.*/
+void oc_enc_vtable_init_c(CP_INSTANCE *_cpi);
+
+void oc_enc_frag_sub_c(ogg_int16_t _diff[64],
+ const unsigned char *_src,const unsigned char *_ref,int _ystride);
+void oc_enc_frag_sub_128_c(ogg_int16_t _diff[64],
+ const unsigned char *_src,int _ystride);
+void oc_enc_frag_copy2_c(unsigned char *_dst,
+ const unsigned char *_src1,const unsigned char *_src2,int _ystride);
+unsigned oc_enc_frag_sad_c(const unsigned char *_src,
+ const unsigned char *_ref,int _ystride);
+unsigned oc_enc_frag_sad_thresh_c(const unsigned char *_src,
+ const unsigned char *_ref,int _ystride,unsigned _thresh);
+unsigned oc_enc_frag_sad2_thresh_c(const unsigned char *_src,
+ const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
+ unsigned _thresh);
+void oc_enc_fdct8x8_c(ogg_int16_t _y[64],const ogg_int16_t _x[64]);
+void oc_enc_loop_filter_c(CP_INSTANCE *_cpi,int _flimit);
+void oc_enc_restore_fpu_c(void);
 
 #endif /* ENCODER_INTERNAL_H */

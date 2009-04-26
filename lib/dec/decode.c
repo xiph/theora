@@ -175,10 +175,10 @@ static int oc_dec_init(oc_dec_ctx *_dec,const th_info *_info,
     int qsum;
     qsum=0;
     for(qti=0;qti<2;qti++)for(pli=0;pli<3;pli++){
-      qsum+=_dec->state.dequant_tables[qti][pli][qi][18]+
-       _dec->state.dequant_tables[qti][pli][qi][19]+
-       _dec->state.dequant_tables[qti][pli][qi][26]+
-       _dec->state.dequant_tables[qti][pli][qi][27]<<(pli==0);
+      qsum+=_dec->state.dequant_tables[qti][pli][qi][12]+
+       _dec->state.dequant_tables[qti][pli][qi][17]+
+       _dec->state.dequant_tables[qti][pli][qi][18]+
+       _dec->state.dequant_tables[qti][pli][qi][24]<<(pli==0);
     }
     _dec->pp_sharp_mod[qi]=-(qsum>>11);
   }
@@ -1397,7 +1397,7 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
   coded_fragi_end+=_pipe->ncoded_fragis[_pli];
   for(;coded_fragi<coded_fragi_end;coded_fragi++){
     oc_fragment    *frag;
-    oc_quant_table *iquants;
+    oc_quant_table *quants;
     /*This array is made one bigger than necessary so that an invalid zero
        run cannot cause a buffer overflow.
       The inverse zig-zag mapping sends all out of range indices to the last
@@ -1432,11 +1432,11 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
       If it's not, we should report some kind of warning.*/
     zzi=OC_MINI(zzi,64);
     dct_coeffs[0]=(ogg_int16_t)frag->dc;
-    iquants=_dec->state.dequant_tables[frag->mbmode!=OC_MODE_INTRA][_pli];
+    quants=_dec->state.dequant_tables[frag->mbmode!=OC_MODE_INTRA][_pli];
     /*last_zzi is always initialized.
       If your compiler thinks otherwise, it is dumb.*/
     oc_state_frag_recon(&_dec->state,frag,_pli,dct_coeffs,last_zzi,zzi,
-     iquants[_dec->state.qis[0]][0],iquants[frag->qi]);
+     quants[_dec->state.qis[0]][0],quants[frag->qi]);
   }
   _pipe->coded_fragis[_pli]=coded_fragi;
   /*Right now the reconstructed MCU has only the coded blocks in it.*/
@@ -1451,7 +1451,7 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
      correctly.*/
   /*Copy the uncoded blocks from the previous reference frame.*/
   _pipe->uncoded_fragis[_pli]-=_pipe->nuncoded_fragis[_pli];
-  oc_state_frag_copy(&_dec->state,_pipe->uncoded_fragis[_pli],
+  oc_state_frag_copy_list(&_dec->state,_pipe->uncoded_fragis[_pli],
    _pipe->nuncoded_fragis[_pli],OC_FRAME_SELF,OC_FRAME_PREV,_pli);
 }
 
@@ -2031,6 +2031,10 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
          pipe.fragy_end[pli]-edelay<<frag_shift);
       }
       if(_dec->stripe_cb.stripe_decoded!=NULL){
+        /*The callback might want to use the FPU, so let's make sure they can.
+          We violate all kinds of ABI restrictions by not doing this until
+           now, but none of them actually matter.*/
+        oc_restore_fpu(&_dec->state);
         /*Make the callback, ensuring we flip the sense of the "start" and
            "end" of the available region upside down.*/
         (*_dec->stripe_cb.stripe_decoded)(_dec->stripe_cb.ctx,stripe_buf,
@@ -2057,6 +2061,7 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
     /*Don't dump images for dropped frames.*/
     oc_state_dump_frame(&_dec->state,OC_FRAME_SELF,"dec");
 #endif
+    oc_restore_fpu(&_dec->state);
     return 0;
   }
   else{

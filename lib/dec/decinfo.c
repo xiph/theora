@@ -116,8 +116,8 @@ static int oc_comment_unpack(oggpack_buffer *_opb,th_comment *_tc){
   _tc->vendor[len]='\0';
   /*Read the user comments.*/
   _tc->comments=(int)oc_unpack_length(_opb);
-  if(_tc->comments<0||_tc->comments>(LONG_MAX>>2)||
-   ((long)_tc->comments<<2)>_opb->storage-theorapackB_bytes(_opb)){
+  len=_tc->comments;
+  if(len<0||len>(LONG_MAX>>2)||len<<2>_opb->storage-theorapackB_bytes(_opb)){
     _tc->comments=0;
     return TH_EBADHEADER;
   }

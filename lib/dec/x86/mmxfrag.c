@@ -20,12 +20,20 @@
   Additional optimization by Nils Pipenbrinck.
   Note: Loops are unrolled for best performance.
   The iteration each instruction belongs to is marked in the comments as #i.*/
-#include "x86int.h"
 #include <stddef.h>
+#include "x86int.h"
+#include "mmxfrag.h"
 
-#if defined(USE_ASM)
+#if defined(OC_X86_ASM)
 
-void oc_frag_recon_intra_mmx(unsigned char *_dst,int _dst_ystride,
+/*Copies an 8x8 block of pixels from _src to _dst, assuming _ystride bytes
+   between rows.*/
+void oc_frag_copy_mmx(unsigned char *_dst,
+ const unsigned char *_src,int _ystride){
+  OC_FRAG_COPY_MMX(_dst,_src,_ystride);
+}
+
+void oc_frag_recon_intra_mmx(unsigned char *_dst,int _ystride,
  const ogg_int16_t *_residue){
   __asm__ __volatile__(
     /*Set mm0 to 0xFFFFFFFFFFFFFFFF.*/
@@ -67,9 +75,9 @@ void oc_frag_recon_intra_mmx(unsigned char *_dst,int _dst_ystride,
     /*#0 Write row.*/
     "movq %%mm1,(%[dst])\n\t"
     /*#1 Write row.*/
-    "movq %%mm3,(%[dst],%[dst_ystride])\n\t"
+    "movq %%mm3,(%[dst],%[ystride])\n\t"
     /*#2 Write row.*/
-    "movq %%mm5,(%[dst],%[dst_ystride],2)\n\t"
+    "movq %%mm5,(%[dst],%[ystride],2)\n\t"
     /*#3 Load low residue.*/
     "movq 6*8(%[residue]),%%mm1\n\t"
     /*#3 Load high residue.*/
@@ -101,11 +109,11 @@ void oc_frag_recon_intra_mmx(unsigned char *_dst,int _dst_ystride,
     /*#5 Pack to byte.*/
     "packuswb %%mm6,%%mm5\n\t"
     /*#3 Write row.*/
-    "movq %%mm1,(%[dst],%[dst_ystride3])\n\t"
+    "movq %%mm1,(%[dst],%[ystride3])\n\t"
     /*#4 Write row.*/
     "movq %%mm3,(%[dst4])\n\t"
     /*#5 Write row.*/
-    "movq %%mm5,(%[dst4],%[dst_ystride])\n\t"
+    "movq %%mm5,(%[dst4],%[ystride])\n\t"
     /*#6 Load low residue.*/
     "movq 12*8(%[residue]),%%mm1\n\t"
     /*#6 Load high residue.*/
@@ -127,21 +135,21 @@ void oc_frag_recon_intra_mmx(unsigned char *_dst,int _dst_ystride,
     /*#7 Pack to byte.*/
     "packuswb %%mm4,%%mm3\n\t"
     /*#6 Write row.*/
-    "movq %%mm1,(%[dst4],%[dst_ystride],2)\n\t"
+    "movq %%mm1,(%[dst4],%[ystride],2)\n\t"
     /*#7 Write row.*/
-    "movq %%mm3,(%[dst4],%[dst_ystride3])\n\t"
+    "movq %%mm3,(%[dst4],%[ystride3])\n\t"
     :
     :[residue]"r"(_residue),
      [dst]"r"(_dst),
-     [dst4]"r"(_dst+(_dst_ystride<<2)),
-     [dst_ystride]"r"((ptrdiff_t)_dst_ystride),
-     [dst_ystride3]"r"((ptrdiff_t)_dst_ystride*3)
+     [dst4]"r"(_dst+(_ystride<<2)),
+     [ystride]"r"((ptrdiff_t)_ystride),
+     [ystride3]"r"((ptrdiff_t)_ystride*3)
     :"memory"
   );
 }
 
-void oc_frag_recon_inter_mmx(unsigned char *_dst,int _dst_ystride,
- const unsigned char *_src,int _src_ystride,const ogg_int16_t *_residue){
+void oc_frag_recon_inter_mmx(unsigned char *_dst,const unsigned char *_src,
+ int _ystride,const ogg_int16_t *_residue){
   int i;
   /*Zero mm0.*/
   __asm__ __volatile__("pxor %%mm0,%%mm0\n\t"::);
@@ -150,7 +158,7 @@ void oc_frag_recon_inter_mmx(unsigned char *_dst,int _dst_ystride,
       /*#0 Load source.*/
       "movq (%[src]),%%mm3\n\t"
       /*#1 Load source.*/
-      "movq (%[src],%[src_ystride]),%%mm7\n\t"
+      "movq (%[src],%[ystride]),%%mm7\n\t"
       /*#0 Get copy of src.*/
       "movq %%mm3,%%mm4\n\t"
       /*#0 Expand high source.*/
@@ -178,29 +186,23 @@ void oc_frag_recon_inter_mmx(unsigned char *_dst,int _dst_ystride,
       /*#1 Pack final row pixels.*/
       "packuswb %%mm2,%%mm7\n\t"
       /*Advance src.*/
-      "lea (%[src],%[src_ystride],2),%[src]\n\t"
+      "lea (%[src],%[ystride],2),%[src]\n\t"
       /*#0 Write row.*/
       "movq %%mm3,(%[dst])\n\t"
       /*#1 Write row.*/
-      "movq %%mm7,(%[dst],%[dst_ystride])\n\t"
+      "movq %%mm7,(%[dst],%[ystride])\n\t"
       /*Advance dst.*/
-      "lea (%[dst],%[dst_ystride],2),%[dst]\n\t"
+      "lea (%[dst],%[ystride],2),%[dst]\n\t"
       :[residue]"+r"(_residue),[dst]"+r"(_dst),[src]"+r"(_src)
-      :[dst_ystride]"r"((ptrdiff_t)_dst_ystride),
-       [src_ystride]"r"((ptrdiff_t)_src_ystride)
+      :[ystride]"r"((ptrdiff_t)_ystride)
       :"memory"
     );
   }
 }
 
-void oc_frag_recon_inter2_mmx(unsigned char *_dst,int _dst_ystride,
- const unsigned char *_src1,int _src1_ystride,const unsigned char *_src2,
- int _src2_ystride,const ogg_int16_t *_residue){
+void oc_frag_recon_inter2_mmx(unsigned char *_dst,const unsigned char *_src1,
+ const unsigned char *_src2,int _ystride,const ogg_int16_t *_residue){
   int i;
-  /*NOTE: This assumes that
-     _dst_ystride==_src1_ystride&&_dst_ystride==_src2_ystride.
-    This is currently always the case, but a slower fallback version will need
-     to be written if it ever is not.*/
   /*Zero mm7.*/
   __asm__ __volatile__("pxor %%mm7,%%mm7\n\t"::);
   for(i=4;i-->0;){
@@ -278,8 +280,8 @@ void oc_frag_recon_inter2_mmx(unsigned char *_dst,int _dst_ystride,
       /*Advance dest ptr.*/
       "lea (%[dst],%[ystride],2),%[dst]\n\t"
      :[dst]"+r"(_dst),[residue]"+r"(_residue),
-      [src1]"+r"(_src1),[src2]"+r"(_src2)
-     :[ystride]"r"((ptrdiff_t)_dst_ystride)
+      [src1]"+%r"(_src1),[src2]"+r"(_src2)
+     :[ystride]"r"((ptrdiff_t)_ystride)
      :"memory"
     );
   }

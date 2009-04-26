@@ -299,12 +299,12 @@ static int BInterSAD(CP_INSTANCE *cpi,int _fi,int _dx,int _dy,
     int offs[2];
     if(oc_get_mv_offsets(offs,_dx,_dy,
      cpi->stride[_pli],_pli,cpi->info.pixelformat)>1){
-      sad=dsp_sad8x8_xy2_thres(cpi->dsp,b,r+offs[0],r+offs[1],stride,16384);
+      sad=oc_enc_frag_sad2_thresh(cpi,b,r+offs[0],r+offs[1],stride,0x3FC0);
     }
-    else sad=dsp_sad8x8(cpi->dsp,b,r+offs[0],stride);
+    else sad=oc_enc_frag_sad(cpi,b,r+offs[0],stride);
   }
   /*TODO: Is this special case worth it?*/
-  else sad=dsp_sad8x8(cpi->dsp,b,r,stride);
+  else sad=oc_enc_frag_sad(cpi,b,r,stride);
   /*TODO: <<2? Really? Why?*/
   if(_pli)return sad<<2;
   else return sad;
@@ -381,7 +381,7 @@ static int cost_inter_nomv(CP_INSTANCE *cpi,int _qi,int _mbi,int *_overhead){
         int offs;
         int sad;
         offs=cpi->frag_buffer_index[fi];
-        sad=dsp_sad8x8(cpi->dsp,cpi->frame+offs,cpi->lastrecon+offs,stride);
+        sad=oc_enc_frag_sad(cpi,cpi->frame+offs,cpi->lastrecon+offs,stride);
         if(pli)sad<<=2;
         cost+=BINMAP(mode_rate[_qi][pli][0],sad);
       }
@@ -489,11 +489,12 @@ static int cost_inter4mv(CP_INSTANCE *cpi,int _qi,int _mbi,
 #include "quant_lookup.h"
 
 static void uncode_frag(CP_INSTANCE *cpi, int fi, int plane){
-  int bi = cpi->frag_buffer_index[fi];
-  int stride = cpi->stride[plane];
-
+  int bi;
+  int stride;
+  bi=cpi->frag_buffer_index[fi];
+  stride=cpi->stride[plane];
   cpi->frag_coded[fi]=0;
-  dsp_copy8x8 (cpi->dsp, cpi->lastrecon+bi, cpi->recon+bi, stride);
+  oc_enc_frag_copy(cpi,cpi->recon+bi,cpi->lastrecon+bi,stride);
 }
 
 typedef struct{
@@ -546,8 +547,8 @@ static int TQB (CP_INSTANCE *cpi,plane_state_t *ps,int mode,int fi,
  token_checkpoint_t **stack){
   const int keyframe = (cpi->FrameType == KEY_FRAME);
   const oc_iquant *iq = ps->iq[mode != CODE_INTRA];
-  ogg_int16_t buffer[64];
-  ogg_int16_t data[64];
+  ogg_int16_t buffer[64]OC_ALIGN16;
+  ogg_int16_t data[64]OC_ALIGN16;
   const int bi = cpi->frag_buffer_index[fi];
   const int stride = cpi->stride[ps->plane];
   const unsigned char *frame_ptr = &cpi->frame[bi];
@@ -561,6 +562,8 @@ static int TQB (CP_INSTANCE *cpi,plane_state_t *ps,int mode,int fi,
   int uncoded_dc=0,coded_dc=0,dc_flag=0;
   int lambda = cpi->lambda;
   token_checkpoint_t *checkpoint=*stack;
+  int mv_offs[2];
+  int nmv_offs;
   int cost;
   int ci;
   int pi;
@@ -578,36 +581,26 @@ static int TQB (CP_INSTANCE *cpi,plane_state_t *ps,int mode,int fi,
 
   /* motion comp */
   switch(mode){
-  case CODE_INTER_PLUS_MV:
-  case CODE_INTER_LAST_MV:
-  case CODE_INTER_PRIOR_LAST:
-  case CODE_GOLDEN_MV:
-  case CODE_INTER_FOURMV:
-
-    {
-      int offs[2];
-      if(oc_get_mv_offsets(offs,_dx,_dy,
-       stride,ps->plane,cpi->info.pixelformat)>1){
-        dsp_copy8x8_half(cpi->dsp,
-         lastrecon+offs[0],lastrecon+offs[1],thisrecon,stride);
-        dsp_sub8x8(cpi->dsp,frame_ptr,thisrecon,data,stride);
+    case CODE_INTRA:{
+      nmv_offs=0;
+      oc_enc_frag_sub_128(cpi,data,frame_ptr,stride);
+    }break;
+    case CODE_USING_GOLDEN:
+    case CODE_INTER_NO_MV:{
+      nmv_offs=1;
+      mv_offs[0]=0;
+      oc_enc_frag_sub(cpi,data,frame_ptr,lastrecon,stride);
+    }break;
+    default:{
+      nmv_offs=oc_get_mv_offsets(mv_offs,_dx,_dy,
+       stride,ps->plane,cpi->info.pixelformat);
+      if(nmv_offs>1){
+        oc_enc_frag_copy2(cpi,thisrecon,
+         lastrecon+mv_offs[0],lastrecon+mv_offs[1],stride);
+        oc_enc_frag_sub(cpi,data,frame_ptr,thisrecon,stride);
       }
-      else{
-        dsp_copy8x8(cpi->dsp,lastrecon+offs[0],thisrecon,stride);
-        dsp_sub8x8(cpi->dsp,frame_ptr,lastrecon+offs[0],data,stride);
-      }
-    }
-    break;
-
-  case CODE_USING_GOLDEN:
-  case CODE_INTER_NO_MV:
-    dsp_copy8x8 (cpi->dsp, lastrecon, thisrecon, stride);
-    dsp_sub8x8(cpi->dsp, frame_ptr, lastrecon, data, stride);
-    break;
-  case CODE_INTRA:
-    dsp_sub8x8_128(cpi->dsp, frame_ptr, data, stride);
-    dsp_set8x8(cpi->dsp, 128, thisrecon, stride);
-    break;
+      else oc_enc_frag_sub(cpi,data,frame_ptr,lastrecon+mv_offs[0],stride);
+    }break;
   }
 
 #ifdef COLLECT_METRICS
@@ -636,7 +629,7 @@ static int TQB (CP_INSTANCE *cpi,plane_state_t *ps,int mode,int fi,
         uncoded_dc += data[pi];
       }
     }else{
-      dsp_sub8x8(cpi->dsp, frame_ptr, cpi->lastrecon+bi, buffer, stride);
+      oc_enc_frag_sub(cpi,buffer,frame_ptr,cpi->lastrecon+bi,stride);
       for(pi=0;pi<64;pi++){
         uncoded_ssd += buffer[pi]*buffer[pi];
         uncoded_dc += buffer[pi];
@@ -646,7 +639,7 @@ static int TQB (CP_INSTANCE *cpi,plane_state_t *ps,int mode,int fi,
   }
 
   /* transform */
-  dsp_fdct_short(cpi->dsp, data, buffer);
+  oc_enc_fdct8x8(cpi,buffer,data);
 
   /* collect rho metrics, quantize */
   {
@@ -693,26 +686,18 @@ static int TQB (CP_INSTANCE *cpi,plane_state_t *ps,int mode,int fi,
   /* tokenize */
   cost = dct_tokenize_AC(cpi, fi, data, dequant, buffer, fi>=cpi->frag_n[0], stack);
 
-  /* reconstruct */
-  switch(nonzero){
-  case 0:
-    IDct1( data, dequant, buffer );
-    break;
-  case 1: case 2:
-    dsp_IDct3(cpi->dsp, data, dequant, buffer );
-    break;
-  case 3:case 4:case 5:case 6:case 7:case 8: case 9:
-    dsp_IDct10(cpi->dsp, data, dequant, buffer );
-    break;
-  default:
-    dsp_IDctSlow(cpi->dsp, data, dequant, buffer );
+  /*Reconstruct.*/
+  oc_enc_dequant_idct8x8(cpi,buffer,data,
+   nonzero+1,nonzero+1,dequant[0],(ogg_uint16_t *)dequant);
+  if(mode==CODE_INTRA)oc_enc_frag_recon_intra(cpi,thisrecon,stride,buffer);
+  else{
+    oc_enc_frag_recon_inter(cpi,thisrecon,
+     nmv_offs==1?lastrecon+mv_offs[0]:thisrecon,stride,buffer);
   }
-
-  dsp_recon8x8 (cpi->dsp, thisrecon, buffer, stride);
 
   if(!keyframe){
     /* in retrospect, should we have skipped this block? */
-    dsp_sub8x8(cpi->dsp, frame_ptr, thisrecon, buffer, stride);
+    oc_enc_frag_sub(cpi,buffer,frame_ptr,thisrecon,stride);
     for(pi=0;pi<64;pi++){
       coded_ssd+=buffer[pi]*buffer[pi];
       coded_dc+=buffer[pi];
@@ -1283,7 +1268,7 @@ static void ModeMetricsGroup(CP_INSTANCE *cpi, int group, int huffY, int huffC, 
 
   for(ti=0;ti<tn;ti++){
     int token = cpi->dct_token[group][ti];
-    int bits = cpi->HuffCodeLengthArray_VP3x[(ti<ty ? huffY : huffC)][token] + cpi->ExtraBitLengths_VP3x[token];
+    int bits = cpi->huff_codes[(ti<ty ? huffY : huffC)][token].nbits + OC_DCT_TOKEN_EXTRA_BITS[token];
 
     if(token>DCT_REPEAT_RUN4_TOKEN){
       /* not an EOB run; this token belongs to a single fragment */

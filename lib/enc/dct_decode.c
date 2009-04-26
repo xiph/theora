@@ -148,8 +148,8 @@ static void loop_filter_h(unsigned char * PixelPtr,
 
     FiltVal = *(BoundingValuePtr+((FiltVal + 4) >> 3));
 
-    PixelPtr[1] = clamp255(PixelPtr[1] + FiltVal);
-    PixelPtr[2] = clamp255(PixelPtr[2] - FiltVal);
+    PixelPtr[1] = OC_CLAMP255(PixelPtr[1] + FiltVal);
+    PixelPtr[2] = OC_CLAMP255(PixelPtr[2] - FiltVal);
 
     PixelPtr += LineLength;
   }
@@ -170,14 +170,14 @@ static void loop_filter_v(unsigned char * PixelPtr,
 
     FiltVal = *(BoundingValuePtr+((FiltVal + 4) >> 3));
 
-    PixelPtr[LineLength] = clamp255(PixelPtr[LineLength] + FiltVal);
-    PixelPtr[2 * LineLength] = clamp255(PixelPtr[2*LineLength] - FiltVal);
+    PixelPtr[LineLength] = OC_CLAMP255(PixelPtr[LineLength] + FiltVal);
+    PixelPtr[2 * LineLength] = OC_CLAMP255(PixelPtr[2*LineLength] - FiltVal);
 
     PixelPtr ++;
   }
 }
 
-static void LoopFilter__c(CP_INSTANCE *cpi, int FLimit){
+void oc_enc_loop_filter_c(CP_INSTANCE *cpi, int FLimit){
 
   int j;
   ogg_int16_t BoundingValues[256];
@@ -198,18 +198,18 @@ static void LoopFilter__c(CP_INSTANCE *cpi, int FLimit){
       ogg_uint32_t *bp_left = bp;
       ogg_uint32_t *bp_right = bp + h;
       while(bp<bp_right){
-	if(cp[0]){
-	  if(bp>bp_left)
-	    loop_filter_h(&cpi->lastrecon[bp[0]],stride,bvp);
-	  if(bp_left>bp_begin)
-	    loop_filter_v(&cpi->lastrecon[bp[0]],stride,bvp);
-	  if(bp+1<bp_right && !cp[1])
-	    loop_filter_h(&cpi->lastrecon[bp[0]]+8,stride,bvp);
-	  if(bp+h<bp_end && !cp[h])
-	    loop_filter_v(&cpi->lastrecon[bp[h]],stride,bvp);
-	}
-	bp++;
-	cp++;
+        if(cp[0]){
+          if(bp>bp_left)
+            loop_filter_h(&cpi->lastrecon[bp[0]],stride,bvp);
+          if(bp_left>bp_begin)
+            loop_filter_v(&cpi->lastrecon[bp[0]],stride,bvp);
+          if(bp+1<bp_right && !cp[1])
+            loop_filter_h(&cpi->lastrecon[bp[0]]+8,stride,bvp);
+          if(bp+h<bp_end && !cp[h])
+            loop_filter_v(&cpi->lastrecon[bp[h]],stride,bvp);
+        }
+        bp++;
+        cp++;
       }
     }
   }
@@ -222,21 +222,11 @@ void ReconRefFrames (CP_INSTANCE *cpi){
   cpi->lastrecon=cpi->recon;
   cpi->recon=temp;
   /* Apply a loop filter to edge pixels of updated blocks */
-  dsp_LoopFilter(cpi->dsp, cpi, cpi->quant_info.loop_filter_limits[cpi->BaseQ] /* temp */);
+  oc_enc_loop_filter(cpi,cpi->quant_info.loop_filter_limits[cpi->BaseQ]);
   /* We may need to update the UMV border */
   UpdateUMVBorder(cpi, cpi->lastrecon);
   /*Swap back.*/
   temp=cpi->lastrecon;
   cpi->lastrecon=cpi->recon;
   cpi->recon=temp;
-}
-
-void dsp_dct_decode_init (DspFunctions *funcs, ogg_uint32_t cpu_flags)
-{
-  funcs->LoopFilter = LoopFilter__c;
-#if defined(USE_ASM)
-  if (cpu_flags & OC_CPU_X86_MMX) {
-    dsp_mmx_dct_decode_init(funcs);
-  }
-#endif
 }

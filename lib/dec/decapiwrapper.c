@@ -52,7 +52,7 @@ static double theora_decode_granule_time(theora_state *_td,ogg_int64_t _gp){
   return th_granule_time(((th_api_wrapper *)_td->i->codec_setup)->decode,_gp);
 }
 
-static const oc_state_dispatch_vtbl OC_DEC_DISPATCH_VTBL={
+static const oc_state_dispatch_vtable OC_DEC_DISPATCH_VTBL={
   (oc_state_clear_func)theora_decode_clear,
   (oc_state_control_func)theora_decode_control,
   (oc_state_granule_frame_func)theora_decode_granule_frame,

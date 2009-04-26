@@ -263,7 +263,7 @@ void InitQTables( CP_INSTANCE *cpi ){
     /*Now compute an "average" quantizer for each qi level.
       We do one for INTER and one for INTRA, since their behavior is very
        different, but average across chroma channels.
-      The basic approach is to compute a geometric average of the squared
+      The basic approach is to compute a harmonic average of the squared
        quantizer, weighted by the expected squared magnitude of the DCT
        coefficients.
       Under the (not quite true) assumption that DCT coefficients are

@@ -54,7 +54,6 @@ void oc_dequant_tables_init(oc_quant_table *_dequant[2][3],
       ogg_uint32_t    q;
       int             qi_start;
       int             qi_end;
-      int             ci;
       qtables=_dequant[qti][pli];
       memcpy(base,_qinfo->qi_ranges[qti][pli].base_matrices[qri],
        sizeof(base));
@@ -64,6 +63,8 @@ void oc_dequant_tables_init(oc_quant_table *_dequant[2][3],
       /*Iterate over quality indicies in this range.*/
       for(;;){
         ogg_uint32_t  qfac;
+        int           zzi;
+        int           ci;
         /*In the original VP3.2 code, the rounding offset and the size of the
            dead zone around 0 were controlled by a "sharpness" parameter.
           The size of our dead zone is now controlled by the per-coefficient
@@ -81,10 +82,10 @@ void oc_dequant_tables_init(oc_quant_table *_dequant[2][3],
         q=OC_CLAMPI(OC_DC_QUANT_MIN[qti],q,OC_QUANT_MAX);
         qtables[qi][0]=(ogg_uint16_t)q;
         /*Now scale AC coefficients from the proper table.*/
-        for(ci=1;ci<64;ci++){
-          q=((ogg_uint32_t)_qinfo->ac_scale[qi]*base[ci]/100)<<2;
+        for(zzi=1;zzi<64;zzi++){
+          q=((ogg_uint32_t)_qinfo->ac_scale[qi]*base[OC_FZIG_ZAG[zzi]]/100)<<2;
           q=OC_CLAMPI(OC_AC_QUANT_MIN[qti],q,OC_QUANT_MAX);
-          qtables[qi][ci]=(ogg_uint16_t)q;
+          qtables[qi][zzi]=(ogg_uint16_t)q;
         }
         if(++qi>=qi_end)break;
         /*Interpolate the next base matrix.*/

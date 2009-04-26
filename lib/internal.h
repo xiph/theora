@@ -34,6 +34,33 @@
 #  pragma warning(disable:4799)
 # endif
 
+/*Some assembly constructs require aligned operands.*/
+# if defined(OC_X86_ASM)
+#  if defined(__GNUC__)
+#   define OC_ALIGN8 __attribute__((aligned(8)))
+#   define OC_ALIGN16 __attribute__((aligned(16)))
+#  endif
+# endif
+# if !defined(OC_ALIGN8)
+#  define OC_ALIGN8
+# endif
+# if !defined(OC_ALIGN16)
+#  define OC_ALIGN16
+# endif
+
+
+
+typedef struct oc_sb                    oc_sb;
+typedef struct oc_mb                    oc_mb;
+typedef struct oc_border_info           oc_border_info;
+typedef struct oc_fragment              oc_fragment;
+typedef struct oc_fragment_plane        oc_fragment_plane;
+typedef struct oc_base_opt_vtable       oc_base_opt_vtable;
+typedef struct oc_state_dispatch_vtable oc_state_dispatch_vtable;
+typedef struct oc_theora_state          oc_theora_state;
+
+
+
 /*This library's version.*/
 # define OC_VENDOR_STRING "Xiph.Org libThusnelda I 20090403"
 
@@ -124,10 +151,6 @@
 
 
 
-typedef struct oc_theora_state oc_theora_state;
-
-
-
 /*A map from a super block to fragment numbers.*/
 typedef int         oc_sb_map[4][4];
 /*A map from a macro block to fragment numbers.*/
@@ -150,12 +173,12 @@ typedef signed char oc_mv[2];
    are called "fragments".
   Fragments are indexed in image order, left to right, then bottom to top,
    from Y plane to Cb plane to Cr plane.*/
-typedef struct{
+struct oc_sb{
   unsigned  coded_fully:1;
   unsigned  coded_partially:1;
   unsigned  quad_valid:4;
   oc_sb_map map;
-}oc_sb;
+};
 
 
 
@@ -166,7 +189,7 @@ typedef struct{
    contains between 6 and 12 fragments, depending on the pixel format.
   Therefore macro block information is kept in a separate array from super
    blocks, to avoid unused space in the other planes.*/
-typedef struct{
+struct oc_mb{
   /*The current macro block mode.
     A negative number indicates the macro block lies entirely outside the
      coded frame.*/
@@ -180,7 +203,7 @@ typedef struct{
     When chroma components are decimated, the extra fragments have an index of
      -1.*/
   oc_mb_map     map;
-}oc_mb;
+};
 
 
 
@@ -189,20 +212,20 @@ typedef struct{
   This marks which pixels belong to the displayable region, and is used to
    ensure that pixels outside of this region are never referenced.
   This allows applications to pass in buffers that are really the size of the
-   displayable region without causing a seg fault.*/
-typedef struct{
+   displayable region without causing a segfault.*/
+struct oc_border_info{
   /*A bit mask marking which pixels are in the displayable region.
     Pixel (x,y) corresponds to bit (y<<3|x).*/
   ogg_int64_t mask;
   /*The number of pixels in the displayable region.
     This is always positive, and always less than 64.*/
   int         npixels;
-}oc_border_info;
+};
 
 
 
 /*Fragment information.*/
-typedef struct{
+struct oc_fragment{
   /*A flag indicating whether or not this fragment is coded.*/
   unsigned        coded:1;
   /*A flag indicating that all of this fragment lies outside the displayable
@@ -233,12 +256,12 @@ typedef struct{
   oc_border_info *border;
   /*The motion vector used for this fragment.*/
   oc_mv           mv;
-}oc_fragment;
+};
 
 
 
 /*A description of each fragment plane.*/
-typedef struct{
+struct oc_fragment_plane{
   /*The number of fragments in the horizontal direction.*/
   int nhfrags;
   /*The number of fragments in the vertical direction.*/
@@ -255,28 +278,32 @@ typedef struct{
   int sboffset;
   /*The total number of super blocks in the plane.*/
   int nsbs;
-}oc_fragment_plane;
+};
 
 
 
 /*The shared (encoder and decoder) functions that have accelerated variants.*/
-typedef struct{
-  void (*frag_recon_intra)(unsigned char *_dst,int _dst_ystride,
-   const ogg_int16_t *_residue);
-  void (*frag_recon_inter)(unsigned char *_dst,int _dst_ystride,
-   const unsigned char *_src,int _src_ystride,const ogg_int16_t *_residue);
-  void (*frag_recon_inter2)(unsigned char *_dst,int _dst_ystride,
-   const unsigned char *_src1,int _src1_ystride,const unsigned char *_src2,
-   int _src2_ystride,const ogg_int16_t *_residue);
-  void (*state_frag_copy)(const oc_theora_state *_state,
-   const int *_fragis,int _nfragis,int _dst_frame,int _src_frame,int _pli);
-  void (*state_frag_recon)(oc_theora_state *_state,oc_fragment *_frag,
+struct oc_base_opt_vtable{
+  void (*frag_copy)(unsigned char *_dst,
+   const unsigned char *_src,int _ystride);
+  void (*frag_recon_intra)(unsigned char *_dst,int _ystride,
+   const ogg_int16_t _residue[64]);
+  void (*frag_recon_inter)(unsigned char *_dst,
+   const unsigned char *_src,int _ystride,const ogg_int16_t _residue[64]);
+  void (*frag_recon_inter2)(unsigned char *_dst,const unsigned char *_src1,
+   const unsigned char *_src2,int _ystride,const ogg_int16_t _residue[64]);
+  void (*dequant_idct8x8)(ogg_int16_t _y[64],const ogg_int16_t _x[64],
+   int _last_zzi,int _ncoefs,ogg_uint16_t _dc_quant,
+   const ogg_uint16_t _ac_quant[64]);
+  void (*state_frag_recon)(const oc_theora_state *_state,oc_fragment *_frag,
    int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
-   ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]);
-  void (*restore_fpu)(void);
-  void (*state_loop_filter_frag_rows)(oc_theora_state *_state,int *_bv,
+   ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]);
+  void (*state_frag_copy_list)(const oc_theora_state *_state,
+   const int *_fragis,int _nfragis,int _dst_frame,int _src_frame,int _pli);
+  void (*state_loop_filter_frag_rows)(const oc_theora_state *_state,int *_bv,
    int _refi,int _pli,int _fragy0,int _fragy_end);  
-}oc_base_opt_vtable;
+  void (*restore_fpu)(void);
+};
 
 
 
@@ -349,7 +376,8 @@ struct oc_theora_state{
   int                 qis[3];
   /*The number of quality indices used in the current frame.*/
   int                 nqis;
-  /*The dequantization tables.*/
+  /*The dequantization tables.
+    Note that these are stored in zig-zag order.*/
   oc_quant_table     *dequant_tables[2][3];
   oc_quant_tables     dequant_table_data[2][3];
   /*Loop filter strength parameters.*/
@@ -419,7 +447,7 @@ void oc_state_borders_fill(oc_theora_state *_state,int _refi);
 void oc_state_fill_buffer_ptrs(oc_theora_state *_state,int _buf_idx,
  th_ycbcr_buffer _img);
 int oc_state_mbi_for_pos(oc_theora_state *_state,int _mbx,int _mby);
-int oc_state_get_mv_offsets(oc_theora_state *_state,int *_offsets,
+int oc_state_get_mv_offsets(const oc_theora_state *_state,int *_offsets,
  int _dx,int _dy,int _ystride,int _pli);
 
 int oc_state_loop_filter_init(oc_theora_state *_state,int *_bv);
@@ -430,38 +458,45 @@ int oc_state_dump_frame(const oc_theora_state *_state,int _frame,
 #endif
 
 /*Shared accelerated functions.*/
+void oc_frag_copy(const oc_theora_state *_state,unsigned char *_dst,
+ const unsigned char *_src,int _ystride);
 void oc_frag_recon_intra(const oc_theora_state *_state,
- unsigned char *_dst,int _dst_ystride,const ogg_int16_t *_residue);
-void oc_frag_recon_inter(const oc_theora_state *_state,
- unsigned char *_dst,int _dst_ystride,
- const unsigned char *_src,int _src_ystride,const ogg_int16_t *_residue);
+ unsigned char *_dst,int _dst_ystride,const ogg_int16_t _residue[64]);
+void oc_frag_recon_inter(const oc_theora_state *_state,unsigned char *_dst,
+ const unsigned char *_src,int _ystride,const ogg_int16_t _residue[64]);
 void oc_frag_recon_inter2(const oc_theora_state *_state,
- unsigned char *_dst,int _dst_ystride,
- const unsigned char *_src1,int _src1_ystride,const unsigned char *_src2,
- int _src2_ystride,const ogg_int16_t *_residue);
-void oc_state_frag_copy(const oc_theora_state *_state,const int *_fragis,
- int _nfragis,int _dst_frame,int _src_frame,int _pli);
-void oc_state_frag_recon(oc_theora_state *_state,oc_fragment *_frag,
+ unsigned char *_dst,const unsigned char *_src1,const unsigned char *_src2,
+ int _ystride,const ogg_int16_t _residue[64]);
+void oc_dequant_idct8x8(const oc_theora_state *_state,ogg_int16_t _y[64],
+ const ogg_int16_t _x[64],int _last_zzi,int _ncoefs,
+ ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]);
+void oc_state_frag_recon(const oc_theora_state *_state,oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
- ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]);
-void oc_state_loop_filter_frag_rows(oc_theora_state *_state,int *_bv,
+ ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]);
+void oc_state_frag_copy_list(const oc_theora_state *_state,const int *_fragis,
+ int _nfragis,int _dst_frame,int _src_frame,int _pli);
+void oc_state_loop_filter_frag_rows(const oc_theora_state *_state,int *_bv,
  int _refi,int _pli,int _fragy0,int _fragy_end);
 void oc_restore_fpu(const oc_theora_state *_state);
 
 /*Default pure-C implementations.*/
+void oc_frag_copy_c(unsigned char *_dst,
+ const unsigned char *_src,int _src_ystride);
 void oc_frag_recon_intra_c(unsigned char *_dst,int _dst_ystride,
- const ogg_int16_t *_residue);
-void oc_frag_recon_inter_c(unsigned char *_dst,int _dst_ystride,
- const unsigned char *_src,int _src_ystride,const ogg_int16_t *_residue);
-void oc_frag_recon_inter2_c(unsigned char *_dst,int _dst_ystride,
- const unsigned char *_src1,int _src1_ystride,const unsigned char *_src2,
- int _src2_ystride,const ogg_int16_t *_residue);
-void oc_state_frag_copy_c(const oc_theora_state *_state,const int *_fragis,
- int _nfragis,int _dst_frame,int _src_frame,int _pli);
-void oc_state_frag_recon_c(oc_theora_state *_state,oc_fragment *_frag,
+ const ogg_int16_t _residue[64]);
+void oc_frag_recon_inter_c(unsigned char *_dst,
+ const unsigned char *_src,int _ystride,const ogg_int16_t _residue[64]);
+void oc_frag_recon_inter2_c(unsigned char *_dst,const unsigned char *_src1,
+ const unsigned char *_src2,int _ystride,const ogg_int16_t _residue[64]);
+void oc_dequant_idct8x8_c(ogg_int16_t _y[64],const ogg_int16_t _x[64],
+ int _last_zzi,int _ncoefs,ogg_uint16_t _dc_quant,
+ const ogg_uint16_t _ac_quant[64]);
+void oc_state_frag_recon_c(const oc_theora_state *_state,oc_fragment *_frag,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
- ogg_uint16_t _dc_iquant,const ogg_uint16_t _ac_iquant[64]);
-void oc_state_loop_filter_frag_rows_c(oc_theora_state *_state,int *_bv,
+ ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]);
+void oc_state_frag_copy_list_c(const oc_theora_state *_state,const int *_fragis,
+ int _nfragis,int _dst_frame,int _src_frame,int _pli);
+void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,int *_bv,
  int _refi,int _pli,int _fragy0,int _fragy_end);
 void oc_restore_fpu_c(void);
 
@@ -480,9 +515,8 @@ typedef ogg_int64_t (*oc_state_granule_frame_func)(theora_state *_th,
 typedef double (*oc_state_granule_time_func)(theora_state *_th,
  ogg_int64_t _granulepos);
 
-typedef struct oc_state_dispatch_vtbl oc_state_dispatch_vtbl;
 
-struct oc_state_dispatch_vtbl{
+struct oc_state_dispatch_vtable{
   oc_state_clear_func         clear;
   oc_state_control_func       control;
   oc_state_granule_frame_func granule_frame;

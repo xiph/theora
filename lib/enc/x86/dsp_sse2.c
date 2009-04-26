@@ -14,13 +14,10 @@
   last mod: $Id$
 
  ********************************************************************/
+#include <stddef.h>
+#include "x86enc.h"
 
-#include <stdlib.h>
-
-#include "codec_internal.h"
-#include "dsp.h"
-
-#if defined(USE_ASM)
+#if defined(OC_X86_ASM)
 
 static int find_nonzero__sse2(ogg_int16_t *q, int in){
   int ret,tmp,tmp2;

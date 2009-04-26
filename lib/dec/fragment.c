@@ -14,73 +14,78 @@
     last mod: $Id$
 
  ********************************************************************/
-
+#include <string.h>
 #include "../internal.h"
 
-void oc_frag_recon_intra(const oc_theora_state *_state,unsigned char *_dst,
- int _dst_ystride,const ogg_int16_t *_residue){
-  _state->opt_vtable.frag_recon_intra(_dst,_dst_ystride,_residue);
+void oc_frag_copy(const oc_theora_state *_state,unsigned char *_dst,
+ const unsigned char *_src,int _ystride){
+  (*_state->opt_vtable.frag_copy)(_dst,_src,_ystride);
 }
 
-void oc_frag_recon_intra_c(unsigned char *_dst,int _dst_ystride,
- const ogg_int16_t *_residue){
+void oc_frag_copy_c(unsigned char *_dst,const unsigned char *_src,int _ystride){
+  int i;
+  for(i=8;i-->0;){
+    memcpy(_dst,_src,8*sizeof(*_dst));
+    _dst+=_ystride;
+    _src+=_ystride;
+  }
+}
+
+void oc_frag_recon_intra(const oc_theora_state *_state,unsigned char *_dst,
+ int _ystride,const ogg_int16_t _residue[64]){
+  _state->opt_vtable.frag_recon_intra(_dst,_ystride,_residue);
+}
+
+void oc_frag_recon_intra_c(unsigned char *_dst,int _ystride,
+ const ogg_int16_t _residue[64]){
   int i;
   for(i=0;i<8;i++){
     int j;
-    for(j=0;j<8;j++){
-      int res;
-      res=*_residue++;
-      _dst[j]=OC_CLAMP255(res+128);
-    }
-    _dst+=_dst_ystride;
+    for(j=0;j<8;j++)_dst[j]=OC_CLAMP255(_residue[i*8+j]+128);
+    _dst+=_ystride;
   }
 }
 
 void oc_frag_recon_inter(const oc_theora_state *_state,unsigned char *_dst,
- int _dst_ystride,const unsigned char *_src,int _src_ystride,
- const ogg_int16_t *_residue){
-  _state->opt_vtable.frag_recon_inter(_dst,_dst_ystride,_src,_src_ystride,
-   _residue);
+ const unsigned char *_src,int _ystride,const ogg_int16_t _residue[64]){
+  _state->opt_vtable.frag_recon_inter(_dst,_src,_ystride,_residue);
 }
 
-void oc_frag_recon_inter_c(unsigned char *_dst,int _dst_ystride,
- const unsigned char *_src,int _src_ystride,const ogg_int16_t *_residue){
+void oc_frag_recon_inter_c(unsigned char *_dst,
+ const unsigned char *_src,int _ystride,const ogg_int16_t _residue[64]){
   int i;
   for(i=0;i<8;i++){
     int j;
-    for(j=0;j<8;j++){
-      int res;
-      res=*_residue++;
-      _dst[j]=OC_CLAMP255(res+_src[j]);
-    }
-    _dst+=_dst_ystride;
-    _src+=_src_ystride;
+    for(j=0;j<8;j++)_dst[j]=OC_CLAMP255(_residue[i*8+j]+_src[j]);
+    _dst+=_ystride;
+    _src+=_ystride;
   }
 }
 
 void oc_frag_recon_inter2(const oc_theora_state *_state,unsigned char *_dst,
- int _dst_ystride,const unsigned char *_src1,int _src1_ystride,
- const unsigned char *_src2,int _src2_ystride,const ogg_int16_t *_residue){
-  _state->opt_vtable.frag_recon_inter2(_dst,_dst_ystride,_src1,_src1_ystride,
-   _src2,_src2_ystride,_residue);
+ const unsigned char *_src1,const unsigned char *_src2,int _ystride,
+ const ogg_int16_t _residue[64]){
+  _state->opt_vtable.frag_recon_inter2(_dst,_src1,_src2,_ystride,_residue);
 }
 
-void oc_frag_recon_inter2_c(unsigned char *_dst,int _dst_ystride,
- const unsigned char *_src1,int _src1_ystride,const unsigned char *_src2,
- int _src2_ystride,const ogg_int16_t *_residue){
+void oc_frag_recon_inter2_c(unsigned char *_dst,const unsigned char *_src1,
+ const unsigned char *_src2,int _ystride,const ogg_int16_t _residue[64]){
   int i;
   for(i=0;i<8;i++){
     int j;
-    for(j=0;j<8;j++){
-      int res;
-      res=*_residue++;
-      _dst[j]=OC_CLAMP255(res+((int)_src1[j]+_src2[j]>>1));
-    }
-    _dst+=_dst_ystride;
-    _src1+=_src1_ystride;
-    _src2+=_src2_ystride;
+    for(j=0;j<8;j++)_dst[j]=OC_CLAMP255(_residue[i*8+j]+(_src1[j]+_src2[j]>>1));
+    _dst+=_ystride;
+    _src1+=_ystride;
+    _src2+=_ystride;
   }
 }
+
+void oc_restore_fpu(const oc_theora_state *_state){
+  _state->opt_vtable.restore_fpu();
+}
+
+void oc_restore_fpu_c(void){}
+
 
 /*Computes the predicted DC value for the given fragment.
   This requires that the fully decoded DC values be available for the left,

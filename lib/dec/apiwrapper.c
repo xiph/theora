@@ -47,10 +47,10 @@ void theora_info_clear(theora_info *_ci){
 void theora_clear(theora_state *_th){
   /*Provide compatibility with mixed encoder and decoder shared lib versions.*/
   if(_th->internal_decode!=NULL){
-    (*((oc_state_dispatch_vtbl *)_th->internal_decode)->clear)(_th);
+    (*((oc_state_dispatch_vtable *)_th->internal_decode)->clear)(_th);
   }
   if(_th->internal_encode!=NULL){
-    (*((oc_state_dispatch_vtbl *)_th->internal_encode)->clear)(_th);
+    (*((oc_state_dispatch_vtable *)_th->internal_encode)->clear)(_th);
   }
   if(_th->i!=NULL)theora_info_clear(_th->i);
   memset(_th,0,sizeof(*_th));
@@ -59,11 +59,11 @@ void theora_clear(theora_state *_th){
 int theora_control(theora_state *_th,int _req,void *_buf,size_t _buf_sz){
   /*Provide compatibility with mixed encoder and decoder shared lib versions.*/
   if(_th->internal_decode!=NULL){
-    return (*((oc_state_dispatch_vtbl *)_th->internal_decode)->control)(_th,
+    return (*((oc_state_dispatch_vtable *)_th->internal_decode)->control)(_th,
      _req,_buf,_buf_sz);
   }
   else if(_th->internal_encode!=NULL){
-    return (*((oc_state_dispatch_vtbl *)_th->internal_encode)->control)(_th,
+    return (*((oc_state_dispatch_vtable *)_th->internal_encode)->control)(_th,
      _req,_buf,_buf_sz);
   }
   else return TH_EINVAL;
@@ -72,11 +72,11 @@ int theora_control(theora_state *_th,int _req,void *_buf,size_t _buf_sz){
 ogg_int64_t theora_granule_frame(theora_state *_th,ogg_int64_t _gp){
   /*Provide compatibility with mixed encoder and decoder shared lib versions.*/
   if(_th->internal_decode!=NULL){
-    return (*((oc_state_dispatch_vtbl *)_th->internal_decode)->granule_frame)(
+    return (*((oc_state_dispatch_vtable *)_th->internal_decode)->granule_frame)(
      _th,_gp);
   }
   else if(_th->internal_encode!=NULL){
-    return (*((oc_state_dispatch_vtbl *)_th->internal_encode)->granule_frame)(
+    return (*((oc_state_dispatch_vtable *)_th->internal_encode)->granule_frame)(
      _th,_gp);
   }
   else return -1;
@@ -85,11 +85,11 @@ ogg_int64_t theora_granule_frame(theora_state *_th,ogg_int64_t _gp){
 double theora_granule_time(theora_state *_th, ogg_int64_t _gp){
   /*Provide compatibility with mixed encoder and decoder shared lib versions.*/
   if(_th->internal_decode!=NULL){
-    return (*((oc_state_dispatch_vtbl *)_th->internal_decode)->granule_time)(
+    return (*((oc_state_dispatch_vtable *)_th->internal_decode)->granule_time)(
      _th,_gp);
   }
   else if(_th->internal_encode!=NULL){
-    return (*((oc_state_dispatch_vtbl *)_th->internal_encode)->granule_time)(
+    return (*((oc_state_dispatch_vtable *)_th->internal_encode)->granule_time)(
      _th,_gp);
   }
   else return -1;
