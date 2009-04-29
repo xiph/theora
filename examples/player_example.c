@@ -98,6 +98,7 @@ vorbis_info      vi;
 vorbis_dsp_state vd;
 vorbis_block     vb;
 vorbis_comment   vc;
+theora_pixelformat     px_fmt;
 
 int              theora_p=0;
 int              vorbis_p=0;
@@ -320,9 +321,15 @@ static void open_video(void){
     exit(1);
   }
 
-  yuv_overlay = SDL_CreateYUVOverlay(w, h,
+  if (px_fmt==OC_PF_422)
+    yuv_overlay = SDL_CreateYUVOverlay(w, h,
+                                     SDL_YUY2_OVERLAY,
+                                     screen);
+  else
+    yuv_overlay = SDL_CreateYUVOverlay(w, h,
                                      SDL_YV12_OVERLAY,
                                      screen);
+  
   if ( yuv_overlay == NULL ) {
     fprintf(stderr, "SDL: Couldn't create SDL_yuv_overlay: %s\n",
             SDL_GetError());
@@ -339,7 +346,7 @@ static void open_video(void){
 static void video_write(void){
   int i;
   yuv_buffer yuv;
-  int crop_offset;
+  int y_offset, uv_offset;
   theora_decode_YUVout(&td,&yuv);
 
   /* Lock SDL_yuv_overlay */
@@ -353,19 +360,38 @@ static void video_write(void){
   /* reverse u and v for SDL */
   /* and crop input properly, respecting the encoded frame rect */
   /* problems may exist for odd frame rect for some encodings */
-  crop_offset=(ti.offset_x&~1)+yuv.y_stride*(ti.offset_y&~1);
-  for(i=0;i<yuv_overlay->h;i++)
-    memcpy(yuv_overlay->pixels[0]+yuv_overlay->pitches[0]*i,
-           yuv.y+crop_offset+yuv.y_stride*i,
+
+  y_offset=(ti.offset_x&~1)+yuv.y_stride*(ti.offset_y&~1);
+  uv_offset=(ti.offset_x/2)+(yuv.uv_stride)*(ti.offset_y/2);
+
+  if (px_fmt==OC_PF_422) {
+    /* SDL doesn't have a planar 4:2:2 */ 
+    for(i=0;i<yuv_overlay->h;i++) {
+      int j;
+      char *in_y  = (char *)yuv.y+y_offset+yuv.y_stride*i;
+      char *out = (char *)(yuv_overlay->pixels[0]+yuv_overlay->pitches[0]*i);
+      for (j=0;j<yuv_overlay->w;j++)
+        out[j*2] = in_y[j];
+      char *in_u  = (char *)yuv.u+uv_offset+yuv.uv_stride*i;
+      char *in_v  = (char *)yuv.v+uv_offset+yuv.uv_stride*i;
+      for (j=0;j<yuv_overlay->w>>1;j++) {
+        out[j*4+1] = in_u[j];
+        out[j*4+3] = in_v[j];
+      }
+    }
+  } else {
+    for(i=0;i<yuv_overlay->h;i++)
+      memcpy(yuv_overlay->pixels[0]+yuv_overlay->pitches[0]*i,
+           yuv.y+y_offset+yuv.y_stride*i,
            yuv_overlay->w);
-  crop_offset=(ti.offset_x/2)+(yuv.uv_stride)*(ti.offset_y/2);
-  for(i=0;i<yuv_overlay->h/2;i++){
-    memcpy(yuv_overlay->pixels[1]+yuv_overlay->pitches[1]*i,
-           yuv.v+crop_offset+yuv.uv_stride*i,
+    for(i=0;i<yuv_overlay->h/2;i++){
+      memcpy(yuv_overlay->pixels[1]+yuv_overlay->pitches[1]*i,
+           yuv.v+uv_offset+yuv.uv_stride*i,
            yuv_overlay->w/2);
-    memcpy(yuv_overlay->pixels[2]+yuv_overlay->pitches[2]*i,
-           yuv.u+crop_offset+yuv.uv_stride*i,
+      memcpy(yuv_overlay->pixels[2]+yuv_overlay->pitches[2]*i,
+           yuv.u+uv_offset+yuv.uv_stride*i,
            yuv_overlay->w/2);
+    }
   }
 
   /* Unlock SDL_yuv_overlay */
@@ -575,6 +601,7 @@ int main(int argc,char *const *argv){
     printf("Ogg logical stream %lx is Theora %dx%d %.02f fps",
            to.serialno,ti.width,ti.height,
            (double)ti.fps_numerator/ti.fps_denominator);
+    px_fmt=ti.pixelformat;
     switch(ti.pixelformat){
       case OC_PF_420: printf(" 4:2:0 video\n"); break;
       case OC_PF_422: printf(" 4:2:2 video\n"); break;
