@@ -364,7 +364,7 @@ static void video_write(void){
   y_offset=(ti.offset_x&~1)+yuv.y_stride*(ti.offset_y&~1);
 
   if (px_fmt==OC_PF_422) {
-    uv_offset=(ti.offset_x/2))+(yuv.uv_stride)*(ti.offset_y);
+    uv_offset=(ti.offset_x/2)+(yuv.uv_stride)*(ti.offset_y);
     /* SDL doesn't have a planar 4:2:2 */ 
     for(i=0;i<yuv_overlay->h;i++) {
       int j;
@@ -380,7 +380,7 @@ static void video_write(void){
       }
     }
   } else {
-    uv_offset=(ti.offset_x/2))+(yuv.uv_stride)*(ti.offset_y/2);
+    uv_offset=(ti.offset_x/2)+(yuv.uv_stride)*(ti.offset_y/2);
     for(i=0;i<yuv_overlay->h;i++)
       memcpy(yuv_overlay->pixels[0]+yuv_overlay->pitches[0]*i,
            yuv.y+y_offset+yuv.y_stride*i,
