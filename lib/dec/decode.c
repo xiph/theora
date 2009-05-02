@@ -47,7 +47,7 @@
 
 /*The mode alphabets for the various mode coding schemes.
   Scheme 0 uses a custom alphabet, which is not stored in this table.*/
-static const int OC_MODE_ALPHABETS[7][OC_NMODES]={
+static const unsigned char OC_MODE_ALPHABETS[7][OC_NMODES]={
   /*Last MV dominates */
   {
     OC_MODE_INTER_MV_LAST,OC_MODE_INTER_MV_LAST2,OC_MODE_INTER_MV,
@@ -193,9 +193,9 @@ static int oc_dec_init(oc_dec_ctx *_dec,const th_info *_info,
   _dec->variances=NULL;
   _dec->pp_frame_data=NULL;
   _dec->telemetry_frame_data=NULL;
-  _dec->telemetry = 0;
-  _dec->telemetry_mv = 0;
-  _dec->telemetry_mbmode = 0;
+  _dec->telemetry=0;
+  _dec->telemetry_mv=0;
+  _dec->telemetry_mbmode=0;
   _dec->stripe_cb.ctx=NULL;
   _dec->stripe_cb.stripe_decoded=NULL;
   return 0;
@@ -222,19 +222,19 @@ static int oc_dec_frame_header_unpack(oc_dec_ctx *_dec){
   /*Read in the frame type (I or P).*/
   theorapackB_read1(&_dec->opb,&val);
   _dec->state.frame_type=(int)val;
-  /*Read in the current qi.*/
+  /*Read in the qi list.*/
   theorapackB_read(&_dec->opb,6,&val);
-  _dec->state.qis[0]=(int)val;
+  _dec->state.qis[0]=(unsigned char)val;
   theorapackB_read1(&_dec->opb,&val);
   if(!val)_dec->state.nqis=1;
   else{
     theorapackB_read(&_dec->opb,6,&val);
-    _dec->state.qis[1]=(int)val;
+    _dec->state.qis[1]=(unsigned char)val;
     theorapackB_read1(&_dec->opb,&val);
     if(!val)_dec->state.nqis=2;
     else{
       theorapackB_read(&_dec->opb,6,&val);
-      _dec->state.qis[2]=(int)val;
+      _dec->state.qis[2]=(unsigned char)val;
       _dec->state.nqis=3;
     }
   }
@@ -242,7 +242,8 @@ static int oc_dec_frame_header_unpack(oc_dec_ctx *_dec){
     /*Keyframes have 3 unused configuration bits, holdovers from VP3 days.
       Most of the other unused bits in the VP3 headers were eliminated.
       I don't know why these remain.*/
-    /* I wanted to eliminate wasted bits, but not all config wiggle room --Monty */
+    /*I wanted to eliminate wasted bits, but not all config wiggle room
+       --Monty.*/
     theorapackB_read(&_dec->opb,3,&val);
     if(val!=0)return TH_EIMPL;
   }
@@ -252,33 +253,37 @@ static int oc_dec_frame_header_unpack(oc_dec_ctx *_dec){
 /*Mark all fragments as coded and in OC_MODE_INTRA.
   This also builds up the coded fragment list (in coded order), and clears the
    uncoded fragment list.
-  It does not update the coded macro block list, as that is not used when
-   decoding INTRA frames.*/
+  It does not update the coded macro block list nor the super block flags, as
+   those are not used when decoding INTRA frames.*/
 static void oc_dec_mark_all_intra(oc_dec_ctx *_dec){
-  oc_sb *sb;
-  oc_sb *sb_end;
-  int    pli;
-  int    ncoded_fragis;
-  int    prev_ncoded_fragis;
+  const oc_sb_map   *sb_maps;
+  const oc_sb_flags *sb_flags;
+  oc_fragment       *frags;
+  ptrdiff_t         *coded_fragis;
+  ptrdiff_t          ncoded_fragis;
+  ptrdiff_t          prev_ncoded_fragis;
+  unsigned           nsbs;
+  unsigned           sbi;
+  int                pli;
+  coded_fragis=_dec->state.coded_fragis;
   prev_ncoded_fragis=ncoded_fragis=0;
-  sb=sb_end=_dec->state.sbs;
+  sb_maps=(const oc_sb_map *)_dec->state.sb_maps;
+  sb_flags=_dec->state.sb_flags;
+  frags=_dec->state.frags;
+  sbi=nsbs=0;
   for(pli=0;pli<3;pli++){
-    const oc_fragment_plane *fplane;
-    fplane=_dec->state.fplanes+pli;
-    sb_end+=fplane->nsbs;
-    for(;sb<sb_end;sb++){
+    nsbs+=_dec->state.fplanes[pli].nsbs;
+    for(;sbi<nsbs;sbi++){
       int quadi;
-      for(quadi=0;quadi<4;quadi++)if(sb->quad_valid&1<<quadi){
+      for(quadi=0;quadi<4;quadi++)if(sb_flags[sbi].quad_valid&1<<quadi){
         int bi;
         for(bi=0;bi<4;bi++){
-          int fragi;
-          fragi=sb->map[quadi][bi];
+          ptrdiff_t fragi;
+          fragi=sb_maps[sbi][quadi][bi];
           if(fragi>=0){
-            oc_fragment *frag;
-            frag=_dec->state.frags+fragi;
-            frag->coded=1;
-            frag->mbmode=OC_MODE_INTRA;
-            _dec->state.coded_fragis[ncoded_fragis++]=fragi;
+            frags[fragi].coded=1;
+            frags[fragi].mb_mode=OC_MODE_INTRA;
+            coded_fragis[ncoded_fragis++]=fragi;
           }
         }
       }
@@ -289,33 +294,34 @@ static void oc_dec_mark_all_intra(oc_dec_ctx *_dec){
   }
 }
 
-/*Decodes the bit flags for whether or not each super block is partially coded
+/*Decodes the bit flags indicating whether each super block is partially coded
    or not.
   Return: The number of partially coded super blocks.*/
 static int oc_dec_partial_sb_flags_unpack(oc_dec_ctx *_dec){
-  oc_sb *sb;
-  oc_sb *sb_end;
-  long   val;
-  int    flag;
-  int    npartial;
-  int    run_count;
+  oc_sb_flags *sb_flags;
+  unsigned     nsbs;
+  unsigned     sbi;
+  unsigned     npartial;
+  unsigned     run_count;
+  long         val;
+  int          flag;
   theorapackB_read1(&_dec->opb,&val);
   flag=(int)val;
-  sb=_dec->state.sbs;
-  sb_end=sb+_dec->state.nsbs;
-  run_count=npartial=0;
-  while(sb<sb_end){
+  sb_flags=_dec->state.sb_flags;
+  nsbs=_dec->state.nsbs;
+  sbi=run_count=npartial=0;
+  while(sbi<nsbs){
     int full_run;
     run_count=oc_sb_run_unpack(&_dec->opb);
     full_run=run_count>=4129;
     do{
-      sb->coded_partially=flag;
-      sb->coded_fully=0;
+      sb_flags[sbi].coded_partially=flag;
+      sb_flags[sbi].coded_fully=0;
       npartial+=flag;
-      sb++;
+      sbi++;
     }
-    while(--run_count>0&&sb<sb_end);
-    if(full_run&&sb<sb_end){
+    while(--run_count>0&&sbi<nsbs);
+    if(full_run&&sbi<nsbs){
       theorapackB_read1(&_dec->opb,&val);
       flag=(int)val;
     }
@@ -332,27 +338,28 @@ static int oc_dec_partial_sb_flags_unpack(oc_dec_ctx *_dec){
    non-partially-coded super block.
   Return: The number of partially coded super blocks.*/
 static void oc_dec_coded_sb_flags_unpack(oc_dec_ctx *_dec){
-  oc_sb *sb;
-  oc_sb *sb_end;
-  long   val;
-  int    flag;
-  int    run_count;
-  sb=_dec->state.sbs;
-  sb_end=sb+_dec->state.nsbs;
+  oc_sb_flags *sb_flags;
+  unsigned     nsbs;
+  unsigned     sbi;
+  unsigned     run_count;
+  long         val;
+  int          flag;
+  sb_flags=_dec->state.sb_flags;
+  nsbs=_dec->state.nsbs;
   /*Skip partially coded super blocks.*/
-  for(;sb->coded_partially;sb++);
+  for(sbi=0;sb_flags[sbi].coded_partially;sbi++);
   theorapackB_read1(&_dec->opb,&val);
   flag=(int)val;
-  while(sb<sb_end){
+  while(sbi<nsbs){
     int full_run;
     run_count=oc_sb_run_unpack(&_dec->opb);
     full_run=run_count>=4129;
-    for(;sb<sb_end;sb++){
-      if(sb->coded_partially)continue;
+    for(;sbi<nsbs;sbi++){
+      if(sb_flags[sbi].coded_partially)continue;
       if(run_count--<=0)break;
-      sb->coded_fully=flag;
+      sb_flags[sbi].coded_fully=flag;
     }
-    if(full_run&&sb<sb_end){
+    if(full_run&&sbi<nsbs){
       theorapackB_read1(&_dec->opb,&val);
       flag=(int)val;
     }
@@ -363,17 +370,20 @@ static void oc_dec_coded_sb_flags_unpack(oc_dec_ctx *_dec){
 }
 
 static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
-  oc_sb *sb;
-  oc_sb *sb_end;
-  long   val;
-  int    npartial;
-  int    pli;
-  int    flag;
-  int    run_count;
-  int    ncoded_fragis;
-  int    prev_ncoded_fragis;
-  int    nuncoded_fragis;
-  int    prev_nuncoded_fragis;
+  const oc_sb_map   *sb_maps;
+  const oc_sb_flags *sb_flags;
+  oc_fragment       *frags;
+  unsigned           nsbs;
+  unsigned           sbi;
+  unsigned           npartial;
+  long               val;
+  int                pli;
+  int                flag;
+  int                run_count;
+  ptrdiff_t          ncoded_fragis;
+  ptrdiff_t          prev_ncoded_fragis;
+  ptrdiff_t          nuncoded_fragis;
+  ptrdiff_t          prev_nuncoded_fragis;
   npartial=oc_dec_partial_sb_flags_unpack(_dec);
   if(npartial<_dec->state.nsbs)oc_dec_coded_sb_flags_unpack(_dec);
   if(npartial>0){
@@ -381,35 +391,37 @@ static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
     flag=!(int)val;
   }
   else flag=0;
-  run_count=0;
+  sb_maps=(const oc_sb_map *)_dec->state.sb_maps;
+  sb_flags=_dec->state.sb_flags;
+  frags=_dec->state.frags;
+  sbi=nsbs=run_count=0;
   prev_ncoded_fragis=ncoded_fragis=prev_nuncoded_fragis=nuncoded_fragis=0;
-  sb=sb_end=_dec->state.sbs;
   for(pli=0;pli<3;pli++){
     const oc_fragment_plane *fplane;
     fplane=_dec->state.fplanes+pli;
-    sb_end+=fplane->nsbs;
-    for(;sb<sb_end;sb++){
+    nsbs+=fplane->nsbs;
+    for(;sbi<nsbs;sbi++){
       int quadi;
-      for(quadi=0;quadi<4;quadi++)if(sb->quad_valid&1<<quadi){
+      for(quadi=0;quadi<4;quadi++)if(sb_flags[sbi].quad_valid&1<<quadi){
         int bi;
         for(bi=0;bi<4;bi++){
-          int fragi;
-          fragi=sb->map[quadi][bi];
+          ptrdiff_t fragi;
+          fragi=sb_maps[sbi][quadi][bi];
           if(fragi>=0){
-            oc_fragment *frag;
-            frag=_dec->state.frags+fragi;
-            if(sb->coded_fully)frag->coded=1;
-            else if(!sb->coded_partially)frag->coded=0;
+            int coded;
+            if(sb_flags[sbi].coded_fully)coded=1;
+            else if(!sb_flags[sbi].coded_partially)coded=0;
             else{
               if(run_count<=0){
                 run_count=oc_block_run_unpack(&_dec->opb);
                 flag=!flag;
               }
               run_count--;
-              frag->coded=flag;
+              coded=flag;
             }
-            if(frag->coded)_dec->state.coded_fragis[ncoded_fragis++]=fragi;
+            if(coded)_dec->state.coded_fragis[ncoded_fragis++]=fragi;
             else *(_dec->state.uncoded_fragis-++nuncoded_fragis)=fragi;
+            frags[fragi].coded=coded;
           }
         }
       }
@@ -445,12 +457,14 @@ static int oc_clc_mode_unpack(oggpack_buffer *_opb){
 
 /*Unpacks the list of macro block modes for INTER frames.*/
 static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
+  const oc_mb_map     *mb_maps;
+  signed char         *mb_modes;
+  const unsigned char *alphabet;
+  unsigned char        scheme0_alphabet[8];
   oc_mode_unpack_func  mode_unpack;
-  oc_mb               *mb;
-  oc_mb               *mb_end;
-  const int           *alphabet;
+  size_t               nmbs;
+  size_t               mbi;
   long                 val;
-  int                  scheme0_alphabet[8];
   int                  mode_scheme;
   theorapackB_read(&_dec->opb,3,&val);
   mode_scheme=(int)val;
@@ -471,18 +485,22 @@ static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
   else alphabet=OC_MODE_ALPHABETS[mode_scheme-1];
   if(mode_scheme==7)mode_unpack=oc_clc_mode_unpack;
   else mode_unpack=oc_vlc_mode_unpack;
-  mb=_dec->state.mbs;
-  mb_end=mb+_dec->state.nmbs;
-  for(;mb<mb_end;mb++){
-    if(mb->mode!=OC_MODE_INVALID){
+  mb_modes=_dec->state.mb_modes;
+  mb_maps=(const oc_mb_map *)_dec->state.mb_maps;
+  nmbs=_dec->state.nmbs;
+  for(mbi=0;mbi<nmbs;mbi++){
+    if(mb_modes[mbi]!=OC_MODE_INVALID){
       int bi;
+      /*Check for a coded luma block in this macro block.*/
       for(bi=0;bi<4;bi++){
-        int fragi;
-        fragi=mb->map[0][bi];
+        ptrdiff_t fragi;
+        fragi=mb_maps[mbi][0][bi];
         if(fragi>=0&&_dec->state.frags[fragi].coded)break;
       }
-      if(bi<4)mb->mode=alphabet[(*mode_unpack)(&_dec->opb)];
-      else mb->mode=OC_MODE_INTER_NOMV;
+      /*We found one, decode a mode.*/
+      if(bi<4)mb_modes[mbi]=alphabet[(*mode_unpack)(&_dec->opb)];
+      /*There were none: INTER_NOMV is forced.*/
+      else mb_modes[mbi]=OC_MODE_INTER_NOMV;
     }
   }
 }
@@ -493,7 +511,8 @@ typedef int (*oc_mv_comp_unpack_func)(oggpack_buffer *_opb);
 
 static int oc_vlc_mv_comp_unpack(oggpack_buffer *_opb){
   long bits;
-  int  mvsigned[2];
+  int  mask;
+  int  mv;
   theorapackB_read(_opb,3,&bits);
   switch(bits){
     case  0:return 0;
@@ -501,40 +520,45 @@ static int oc_vlc_mv_comp_unpack(oggpack_buffer *_opb){
     case  2:return -1;
     case  3:
     case  4:{
-      mvsigned[0]=(int)(bits-1);
+      mv=(int)(bits-1);
       theorapackB_read1(_opb,&bits);
     }break;
     /*case  5:
     case  6:
     case  7:*/
     default:{
-      mvsigned[0]=1<<bits-3;
+      mv=1<<bits-3;
       theorapackB_read(_opb,bits-2,&bits);
-      mvsigned[0]+=(int)(bits>>1);
+      mv+=(int)(bits>>1);
       bits&=1;
     }break;
   }
-  mvsigned[1]=-mvsigned[0];
-  return mvsigned[bits];
+  mask=-(int)bits;
+  return (mv+mask)^mask;
 }
 
 static int oc_clc_mv_comp_unpack(oggpack_buffer *_opb){
   long bits;
-  int  mvsigned[2];
+  int  mask;
+  int  mv;
   theorapackB_read(_opb,6,&bits);
-  mvsigned[0]=bits>>1;
-  mvsigned[1]=-mvsigned[0];
-  return mvsigned[bits&1];
+  mv=(int)bits>>1;
+  mask=-((int)bits&1);
+  return (mv+mask)^mask;
 }
 
 /*Unpacks the list of motion vectors for INTER frames, and propagtes the macro
    block modes and motion vectors to the individual fragments.*/
 static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
+  const oc_mb_map        *mb_maps;
+  const signed char      *mb_modes;
   oc_set_chroma_mvs_func  set_chroma_mvs;
   oc_mv_comp_unpack_func  mv_comp_unpack;
-  oc_mb                  *mb;
-  oc_mb                  *mb_end;
-  const int              *map_idxs;
+  oc_fragment            *frags;
+  oc_mv                  *frag_mvs;
+  size_t                  nmbs;
+  size_t                  mbi;
+  const unsigned char    *map_idxs;
   long                    val;
   int                     map_nidxs;
   oc_mv                   last_mv[2];
@@ -545,97 +569,98 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
   map_idxs=OC_MB_MAP_IDXS[_dec->state.info.pixel_fmt];
   map_nidxs=OC_MB_MAP_NIDXS[_dec->state.info.pixel_fmt];
   memset(last_mv,0,sizeof(last_mv));
-  mb=_dec->state.mbs;
-  mb_end=mb+_dec->state.nmbs;
-
-  for(;mb<mb_end;mb++)if(mb->mode!=OC_MODE_INVALID){
-    oc_fragment *frag;
-    oc_mv        mbmv;
-    int          coded[13];
-    int          codedi;
-    int          ncoded;
-    int          mapi;
-    int          mapii;
-    int          fragi;
+  frags=_dec->state.frags;
+  frag_mvs=_dec->state.frag_mvs;
+  mb_maps=(const oc_mb_map *)_dec->state.mb_maps;
+  mb_modes=_dec->state.mb_modes;
+  nmbs=_dec->state.nmbs;
+  for(mbi=0;mbi<nmbs;mbi++){
     int          mb_mode;
-    /*Search for at least one coded fragment.*/
-    ncoded=mapii=0;
-    do{
-      mapi=map_idxs[mapii];
-      fragi=mb->map[mapi>>2][mapi&3];
-      if(fragi>=0&&_dec->state.frags[fragi].coded)coded[ncoded++]=mapi;
-    }
-    while(++mapii<map_nidxs);
-    if(ncoded<=0)continue;
-    mb_mode=mb->mode;
-    switch(mb_mode){
-      case OC_MODE_INTER_MV_FOUR:{
-        oc_mv       lbmvs[4];
-        int         bi;
-        /*Mark the tail of the list, so we don't accidentally go past it.*/
-        coded[ncoded]=-1;
-        for(bi=codedi=0;bi<4;bi++){
-          if(coded[codedi]==bi){
-            codedi++;
-            frag=_dec->state.frags+mb->map[0][bi];
-            frag->mbmode=mb_mode;
-            frag->mv[0]=lbmvs[bi][0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
-            frag->mv[1]=lbmvs[bi][1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+    mb_mode=mb_modes[mbi];
+    if(mb_mode!=OC_MODE_INVALID){
+      oc_mv        mbmv;
+      ptrdiff_t    fragi;
+      int          coded[13];
+      int          codedi;
+      int          ncoded;
+      int          mapi;
+      int          mapii;
+      /*Search for at least one coded fragment.*/
+      ncoded=mapii=0;
+      do{
+        mapi=map_idxs[mapii];
+        fragi=mb_maps[mbi][mapi>>2][mapi&3];
+        if(fragi>=0&&_dec->state.frags[fragi].coded)coded[ncoded++]=mapi;
+      }
+      while(++mapii<map_nidxs);
+      if(ncoded<=0)continue;
+      switch(mb_mode){
+        case OC_MODE_INTER_MV_FOUR:{
+          oc_mv       lbmvs[4];
+          int         bi;
+          /*Mark the tail of the list, so we don't accidentally go past it.*/
+          coded[ncoded]=-1;
+          for(bi=codedi=0;bi<4;bi++){
+            if(coded[codedi]==bi){
+              codedi++;
+              fragi=mb_maps[mbi][0][bi];
+              frags[fragi].mb_mode=mb_mode;
+              lbmvs[bi][0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+              lbmvs[bi][1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+              memcpy(frag_mvs[fragi],lbmvs[bi],sizeof(lbmvs[bi]));
+            }
+            else lbmvs[bi][0]=lbmvs[bi][1]=0;
           }
-          else lbmvs[bi][0]=lbmvs[bi][1]=0;
-        }
-        if(codedi>0){
+          if(codedi>0){
+            last_mv[1][0]=last_mv[0][0];
+            last_mv[1][1]=last_mv[0][1];
+            last_mv[0][0]=lbmvs[coded[codedi-1]][0];
+            last_mv[0][1]=lbmvs[coded[codedi-1]][1];
+          }
+          if(codedi<ncoded){
+            (*set_chroma_mvs)(cbmvs,(const oc_mv *)lbmvs);
+            for(;codedi<ncoded;codedi++){
+              mapi=coded[codedi];
+              bi=mapi&3;
+              fragi=mb_maps[mbi][mapi>>2][bi];
+              frags[fragi].mb_mode=mb_mode;
+              memcpy(frag_mvs[fragi],cbmvs[bi],sizeof(cbmvs[bi]));
+            }
+          }
+        }break;
+        case OC_MODE_INTER_MV:{
           last_mv[1][0]=last_mv[0][0];
           last_mv[1][1]=last_mv[0][1];
-          last_mv[0][0]=lbmvs[coded[codedi-1]][0];
-          last_mv[0][1]=lbmvs[coded[codedi-1]][1];
+          mbmv[0]=last_mv[0][0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+          mbmv[1]=last_mv[0][1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+        }break;
+        case OC_MODE_INTER_MV_LAST:{
+          mbmv[0]=last_mv[0][0];
+          mbmv[1]=last_mv[0][1];
+        }break;
+        case OC_MODE_INTER_MV_LAST2:{
+          mbmv[0]=last_mv[1][0];
+          mbmv[1]=last_mv[1][1];
+          last_mv[1][0]=last_mv[0][0];
+          last_mv[1][1]=last_mv[0][1];
+          last_mv[0][0]=mbmv[0];
+          last_mv[0][1]=mbmv[1];
+        }break;
+        case OC_MODE_GOLDEN_MV:{
+          mbmv[0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+          mbmv[1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+        }break;
+        default:mbmv[0]=mbmv[1]=0;break;
+      }
+      /*4MV mode fills in the fragments itself.
+        For all other modes we can use this common code.*/
+      if(mb_mode!=OC_MODE_INTER_MV_FOUR){
+        for(codedi=0;codedi<ncoded;codedi++){
+          mapi=coded[codedi];
+          fragi=mb_maps[mbi][mapi>>2][mapi&3];
+          frags[fragi].mb_mode=mb_mode;
+          memcpy(frag_mvs[fragi],mbmv,sizeof(mbmv));
         }
-        if(codedi<ncoded){
-          (*set_chroma_mvs)(cbmvs,(const oc_mv *)lbmvs);
-          for(;codedi<ncoded;codedi++){
-            mapi=coded[codedi];
-            bi=mapi&3;
-            frag=_dec->state.frags+mb->map[mapi>>2][bi];
-            frag->mbmode=mb_mode;
-            frag->mv[0]=cbmvs[bi][0];
-            frag->mv[1]=cbmvs[bi][1];
-          }
-        }
-      }break;
-      case OC_MODE_INTER_MV:{
-        last_mv[1][0]=last_mv[0][0];
-        last_mv[1][1]=last_mv[0][1];
-        mbmv[0]=last_mv[0][0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
-        mbmv[1]=last_mv[0][1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
-      }break;
-      case OC_MODE_INTER_MV_LAST:{
-        mbmv[0]=last_mv[0][0];
-        mbmv[1]=last_mv[0][1];
-      }break;
-      case OC_MODE_INTER_MV_LAST2:{
-        mbmv[0]=last_mv[1][0];
-        mbmv[1]=last_mv[1][1];
-        last_mv[1][0]=last_mv[0][0];
-        last_mv[1][1]=last_mv[0][1];
-        last_mv[0][0]=mbmv[0];
-        last_mv[0][1]=mbmv[1];
-      }break;
-      case OC_MODE_GOLDEN_MV:{
-        mbmv[0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
-        mbmv[1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
-      }break;
-      default:mbmv[0]=mbmv[1]=0;break;
-    }
-    /*4MV mode fills in the fragments itself.
-      For all other modes we can use this common code.*/
-    if(mb_mode!=OC_MODE_INTER_MV_FOUR){
-      for(codedi=0;codedi<ncoded;codedi++){
-        mapi=coded[codedi];
-        fragi=mb->map[mapi>>2][mapi&3];
-        frag=_dec->state.frags+fragi;
-        frag->mbmode=mb_mode;
-        frag->mv[0]=mbmv[0];
-        frag->mv[1]=mbmv[1];
       }
     }
   }
@@ -643,9 +668,9 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
 
 static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
   oc_fragment *frag;
-  int         *coded_fragi;
-  int         *coded_fragi_end;
-  int          ncoded_fragis;
+  ptrdiff_t   *coded_fragi;
+  ptrdiff_t   *coded_fragi_end;
+  ptrdiff_t    ncoded_fragis;
   ncoded_fragis=_dec->state.ncoded_fragis[0]+
    _dec->state.ncoded_fragis[1]+_dec->state.ncoded_fragis[2];
   if(ncoded_fragis<=0)return;
@@ -730,7 +755,8 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
 
 
 
-/*Returns the decoded value of the given token.
+/*Returns the decoded value of the first coefficient produced by the given
+   token.
   It CANNOT be called for any of the EOB tokens.
   _token:      The token value to skip.
   _extra_bits: The extra bits attached to this token.
@@ -776,7 +802,7 @@ static int oc_token_dec1val_cati(int _token,int _extra_bits){
   return (VAL_CAT_OFFS[cati]+(_extra_bits&VAL_CAT_MASKS[cati])+mask)^mask;
 }
 
-/*A jump table for compute the first coefficient value the given token value
+/*A jump table for computing the first coefficient value the given token value
    represents.*/
 static const oc_token_dec1val_func OC_TOKEN_DEC1VAL_TABLE[TH_NDCT_TOKENS-
  OC_NDCT_EOB_TOKEN_MAX]={
@@ -807,7 +833,8 @@ static const oc_token_dec1val_func OC_TOKEN_DEC1VAL_TABLE[TH_NDCT_TOKENS-
   (oc_token_dec1val_func)oc_token_dec1val_zrl
 };
 
-/*Returns the decoded value of the given token.
+/*Returns the decoded value of the first coefficient produced by the given
+   token.
   It CANNOT be called for any of the EOB tokens.
   _token:      The token value to skip.
   _extra_bits: The extra bits attached to this token.
@@ -825,19 +852,21 @@ static int oc_dct_token_dec1val(int _token,int _extra_bits){
                 each coefficient.
                This is updated as EOB tokens and zero run tokens are decoded.
   Return: The length of any outstanding EOB run.*/
-static int oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[3],
- int _ntoks_left[3][64]){
-  long  val;
-  int  *coded_fragi;
-  int  *coded_fragi_end;
-  int   run_counts[64];
-  int   cfi;
-  int   eobi;
-  int   eobs;
-  int   ti;
-  int   ebi;
-  int   pli;
-  int   rli;
+static ptrdiff_t oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[3],
+ ptrdiff_t _ntoks_left[3][64]){
+  oc_fragment     *frags;
+  const ptrdiff_t *coded_fragi;
+  const ptrdiff_t *coded_fragi_end;
+  ptrdiff_t        run_counts[64];
+  ptrdiff_t        cfi;
+  ptrdiff_t        eobi;
+  ptrdiff_t        eobs;
+  ptrdiff_t        ti;
+  ptrdiff_t        ebi;
+  long             val;
+  int              pli;
+  int              rli;
+  frags=_dec->state.frags;
   eobs=0;
   ti=ebi=0;
   coded_fragi_end=coded_fragi=_dec->state.coded_fragis;
@@ -847,7 +876,7 @@ static int oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[3],
     _dec->eob_runs[pli][0]=eobs;
     /*Continue any previous EOB run, if there was one.*/
     for(eobi=eobs;eobi-->0&&coded_fragi<coded_fragi_end;){
-      _dec->state.frags[*coded_fragi++].dc=0;
+      frags[*coded_fragi++].dc=0;
     }
     cfi=0;
     while(eobs<_ntoks_left[pli][0]-cfi){
@@ -870,15 +899,13 @@ static int oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[3],
       skip=oc_dct_token_skip(token,eb);
       if(skip<0){
         eobs=eobi=-skip;
-        while(eobi-->0&&coded_fragi<coded_fragi_end){
-          _dec->state.frags[*coded_fragi++].dc=0;
-        }
+        while(eobi-->0&&coded_fragi<coded_fragi_end)frags[*coded_fragi++].dc=0;
       }
       else{
         run_counts[skip-1]++;
         cfi++;
         eobs=0;
-        _dec->state.frags[*coded_fragi++].dc=oc_dct_token_dec1val(token,eb);
+        frags[*coded_fragi++].dc=oc_dct_token_dec1val(token,eb);
       }
     }
     _dec->ti0[pli][0]=ti;
@@ -909,14 +936,14 @@ static int oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[3],
                 coefficients.
   Return: The length of any outstanding EOB run.*/
 static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[3],
- int _ntoks_left[3][64],int _eobs){
-  long val;
-  int  run_counts[64];
-  int  cfi;
-  int  ti;
-  int  ebi;
-  int  pli;
-  int  rli;
+ ptrdiff_t _ntoks_left[3][64],ptrdiff_t _eobs){
+  ptrdiff_t run_counts[64];
+  ptrdiff_t cfi;
+  ptrdiff_t ti;
+  ptrdiff_t ebi;
+  long      val;
+  int       pli;
+  int       rli;
   ti=ebi=0;
   for(pli=0;pli<3;pli++){
     memset(run_counts,0,sizeof(run_counts));
@@ -982,23 +1009,22 @@ static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[3],
    each of the 64 coefficients, instead of a counter for every fragment to
    determine where the next token goes.
 
-  Actually, we use 3 counters per coefficient, one for each color plane, so we
+  We actually use 3 counters per coefficient, one for each color plane, so we
    can decode all color planes simultaneously.
-
   This lets color conversion, etc., be done as soon as a full MCU (one or
    two super block rows) is decoded, while the image data is still in cache.*/
 
 static void oc_dec_residual_tokens_unpack(oc_dec_ctx *_dec){
-  static const int OC_HUFF_LIST_MAX[5]={1,6,15,28,64};
-  long val;
-  int  ntoks_left[3][64];
-  int  huff_idxs[3];
-  int  pli;
-  int  zzi;
-  int  hgi;
-  int  huffi_y;
-  int  huffi_c;
-  int  eobs;
+  static const unsigned char OC_HUFF_LIST_MAX[5]={1,6,15,28,64};
+  ptrdiff_t  ntoks_left[3][64];
+  int        huff_idxs[3];
+  ptrdiff_t  eobs;
+  long       val;
+  int        pli;
+  int        zzi;
+  int        hgi;
+  int        huffi_y;
+  int        huffi_c;
   for(pli=0;pli<3;pli++)for(zzi=0;zzi<64;zzi++){
     ntoks_left[pli][zzi]=_dec->state.ncoded_fragis[pli];
   }
@@ -1024,7 +1050,7 @@ static void oc_dec_residual_tokens_unpack(oc_dec_ctx *_dec){
   }
   /*TODO: eobs should be exactly zero, or 4096 or greater.
     The second case occurs when an EOB run of size zero is encountered, which
-     gets treated as an infinite EOB run (where infinity is INT_MAX).
+     gets treated as an infinite EOB run (where infinity is PTRDIFF_MAX).
     If neither of these conditions holds, then a warning should be issued.*/
 }
 
@@ -1037,87 +1063,81 @@ static void oc_dec_residual_tokens_unpack(oc_dec_ctx *_dec){
   _token:      The token value to expand.
   _extra_bits: The extra bits associated with the token.
   _dct_coeffs: The current list of coefficients, in zig-zag order.
-  _zzi:        A pointer to the zig-zag index of the next coefficient to write
-                to.
-               This is updated before the function returns.*/
-typedef void (*oc_token_expand_func)(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int *_zzi);
+  _zzi:        The zig-zag index of the next coefficient to write to.
+  Return: The updated index of the next coefficient to write to.*/
+typedef int (*oc_token_expand_func)(int _token,int _extra_bits,
+ ogg_int16_t _dct_coeffs[128],int _zzi);
 
 /*Expands a zero run token.*/
-static void oc_token_expand_zrl(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int *_zzi){
-  int zzi;
-  zzi=*_zzi;
-  do _dct_coeffs[zzi++]=0;
+static int oc_token_expand_zrl(int _token,int _extra_bits,
+ ogg_int16_t _dct_coeffs[128],int _zzi){
+  do _dct_coeffs[_zzi++]=0;
   while(_extra_bits-->0);
-  *_zzi=zzi;
+  return _zzi;
 }
 
 /*Expands a constant, single-value token.*/
-static void oc_token_expand_const(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int *_zzi){
-  _dct_coeffs[(*_zzi)++]=(ogg_int16_t)oc_token_dec1val_const(_token);
+static int oc_token_expand_const(int _token,int _extra_bits,
+ ogg_int16_t _dct_coeffs[128],int _zzi){
+  _dct_coeffs[_zzi++]=(ogg_int16_t)oc_token_dec1val_const(_token);
+  return _zzi;
 }
 
 /*Expands category 2 single-valued tokens.*/
-static void oc_token_expand_cat2(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int *_zzi){
-  _dct_coeffs[(*_zzi)++]=
-   (ogg_int16_t)oc_token_dec1val_cat2(_token,_extra_bits);
+static int oc_token_expand_cat2(int _token,int _extra_bits,
+ ogg_int16_t _dct_coeffs[128],int _zzi){
+  _dct_coeffs[_zzi++]=(ogg_int16_t)oc_token_dec1val_cat2(_token,_extra_bits);
+  return _zzi;
 }
 
 /*Expands category 3 through 8 single-valued tokens.*/
-static void oc_token_expand_cati(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int *_zzi){
-  _dct_coeffs[(*_zzi)++]=
-   (ogg_int16_t)oc_token_dec1val_cati(_token,_extra_bits);
+static int oc_token_expand_cati(int _token,int _extra_bits,
+ ogg_int16_t _dct_coeffs[128],int _zzi){
+  _dct_coeffs[_zzi++]=(ogg_int16_t)oc_token_dec1val_cati(_token,_extra_bits);
+  return _zzi;
 }
 
 /*Expands a category 1a zero run/value combo token.*/
-static void oc_token_expand_run_cat1a(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int *_zzi){
-  int zzi;
+static int oc_token_expand_run_cat1a(int _token,int _extra_bits,
+ ogg_int16_t _dct_coeffs[128],int _zzi){
   int rl;
-  zzi=*_zzi;
   /*LOOP VECTORIZES.*/
-  for(rl=_token-OC_DCT_RUN_CAT1A+1;rl-->0;)_dct_coeffs[zzi++]=0;
-  _dct_coeffs[zzi++]=(ogg_int16_t)(1-(_extra_bits<<1));
-  *_zzi=zzi;
+  for(rl=_token-OC_DCT_RUN_CAT1A+1;rl-->0;)_dct_coeffs[_zzi++]=0;
+  _dct_coeffs[_zzi++]=(ogg_int16_t)(1-(_extra_bits<<1));
+  return _zzi;
 }
 
 /*Expands all other zero run/value combo tokens.*/
-static void oc_token_expand_run(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int *_zzi){
-  static const int NZEROS_ADJUST[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
+static int oc_token_expand_run(int _token,int _extra_bits,
+ ogg_int16_t _dct_coeffs[128],int _zzi){
+  static const unsigned char NZEROS_ADJUST[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
     6,10,1,2
   };
-  static const int NZEROS_MASK[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
+  static const unsigned char NZEROS_MASK[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
     3,7,0,1
   };
-  static const int VALUE_SHIFT[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
+  static const unsigned char VALUE_SHIFT[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
     0,0,0,1
   };
-  static const int VALUE_MASK[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
+  static const unsigned char VALUE_MASK[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
     0,0,1,1
   };
-  static const int VALUE_ADJUST[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
+  static const unsigned char VALUE_ADJUST[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
     1,1,2,2
   };
-  static const int SIGN_SHIFT[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
+  static const unsigned char SIGN_SHIFT[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
     2,3,1,2
   };
   int mask;
-  int zzi;
   int rl;
   _token-=OC_DCT_RUN_CAT1B;
   rl=(_extra_bits&NZEROS_MASK[_token])+NZEROS_ADJUST[_token];
-  zzi=*_zzi;
   /*LOOP VECTORIZES.*/
-  while(rl-->0)_dct_coeffs[zzi++]=0;
+  while(rl-->0)_dct_coeffs[_zzi++]=0;
   mask=-(_extra_bits>>SIGN_SHIFT[_token]);
-  _dct_coeffs[zzi++]=(ogg_int16_t)((VALUE_ADJUST[_token]+
+  _dct_coeffs[_zzi++]=(ogg_int16_t)((VALUE_ADJUST[_token]+
    (_extra_bits>>VALUE_SHIFT[_token]&VALUE_MASK[_token])+mask)^mask);
-  *_zzi=zzi;
+  return _zzi;
 }
 
 /*A jump table for expanding token values into coefficient values.
@@ -1159,12 +1179,11 @@ static const oc_token_expand_func OC_TOKEN_EXPAND_TABLE[TH_NDCT_TOKENS-
   _token:      The token value to expand.
   _extra_bits: The extra bits associated with the token.
   _dct_coeffs: The current list of coefficients, in zig-zag order.
-  _zzi:        A pointer to the zig-zag index of the next coefficient to write
-                to.
-               This is updated before the function returns.*/
-static void oc_dct_token_expand(int _token,int _extra_bits,
- ogg_int16_t *_dct_coeffs,int *_zzi){
-  (*OC_TOKEN_EXPAND_TABLE[_token-OC_NDCT_EOB_TOKEN_MAX])(_token,
+  _zzi:        The zig-zag index of the next coefficient to write to.
+  Return: The updated index of the next coefficient to write to.*/
+static int oc_dct_token_expand(int _token,int _extra_bits,
+ ogg_int16_t _dct_coeffs[128],int _zzi){
+  return (*OC_TOKEN_EXPAND_TABLE[_token-OC_NDCT_EOB_TOKEN_MAX])(_token,
    _extra_bits,_dct_coeffs,_zzi);
 }
 
@@ -1192,8 +1211,8 @@ static int oc_dec_postprocess_init(oc_dec_ctx *_dec){
     memset(_dec->dc_qis,_dec->state.qis[0],_dec->state.nfrags);
   }
   else{
-    int           *coded_fragi;
-    int           *coded_fragi_end;
+    ptrdiff_t     *coded_fragi;
+    ptrdiff_t     *coded_fragi_end;
     unsigned char  qi0;
     /*Update the DC quantization index of each coded block.*/
     qi0=(unsigned char)_dec->state.qis[0];
@@ -1227,7 +1246,7 @@ static int oc_dec_postprocess_init(oc_dec_ctx *_dec){
       _dec->pp_frame_buf[0].height=_dec->state.info.frame_height;
       _dec->pp_frame_buf[0].stride=-_dec->pp_frame_buf[0].width;
       _dec->pp_frame_buf[0].data=_dec->pp_frame_data+
-       (1-_dec->pp_frame_buf[0].height)*_dec->pp_frame_buf[0].stride;
+       (1-_dec->pp_frame_buf[0].height)*(ptrdiff_t)_dec->pp_frame_buf[0].stride;
     }
     else{
       size_t y_sz;
@@ -1271,20 +1290,20 @@ static int oc_dec_postprocess_init(oc_dec_ctx *_dec){
 
 
 typedef struct{
-  int  ti[3][64];
-  int  ebi[3][64];
-  int  eob_runs[3][64];
-  int  bounding_values[256];
-  int *coded_fragis[3];
-  int *uncoded_fragis[3];
-  int  fragy0[3];
-  int  fragy_end[3];
-  int  ncoded_fragis[3];
-  int  nuncoded_fragis[3];
-  int  pred_last[3][3];
-  int  mcu_nvfrags;
-  int  loop_filter;
-  int  pp_level;
+  int              bounding_values[256];
+  ptrdiff_t        ti[3][64];
+  ptrdiff_t        ebi[3][64];
+  ptrdiff_t        eob_runs[3][64];
+  const ptrdiff_t *coded_fragis[3];
+  const ptrdiff_t *uncoded_fragis[3];
+  ptrdiff_t        ncoded_fragis[3];
+  ptrdiff_t        nuncoded_fragis[3];
+  int              fragy0[3];
+  int              fragy_end[3];
+  int              pred_last[3][3];
+  int              mcu_nvfrags;
+  int              loop_filter;
+  int              pp_level;
 }oc_dec_pipeline_state;
 
 
@@ -1292,9 +1311,9 @@ typedef struct{
 /*Initialize the main decoding pipeline.*/
 static void oc_dec_pipeline_init(oc_dec_ctx *_dec,
  oc_dec_pipeline_state *_pipe){
-  int *coded_fragi_end;
-  int *uncoded_fragi_end;
-  int  pli;
+  const ptrdiff_t *coded_fragi_end;
+  const ptrdiff_t *uncoded_fragi_end;
+  int              pli;
   /*If chroma is sub-sampled in the vertical direction, we have to decode two
      super block rows of Y' for each super block row of Cb and Cr.*/
   _pipe->mcu_nvfrags=4<<!(_dec->state.info.pixel_fmt&2);
@@ -1342,27 +1361,28 @@ static void oc_dec_pipeline_init(oc_dec_ctx *_dec,
    the MCU is also computed.*/
 static void oc_dec_dc_unpredict_mcu_plane(oc_dec_ctx *_dec,
  oc_dec_pipeline_state *_pipe,int _pli){
-  /*Undo the DC prediction.*/
-  oc_fragment_plane *fplane;
-  oc_fragment       *frag;
-  int               *pred_last;
-  int                ncoded_fragis;
-  int                fragx;
-  int                fragy;
-  int                fragy0;
-  int                fragy_end;
+  const oc_fragment_plane *fplane;
+  oc_fragment             *frag;
+  int                     *pred_last;
+  ptrdiff_t                ncoded_fragis;
+  int                      fragx;
+  int                      fragy;
+  int                      fragy0;
+  int                      fragy_end;
+  int                      nhfrags;
   /*Compute the first and last fragment row of the current MCU for this
      plane.*/
   fplane=_dec->state.fplanes+_pli;
   fragy0=_pipe->fragy0[_pli];
   fragy_end=_pipe->fragy_end[_pli];
-  frag=_dec->state.frags+fplane->froffset+(fragy0*fplane->nhfrags);
+  nhfrags=fplane->nhfrags;
+  frag=_dec->state.frags+fplane->froffset+fragy0*(ptrdiff_t)nhfrags;
   ncoded_fragis=0;
   pred_last=_pipe->pred_last[_pli];
   for(fragy=fragy0;fragy<fragy_end;fragy++){
-    for(fragx=0;fragx<fplane->nhfrags;fragx++,frag++){
+    for(fragx=0;fragx<nhfrags;fragx++,frag++){
       if(!frag->coded)continue;
-      pred_last[OC_FRAME_FOR_MODE[frag->mbmode]]=frag->dc+=
+      pred_last[OC_FRAME_FOR_MODE[frag->mb_mode]]=frag->dc+=
        oc_frag_pred_dc(frag,fplane,fragx,fragy,pred_last);
       ncoded_fragis++;
     }
@@ -1370,7 +1390,7 @@ static void oc_dec_dc_unpredict_mcu_plane(oc_dec_ctx *_dec,
   _pipe->ncoded_fragis[_pli]=ncoded_fragis;
   /*Also save the number of uncoded fragments so we know how many to copy.*/
   _pipe->nuncoded_fragis[_pli]=
-   (fragy_end-fragy0)*fplane->nhfrags-ncoded_fragis;
+   (fragy_end-fragy0)*(ptrdiff_t)nhfrags-ncoded_fragis;
 }
 
 /*Reconstructs all coded fragments in a single MCU (one or two super block
@@ -1384,30 +1404,28 @@ static void oc_dec_dc_unpredict_mcu_plane(oc_dec_ctx *_dec,
    counts.*/
 static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
  oc_dec_pipeline_state *_pipe,int _pli){
-  /*Decode the AC coefficients.*/
-  int *ti;
-  int *ebi;
-  int *eob_runs;
-  int *coded_fragi;
-  int *coded_fragi_end;
+  const oc_fragment *frags;
+  const ptrdiff_t   *coded_fragi;
+  const ptrdiff_t   *coded_fragi_end;
+  ptrdiff_t         *ti;
+  ptrdiff_t         *ebi;
+  ptrdiff_t         *eob_runs;
+  frags=_dec->state.frags;
+  coded_fragi_end=coded_fragi=_pipe->coded_fragis[_pli];
+  coded_fragi_end+=_pipe->ncoded_fragis[_pli];
   ti=_pipe->ti[_pli];
   ebi=_pipe->ebi[_pli];
   eob_runs=_pipe->eob_runs[_pli];
-  coded_fragi_end=coded_fragi=_pipe->coded_fragis[_pli];
-  coded_fragi_end+=_pipe->ncoded_fragis[_pli];
   for(;coded_fragi<coded_fragi_end;coded_fragi++){
-    oc_fragment    *frag;
     oc_quant_table *quants;
-    /*This array is made one bigger than necessary so that an invalid zero
-       run cannot cause a buffer overflow.
-      The inverse zig-zag mapping sends all out of range indices to the last
-       entry of this array, where they are ignored.*/
+    /*This array is made twice as large as necessary so that an invalid zero
+       run cannot cause a buffer overflow.*/
     ogg_int16_t    dct_coeffs[128];
-    int            fragi;
+    ptrdiff_t      fragi;
     int            zzi;
     int            last_zzi;
     fragi=*coded_fragi;
-    frag=_dec->state.frags+fragi;
+    /*Decode the AC coefficients.*/
     for(zzi=0;zzi<64;){
       int token;
       int eb;
@@ -1425,18 +1443,19 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
         if(token<OC_NDCT_EOB_TOKEN_MAX){
           eob_runs[zzi]=-oc_dct_token_skip(token,eb);
         }
-        else oc_dct_token_expand(token,eb,dct_coeffs,&zzi);
+        else zzi=oc_dct_token_expand(token,eb,dct_coeffs,zzi);
       }
     }
     /*TODO: zzi should be exactly 64 here.
       If it's not, we should report some kind of warning.*/
     zzi=OC_MINI(zzi,64);
-    dct_coeffs[0]=(ogg_int16_t)frag->dc;
-    quants=_dec->state.dequant_tables[frag->mbmode!=OC_MODE_INTRA][_pli];
+    dct_coeffs[0]=(ogg_int16_t)frags[fragi].dc;
+    quants=
+     _dec->state.dequant_tables[frags[fragi].mb_mode!=OC_MODE_INTRA][_pli];
     /*last_zzi is always initialized.
       If your compiler thinks otherwise, it is dumb.*/
-    oc_state_frag_recon(&_dec->state,frag,_pli,dct_coeffs,last_zzi,zzi,
-     quants[_dec->state.qis[0]][0],quants[frag->qi]);
+    oc_state_frag_recon(&_dec->state,fragi,_pli,dct_coeffs,last_zzi,zzi,
+     quants[_dec->state.qis[0]][0],quants[frags[fragi].qi]);
   }
   _pipe->coded_fragis[_pli]=coded_fragi;
   /*Right now the reconstructed MCU has only the coded blocks in it.*/
@@ -1555,9 +1574,13 @@ static void oc_dec_deblock_frag_rows(oc_dec_ctx *_dec,
   unsigned char       *dc_qi;
   unsigned char       *dst;
   const unsigned char *src;
+  ptrdiff_t            froffset;
+  int                  dst_ystride;
+  int                  src_ystride;
+  int                  nhfrags;
+  int                  width;
   int                  notstart;
   int                  notdone;
-  int                  froffset;
   int                  flimit;
   int                  qstep;
   int                  y_end;
@@ -1566,58 +1589,64 @@ static void oc_dec_deblock_frag_rows(oc_dec_ctx *_dec,
   _dst+=_pli;
   _src+=_pli;
   fplane=_dec->state.fplanes+_pli;
-  froffset=fplane->froffset+_fragy0*fplane->nhfrags;
+  nhfrags=fplane->nhfrags;
+  froffset=fplane->froffset+_fragy0*(ptrdiff_t)nhfrags;
   variance=_dec->variances+froffset;
   dc_qi=_dec->dc_qis+froffset;
   notstart=_fragy0>0;
   notdone=_fragy_end<fplane->nvfrags;
   /*We want to clear an extra row of variances, except at the end.*/
-  memset(variance+(fplane->nhfrags&-notstart),0,
-   (_fragy_end+notdone-_fragy0-notstart)*fplane->nhfrags*sizeof(variance[0]));
+  memset(variance+(nhfrags&-notstart),0,
+   (_fragy_end+notdone-_fragy0-notstart)*(nhfrags*sizeof(variance[0])));
   /*Except for the first time, we want to point to the middle of the row.*/
   y=(_fragy0<<3)+(notstart<<2);
-  dst=_dst->data+y*_dst->stride;
-  src=_src->data+y*_src->stride;
+  dst_ystride=_dst->stride;
+  src_ystride=_src->stride;
+  dst=_dst->data+y*(ptrdiff_t)dst_ystride;
+  src=_src->data+y*(ptrdiff_t)src_ystride;
+  width=_dst->width;
   for(;y<4;y++){
-    memcpy(dst,src,_dst->width*sizeof(dst[0]));
-    dst+=_dst->stride;
-    src+=_src->stride;
+    memcpy(dst,src,width*sizeof(dst[0]));
+    dst+=dst_ystride;
+    src+=src_ystride;
   }
   /*We also want to skip the last row in the frame for this loop.*/
   y_end=_fragy_end-!notdone<<3;
   for(;y<y_end;y+=8){
     qstep=_dec->pp_dc_scale[*dc_qi];
     flimit=(qstep*3)>>2;
-    oc_filter_hedge(dst,_dst->stride,src-_src->stride,_src->stride,
-     qstep,flimit,variance,variance+fplane->nhfrags);
+    oc_filter_hedge(dst,dst_ystride,src-src_ystride,src_ystride,
+     qstep,flimit,variance,variance+nhfrags);
     variance++;
     dc_qi++;
-    for(x=8;x<_dst->width;x+=8){
+    for(x=8;x<width;x+=8){
       qstep=_dec->pp_dc_scale[*dc_qi];
       flimit=(qstep*3)>>2;
-      oc_filter_hedge(dst+x,_dst->stride,src+x-_src->stride,_src->stride,
-       qstep,flimit,variance,variance+fplane->nhfrags);
-      oc_filter_vedge(dst+x-(_dst->stride<<2)-4,_dst->stride,
+      oc_filter_hedge(dst+x,dst_ystride,src+x-src_ystride,src_ystride,
+       qstep,flimit,variance,variance+nhfrags);
+      oc_filter_vedge(dst+x-(dst_ystride<<2)-4,dst_ystride,
        qstep,flimit,variance-1);
       variance++;
       dc_qi++;
     }
-    dst+=_dst->stride<<3;
-    src+=_src->stride<<3;
+    dst+=dst_ystride<<3;
+    src+=src_ystride<<3;
   }
   /*And finally, handle the last row in the frame, if it's in the range.*/
   if(!notdone){
-    for(;y<_dst->height;y++){
-      memcpy(dst,src,_dst->width*sizeof(dst[0]));
-      dst+=_dst->stride;
-      src+=_src->stride;
+    int height;
+    height=_dst->height;
+    for(;y<height;y++){
+      memcpy(dst,src,width*sizeof(dst[0]));
+      dst+=dst_ystride;
+      src+=src_ystride;
     }
     /*Filter the last row of vertical block edges.*/
     dc_qi++;
-    for(x=8;x<_dst->width;x+=8){
+    for(x=8;x<width;x+=8){
       qstep=_dec->pp_dc_scale[*dc_qi++];
       flimit=(qstep*3)>>2;
-      oc_filter_vedge(dst+x-(_dst->stride<<3)-4,_dst->stride,
+      oc_filter_vedge(dst+x-(dst_ystride<<3)-4,dst_ystride,
        qstep,flimit,variance++);
     }
   }
@@ -1625,8 +1654,8 @@ static void oc_dec_deblock_frag_rows(oc_dec_ctx *_dec,
 
 static void oc_dering_block(unsigned char *_idata,int _ystride,int _b,
  int _dc_scale,int _sharp_mod,int _strong){
-  static const int     MOD_MAX[2]={24,32};
-  static const int     MOD_SHIFT[2]={1,0};
+  static const unsigned char MOD_MAX[2]={24,32};
+  static const unsigned char MOD_SHIFT[2]={1,0};
   const unsigned char *psrc;
   const unsigned char *src;
   const unsigned char *nsrc;
@@ -1675,10 +1704,10 @@ static void oc_dering_block(unsigned char *_idata,int _ystride,int _b,
     w=hmod[by];
     a-=w;
     b+=w**(src-!(_b&1));
-    w=vmod[(by<<3)];
+    w=vmod[by<<3];
     a-=w;
     b+=w*psrc[0];
-    w=vmod[(by+1<<3)];
+    w=vmod[by+1<<3];
     a-=w;
     b+=w*nsrc[0];
     w=hmod[(1<<3)+by];
@@ -1736,62 +1765,69 @@ static void oc_dec_dering_frag_rows(oc_dec_ctx *_dec,th_img_plane *_img,
   oc_fragment       *frag;
   int               *variance;
   unsigned char     *idata;
+  ptrdiff_t          froffset;
+  int                ystride;
+  int                nhfrags;
   int                sthresh;
   int                strong;
-  int                froffset;
   int                y_end;
+  int                width;
+  int                height;
   int                y;
   int                x;
   iplane=_img+_pli;
   fplane=_dec->state.fplanes+_pli;
-  froffset=fplane->froffset+_fragy0*fplane->nhfrags;
+  nhfrags=fplane->nhfrags;
+  froffset=fplane->froffset+_fragy0*(ptrdiff_t)nhfrags;
   variance=_dec->variances+froffset;
   frag=_dec->state.frags+froffset;
   strong=_dec->pp_level>=(_pli?OC_PP_LEVEL_SDERINGC:OC_PP_LEVEL_SDERINGY);
   sthresh=_pli?OC_DERING_THRESH4:OC_DERING_THRESH3;
   y=_fragy0<<3;
-  idata=iplane->data+y*iplane->stride;
+  ystride=iplane->stride;
+  idata=iplane->data+y*(ptrdiff_t)ystride;
   y_end=_fragy_end<<3;
+  width=iplane->width;
+  height=iplane->height;
   for(;y<y_end;y+=8){
-    for(x=0;x<iplane->width;x+=8){
+    for(x=0;x<width;x+=8){
       int b;
       int qi;
       int var;
       qi=frag->qi;
       var=*variance;
-      b=(x<=0)|(x+8>=iplane->width)<<1|(y<=0)<<2|(y+8>=iplane->height)<<3;
+      b=(x<=0)|(x+8>=width)<<1|(y<=0)<<2|(y+8>=height)<<3;
       if(strong&&var>sthresh){
-        oc_dering_block(idata+x,iplane->stride,b,
+        oc_dering_block(idata+x,ystride,b,
          _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],1);
         if(_pli||!(b&1)&&*(variance-1)>OC_DERING_THRESH4||
          !(b&2)&&variance[1]>OC_DERING_THRESH4||
-         !(b&4)&&*(variance-fplane->nvfrags)>OC_DERING_THRESH4||
-         !(b&8)&&variance[fplane->nvfrags]>OC_DERING_THRESH4){
-          oc_dering_block(idata+x,iplane->stride,b,
+         !(b&4)&&*(variance-nhfrags)>OC_DERING_THRESH4||
+         !(b&8)&&variance[nhfrags]>OC_DERING_THRESH4){
+          oc_dering_block(idata+x,ystride,b,
            _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],1);
-          oc_dering_block(idata+x,iplane->stride,b,
+          oc_dering_block(idata+x,ystride,b,
            _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],1);
         }
       }
       else if(var>OC_DERING_THRESH2){
-        oc_dering_block(idata+x,iplane->stride,b,
+        oc_dering_block(idata+x,ystride,b,
          _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],1);
       }
       else if(var>OC_DERING_THRESH1){
-        oc_dering_block(idata+x,iplane->stride,b,
+        oc_dering_block(idata+x,ystride,b,
          _dec->pp_dc_scale[qi],_dec->pp_sharp_mod[qi],0);
       }
       frag++;
       variance++;
     }
-    idata+=iplane->stride<<3;
+    idata+=ystride<<3;
   }
 }
 
 
 
-th_dec_ctx *th_decode_alloc(const th_info *_info,
- const th_setup_info *_setup){
+th_dec_ctx *th_decode_alloc(const th_info *_info,const th_setup_info *_setup){
   oc_dec_ctx *dec;
   if(_info==NULL||_setup==NULL)return NULL;
   dec=_ogg_malloc(sizeof(*dec));
@@ -1854,15 +1890,15 @@ int th_decode_ctl(th_dec_ctx *_dec,int _req,void *_buf,
   case TH_DECCTL_SET_TELEMETRY_MBMODE:{
     if(_dec==NULL||_buf==NULL)return TH_EFAULT;
     if(_buf_sz!=sizeof(int))return TH_EINVAL;
-    _dec->telemetry = 1;
-    _dec->telemetry_mbmode = *(int *)_buf;
+    _dec->telemetry=1;
+    _dec->telemetry_mbmode=*(int *)_buf;
     return 0;
   }break;
   case TH_DECCTL_SET_TELEMETRY_MV:{
     if(_dec==NULL||_buf==NULL)return TH_EFAULT;
     if(_buf_sz!=sizeof(int))return TH_EINVAL;
-    _dec->telemetry = 1;
-    _dec->telemetry_mv = *(int *)_buf;
+    _dec->telemetry=1;
+    _dec->telemetry_mv=*(int *)_buf;
     return 0;
   }break;
 #endif
@@ -1897,9 +1933,9 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
       size_t       yplane_sz;
       size_t       cplane_sz;
       int          yhstride;
-      int          yvstride;
+      int          yheight;
       int          chstride;
-      int          cvstride;
+      int          cheight;
       /*We're decoding an INTER frame, but have no initialized reference
          buffers (i.e., decoding did not start on a key frame).
         We initialize them to a solid gray here.*/
@@ -1908,11 +1944,11 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
       _dec->state.ref_frame_idx[OC_FRAME_SELF]=refi=1;
       info=&_dec->state.info;
       yhstride=info->frame_width+2*OC_UMV_PADDING;
-      yvstride=info->frame_height+2*OC_UMV_PADDING;
+      yheight=info->frame_height+2*OC_UMV_PADDING;
       chstride=yhstride>>!(info->pixel_fmt&1);
-      cvstride=yvstride>>!(info->pixel_fmt&2);
-      yplane_sz=(size_t)yhstride*yvstride;
-      cplane_sz=(size_t)chstride*cvstride;
+      cheight=yheight>>!(info->pixel_fmt&2);
+      yplane_sz=yhstride*(size_t)yheight;
+      cplane_sz=chstride*(size_t)cheight;
       memset(_dec->state.ref_frame_data,0x80,yplane_sz+2*cplane_sz);
     }
     else{
@@ -2033,7 +2069,8 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
       if(_dec->stripe_cb.stripe_decoded!=NULL){
         /*The callback might want to use the FPU, so let's make sure they can.
           We violate all kinds of ABI restrictions by not doing this until
-           now, but none of them actually matter.*/
+           now, but none of them actually matter since we don't use floating
+           point ourselves.*/
         oc_restore_fpu(&_dec->state);
         /*Make the callback, ensuring we flip the sense of the "start" and
            "end" of the available region upside down.*/
@@ -2057,11 +2094,13 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
       _dec->state.ref_frame_idx[OC_FRAME_PREV]=
        _dec->state.ref_frame_idx[OC_FRAME_SELF];
     }
+    /*Restore the FPU before dump_frame, since that _does_ use the FPU (for PNG
+       gamma values, if nothing else).*/
+    oc_restore_fpu(&_dec->state);
 #if defined(OC_DUMP_IMAGES)
     /*Don't dump images for dropped frames.*/
     oc_state_dump_frame(&_dec->state,OC_FRAME_SELF,"dec");
 #endif
-    oc_restore_fpu(&_dec->state);
     return 0;
   }
   else{

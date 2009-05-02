@@ -552,7 +552,6 @@ static const unsigned char OC_FZIG_ZAG_MMX[64]={
 void oc_dequant_idct8x8_mmx(ogg_int16_t _y[64],const ogg_int16_t _x[64],
  int _last_zzi,int _ncoefs,ogg_uint16_t _dc_quant,
  const ogg_uint16_t _ac_quant[64]){
-  int ci;
   /*_last_zzi is subtly different from an actual count of the number of
      coefficients we decoded for this block.
     It contains the value of zzi BEFORE the final token in the block was
@@ -650,6 +649,5 @@ void oc_dequant_idct8x8_mmx(ogg_int16_t _y[64],const ogg_int16_t _x[64],
     else oc_idct8x8_slow(_y);
   }
 }
-
 
 #endif

@@ -32,13 +32,14 @@ void oc_frag_recon_inter2_mmx(unsigned char *_dst,const unsigned char *_src1,
 void oc_dequant_idct8x8_mmx(ogg_int16_t _y[64],const ogg_int16_t _x[64],
  int _last_zzi,int _ncoefs,ogg_uint16_t _dc_quant,
  const ogg_uint16_t _ac_quant[64]);
-void oc_state_frag_recon_mmx(const oc_theora_state *_state,oc_fragment *_frag,
- int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,int _ncoefs,
+void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
+ int _pli,ogg_int16_t _dct_coeffs[64],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]);
 void oc_state_frag_copy_list_mmx(const oc_theora_state *_state,
- const int *_fragis,int _nfragis,int _dst_frame,int _src_frame,int _pli);
-void oc_state_loop_filter_frag_rows_mmx(const oc_theora_state *_state,int *_bv,
- int _refi,int _pli,int _fragy0,int _fragy_end);
+ const ptrdiff_t *_fragis,ptrdiff_t _nfragis,
+ int _dst_frame,int _src_frame,int _pli);
+void oc_state_loop_filter_frag_rows_mmx(const oc_theora_state *_state,
+ int _bv[256],int _refi,int _pli,int _fragy0,int _fragy_end);
 void oc_restore_fpu_mmx(void);
 
 #endif

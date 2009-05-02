@@ -101,7 +101,7 @@ void oc_restore_fpu_c(void){}
   Return: The predicted DC value for this fragment.*/
 int oc_frag_pred_dc(const oc_fragment *_frag,
  const oc_fragment_plane *_fplane,int _x,int _y,int _pred_last[3]){
-  static const int PRED_SCALE[16][4]={
+  static const signed char   PRED_SCALE[16][4]={
     /*0*/
     {0,0,0,0},
     /*OC_PL*/
@@ -135,9 +135,11 @@ int oc_frag_pred_dc(const oc_fragment *_frag,
     /*OC_PL|OC_PUL|OC_PU|OC_PUR*/
     {29,-26,29,0}
   };
-  static const int PRED_SHIFT[16]={0,0,0,0,0,1,0,5,0,7,1,7,0,7,4,5};
-  static const int PRED_RMASK[16]={0,0,0,0,0,1,0,31,0,127,1,127,0,127,15,31};
-  static const int BC_MASK[8]={
+  static const unsigned char PRED_SHIFT[16]={0,0,0,0,0,1,0,5,0,7,1,7,0,7,4,5};
+  static const unsigned char PRED_RMASK[16]={
+    0,0,0,0,0,1,0,31,0,127,1,127,0,127,15,31
+  };
+  static const unsigned char BC_MASK[8]={
     /*No boundary condition.*/
     OC_PL|OC_PUL|OC_PU|OC_PUR,
     /*Left column.*/
@@ -161,8 +163,7 @@ int oc_frag_pred_dc(const oc_fragment *_frag,
   int                pred_frame;
   /*The boundary condition flags.*/
   int                bc;
-  /*DC predictor values: left, up-left, up, up-right, missing values
-     skipped.*/
+  /*DC predictor values: left, up-left, up, up-right, missing values skipped.*/
   int                p[4];
   /*Predictor count.*/
   int                np;
@@ -171,7 +172,7 @@ int oc_frag_pred_dc(const oc_fragment *_frag,
   /*The predicted DC value.*/
   int                ret;
   int                i;
-  pred_frame=OC_FRAME_FOR_MODE[_frag->mbmode];
+  pred_frame=OC_FRAME_FOR_MODE[_frag->mb_mode];
   bc=(_x==0)+((_y==0)<<1)+((_x+1==_fplane->nhfrags)<<2);
   predfr[0]=_frag-1;
   predfr[1]=_frag-_fplane->nhfrags-1;
@@ -183,7 +184,7 @@ int oc_frag_pred_dc(const oc_fragment *_frag,
     int pflag;
     pflag=1<<i;
     if((BC_MASK[bc]&pflag)&&predfr[i]->coded&&
-     OC_FRAME_FOR_MODE[predfr[i]->mbmode]==pred_frame){
+     OC_FRAME_FOR_MODE[predfr[i]->mb_mode]==pred_frame){
       p[np++]=predfr[i]->dc;
       pflags|=pflag;
     }
