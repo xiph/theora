@@ -264,19 +264,18 @@ void fr_finishsb(CP_INSTANCE *cpi, fr_state_t *fr){
     fr->cost++;
     fr->sb_partial_last = partial;
   }
-    
+
+  if(fr->sb_partial_break){
+    if(cpi){
+      cpi->fr_partial[cpi->fr_partial_count] = partial;
+      cpi->fr_partial_bits[cpi->fr_partial_count++] = 1;
+    }
+    fr->cost++;
+    fr->sb_partial_break=0;
+  }
   if(fr->sb_partial_last == partial && fr->sb_partial_count < 4129){
     fr->sb_partial_count++;
   }else{
-    if(fr->sb_partial_break){
-      if(cpi){
-	cpi->fr_partial[cpi->fr_partial_count] = partial;
-	cpi->fr_partial_bits[cpi->fr_partial_count++] = 1;
-      }
-      fr->cost++;
-    }
-      
-    fr->sb_partial_break=0;
     if(cpi){
       fr->cost+=
 	cpi->fr_partial_bits[cpi->fr_partial_count] = 
@@ -284,7 +283,6 @@ void fr_finishsb(CP_INSTANCE *cpi, fr_state_t *fr){
       cpi->fr_partial_count++;
     }else
       fr->cost+=SBRunCost(fr->sb_partial_count);
-    
     if(fr->sb_partial_count >= 4129) fr->sb_partial_break = 1;
     fr->sb_partial_count=1;
   }
@@ -301,19 +299,17 @@ void fr_finishsb(CP_INSTANCE *cpi, fr_state_t *fr){
       fr->cost++;
       fr->sb_full_last = fr->sb_coded;
     }
-    
+    if(fr->sb_full_break){
+      if(cpi){
+        cpi->fr_full[cpi->fr_full_count] = fr->sb_coded;
+        cpi->fr_full_bits[cpi->fr_full_count++] = 1;
+      }
+      fr->cost++;
+      fr->sb_full_break=0;
+    }
     if(fr->sb_full_last == fr->sb_coded && fr->sb_full_count < 4129){
       fr->sb_full_count++;
     }else{
-      if(fr->sb_full_break){
-	if(cpi){
-	  cpi->fr_full[cpi->fr_full_count] = fr->sb_coded;
-	  cpi->fr_full_bits[cpi->fr_full_count++] = 1;
-	}
-	fr->cost++;
-      }
-
-      fr->sb_full_break=0;
       if(cpi){
 	fr->cost+=
 	  cpi->fr_full_bits[cpi->fr_full_count] = 
