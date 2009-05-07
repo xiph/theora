@@ -200,9 +200,8 @@ void oc_enc_frag_sub_mmx(ogg_int16_t _residue[64],
       "movq %%mm4,0x10(%[residue])\n\t"
       "movq %%mm1,0x18(%[residue])\n\t"
       "lea 0x20(%[residue]),%[residue]\n\t"
-      :
-      :[residue]"r"(_residue),[src]"r"(_src),[ref]"r"(_ref),
-       [ystride]"r"((ptrdiff_t)_ystride)
+      :[residue]"+r"(_residue),[src]"+r"(_src),[ref]"+r"(_ref)
+      :[ystride]"r"((ptrdiff_t)_ystride)
       :"memory"
     );
   }
