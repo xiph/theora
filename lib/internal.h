@@ -23,9 +23,6 @@
 # endif
 # include "theora/codec.h"
 # include "theora/theora.h"
-# include "dec/ocintrin.h"
-# include "dec/huffman.h"
-# include "dec/quant.h"
 
 # if defined(_MSC_VER)
 /*Thank you Microsoft, I know the order of operations.*/
@@ -33,6 +30,14 @@
 /*Disable missing EMMS warnings.*/
 #  pragma warning(disable:4799)
 # endif
+/*You, too, gcc.*/
+# if defined(__GNUC_PREREQ)&&__GNUC_PREREQ(4,2)
+#  pragma GCC diagnostic ignored "-Wparentheses"
+# endif
+
+# include "dec/ocintrin.h"
+# include "dec/huffman.h"
+# include "dec/quant.h"
 
 /*Some assembly constructs require aligned operands.*/
 # if defined(OC_X86_ASM)
@@ -297,87 +302,87 @@ struct oc_base_opt_vtable{
 /*Common state information between the encoder and decoder.*/
 struct oc_theora_state{
   /*The stream information.*/
-  th_info                     info;
+  th_info             info;
   /*Table for shared accelerated functions.*/
-  oc_base_opt_vtable          opt_vtable;
+  oc_base_opt_vtable  opt_vtable;
   /*CPU flags to detect the presence of extended instruction sets.*/
-  ogg_uint32_t                cpu_flags;
+  ogg_uint32_t        cpu_flags;
   /*The fragment plane descriptions.*/
-  oc_fragment_plane           fplanes[3];
+  oc_fragment_plane   fplanes[3];
   /*The list of fragments, indexed in image order.*/
-  oc_fragment                *frags;
+  oc_fragment        *frags;
   /*The the offset into the reference frame buffer to the upper-left pixel of
      each fragment.*/
-  ptrdiff_t                  *frag_buf_offs;
+  ptrdiff_t          *frag_buf_offs;
   /*The motion vector for each fragment.*/
-  oc_mv                      *frag_mvs;
+  oc_mv              *frag_mvs;
   /*The total number of fragments in a single frame.*/
-  ptrdiff_t                   nfrags;
+  ptrdiff_t           nfrags;
   /*The list of super block maps, indexed in image order.*/
-  oc_sb_map                  *sb_maps;
+  oc_sb_map          *sb_maps;
   /*The list of super block flags, indexed in image order.*/
-  oc_sb_flags                *sb_flags;
+  oc_sb_flags        *sb_flags;
   /*The total number of super blocks in a single frame.*/
-  unsigned                    nsbs;
+  unsigned            nsbs;
   /*The number of macro blocks in the X direction.*/
-  unsigned                    nhmbs;
+  unsigned            nhmbs;
   /*The number of macro blocks in the Y direction.*/
-  unsigned                    nvmbs;
+  unsigned            nvmbs;
   /*The total number of macro blocks.*/
-  size_t                      nmbs;
+  size_t              nmbs;
   /*The fragments from each color plane that belong to each macro block.
     Fragments are stored in image order (left to right then top to bottom).
     When chroma components are decimated, the extra fragments have an index of
      -1.*/
-  oc_mb_map                  *mb_maps;
+  oc_mb_map          *mb_maps;
   /*The list of macro block modes.
     A negative number indicates the macro block lies entirely outside the
      coded frame.*/
-  signed char                *mb_modes;
+  signed char        *mb_modes;
   /*The list of coded fragments, in coded order.*/
-  ptrdiff_t                  *coded_fragis;
+  ptrdiff_t          *coded_fragis;
   /*The number of coded fragments in each plane.*/
-  ptrdiff_t                   ncoded_fragis[3];
+  ptrdiff_t           ncoded_fragis[3];
   /*The list of uncoded fragments.
     This just past the end of the list, which is in reverse order, and
      uses the same block of allocated storage as the coded_fragis list.*/
-  ptrdiff_t                  *uncoded_fragis;
+  ptrdiff_t          *uncoded_fragis;
   /*The number of uncoded fragments in each plane.*/
-  ptrdiff_t                   nuncoded_fragis[3];
+  ptrdiff_t           nuncoded_fragis[3];
   /*The list of coded macro blocks in the Y plane, in coded order.*/
-  unsigned                   *coded_mbis;
+  unsigned           *coded_mbis;
   /*The number of coded macro blocks in the Y plane.*/
-  size_t                      ncoded_mbis;
+  size_t              ncoded_mbis;
   /*The number of unique border patterns.*/
-  int                         nborders;
+  int                 nborders;
   /*The unique border patterns for all border fragments.
     The borderi field of fragments which straddle the border indexes this
      list.*/
-  oc_border_info              borders[16];
+  oc_border_info      borders[16];
   /*The index of the buffers being used for each OC_FRAME_* reference frame.*/
-  int                         ref_frame_idx[3];
+  int                 ref_frame_idx[3];
   /*The actual buffers used for the previously decoded frames.*/
-  th_ycbcr_buffer             ref_frame_bufs[3];
+  th_ycbcr_buffer     ref_frame_bufs[3];
   /*The storage for the reference frame buffers.*/
-  unsigned char              *ref_frame_data[3];
+  unsigned char      *ref_frame_data[3];
   /*The frame number of the last keyframe.*/
-  ogg_int64_t                 keyframe_num;
+  ogg_int64_t         keyframe_num;
   /*The frame number of the current frame.*/
-  ogg_int64_t                 curframe_num;
+  ogg_int64_t         curframe_num;
   /*The granpos of the current frame.*/
-  ogg_int64_t                 granpos;
+  ogg_int64_t         granpos;
   /*The type of the current frame.*/
-  int                         frame_type;
+  int                 frame_type;
   /*The quality indices of the current frame.*/
-  unsigned char               qis[3];
+  unsigned char       qis[3];
   /*The number of quality indices used in the current frame.*/
-  unsigned char               nqis;
+  unsigned char       nqis;
   /*The dequantization tables.
     Note that these are stored in zig-zag order.*/
-  oc_quant_table             *dequant_tables[2][3];
-  oc_quant_tables OC_ALIGN16  dequant_table_data[2][3];
+  oc_quant_table     *dequant_tables[2][3];
+  oc_quant_tables     dequant_table_data[2][3]OC_ALIGN16;
   /*Loop filter strength parameters.*/
-  unsigned char               loop_filter_limits[64];
+  unsigned char       loop_filter_limits[64];
 };
 
 

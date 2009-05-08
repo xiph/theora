@@ -336,7 +336,6 @@ static void oc_idct8x8_slow(ogg_int16_t _y[64]){
     OC_COLUMN_IDCT
 #undef  OC_I
 #undef  OC_J
-    "emms\n\t"
     :
     :[y]"r"(_y),[c]"r"(OC_IDCT_CONSTS)
   );
@@ -524,7 +523,6 @@ static void oc_idct8x8_10(ogg_int16_t _y[64]){
     OC_COLUMN_IDCT_10
 #undef  OC_I
 #undef  OC_J
-    "emms\n\t"
     :
     :[y]"r"(_y),[c]"r"(OC_IDCT_CONSTS)
   );

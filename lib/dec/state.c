@@ -498,7 +498,7 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state){
   info=&_state->info;
   /*Compute the image buffer parameters for each plane.*/
   hdec=!(info->pixel_fmt&1);
-  vdec=!(info->pixel_fmt&1);
+  vdec=!(info->pixel_fmt&2);
   yhstride=info->frame_width+2*OC_UMV_PADDING;
   yheight=info->frame_height+2*OC_UMV_PADDING;
   chstride=yhstride>>hdec;
@@ -630,6 +630,11 @@ int oc_state_init(oc_theora_state *_state,const th_info *_info){
    _info->pic_y+_info->pic_height>_info->frame_height||
    _info->pic_x>255||
    _info->frame_height-_info->pic_height-_info->pic_y>255||
+   /*Note: the following <0 comparisons may generate spurious warnings on
+      platforms where enums are unsigned.
+     We could cast them to unsigned and just use the following >= comparison,
+      but there are a number of compilers which will mis-optimize this.
+     It's better to live with the spurious warnings.*/
    _info->colorspace<0||_info->colorspace>=TH_CS_NSPACES||
    _info->pixel_fmt<0||_info->pixel_fmt>=TH_PF_NFORMATS){
     return TH_EINVAL;

@@ -81,9 +81,9 @@
 /*Divides _x by 16, truncating towards 0.*/
 #define OC_DIV16(_x) OC_DIV_POW2(_x,4,0xF)
 /*Right shifts _dividend by _shift, adding _rval, and subtracting one for
-   negative dividends first..
+   negative dividends first.
   When _rval is (1<<_shift-1), this is equivalent to division with rounding
-   ties towards positive infinity.*/
+   ties away from zero.*/
 #define OC_DIV_ROUND_POW2(_dividend,_shift,_rval)\
  ((_dividend)+OC_SIGNMASK(_dividend)+(_rval)>>(_shift))
 /*Divides a _x by 2, rounding towards even numbers.*/
