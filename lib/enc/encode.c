@@ -444,6 +444,8 @@ void oc_enc_vtable_init_c(CP_INSTANCE *_cpi){
   _cpi->opt_vtable.frag_sad=oc_enc_frag_sad_c;
   _cpi->opt_vtable.frag_sad_thresh=oc_enc_frag_sad_thresh_c;
   _cpi->opt_vtable.frag_sad2_thresh=oc_enc_frag_sad2_thresh_c;
+  _cpi->opt_vtable.frag_satd_thresh=oc_enc_frag_satd_thresh_c;
+  _cpi->opt_vtable.frag_satd2_thresh=oc_enc_frag_satd2_thresh_c;
   _cpi->opt_vtable.frag_sub=oc_enc_frag_sub_c;
   _cpi->opt_vtable.frag_sub_128=oc_enc_frag_sub_128_c;
   _cpi->opt_vtable.frag_copy=oc_frag_copy_c;

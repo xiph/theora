@@ -160,6 +160,461 @@ unsigned oc_enc_frag_sad2_thresh_mmxext(const unsigned char *_src,
   return (unsigned)ret;
 }
 
+/*Load an 8x4 array of pixel values from %[src] and %[ref] and compute their
+   16-bit difference in %%mm0...%%mm7.*/
+#define OC_LOAD_SUB_8x4(_off) \
+ "#OC_LOAD_SUB_8x4\n\t" \
+ "movd "_off"(%[src]),%%mm0\n\t" \
+ "movd "_off"(%[ref]),%%mm4\n\t" \
+ "movd "_off"(%[src],%[src_ystride]),%%mm1\n\t" \
+ "lea (%[src],%[src_ystride],2),%[src]\n\t" \
+ "movd "_off"(%[ref],%[ref_ystride]),%%mm5\n\t" \
+ "lea (%[ref],%[ref_ystride],2),%[ref]\n\t" \
+ "movd "_off"(%[src]),%%mm2\n\t" \
+ "movd "_off"(%[ref]),%%mm7\n\t" \
+ "movd "_off"(%[src],%[src_ystride]),%%mm3\n\t" \
+ "movd "_off"(%[ref],%[ref_ystride]),%%mm6\n\t" \
+ "punpcklbw %%mm4,%%mm0\n\t" \
+ "lea (%[src],%[src_ystride],2),%[src]\n\t" \
+ "punpcklbw %%mm4,%%mm4\n\t" \
+ "lea (%[ref],%[ref_ystride],2),%[ref]\n\t" \
+ "psubw %%mm4,%%mm0\n\t" \
+ "movd "_off"(%[src]),%%mm4\n\t" \
+ "movq %%mm0,"_off"*2(%[buf])\n\t" \
+ "movd "_off"(%[ref]),%%mm0\n\t" \
+ "punpcklbw %%mm5,%%mm1\n\t" \
+ "punpcklbw %%mm5,%%mm5\n\t" \
+ "psubw %%mm5,%%mm1\n\t" \
+ "movd "_off"(%[src],%[src_ystride]),%%mm5\n\t" \
+ "punpcklbw %%mm7,%%mm2\n\t" \
+ "punpcklbw %%mm7,%%mm7\n\t" \
+ "psubw %%mm7,%%mm2\n\t" \
+ "movd "_off"(%[ref],%[ref_ystride]),%%mm7\n\t" \
+ "punpcklbw %%mm6,%%mm3\n\t" \
+ "lea (%[src],%[src_ystride],2),%[src]\n\t" \
+ "punpcklbw %%mm6,%%mm6\n\t" \
+ "psubw %%mm6,%%mm3\n\t" \
+ "movd "_off"(%[src]),%%mm6\n\t" \
+ "punpcklbw %%mm0,%%mm4\n\t" \
+ "lea (%[ref],%[ref_ystride],2),%[ref]\n\t" \
+ "punpcklbw %%mm0,%%mm0\n\t" \
+ "lea (%[src],%[src_ystride],2),%[src]\n\t" \
+ "psubw %%mm0,%%mm4\n\t" \
+ "movd "_off"(%[ref]),%%mm0\n\t" \
+ "punpcklbw %%mm7,%%mm5\n\t" \
+ "neg %[src_ystride]\n\t" \
+ "punpcklbw %%mm7,%%mm7\n\t" \
+ "psubw %%mm7,%%mm5\n\t" \
+ "movd "_off"(%[src],%[src_ystride]),%%mm7\n\t" \
+ "punpcklbw %%mm0,%%mm6\n\t" \
+ "lea (%[ref],%[ref_ystride],2),%[ref]\n\t" \
+ "punpcklbw %%mm0,%%mm0\n\t" \
+ "neg %[ref_ystride]\n\t" \
+ "psubw %%mm0,%%mm6\n\t" \
+ "movd "_off"(%[ref],%[ref_ystride]),%%mm0\n\t" \
+ "lea (%[src],%[src_ystride],8),%[src]\n\t" \
+ "punpcklbw %%mm0,%%mm7\n\t" \
+ "neg %[src_ystride]\n\t" \
+ "punpcklbw %%mm0,%%mm0\n\t" \
+ "lea (%[ref],%[ref_ystride],8),%[ref]\n\t" \
+ "psubw %%mm0,%%mm7\n\t" \
+ "neg %[ref_ystride]\n\t" \
+ "movq "_off"*2(%[buf]),%%mm0\n\t" \
+
+/*Performs the first two stages of an 8-point 1-D Hadamard transform.
+  The transform is performed in place, except that outputs 0-3 are swapped with
+   outputs 4-7.
+  Outputs 2, 3, 6 and 7 from the second stage are negated (which allows us to
+   perform this stage in place with no temporary registers).*/
+#define OC_HADAMARD_AB_8x4 \
+ "#OC_HADAMARD_AB_8x4\n\t" \
+ /*Stage A: \
+   Outputs 0-3 are swapped with 4-7 here.*/ \
+ "paddw %%mm1,%%mm5\n\t" \
+ "paddw %%mm2,%%mm6\n\t" \
+ "paddw %%mm1,%%mm1\n\t" \
+ "paddw %%mm2,%%mm2\n\t" \
+ "psubw %%mm5,%%mm1\n\t" \
+ "psubw %%mm6,%%mm2\n\t" \
+ "paddw %%mm3,%%mm7\n\t" \
+ "paddw %%mm0,%%mm4\n\t" \
+ "paddw %%mm3,%%mm3\n\t" \
+ "paddw %%mm0,%%mm0\n\t" \
+ "psubw %%mm7,%%mm3\n\t" \
+ "psubw %%mm4,%%mm0\n\t" \
+ /*Stage B:*/ \
+ "paddw %%mm2,%%mm0\n\t" \
+ "paddw %%mm3,%%mm1\n\t" \
+ "paddw %%mm6,%%mm4\n\t" \
+ "paddw %%mm7,%%mm5\n\t" \
+ "paddw %%mm2,%%mm2\n\t" \
+ "paddw %%mm3,%%mm3\n\t" \
+ "paddw %%mm6,%%mm6\n\t" \
+ "paddw %%mm7,%%mm7\n\t" \
+ "psubw %%mm0,%%mm2\n\t" \
+ "psubw %%mm1,%%mm3\n\t" \
+ "psubw %%mm4,%%mm6\n\t" \
+ "psubw %%mm5,%%mm7\n\t" \
+
+/*Performs the last stage of an 8-point 1-D Hadamard transform in place.
+  Ouputs 1, 3, 5, and 7 are negated (which allows us to perform this stage in
+   place with no temporary registers).*/
+#define OC_HADAMARD_C_8x4 \
+ "#OC_HADAMARD_C_8x4\n\t" \
+ /*Stage C:*/ \
+ "paddw %%mm1,%%mm0\n\t" \
+ "paddw %%mm3,%%mm2\n\t" \
+ "paddw %%mm5,%%mm4\n\t" \
+ "paddw %%mm7,%%mm6\n\t" \
+ "paddw %%mm1,%%mm1\n\t" \
+ "paddw %%mm3,%%mm3\n\t" \
+ "paddw %%mm5,%%mm5\n\t" \
+ "paddw %%mm7,%%mm7\n\t" \
+ "psubw %%mm0,%%mm1\n\t" \
+ "psubw %%mm2,%%mm3\n\t" \
+ "psubw %%mm4,%%mm5\n\t" \
+ "psubw %%mm6,%%mm7\n\t" \
+
+/*Performs two 4x4 transposes (mostly) in place.
+  On input, {mm0,mm1,mm2,mm3} contains rows {e,f,g,h}, and {mm4,mm5,mm6,mm7}
+   contains rows {a,b,c,d}.
+  On output, {0x40+_off(%[buf]),mm1,mm2,mm3} contains {e,f,g,h}^T, and
+   {mm4,mm5,mm6,mm7} contains the transposed rows {a,b,c,d}^T.*/
+#define OC_TRANSPOSE_4x4x2(_off) \
+ "#OC_TRANSPOSE_4x4x2\n\t" \
+ /*First 4x4 transpose:*/ \
+ "movq %%mm5,0x10+"_off"(%[buf])\n\t" \
+ /*mm0 = e3 e2 e1 e0 \
+   mm1 = f3 f2 f1 f0 \
+   mm2 = g3 g2 g1 g0 \
+   mm3 = h3 h2 h1 h0*/ \
+ "movq %%mm2,%%mm5\n\t" \
+ "punpcklwd %%mm3,%%mm2\n\t" \
+ "punpckhwd %%mm3,%%mm5\n\t" \
+ "movq %%mm0,%%mm3\n\t" \
+ "punpcklwd %%mm1,%%mm0\n\t" \
+ "punpckhwd %%mm1,%%mm3\n\t" \
+ /*mm0 = f1 e1 f0 e0 \
+   mm3 = f3 e3 f2 e2 \
+   mm2 = h1 g1 h0 g0 \
+   mm5 = h3 g3 h2 g2*/ \
+ "movq %%mm0,%%mm1\n\t" \
+ "punpckldq %%mm2,%%mm0\n\t" \
+ "punpckhdq %%mm2,%%mm1\n\t" \
+ "movq %%mm0,0x40+"_off"(%[buf])\n\t" \
+ "movq %%mm3,%%mm2\n\t" \
+ "punpckhdq %%mm5,%%mm3\n\t" \
+ "punpckldq %%mm5,%%mm2\n\t" \
+ /*mm0 = h0 g0 f0 e0 \
+   mm1 = h1 g1 f1 e1 \
+   mm2 = h2 g2 f2 e2 \
+   mm3 = h3 g3 f3 e3*/ \
+ "movq 0x10+"_off"(%[buf]),%%mm5\n\t" \
+ /*Second 4x4 transpose:*/ \
+ /*mm4 = a3 a2 a1 a0 \
+   mm5 = b3 b2 b1 b0 \
+   mm6 = c3 c2 c1 c0 \
+   mm7 = d3 d2 d1 d0*/ \
+ "movq %%mm6,%%mm0\n\t" \
+ "punpcklwd %%mm7,%%mm6\n\t" \
+ "punpckhwd %%mm7,%%mm0\n\t" \
+ "movq %%mm4,%%mm7\n\t" \
+ "punpcklwd %%mm5,%%mm4\n\t" \
+ "punpckhwd %%mm5,%%mm7\n\t" \
+ /*mm4 = b1 a1 b0 a0 \
+   mm7 = b3 a3 b2 a2 \
+   mm6 = d1 c1 d0 c0 \
+   mm0 = d3 c3 d2 c2*/ \
+ "movq %%mm4,%%mm5\n\t" \
+ "punpckldq %%mm6,%%mm4\n\t" \
+ "punpckhdq %%mm6,%%mm5\n\t" \
+ "movq %%mm7,%%mm6\n\t" \
+ "punpckhdq %%mm0,%%mm7\n\t" \
+ "punpckldq %%mm0,%%mm6\n\t" \
+ /*mm4 = d0 c0 b0 a0 \
+   mm5 = d1 c1 b1 a1 \
+   mm6 = d2 c2 b2 a2 \
+   mm7 = d3 c3 b3 a3*/ \
+
+/*Performs the last stage of an 8-point 1-D Hadamard transform, takes the
+   absolute value of each component, and accumulates everything into mm0.
+  This is the only portion of SATD which requires MMXEXT (we could use plain
+   MMX, but it takes 4 instructions and an extra register to work around the
+   lack of a pmaxsw, which is a pretty serious penalty).*/
+#define OC_HADAMARD_C_ABS_ACCUM_8x4(_r6,_r7) \
+ /*We use the fact that \
+     (abs(a+b)+abs(a-b))/2=max(abs(a),abs(b)) \
+    to merge the final butterfly with the abs and the first stage of \
+    accumulation. \
+   Thus we can avoid using pabsw, which is not available until SSSE3. \
+   Emulating pabsw takes 3 instructions, so the straightforward MMXEXT \
+    implementation would be (3+3)*8+7=55 instructions (+4 for spilling \
+    registers). \
+   Even with pabsw, it would be (3+1)*8+7=39 instructions (with no spills). \
+   This implementation is only 29 (+4 for spilling registers).*/ \
+ "#OC_HADAMARD_C_ABS_ACCUM_8x4\n\t" \
+ "movq %%mm7,"_r7"(%[buf])\n\t" \
+ "movq %%mm6,"_r6"(%[buf])\n\t" \
+ /*mm7={0x7FFF}x4 \
+   mm0=max(abs(mm0),abs(mm1))-0x7FFF*/ \
+ "pcmpeqb %%mm7,%%mm7\n\t" \
+ "movq %%mm0,%%mm6\n\t" \
+ "psrlw $1,%%mm7\n\t" \
+ "paddw %%mm1,%%mm6\n\t" \
+ "pmaxsw %%mm1,%%mm0\n\t" \
+ "paddsw %%mm7,%%mm6\n\t" \
+ "psubw %%mm6,%%mm0\n\t" \
+ /*mm2=max(abs(mm2),abs(mm3)) \
+   mm4=max(abs(mm4),abs(mm5))*/ \
+ "movq %%mm2,%%mm6\n\t" \
+ "movq %%mm4,%%mm1\n\t" \
+ "pmaxsw %%mm3,%%mm2\n\t" \
+ "pmaxsw %%mm5,%%mm4\n\t" \
+ "paddw %%mm3,%%mm6\n\t" \
+ "paddw %%mm5,%%mm1\n\t" \
+ "movq "_r7"(%[buf]),%%mm3\n\t" \
+ "paddsw %%mm7,%%mm6\n\t" \
+ "movq "_r6"(%[buf]),%%mm5\n\t" \
+ "paddsw %%mm7,%%mm1\n\t" \
+ "psubw %%mm7,%%mm6\n\t" \
+ "psubw %%mm7,%%mm1\n\t" \
+ "psubw %%mm6,%%mm2\n\t" \
+ "psubw %%mm1,%%mm4\n\t" \
+ /*mm0+=0x7FFF*/ \
+ "paddw %%mm7,%%mm0\n\t" \
+ /*mm7={1}x4 (needed for the horizontal add that follows) \
+   mm0+=mm2+mm4+max(abs(mm3),abs(mm5))*/ \
+ "movq %%mm3,%%mm6\n\t" \
+ "pmaxsw %%mm5,%%mm3\n\t" \
+ "paddw %%mm5,%%mm6\n\t" \
+ "paddw %%mm2,%%mm0\n\t" \
+ "paddsw %%mm7,%%mm6\n\t" \
+ "paddw %%mm4,%%mm0\n\t" \
+ "psubw %%mm7,%%mm6\n\t" \
+ "paddw %%mm3,%%mm0\n\t" \
+ "psrlw $14,%%mm7\n\t" \
+ "psubw %%mm6,%%mm0\n\t" \
+
+static unsigned oc_int_frag_satd_thresh_mmxext(const unsigned char *_src,
+ int _src_ystride,const unsigned char *_ref,int _ref_ystride,
+ unsigned _thresh){
+  ogg_int16_t  buf[64]OC_ALIGN8;
+  ogg_int16_t *bufp;
+  ptrdiff_t    ret;
+  ptrdiff_t    ret2;
+  bufp=buf;
+  __asm__ __volatile__(
+    OC_LOAD_SUB_8x4("0x00")
+    OC_HADAMARD_AB_8x4
+    OC_HADAMARD_C_8x4
+    OC_TRANSPOSE_4x4x2("0x00")
+    /*Swap out this 8x4 block to make room for the next one.
+      mm0 has been swapped out already.*/
+    "movq %%mm4,0x00(%[buf])\n\t"
+    "movq %%mm5,0x10(%[buf])\n\t"
+    "movq %%mm6,0x20(%[buf])\n\t"
+    "movq %%mm7,0x30(%[buf])\n\t"
+    "movq %%mm1,0x50(%[buf])\n\t"
+    "movq %%mm2,0x60(%[buf])\n\t"
+    "movq %%mm3,0x70(%[buf])\n\t"
+    OC_LOAD_SUB_8x4("0x04")
+    OC_HADAMARD_AB_8x4
+    OC_HADAMARD_C_8x4
+    OC_TRANSPOSE_4x4x2("0x08")
+    /*Here the first 4x4 block of output from the last transpose is the second
+       4x4 block of input for the next transform.
+      We have cleverly arranged that it already be in the appropriate place, so
+       we only have to do half the stores and loads.*/
+    "movq 0x00(%[buf]),%%mm0\n\t"
+    "movq %%mm1,0x58(%[buf])\n\t"
+    "movq 0x10(%[buf]),%%mm1\n\t"
+    "movq %%mm2,0x68(%[buf])\n\t"
+    "movq 0x20(%[buf]),%%mm2\n\t"
+    "movq %%mm3,0x78(%[buf])\n\t"
+    "movq 0x30(%[buf]),%%mm3\n\t"
+    OC_HADAMARD_AB_8x4
+    OC_HADAMARD_C_ABS_ACCUM_8x4("0x28","0x38")
+    /*Up to here, everything fit in 16 bits (8 input + 1 for the difference +
+       2*3 for the two 8-point 1-D Hadamards - 1 for the abs - 1 for the factor
+       of two we dropped + 3 for the vertical accumulation).
+      Now we finally have to promote things to dwords.
+      We break this part out of OC_HADAMARD_C_ABS_ACCUM_8x4 to hide the long
+       latency of pmaddwd by starting the next series of loads now.*/
+    "mov %[thresh],%[ret2]\n\t"
+    "pmaddwd %%mm7,%%mm0\n\t"
+    "movq 0x50(%[buf]),%%mm1\n\t"
+    "movq 0x58(%[buf]),%%mm5\n\t"
+    "movq %%mm0,%%mm4\n\t"
+    "movq 0x60(%[buf]),%%mm2\n\t"
+    "punpckhdq %%mm0,%%mm0\n\t"
+    "movq 0x68(%[buf]),%%mm6\n\t"
+    "paddd %%mm0,%%mm4\n\t"
+    "movq 0x70(%[buf]),%%mm3\n\t"
+    "movd %%mm4,%[ret]\n\t"
+    "movq 0x78(%[buf]),%%mm7\n\t"
+    "cmp %[ret2],%[ret]\n\t"
+    "movq 0x40(%[buf]),%%mm0\n\t"
+    "jae %=1f\n\t"
+    "movq 0x48(%[buf]),%%mm4\n\t"
+    OC_HADAMARD_AB_8x4
+    OC_HADAMARD_C_ABS_ACCUM_8x4("0x68","0x78")
+    "pmaddwd %%mm7,%%mm0\n\t"
+    /*There's nothing to stick in here to hide the latency this time, but the
+       alternative to pmaddwd is movq->punpcklwd->punpckhwd->paddd, whose
+       latency is even worse.*/
+    "movq %%mm0,%%mm4\n\t"
+    "punpckhdq %%mm0,%%mm0\n\t"
+    "paddd %%mm0,%%mm4\n\t"
+    "movd %%mm4,%[ret2]\n\t"
+    "add %[ret2],%[ret]\n\t"
+    ".p2align 4,,15\n\t"
+    "%=1:\n\t"
+    /*Although it looks like we're using 7 registers here, gcc can alias %[ret]
+       and %[ret2] with some of the inputs, since for once we don't write to
+       them until after we're done using everything but %[buf] (which is also
+       listed as an output to ensure gcc _doesn't_ alias them against it).*/
+    :[ret]"=r"(ret),[ret2]"=r"(ret2),[buf]"+r"(bufp)
+    :[src]"r"(_src),[src_ystride]"r"((ptrdiff_t)_src_ystride),
+     [ref]"r"(_ref),[ref_ystride]"r"((ptrdiff_t)_ref_ystride),
+     [thresh]"m"((ptrdiff_t)_thresh)
+    /*We have to use neg, so we actually clobber the condition codes for once.*/
+    :"cc"
+  );
+  return (unsigned)ret;
+}
+
+unsigned oc_enc_frag_satd_thresh_mmxext(const unsigned char *_src,
+ const unsigned char *_ref,int _ystride,unsigned _thresh){
+  return oc_int_frag_satd_thresh_mmxext(_src,_ystride,_ref,_ystride,_thresh);
+}
+
+/*Our internal implementation of frag_copy2 takes an extra stride parameter so
+   we can share code with oc_enc_frag_satd2_thresh_mmxext().*/
+static void oc_int_frag_copy2_mmxext(unsigned char *_dst,int _dst_ystride,
+ const unsigned char *_src1,const unsigned char *_src2,int _src_ystride){
+  __asm__ __volatile__(
+    /*Load the first 3 rows.*/
+    "movq (%[src1]),%%mm0\n\t"
+    "movq (%[src2]),%%mm1\n\t"
+    "movq (%[src1],%[src_ystride]),%%mm2\n\t"
+    "lea (%[src1],%[src_ystride],2),%[src1]\n\t"
+    "movq (%[src2],%[src_ystride]),%%mm3\n\t"
+    "lea (%[src2],%[src_ystride],2),%[src2]\n\t"
+    "pxor %%mm7,%%mm7\n\t"
+    "movq (%[src1]),%%mm4\n\t"
+    "pcmpeqb %%mm6,%%mm6\n\t"
+    "movq (%[src2]),%%mm5\n\t"
+    /*mm7={1}x8.*/
+    "psubb %%mm6,%%mm7\n\t"
+    /*Start averaging %%mm0 and %%mm1 into %%mm6.*/
+    "movq %%mm0,%%mm6\n\t"
+    "pxor %%mm1,%%mm0\n\t"
+    "pavgb %%mm1,%%mm6\n\t"
+    /*%%mm1 is free, start averaging %%mm3 into %%mm2 using %%mm1.*/
+    "movq %%mm2,%%mm1\n\t"
+    "pand %%mm7,%%mm0\n\t"
+    "pavgb %%mm3,%%mm2\n\t"
+    "pxor %%mm3,%%mm1\n\t"
+    /*%%mm3 is free.*/
+    "psubb %%mm0,%%mm6\n\t"
+    /*%%mm0 is free, start loading the next row.*/
+    "movq (%[src1],%[src_ystride]),%%mm0\n\t"
+    /*Start averaging %%mm5 and %%mm4 using %%mm3.*/
+    "movq %%mm4,%%mm3\n\t"
+    /*%%mm6 (row 0) is done; write it out.*/
+    "movq %%mm6,(%[dst])\n\t"
+    "pand %%mm7,%%mm1\n\t"
+    "pavgb %%mm5,%%mm4\n\t"
+    "psubb %%mm1,%%mm2\n\t"
+    /*%%mm1 is free, continue loading the next row.*/
+    "movq (%[src2],%[src_ystride]),%%mm1\n\t"
+    "pxor %%mm5,%%mm3\n\t"
+    "lea (%[src1],%[src_ystride],2),%[src1]\n\t"
+    /*%%mm2 (row 1) is done; write it out.*/
+    "movq %%mm2,(%[dst],%[dst_ystride])\n\t"
+    "pand %%mm7,%%mm3\n\t"
+    /*Start loading the next row.*/
+    "movq (%[src1]),%%mm2\n\t"
+    "lea (%[dst],%[dst_ystride],2),%[dst]\n\t"
+    "psubb %%mm3,%%mm4\n\t"
+    "lea (%[src2],%[src_ystride],2),%[src2]\n\t"
+    /*%%mm4 (row 2) is done; write it out.*/
+    "movq %%mm4,(%[dst])\n\t"
+    /*Continue loading the next row.*/
+    "movq (%[src2]),%%mm3\n\t"
+    /*Start averaging %%mm0 and %%mm1 into %%mm6.*/
+    "movq %%mm0,%%mm6\n\t"
+    "pxor %%mm1,%%mm0\n\t"
+    /*Start loading the next row.*/
+    "movq (%[src1],%[src_ystride]),%%mm4\n\t"
+    "pavgb %%mm1,%%mm6\n\t"
+    /*%%mm1 is free; start averaging %%mm3 into %%mm2 using %%mm1.*/
+    "movq %%mm2,%%mm1\n\t"
+    "pand %%mm7,%%mm0\n\t"
+    /*Continue loading the next row.*/
+    "movq (%[src2],%[src_ystride]),%%mm5\n\t"
+    "pavgb %%mm3,%%mm2\n\t"
+    "lea (%[src1],%[src_ystride],2),%[src1]\n\t"
+    "pxor %%mm3,%%mm1\n\t"
+    /*%%mm3 is free.*/
+    "psubb %%mm0,%%mm6\n\t"
+    /*%%mm0 is free, start loading the next row.*/
+    "movq (%[src1]),%%mm0\n\t"
+    /*Start averaging %%mm5 into %%mm4 using %%mm3.*/
+    "movq %%mm4,%%mm3\n\t"
+    /*%%mm6 (row 3) is done; write it out.*/
+    "movq %%mm6,(%[dst],%[dst_ystride])\n\t"
+    "pand %%mm7,%%mm1\n\t"
+    "lea (%[src2],%[src_ystride],2),%[src2]\n\t"
+    "pavgb %%mm5,%%mm4\n\t"
+    "lea (%[dst],%[dst_ystride],2),%[dst]\n\t"
+    "psubb %%mm1,%%mm2\n\t"
+    /*%%mm1 is free; continue loading the next row.*/
+    "movq (%[src2]),%%mm1\n\t"
+    "pxor %%mm5,%%mm3\n\t"
+    /*%%mm2 (row 4) is done; write it out.*/
+    "movq %%mm2,(%[dst])\n\t"
+    "pand %%mm7,%%mm3\n\t"
+    /*Start loading the next row.*/
+    "movq (%[src1],%[src_ystride]),%%mm2\n\t"
+    "psubb %%mm3,%%mm4\n\t"
+    /*Start averaging %%mm0 and %%mm1 into %%mm6.*/
+    "movq %%mm0,%%mm6\n\t"
+    /*Continue loading the next row.*/
+    "movq (%[src2],%[src_ystride]),%%mm3\n\t"
+    /*%%mm4 (row 5) is done; write it out.*/
+    "movq %%mm4,(%[dst],%[src_ystride])\n\t"
+    "pxor %%mm1,%%mm0\n\t"
+    "pavgb %%mm1,%%mm6\n\t"
+    /*%%mm4 is free; start averaging %%mm3 into %%mm2 using %%mm4.*/
+    "movq %%mm2,%%mm4\n\t"
+    "pand %%mm7,%%mm0\n\t"
+    "pavgb %%mm3,%%mm2\n\t"
+    "pxor %%mm3,%%mm4\n\t"
+    "lea (%[dst],%[dst_ystride],2),%[dst]\n\t"
+    "psubb %%mm0,%%mm6\n\t"
+    "pand %%mm7,%%mm4\n\t"
+    /*%%mm6 (row 6) is done, write it out.*/
+    "movq %%mm6,(%[dst])\n\t"
+    "psubb %%mm4,%%mm2\n\t"
+    /*%%mm2 (row 7) is done, write it out.*/
+    "movq %%mm2,(%[dst],%[dst_ystride])\n\t"
+    :
+    :[dst]"r"(_dst),[dst_ystride]"r"((ptrdiff_t)_dst_ystride),
+     [src1]"%r"(_src1),[src2]"r"(_src2),
+     [src_ystride]"r"((ptrdiff_t)_src_ystride)
+    :"memory"
+  );
+}
+
+unsigned oc_enc_frag_satd2_thresh_mmxext(const unsigned char *_src,
+ const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
+ unsigned _thresh){
+  unsigned char ref[64]OC_ALIGN8;
+  oc_int_frag_copy2_mmxext(ref,8,_ref1,_ref2,_ystride);
+  return oc_int_frag_satd_thresh_mmxext(_src,_ystride,ref,8,_thresh);
+}
+
 void oc_enc_frag_sub_mmx(ogg_int16_t _residue[64],
  const unsigned char *_src,const unsigned char *_ref,int _ystride){
   int i;
@@ -311,118 +766,7 @@ void oc_enc_frag_sub_128_mmx(ogg_int16_t _residue[64],
 
 void oc_enc_frag_copy2_mmxext(unsigned char *_dst,
  const unsigned char *_src1,const unsigned char *_src2,int _ystride){
-  ptrdiff_t ystride3;
-  __asm__ __volatile__(
-    /*Load the first 3 rows.*/
-    "movq (%[src1]),%%mm0\n\t"
-    "movq (%[src2]),%%mm1\n\t"
-    "movq (%[src1],%[ystride]),%%mm2\n\t"
-    "movq (%[src2],%[ystride]),%%mm3\n\t"
-    "pxor %%mm7,%%mm7\n\t"
-    "movq (%[src1],%[ystride],2),%%mm4\n\t"
-    "pcmpeqb %%mm6,%%mm6\n\t"
-    "movq (%[src2],%[ystride],2),%%mm5\n\t"
-    /*mm7={1}x8.*/
-    "psubb %%mm6,%%mm7\n\t"
-    /*ystride3=ystride*3.*/
-    "lea (%[ystride],%[ystride],2),%[ystride3]\n\t"
-    /*Start averaging %%mm0 and %%mm1 into %%mm6.*/
-    "movq %%mm0,%%mm6\n\t"
-    "pxor %%mm1,%%mm0\n\t"
-    "pavgb %%mm1,%%mm6\n\t"
-    /*%%mm1 is free, start averaging %%mm3 into %%mm2 using %%mm1.*/
-    "movq %%mm2,%%mm1\n\t"
-    "pand %%mm7,%%mm0\n\t"
-    "pavgb %%mm3,%%mm2\n\t"
-    "pxor %%mm3,%%mm1\n\t"
-    /*%%mm3 is free.*/
-    "psubb %%mm0,%%mm6\n\t"
-    /*%%mm0 is free, start loading the next row.*/
-    "movq (%[src1],%[ystride3]),%%mm0\n\t"
-    /*Start averaging %%mm5 and %%mm4 using %%mm3.*/
-    "movq %%mm4,%%mm3\n\t"
-    /*%%mm6 (row 0) is done; write it out.*/
-    "movq %%mm6,(%[dst])\n\t"
-    "pand %%mm7,%%mm1\n\t"
-    "pavgb %%mm5,%%mm4\n\t"
-    "psubb %%mm1,%%mm2\n\t"
-    /*%%mm1 is free, continue loading the next row.*/
-    "movq (%[src2],%[ystride3]),%%mm1\n\t"
-    "pxor %%mm5,%%mm3\n\t"
-    /*Advance %[src1]*/
-    "lea (%[src1],%[ystride],4),%[src1]\n\t"
-    /*%%mm2 (row 1) is done; write it out.*/
-    "movq %%mm2,(%[dst],%[ystride])\n\t"
-    "pand %%mm7,%%mm3\n\t"
-    /*Start loading the next row.*/
-    "movq (%[src1]),%%mm2\n\t"
-    "psubb %%mm3,%%mm4\n\t"
-    /*Advance %[src2]*/
-    "lea (%[src2],%[ystride],4),%[src2]\n\t"
-    /*%%mm4 (row 2) is done; write it out.*/
-    "movq %%mm4,(%[dst],%[ystride],2)\n\t"
-    /*Continue loading the next row.*/
-    "movq (%[src2]),%%mm3\n\t"
-    /*Start averaging %%mm0 and %%mm1 into %%mm6.*/
-    "movq %%mm0,%%mm6\n\t"
-    "pxor %%mm1,%%mm0\n\t"
-    /*Start loading the next row.*/
-    "movq (%[src1],%[ystride]),%%mm4\n\t"
-    "pavgb %%mm1,%%mm6\n\t"
-    /*%%mm1 is free; start averaging %%mm3 into %%mm2 using %%mm1.*/
-    "movq %%mm2,%%mm1\n\t"
-    "pand %%mm7,%%mm0\n\t"
-    /*Continue loading the next row.*/
-    "movq (%[src2],%[ystride]),%%mm5\n\t"
-    "pavgb %%mm3,%%mm2\n\t"
-    "pxor %%mm3,%%mm1\n\t"
-    /*%%mm3 is free.*/
-    "psubb %%mm0,%%mm6\n\t"
-    /*%%mm0 is free, start loading the next row.*/
-    "movq (%[src1],%[ystride],2),%%mm0\n\t"
-    /*Start averaging %%mm5 into %%mm4 using %%mm3.*/
-    "movq %%mm4,%%mm3\n\t"
-    /*%%mm6 (row 3) is done; write it out.*/
-    "movq %%mm6,(%[dst],%[ystride3])\n\t"
-    "pand %%mm7,%%mm1\n\t"
-    "pavgb %%mm5,%%mm4\n\t"
-    /*Advance %[dst]*/
-    "lea (%[dst],%[ystride],4),%[dst]\n\t"
-    "psubb %%mm1,%%mm2\n\t"
-    /*%%mm1 is free; continue loading the next row.*/
-    "movq (%[src2],%[ystride],2),%%mm1\n\t"
-    "pxor %%mm5,%%mm3\n\t"
-    /*%%mm2 (row 4) is done; write it out.*/
-    "movq %%mm2,(%[dst])\n\t"
-    "pand %%mm7,%%mm3\n\t"
-    /*Start loading the next row.*/
-    "movq (%[src1],%[ystride3]),%%mm2\n\t"
-    "psubb %%mm3,%%mm4\n\t"
-    /*Start averaging %%mm0 and %%mm1 into %%mm6.*/
-    "movq %%mm0,%%mm6\n\t"
-    /*Continue loading the next row.*/
-    "movq (%[src2],%[ystride3]),%%mm3\n\t"
-    /*%%mm4 (row 5) is done; write it out.*/
-    "movq %%mm4,(%[dst],%[ystride])\n\t"
-    "pxor %%mm1,%%mm0\n\t"
-    "pavgb %%mm1,%%mm6\n\t"
-    /*%%mm4 is free; start averaging %%mm3 into %%mm2 using %%mm4.*/
-    "movq %%mm2,%%mm4\n\t"
-    "pand %%mm7,%%mm0\n\t"
-    "pavgb %%mm3,%%mm2\n\t"
-    "pxor %%mm3,%%mm4\n\t"
-    "psubb %%mm0,%%mm6\n\t"
-    "pand %%mm7,%%mm4\n\t"
-    /*%%mm6 (row 6) is done, write it out.*/
-    "movq %%mm6,(%[dst],%[ystride],2)\n\t"
-    "psubb %%mm4,%%mm2\n\t"
-    /*%%mm2 (row 7) is done, write it out.*/
-    "movq %%mm2,(%[dst],%[ystride3])\n\t"
-    :[ystride3]"=&r"(ystride3)
-    :[dst]"r"(_dst),[src1]"%r"(_src1),[src2]"r"(_src2),
-     [ystride]"r"((ptrdiff_t)_ystride)
-    :"memory"
-  );
+  oc_int_frag_copy2_mmxext(_dst,_ystride,_src1,_src2,_ystride);
 }
 
 #endif

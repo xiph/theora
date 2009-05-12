@@ -171,7 +171,7 @@ static int oc_sad16_halfpel(CP_INSTANCE *cpi,int mbi,
 }
 
 static int oc_mcenc_ysad_check_mbcandidate_fullpel(CP_INSTANCE *cpi,
- mc_state *_mcenc,int _mbi,int _dx,int _dy,int _goldenp,int _block_err[4]){
+ int _mbi,int _dx,int _dy,int _goldenp,int _block_err[4]){
   int           stride;
   int           mvoffset;
   int           err;
@@ -347,8 +347,8 @@ void oc_mcenc_search(CP_INSTANCE *cpi,mc_state *_mcenc,int _mbi,
   candy=_mcenc->candidates[0][1];
   hit_cache[candy+15]|=(ogg_int32_t)1<<candx+15;
   /*TODO: customize error function for speed/(quality+size) tradeoff.*/
-  best_err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,_mcenc,_mbi,
-   candx,candy,_goldenp,block_err);
+  best_err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,
+   _mbi,candx,candy,_goldenp,block_err);
   best_vec[0]=candx;
   best_vec[1]=candy;
   if(_bmvs){
@@ -378,8 +378,8 @@ void oc_mcenc_search(CP_INSTANCE *cpi,mc_state *_mcenc,int _mbi,
       hitbit=(ogg_int32_t)1<<candx+15;
       if(hit_cache[candy+15]&hitbit)continue;
       hit_cache[candy+15]|=hitbit;
-      err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,_mcenc,_mbi,
-       candx,candy,_goldenp,block_err);
+      err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,
+       _mbi,candx,candy,_goldenp,block_err);
       if(err<best_err){
         best_err=err;
         best_vec[0]=candx;
@@ -401,8 +401,8 @@ void oc_mcenc_search(CP_INSTANCE *cpi,mc_state *_mcenc,int _mbi,
         hitbit=(ogg_int32_t)1<<candx+15;
         if(hit_cache[candy+15]&hitbit)continue;
         hit_cache[candy+15]|=hitbit;
-        err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,_mcenc,_mbi,
-         candx,candy,_goldenp,block_err);
+        err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,
+         _mbi,candx,candy,_goldenp,block_err);
         if(err<best_err){
           best_err=err;
           best_vec[0]=candx;
@@ -437,8 +437,8 @@ void oc_mcenc_search(CP_INSTANCE *cpi,mc_state *_mcenc,int _mbi,
             hitbit=(ogg_int32_t)1<<candx+15;
             if(hit_cache[candy+15]&hitbit)continue;
             hit_cache[candy+15]|=hitbit;
-            err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,_mcenc,_mbi,
-             candx,candy,_goldenp,block_err);
+            err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,
+             _mbi,candx,candy,_goldenp,block_err);
             if(err<best_err){
               best_err=err;
               best_site=site;
@@ -502,8 +502,8 @@ void oc_mcenc_search(CP_INSTANCE *cpi,mc_state *_mcenc,int _mbi,
                   hitbit=(ogg_int32_t)1<<candx+15;
                   if(hit_cache[candy+15]&hitbit)continue;
                   hit_cache[candy+15]|=hitbit;
-                  err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,_mcenc,_mbi,
-                   candx,candy,_goldenp,block_err);
+                  err=oc_mcenc_ysad_check_mbcandidate_fullpel(cpi,
+                   _mbi,candx,candy,_goldenp,block_err);
                   if(err<best_err){
                     best_err=err;
                     best_vec[0]=candx;

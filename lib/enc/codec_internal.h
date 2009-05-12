@@ -44,6 +44,11 @@ struct oc_enc_opt_vtable{
   unsigned (*frag_sad2_thresh)(const unsigned char *_src,
    const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
    unsigned _thresh);
+  unsigned (*frag_satd_thresh)(const unsigned char *_src,
+   const unsigned char *_ref,int _ystride,unsigned _thresh);
+  unsigned (*frag_satd2_thresh)(const unsigned char *_src,
+   const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
+   unsigned _thresh);
   void     (*frag_sub)(ogg_int16_t _diff[64],const unsigned char *_src,
    const unsigned char *_ref,int _ystride);
   void     (*frag_sub_128)(ogg_int16_t _diff[64],
@@ -467,6 +472,12 @@ unsigned oc_enc_frag_sad_thresh(const CP_INSTANCE *_cpi,
 unsigned oc_enc_frag_sad2_thresh(const CP_INSTANCE *_cpi,
  const unsigned char *_src,const unsigned char *_ref1,
  const unsigned char *_ref2,int _ystride,unsigned _thresh);
+unsigned oc_enc_frag_satd_thresh(const CP_INSTANCE *_cpi,
+ const unsigned char *_src,const unsigned char *_ref,int _ystride,
+ unsigned _thresh);
+unsigned oc_enc_frag_satd2_thresh(const CP_INSTANCE *_cpi,
+ const unsigned char *_src,const unsigned char *_ref1,
+ const unsigned char *_ref2,int _ystride,unsigned _thresh);
 void oc_enc_frag_copy(const CP_INSTANCE *_cpi,unsigned char *_dst,
  const unsigned char *_src,int _ystride);
 void oc_enc_frag_copy2(const CP_INSTANCE *_cpi,unsigned char *_dst,
@@ -497,6 +508,11 @@ unsigned oc_enc_frag_sad_c(const unsigned char *_src,
 unsigned oc_enc_frag_sad_thresh_c(const unsigned char *_src,
  const unsigned char *_ref,int _ystride,unsigned _thresh);
 unsigned oc_enc_frag_sad2_thresh_c(const unsigned char *_src,
+ const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
+ unsigned _thresh);
+unsigned oc_enc_frag_satd_thresh_c(const unsigned char *_src,
+ const unsigned char *_ref,int _ystride,unsigned _thresh);
+unsigned oc_enc_frag_satd2_thresh_c(const unsigned char *_src,
  const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
  unsigned _thresh);
 void oc_enc_fdct8x8_c(ogg_int16_t _y[64],const ogg_int16_t _x[64]);
