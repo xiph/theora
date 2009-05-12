@@ -278,7 +278,7 @@ unsigned oc_enc_frag_sad2_thresh_mmxext(const unsigned char *_src,
 /*Performs two 4x4 transposes (mostly) in place.
   On input, {mm0,mm1,mm2,mm3} contains rows {e,f,g,h}, and {mm4,mm5,mm6,mm7}
    contains rows {a,b,c,d}.
-  On output, {0x40+_off(%[buf]),mm1,mm2,mm3} contains {e,f,g,h}^T, and
+  On output, {0x40,0x50,0x60,0x70}+_off(%[buf]) contains {e,f,g,h}^T, and
    {mm4,mm5,mm6,mm7} contains the transposed rows {a,b,c,d}^T.*/
 #define OC_TRANSPOSE_4x4x2(_off) \
  "#OC_TRANSPOSE_4x4x2\n\t" \
@@ -301,9 +301,9 @@ unsigned oc_enc_frag_sad2_thresh_mmxext(const unsigned char *_src,
  "movq %%mm0,%%mm1\n\t" \
  "punpckldq %%mm2,%%mm0\n\t" \
  "punpckhdq %%mm2,%%mm1\n\t" \
- "movq %%mm0,0x40+"_off"(%[buf])\n\t" \
  "movq %%mm3,%%mm2\n\t" \
  "punpckhdq %%mm5,%%mm3\n\t" \
+ "movq %%mm0,0x40+"_off"(%[buf])\n\t" \
  "punpckldq %%mm5,%%mm2\n\t" \
  /*mm0 = h0 g0 f0 e0 \
    mm1 = h1 g1 f1 e1 \
@@ -317,9 +317,11 @@ unsigned oc_enc_frag_sad2_thresh_mmxext(const unsigned char *_src,
    mm7 = d3 d2 d1 d0*/ \
  "movq %%mm6,%%mm0\n\t" \
  "punpcklwd %%mm7,%%mm6\n\t" \
+ "movq %%mm1,0x50+"_off"(%[buf])\n\t" \
  "punpckhwd %%mm7,%%mm0\n\t" \
  "movq %%mm4,%%mm7\n\t" \
  "punpcklwd %%mm5,%%mm4\n\t" \
+ "movq %%mm2,0x60+"_off"(%[buf])\n\t" \
  "punpckhwd %%mm5,%%mm7\n\t" \
  /*mm4 = b1 a1 b0 a0 \
    mm7 = b3 a3 b2 a2 \
@@ -327,6 +329,7 @@ unsigned oc_enc_frag_sad2_thresh_mmxext(const unsigned char *_src,
    mm0 = d3 c3 d2 c2*/ \
  "movq %%mm4,%%mm5\n\t" \
  "punpckldq %%mm6,%%mm4\n\t" \
+ "movq %%mm3,0x70+"_off"(%[buf])\n\t" \
  "punpckhdq %%mm6,%%mm5\n\t" \
  "movq %%mm7,%%mm6\n\t" \
  "punpckhdq %%mm0,%%mm7\n\t" \
@@ -351,7 +354,7 @@ unsigned oc_enc_frag_sad2_thresh_mmxext(const unsigned char *_src,
     implementation would be (3+3)*8+7=55 instructions (+4 for spilling \
     registers). \
    Even with pabsw, it would be (3+1)*8+7=39 instructions (with no spills). \
-   This implementation is only 29 (+4 for spilling registers).*/ \
+   This implementation is only 26 (+4 for spilling registers).*/ \
  "#OC_HADAMARD_C_ABS_ACCUM_8x4\n\t" \
  "movq %%mm7,"_r7"(%[buf])\n\t" \
  "movq %%mm6,"_r6"(%[buf])\n\t" \
@@ -364,8 +367,8 @@ unsigned oc_enc_frag_sad2_thresh_mmxext(const unsigned char *_src,
  "pmaxsw %%mm1,%%mm0\n\t" \
  "paddsw %%mm7,%%mm6\n\t" \
  "psubw %%mm6,%%mm0\n\t" \
- /*mm2=max(abs(mm2),abs(mm3)) \
-   mm4=max(abs(mm4),abs(mm5))*/ \
+ /*mm2=max(abs(mm2),abs(mm3))-0x7FFF \
+   mm4=max(abs(mm4),abs(mm5))-0x7FFF*/ \
  "movq %%mm2,%%mm6\n\t" \
  "movq %%mm4,%%mm1\n\t" \
  "pmaxsw %%mm3,%%mm2\n\t" \
@@ -376,21 +379,16 @@ unsigned oc_enc_frag_sad2_thresh_mmxext(const unsigned char *_src,
  "paddsw %%mm7,%%mm6\n\t" \
  "movq "_r6"(%[buf]),%%mm5\n\t" \
  "paddsw %%mm7,%%mm1\n\t" \
- "psubw %%mm7,%%mm6\n\t" \
- "psubw %%mm7,%%mm1\n\t" \
  "psubw %%mm6,%%mm2\n\t" \
  "psubw %%mm1,%%mm4\n\t" \
- /*mm0+=0x7FFF*/ \
- "paddw %%mm7,%%mm0\n\t" \
  /*mm7={1}x4 (needed for the horizontal add that follows) \
-   mm0+=mm2+mm4+max(abs(mm3),abs(mm5))*/ \
+   mm0+=mm2+mm4+max(abs(mm3),abs(mm5))-0x7FFF*/ \
  "movq %%mm3,%%mm6\n\t" \
  "pmaxsw %%mm5,%%mm3\n\t" \
- "paddw %%mm5,%%mm6\n\t" \
  "paddw %%mm2,%%mm0\n\t" \
- "paddsw %%mm7,%%mm6\n\t" \
+ "paddw %%mm5,%%mm6\n\t" \
  "paddw %%mm4,%%mm0\n\t" \
- "psubw %%mm7,%%mm6\n\t" \
+ "paddsw %%mm7,%%mm6\n\t" \
  "paddw %%mm3,%%mm0\n\t" \
  "psrlw $14,%%mm7\n\t" \
  "psubw %%mm6,%%mm0\n\t" \
@@ -400,23 +398,20 @@ static unsigned oc_int_frag_satd_thresh_mmxext(const unsigned char *_src,
  unsigned _thresh){
   ogg_int16_t  buf[64]OC_ALIGN8;
   ogg_int16_t *bufp;
-  ptrdiff_t    ret;
-  ptrdiff_t    ret2;
+  unsigned     ret;
+  unsigned     ret2;
   bufp=buf;
   __asm__ __volatile__(
     OC_LOAD_SUB_8x4("0x00")
     OC_HADAMARD_AB_8x4
     OC_HADAMARD_C_8x4
     OC_TRANSPOSE_4x4x2("0x00")
-    /*Swap out this 8x4 block to make room for the next one.
-      mm0 has been swapped out already.*/
+    /*Finish swapping out this 8x4 block to make room for the next one.
+      mm0...mm3 have been swapped out already.*/
     "movq %%mm4,0x00(%[buf])\n\t"
     "movq %%mm5,0x10(%[buf])\n\t"
     "movq %%mm6,0x20(%[buf])\n\t"
     "movq %%mm7,0x30(%[buf])\n\t"
-    "movq %%mm1,0x50(%[buf])\n\t"
-    "movq %%mm2,0x60(%[buf])\n\t"
-    "movq %%mm3,0x70(%[buf])\n\t"
     OC_LOAD_SUB_8x4("0x04")
     OC_HADAMARD_AB_8x4
     OC_HADAMARD_C_8x4
@@ -424,19 +419,16 @@ static unsigned oc_int_frag_satd_thresh_mmxext(const unsigned char *_src,
     /*Here the first 4x4 block of output from the last transpose is the second
        4x4 block of input for the next transform.
       We have cleverly arranged that it already be in the appropriate place, so
-       we only have to do half the stores and loads.*/
+       we only have to do half the loads.*/
     "movq 0x00(%[buf]),%%mm0\n\t"
-    "movq %%mm1,0x58(%[buf])\n\t"
     "movq 0x10(%[buf]),%%mm1\n\t"
-    "movq %%mm2,0x68(%[buf])\n\t"
     "movq 0x20(%[buf]),%%mm2\n\t"
-    "movq %%mm3,0x78(%[buf])\n\t"
     "movq 0x30(%[buf]),%%mm3\n\t"
     OC_HADAMARD_AB_8x4
     OC_HADAMARD_C_ABS_ACCUM_8x4("0x28","0x38")
-    /*Up to here, everything fit in 16 bits (8 input + 1 for the difference +
-       2*3 for the two 8-point 1-D Hadamards - 1 for the abs - 1 for the factor
-       of two we dropped + 3 for the vertical accumulation).
+    /*Up to this point, everything fit in 16 bits (8 input + 1 for the
+       difference + 2*3 for the two 8-point 1-D Hadamards - 1 for the abs - 1
+       for the factor of two we dropped + 3 for the vertical accumulation).
       Now we finally have to promote things to dwords.
       We break this part out of OC_HADAMARD_C_ABS_ACCUM_8x4 to hide the long
        latency of pmaddwd by starting the next series of loads now.*/
@@ -452,16 +444,20 @@ static unsigned oc_int_frag_satd_thresh_mmxext(const unsigned char *_src,
     "movq 0x70(%[buf]),%%mm3\n\t"
     "movd %%mm4,%[ret]\n\t"
     "movq 0x78(%[buf]),%%mm7\n\t"
-    "cmp %[ret2],%[ret]\n\t"
+    /*Each term in the horizontal sum had an extra 4 added to it; remove them
+       all at once here.*/
+    "sub $16,%[ret]\n\t"
     "movq 0x40(%[buf]),%%mm0\n\t"
-    "jae %=1f\n\t"
+    "cmp %[ret2],%[ret]\n\t"
     "movq 0x48(%[buf]),%%mm4\n\t"
+    "jae %=1f\n\t"
     OC_HADAMARD_AB_8x4
     OC_HADAMARD_C_ABS_ACCUM_8x4("0x68","0x78")
     "pmaddwd %%mm7,%%mm0\n\t"
-    /*There's nothing to stick in here to hide the latency this time, but the
+    /*There isn't much to stick in here to hide the latency this time, but the
        alternative to pmaddwd is movq->punpcklwd->punpckhwd->paddd, whose
        latency is even worse.*/
+    "sub $16,%[ret]\n\t"
     "movq %%mm0,%%mm4\n\t"
     "punpckhdq %%mm0,%%mm0\n\t"
     "paddd %%mm0,%%mm4\n\t"
@@ -476,7 +472,7 @@ static unsigned oc_int_frag_satd_thresh_mmxext(const unsigned char *_src,
     :[ret]"=r"(ret),[ret2]"=r"(ret2),[buf]"+r"(bufp)
     :[src]"r"(_src),[src_ystride]"r"((ptrdiff_t)_src_ystride),
      [ref]"r"(_ref),[ref_ystride]"r"((ptrdiff_t)_ref_ystride),
-     [thresh]"m"((ptrdiff_t)_thresh)
+     [thresh]"m"(_thresh)
     /*We have to use neg, so we actually clobber the condition codes for once.*/
     :"cc"
   );
@@ -583,7 +579,7 @@ static void oc_int_frag_copy2_mmxext(unsigned char *_dst,int _dst_ystride,
     /*Continue loading the next row.*/
     "movq (%[src2],%[src_ystride]),%%mm3\n\t"
     /*%%mm4 (row 5) is done; write it out.*/
-    "movq %%mm4,(%[dst],%[src_ystride])\n\t"
+    "movq %%mm4,(%[dst],%[dst_ystride])\n\t"
     "pxor %%mm1,%%mm0\n\t"
     "pavgb %%mm1,%%mm6\n\t"
     /*%%mm4 is free; start averaging %%mm3 into %%mm2 using %%mm4.*/
