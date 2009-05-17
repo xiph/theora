@@ -31,8 +31,10 @@
 #  pragma warning(disable:4799)
 # endif
 /*You, too, gcc.*/
-# if defined(__GNUC_PREREQ)&&__GNUC_PREREQ(4,2)
-#  pragma GCC diagnostic ignored "-Wparentheses"
+# if defined(__GNUC_PREREQ)
+#  if __GNUC_PREREQ(4,2)
+#   pragma GCC diagnostic ignored "-Wparentheses"
+#  endif
 # endif
 
 # include "dec/ocintrin.h"
