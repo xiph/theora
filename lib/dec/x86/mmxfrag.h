@@ -9,7 +9,11 @@
    between rows.*/
 #define OC_FRAG_COPY_MMX(_dst,_src,_ystride) \
   do{ \
-    ptrdiff_t ystride3; \
+    const unsigned char *src; \
+    unsigned char       *dst; \
+    ptrdiff_t            ystride3; \
+    src=(_src); \
+    dst=(_dst); \
     __asm__ __volatile__( \
       /*src+0*ystride*/ \
       "movq (%[src]),%%mm0\n\t" \
@@ -49,8 +53,8 @@
       "movq %%mm2,(%[dst],%[ystride],2)\n\t" \
       /*dst+3*ystride*/ \
       "movq %%mm3,(%[dst],%[ystride3])\n\t" \
-      :[ystride3]"=&r"(ystride3) \
-      :[dst]"r"(_dst),[src]"r"(_src),[ystride]"r"((ptrdiff_t)(_ystride)) \
+      :[dst]"+r"(dst),[src]"+r"(src),[ystride3]"=&r"(ystride3) \
+      :[ystride]"r"((ptrdiff_t)(_ystride)) \
       :"memory" \
     ); \
   } \

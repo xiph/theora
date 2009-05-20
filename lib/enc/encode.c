@@ -338,7 +338,7 @@ void EncodeData(CP_INSTANCE *cpi){
   bits = oggpackB_bits(cpi->oggbuffer);
   ReconRefFrames(cpi);
 
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
   ModeMetrics(cpi);
 
 #if 0
@@ -446,6 +446,7 @@ void oc_enc_vtable_init_c(CP_INSTANCE *_cpi){
   _cpi->opt_vtable.frag_sad2_thresh=oc_enc_frag_sad2_thresh_c;
   _cpi->opt_vtable.frag_satd_thresh=oc_enc_frag_satd_thresh_c;
   _cpi->opt_vtable.frag_satd2_thresh=oc_enc_frag_satd2_thresh_c;
+  _cpi->opt_vtable.frag_intra_satd=oc_enc_frag_intra_satd_c;
   _cpi->opt_vtable.frag_sub=oc_enc_frag_sub_c;
   _cpi->opt_vtable.frag_sub_128=oc_enc_frag_sub_128_c;
   _cpi->opt_vtable.frag_copy=oc_frag_copy_c;

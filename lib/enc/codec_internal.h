@@ -22,7 +22,7 @@
 # include "config.h"
 #endif
 
-//#define COLLECT_METRICS 
+/*#define OC_COLLECT_METRICS*/
 
 #include "theora/theora.h"
 #include "../internal.h"
@@ -49,6 +49,7 @@ struct oc_enc_opt_vtable{
   unsigned (*frag_satd2_thresh)(const unsigned char *_src,
    const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
    unsigned _thresh);
+  unsigned (*frag_intra_satd)(const unsigned char *_src,int _ystride);
   void     (*frag_sub)(ogg_int16_t _diff[64],const unsigned char *_src,
    const unsigned char *_ref,int _ystride);
   void     (*frag_sub_128)(ogg_int16_t _diff[64],
@@ -164,6 +165,9 @@ typedef struct macroblock {
   /*Minimum motion estimation error from the analysis stage.*/
   int    aerror;
   int    gerror;
+  int    asatd;
+  int    gsatd;
+  int    block_satd[4];
 
   char coded;
   char refined;
@@ -322,10 +326,11 @@ struct CP_INSTANCE {
   /* Fragment SAD->bitrate estimation tracking metrics */
   long                      rho_count[65]; 
 
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
   long                      rho_postop;
   int                      *frag_mbi;
   int                      *frag_sad;
+  int                      *frag_ssd;
   int                      *dct_token_frag_storage;
   int                      *dct_token_frag[64];
   int                      *dct_eob_fi_storage;
@@ -373,7 +378,7 @@ typedef struct {
   int chroma;
   int pre;
   int run;
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
   int runstack;
 #endif
 } token_checkpoint_t;
@@ -454,9 +459,9 @@ extern void fr_write(CP_INSTANCE *cpi, fr_state_t *fr);
 extern int fr_cost1(fr_state_t *fr);
 extern int fr_cost4(fr_state_t *pre, fr_state_t *post);
 
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
 extern void ModeMetrics(CP_INSTANCE *cpi);
-extern void DumpMetrics(CP_INSTANCE *cpi);
+extern void oc_enc_mode_metrics_dump(CP_INSTANCE *cpi);
 #endif
 
 /*Encoder-specific accelerated functions.*/
@@ -478,6 +483,8 @@ unsigned oc_enc_frag_satd_thresh(const CP_INSTANCE *_cpi,
 unsigned oc_enc_frag_satd2_thresh(const CP_INSTANCE *_cpi,
  const unsigned char *_src,const unsigned char *_ref1,
  const unsigned char *_ref2,int _ystride,unsigned _thresh);
+unsigned oc_enc_frag_intra_satd(const CP_INSTANCE *_cpi,
+ const unsigned char *_src,int _ystride);
 void oc_enc_frag_copy(const CP_INSTANCE *_cpi,unsigned char *_dst,
  const unsigned char *_src,int _ystride);
 void oc_enc_frag_copy2(const CP_INSTANCE *_cpi,unsigned char *_dst,
@@ -515,6 +522,7 @@ unsigned oc_enc_frag_satd_thresh_c(const unsigned char *_src,
 unsigned oc_enc_frag_satd2_thresh_c(const unsigned char *_src,
  const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
  unsigned _thresh);
+unsigned oc_enc_frag_intra_satd_c(const unsigned char *_src,int _ystride);
 void oc_enc_fdct8x8_c(ogg_int16_t _y[64],const ogg_int16_t _x[64]);
 void oc_enc_loop_filter_c(CP_INSTANCE *_cpi,int _flimit);
 void oc_enc_restore_fpu_c(void);

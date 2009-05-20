@@ -41,6 +41,7 @@ void oc_enc_vtable_init_x86(CP_INSTANCE *_cpi){
     _cpi->opt_vtable.frag_sad2_thresh=oc_enc_frag_sad2_thresh_mmxext;
     _cpi->opt_vtable.frag_satd_thresh=oc_enc_frag_satd_thresh_mmxext;
     _cpi->opt_vtable.frag_satd2_thresh=oc_enc_frag_satd2_thresh_mmxext;
+    _cpi->opt_vtable.frag_intra_satd=oc_enc_frag_intra_satd_mmxext;
     _cpi->opt_vtable.frag_copy2=oc_enc_frag_copy2_mmxext;
   }
   if(cpu_flags&OC_CPU_X86_SSE2){

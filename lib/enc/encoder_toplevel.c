@@ -119,6 +119,11 @@ static void oc_rc_state_init(oc_rc_state *_rc,const theora_info *_info){
 
 static void oc_enc_update_rc_state(CP_INSTANCE *cpi,
  long _bits,int _qti,int _qi,int _trial){
+  /*Note, setting OC_SCALE_SMOOTHING[1] to 0x80 (0.5), which one might expect
+     to be a reasonable value, actually causes a feedback loop with, e.g., 12
+     fps content encoded at 24 fps; use values near 0 or near 1 for now.
+    TODO: Should probably revisit using an exponential moving average in the
+     first place at some point.*/
   static const unsigned OC_SCALE_SMOOTHING[2]={0x13,0x00};
   ogg_int64_t   log_scale;
   ogg_int64_t   log_bits;
@@ -130,13 +135,11 @@ static void oc_enc_update_rc_state(CP_INSTANCE *cpi,
   log_scale=OC_MINI(log_bits-cpi->rc.log_npixels+log_qexp,OC_Q57(16));
   /*Use it to set that factor directly if this was a trial.*/
   if(_trial)cpi->rc.log_scale[_qti]=log_scale;
-  /*Otherwise update an exponential moving average.*/
   else{
+    /*Otherwise update an exponential moving average.*/
     cpi->rc.log_scale[_qti]=log_scale
      +(cpi->rc.log_scale[_qti]-log_scale+128>>8)*OC_SCALE_SMOOTHING[_qti];
-  }
-  /*Update the buffer fullness level.*/
-  if(!_trial){
+    /*And update the buffer fullness level.*/
     cpi->rc.fullness+=cpi->rc.bits_per_frame*(1+cpi->dup_count)-_bits;
     /*If we're too quick filling the buffer, that rate is lost forever.*/
     if(cpi->rc.fullness>cpi->rc.max)cpi->rc.fullness=cpi->rc.max;
@@ -469,6 +472,8 @@ int theora_encode_YUVin(theora_state *t,
     /*Compress the frame.*/
     dropped=CompressFrame(cpi,0);
   }
+  oc_enc_restore_fpu(cpi);
+
 
   /* Update stats variables. */
   {
@@ -518,8 +523,8 @@ int theora_encode_packetout(theora_state *_t,int _last_p,ogg_packet *_op){
   else{
     if(_last_p){
       cpi->doneflag=1;
-#ifdef COLLECT_METRICS
-      DumpMetrics(cpi);
+#if defined(OC_COLLECT_METRICS)
+      oc_enc_mode_metrics_dump(cpi);
 #endif
     }
     return 0;

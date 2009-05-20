@@ -17,7 +17,7 @@
 
 #include <string.h>
 #include "codec_internal.h"
-#include "mode_select.h"
+#include "modedec.h"
 #include "encoder_lookup.h"
 
 /*Mode decision is done by exhaustively examining all potential choices.
@@ -206,37 +206,39 @@ static void oc_mode_scheme_chooser_update(oc_mode_scheme_chooser *_chooser,
   }
 }
 
-static int BIntraSAD(CP_INSTANCE *cpi, int fi, int plane){
-  int sad = 0;
-  unsigned char *b = cpi->frame + cpi->frag_buffer_index[fi];
-  ogg_int32_t acc = 0;
-  int stride = cpi->stride[plane];
-  int j,k;
+typedef struct oc_mode_choice oc_mode_choice;
 
-  for(j=0;j<8;j++){
-    for(k=0;k<8;k++)
-      acc += b[k];
-    b += stride;
-  }
+struct oc_mode_choice{
+  unsigned cost;
+  unsigned ssd;
+  unsigned rate;
+  unsigned overhead;
+};
 
-  b = cpi->frame + cpi->frag_buffer_index[fi];
-  for(j=0;j<8;j++){
-    for(k=0;k<8;k++)
-      sad += abs ((b[k]<<6)-acc);
-    b += stride;
-  }
-
-  return sad>>6;
+static void oc_mode_dct_cost_accum(oc_mode_choice *_mode,
+ int _qi,int _pli,int _qti,int _sad){
+  int      bin;
+  int      dx;
+  int      y0;
+  int      z0;
+  int      dy;
+  int      dz;
+  unsigned rmse;
+  bin=OC_MINI(_sad>>OC_SAD_SHIFT,OC_SAD_BINS-2);
+  dx=_sad-(bin<<OC_SAD_SHIFT);
+  y0=OC_MODE_RD[_qi][_pli][_qti][bin].rate;
+  z0=OC_MODE_RD[_qi][_pli][_qti][bin].rmse;
+  dy=OC_MODE_RD[_qi][_pli][_qti][bin+1].rate-y0;
+  dz=OC_MODE_RD[_qi][_pli][_qti][bin+1].rmse-z0;
+  _mode->rate+=OC_MAXI(y0+(dy*dx>>OC_SAD_SHIFT),0);
+  rmse=OC_MAXI(z0+(dz*dx>>OC_SAD_SHIFT),0);
+  _mode->ssd+=rmse*rmse>>2*OC_RMSE_SCALE-OC_BIT_SCALE;
 }
 
-static int BINMAP(ogg_int32_t *lookup,int sad){
-  int bin = OC_MINI((sad >> OC_SAD_SHIFT),(OC_SAD_BINS-1));
-  ogg_int32_t *y = lookup + bin;
-  int xdel = sad - (bin<<OC_SAD_SHIFT);
-  int ydel = y[1] - y[0];
-  int ret = y[0] + ((ydel*xdel)>>OC_SAD_SHIFT);
-  return (ret>0?ret:0);
+static void oc_mode_set_cost(oc_mode_choice *_mode,int _lambda){
+ _mode->cost=_mode->ssd+(_mode->rate+_mode->overhead)*_lambda;
 }
+
 
 static const signed char OC_MVMAP[2][64]={
   {     -15,-15,-14, -14,-13,-13,-12, -12,-11,-11,-10, -10, -9, -9, -8,
@@ -285,92 +287,93 @@ int oc_get_mv_offsets(int _offsets[2],int _dx,int _dy,
   return 1;
 }
 
+static int BIntraSAD(CP_INSTANCE *cpi, int fi, int plane){
+  int satd;
+  satd=oc_enc_frag_intra_satd(cpi,
+   cpi->frame+cpi->frag_buffer_index[fi],cpi->stride[plane]);
+  if(plane)satd<<=2;
+  return satd;
+}
+
 static int BInterSAD(CP_INSTANCE *cpi,int _fi,int _dx,int _dy,
  int _pli,int _goldenp){
   unsigned char *b;
   unsigned char *r;
+  int            offs[2];
   int            stride;
   int            sad;
   b=cpi->frame+cpi->frag_buffer_index[_fi];
   r=(_goldenp?cpi->golden:cpi->lastrecon)+cpi->frag_buffer_index[_fi];
   stride=cpi->stride[_pli];
   sad=0;
-  if(_dx||_dy){
-    int offs[2];
-    if(oc_get_mv_offsets(offs,_dx,_dy,
-     cpi->stride[_pli],_pli,cpi->info.pixelformat)>1){
-      sad=oc_enc_frag_sad2_thresh(cpi,b,r+offs[0],r+offs[1],stride,0x3FC0);
-    }
-    else sad=oc_enc_frag_sad(cpi,b,r+offs[0],stride);
+  if(oc_get_mv_offsets(offs,_dx,_dy,
+   cpi->stride[_pli],_pli,cpi->info.pixelformat)>1){
+    sad=oc_enc_frag_satd2_thresh(cpi,b,r+offs[0],r+offs[1],stride,0xFF000);
   }
-  /*TODO: Is this special case worth it?*/
-  else sad=oc_enc_frag_sad(cpi,b,r,stride);
+  else sad=oc_enc_frag_satd_thresh(cpi,b,r+offs[0],stride,0xFF000);
   /*TODO: <<2? Really? Why?*/
   if(_pli)return sad<<2;
   else return sad;
 }
 
-static int cost_intra(CP_INSTANCE *cpi,int _qi,int _mbi,
- ogg_uint32_t *_intrabits,int *_overhead){
+static void oc_cost_intra(CP_INSTANCE *cpi,oc_mode_choice *_mode,
+ int _mbi,int _qi){
   macroblock_t *mb;
   int           pli;
   int           bi;
-  int           cost;
-  int           overhead;
   mb=cpi->macro+_mbi;
-  cost=0;
+  _mode->rate=_mode->ssd=0;
   for(pli=0;pli<3;pli++){
     for(bi=0;bi<4;bi++){
       int fi;
       fi=mb->Ryuv[pli][bi];
       if(fi<cpi->frag_total){
-        int sad;
-        sad=BIntraSAD(cpi,fi,pli);
-        cost+=BINMAP(mode_rate[_qi][pli][1],sad);
+        oc_mode_dct_cost_accum(_mode,_qi,pli,0,BIntraSAD(cpi,fi,pli));
       }
     }
   }
-  *_intrabits+=cost;
-  overhead=oc_mode_scheme_chooser_cost(&cpi->chooser,CODE_INTRA)<<OC_BIT_SCALE;
-  *_overhead=overhead;
-  return cost+overhead;
+  _mode->overhead=
+   oc_mode_scheme_chooser_cost(&cpi->chooser,CODE_INTRA)<<OC_BIT_SCALE;
+  oc_mode_set_cost(_mode,cpi->lambda);
 }
 
-static int cost_inter(CP_INSTANCE *cpi,int _qi,int _mbi,int _dx, int _dy,
- int _mode,int *_overhead){
+static void oc_cost_inter(CP_INSTANCE *cpi,oc_mode_choice *_mode,int _mbi,
+ int _modei,const signed char *_mv,int _qi){
   macroblock_t *mb;
   int           goldenp;
   int           pli;
   int           bi;
-  int           cost;
-  int           overhead;
+  int           dx;
+  int           dy;
+  goldenp=OC_FRAME_FOR_MODE[_modei]==OC_FRAME_GOLD;
   mb=cpi->macro+_mbi;
-  goldenp=_mode==CODE_USING_GOLDEN;
-  cost=0;
+  _mode->rate=_mode->ssd=0;
+  dx=_mv[0];
+  dy=_mv[1];
   for(pli=0;pli<3;pli++){
     for(bi=0;bi<4;bi++){
       int fi;
       fi=mb->Ryuv[pli][bi];
       if(fi<cpi->frag_total){
-        int sad;
-        sad=BInterSAD(cpi,fi,_dx,_dy,pli,goldenp);
-        cost+=BINMAP(mode_rate[_qi][pli][0],sad);
+        oc_mode_dct_cost_accum(_mode,_qi,pli,1,
+         BInterSAD(cpi,fi,dx,dy,pli,goldenp));
       }
     }
   }
-  overhead=oc_mode_scheme_chooser_cost(&cpi->chooser,_mode)<<OC_BIT_SCALE;
-  *_overhead=overhead;
-  return cost+overhead;
+  _mode->overhead=
+   oc_mode_scheme_chooser_cost(&cpi->chooser,_modei)<<OC_BIT_SCALE;
+  oc_mode_set_cost(_mode,cpi->lambda);
 }
 
-static int cost_inter_nomv(CP_INSTANCE *cpi,int _qi,int _mbi,int *_overhead){
-  macroblock_t *mb;
-  int           pli;
-  int           bi;
-  int           cost;
-  int           overhead;
+static void oc_cost_inter_nomv(CP_INSTANCE *cpi,oc_mode_choice *_mode,int _mbi,
+ int _modei,int _qi){
+  const unsigned char *ref;
+  macroblock_t        *mb;
+  int                  pli;
+  int                  bi;
+  ref=_modei==CODE_INTER_NO_MV?cpi->lastrecon:cpi->golden;
   mb=cpi->macro+_mbi;
-  cost=0;
+  _mode->rate=_mode->ssd=0;
   for(pli=0;pli<3;pli++){
     int stride;
     stride=cpi->stride[pli];
@@ -381,109 +384,73 @@ static int cost_inter_nomv(CP_INSTANCE *cpi,int _qi,int _mbi,int *_overhead){
         int offs;
         int sad;
         offs=cpi->frag_buffer_index[fi];
-        sad=oc_enc_frag_sad(cpi,cpi->frame+offs,cpi->lastrecon+offs,stride);
+        sad=oc_enc_frag_satd_thresh(cpi,
+         cpi->frame+offs,ref+offs,stride,0xFF000);
         if(pli)sad<<=2;
-        cost+=BINMAP(mode_rate[_qi][pli][0],sad);
+        oc_mode_dct_cost_accum(_mode,_qi,pli,1,sad);
       }
     }
   }
-  overhead=
-   oc_mode_scheme_chooser_cost(&cpi->chooser,CODE_INTER_NO_MV)<<OC_BIT_SCALE;
-  *_overhead=overhead;
-  return cost+overhead;
+  _mode->overhead=
+   oc_mode_scheme_chooser_cost(&cpi->chooser,_modei)<<OC_BIT_SCALE;
+  oc_mode_set_cost(_mode,cpi->lambda);
 }
 
-static int cost_inter1mv(CP_INSTANCE *cpi,int _qi,int _mbi,int _goldenp,
- signed char *_mv,int *_bits0,int *_overhead){
-  macroblock_t *mb;
-  int           dx;
-  int           dy;
-  int           pli;
-  int           bi;
-  int           bits0;
-  int           cost;
-  int           overhead;
-  mb=cpi->macro+_mbi;
-  dx=_mv[0];
-  dy=_mv[1];
-  cost=0;
-  for(pli=0;pli<3;pli++){
-    for(bi=0;bi<4;bi++){
-      int fi;
-      fi=mb->Ryuv[pli][bi];
-      if(fi<cpi->frag_total){
-        int          sad;
-        sad=BInterSAD(cpi,fi,dx,dy,pli,_goldenp);
-        cost+=BINMAP(mode_rate[_qi][pli][0],sad);
-      }
-    }
-  }
-  bits0=MvBits[dx+MAX_MV_EXTENT]+MvBits[dy+MAX_MV_EXTENT];
-  overhead=oc_mode_scheme_chooser_cost(&cpi->chooser,
-   _goldenp?CODE_GOLDEN_MV:CODE_INTER_PLUS_MV)
-   +OC_MINI(cpi->MVBits_0+bits0,cpi->MVBits_1+12)
+static int oc_cost_inter1mv(CP_INSTANCE *cpi,oc_mode_choice *_mode,int _mbi,
+ int _modei,const signed char *_mv,int _qi){
+  int bits0;
+  oc_cost_inter(cpi,_mode,_mbi,_modei,_mv,_qi);
+  bits0=MvBits[_mv[0]+MAX_MV_EXTENT]+MvBits[_mv[1]+MAX_MV_EXTENT];
+  _mode->overhead+=OC_MINI(cpi->MVBits_0+bits0,cpi->MVBits_1+12)
    -OC_MINI(cpi->MVBits_0,cpi->MVBits_1)<<OC_BIT_SCALE;
-  *_bits0=bits0;
-  *_overhead=overhead;
-  return cost+overhead;
+  oc_mode_set_cost(_mode,cpi->lambda);
+  return bits0;
 }
 
-static void oc_set_chroma_mvs00(oc_mv _cbmvs[4],oc_mv _lbmvs[4]){
-  int dx;
-  int dy;
-  dx=_lbmvs[0][0]+_lbmvs[1][0]+_lbmvs[2][0]+_lbmvs[3][0];
-  dy=_lbmvs[0][1]+_lbmvs[1][1]+_lbmvs[2][1]+_lbmvs[3][1];
-  _cbmvs[0][0]=(signed char)OC_DIV_ROUND_POW2(dx,2,2);
-  _cbmvs[0][1]=(signed char)OC_DIV_ROUND_POW2(dy,2,2);
-}
-
-static int cost_inter4mv(CP_INSTANCE *cpi,int _qi,int _mbi,
- oc_mv _mv[4],int *_bits0,int *_bits1,int *_overhead){
+static int oc_cost_inter4mv(CP_INSTANCE *cpi,oc_mode_choice *_mode,int _mbi,
+ oc_mv _mv[4],int _qi){
   macroblock_t *mb;
   int           pli;
   int           bi;
-  int           cost;
-  int           overhead;
   int           bits0;
-  int           bits1;
   mb=cpi->macro+_mbi;
-  cost=bits0=bits1=0;
   memcpy(mb->mv,_mv,sizeof(mb->mv));
+  _mode->rate=_mode->ssd=0;
+  bits0=0;
   for(bi=0;bi<4;bi++){
     int fi;
     fi=mb->Ryuv[0][bi];
     if(fi<cpi->frag_total){
       int dx;
       int dy;
-      int sad;
       dx=_mv[bi][0];
       dy=_mv[bi][1];
-      sad=BInterSAD(cpi,fi,dx,dy,0,0);
-      cost+=BINMAP(mode_rate[_qi][0][0],sad);
       bits0+=MvBits[dx+MAX_MV_EXTENT]+MvBits[dy+MAX_MV_EXTENT];
-      bits1+=12;
+      oc_mode_dct_cost_accum(_mode,_qi,0,1,
+       BInterSAD(cpi,fi,dx,dy,0,0));
     }
   }
-  /*TODO: Use OC_SET_CHROMA_MVS_TABLE from decoder; 4:2:0 only for now.*/
-  oc_set_chroma_mvs00(mb->cbmvs,_mv);
+  (*OC_SET_CHROMA_MVS_TABLE[cpi->info.pixelformat])(mb->cbmvs,
+   (const oc_mv *)_mv);
   for(pli=1;pli<3;pli++){
     for(bi=0;bi<4;bi++){
       int fi;
       fi=mb->Ryuv[pli][bi];
       if(fi<cpi->frag_total){
-        int sad;
-        sad=BInterSAD(cpi,fi,mb->cbmvs[bi][0],mb->cbmvs[bi][1],pli,0);
-        cost+=BINMAP(mode_rate[_qi][pli][0],sad);
+        int dx;
+        int dy;
+        dx=mb->cbmvs[bi][0];
+        dy=mb->cbmvs[bi][1];
+        oc_mode_dct_cost_accum(_mode,_qi,pli,1,
+         BInterSAD(cpi,fi,dx,dy,pli,0));
       }
     }
   }
-  overhead=oc_mode_scheme_chooser_cost(&cpi->chooser,CODE_INTER_FOURMV)
-   +OC_MINI(cpi->MVBits_0+bits0,cpi->MVBits_1+bits1)
+  _mode->overhead=oc_mode_scheme_chooser_cost(&cpi->chooser,CODE_INTER_FOURMV)
+   +OC_MINI(cpi->MVBits_0+bits0,cpi->MVBits_1+48)
    -OC_MINI(cpi->MVBits_0,cpi->MVBits_1)<<OC_BIT_SCALE;
-  *_overhead=overhead;
-  *_bits0=bits0;
-  *_bits1=bits1;
-  return cost+overhead;
+  oc_mode_set_cost(_mode,cpi->lambda);
+  return bits0;
 }
 
 #include "quant_lookup.h"
@@ -510,7 +477,6 @@ typedef struct{
   ogg_int16_t re_q[2][3][64];
   oc_iquant *iq[2];
   quant_tables *qq[2];
-  ogg_int32_t *mode_rate[2];
   int xqp;
   int yqp;
   int ssdmul;
@@ -533,8 +499,6 @@ static void ps_setup_plane(CP_INSTANCE *cpi, plane_state_t *ps, int plane){
   ps->iq[1] = cpi->iquant_tables[1][plane][ps->qi];
   ps->qq[0] = &(cpi->quant_tables[0][plane]);
   ps->qq[1] = &(cpi->quant_tables[1][plane]);
-  ps->mode_rate[0] = mode_rate[ps->qi][plane][0];
-  ps->mode_rate[1] = mode_rate[ps->qi][plane][1];
   ps->xqp = (plane && cpi->info.pixelformat != OC_PF_444);
   ps->yqp = (plane && cpi->info.pixelformat == OC_PF_420);
   ps->ssdmul = (ps->xqp+1)*(ps->yqp+1);
@@ -603,22 +567,13 @@ static int TQB (CP_INSTANCE *cpi,plane_state_t *ps,int mode,int fi,
     }break;
   }
 
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
   int sad=0;
-  if(mode==CODE_INTRA){
-    int acc=0;
-    for(pi=0;pi<64;pi++)
-      acc += data[pi];
-    for(pi=0;pi<64;pi++)
-      sad += abs((data[pi]<<6)-acc);
-    sad >>=6;
-  }else{
-    for(pi=0;pi<64;pi++)
-      sad += abs(data[pi]);
-
-    if(ps->plane)sad<<=2;
+  if(mode==CODE_INTRA)sad=BIntraSAD(cpi,fi,ps->plane);
+  else{
+    sad=BInterSAD(cpi,fi,_dx,_dy,ps->plane,
+     OC_FRAME_FOR_MODE[mode]==OC_FRAME_GOLD);
   }
-
   cpi->frag_sad[fi]=sad;
 #endif
 
@@ -695,7 +650,11 @@ static int TQB (CP_INSTANCE *cpi,plane_state_t *ps,int mode,int fi,
      nmv_offs==1?lastrecon+mv_offs[0]:thisrecon,stride,buffer);
   }
 
+#if defined(OC_COLLECT_METRICS)
+  {
+#else
   if(!keyframe){
+#endif
     /* in retrospect, should we have skipped this block? */
     oc_enc_frag_sub(cpi,buffer,frame_ptr,thisrecon,stride);
     for(pi=0;pi<64;pi++){
@@ -706,6 +665,11 @@ static int TQB (CP_INSTANCE *cpi,plane_state_t *ps,int mode,int fi,
     /* We actually only want the AC contribution to the SSDs */
     uncoded_ssd -= ((uncoded_dc*uncoded_dc)>>2);
     coded_ssd -= ((coded_dc*coded_dc)>>2);
+#if defined(OC_COLLECT_METRICS)
+    cpi->frag_ssd[fi]=coded_ssd;
+  }
+  if(!keyframe){
+#endif
     /* for undersampled planes */
     /*coded_ssd*=ps->ssdmul;*/
     /*uncoded_ssd*=ps->ssdmul;*/
@@ -920,124 +884,107 @@ int PickModes(CP_INSTANCE *cpi, int recode){
   for(; sb<sb_end; sb++){
 
     for(j = 0; j<4; j++){ /* mode addressing is through Y plane, always 4 MB per SB */
-      int mbi = sb->m[j];
-
-      int cost[8] = {0,0,0,0, 0,0,0,0};
-      int overhead[8] = {0,0,0,0, 0,0,0,0};
-      int mb_mv_bits_0;
-      int mb_gmv_bits_0;
-      int mb_4mv_bits_0;
-      int mb_4mv_bits_1;
-      int mode;
-      int aerror;
-      int gerror;
-      int block_err[4];
-
-      macroblock_t *mb = &cpi->macro[mbi];
-
-      if(mbi >= cpi->macro_total) continue;
-
+      macroblock_t *mb;
+      int           mbi;
+      mbi=sb->m[j];
+      if(mbi>=cpi->macro_total)continue;
+      mb=cpi->macro+mbi;
       if(!recode){
-        /* Motion estimation */
-
-        /* Move the motion vector predictors back a frame */
+        /*Motion estimation:
+          We always do a basic 1MV search for all macroblocks, coded or not,
+           keyframe or not.*/
+        /*Move the motion vector predictors back a frame.*/
         memmove(mb->analysis_mv+1,mb->analysis_mv,2*sizeof(mb->analysis_mv[0]));
-
-        /* basic 1MV search always done for all macroblocks, coded or not, keyframe or not */
-        oc_mcenc_search(cpi, &mcenc, mbi, 0, mb->block_mv, &aerror, block_err);
-
-        /* search golden frame */
-        oc_mcenc_search(cpi, &mcenc, mbi, 1, NULL, &gerror, NULL);
-
-      }else{
-        aerror = mb->aerror;
-        gerror = mb->gerror;
+        /*Search the last frame.*/
+        oc_mcenc_search(cpi,&mcenc,mbi,0,
+         mb->block_mv,&mb->asatd,mb->block_satd);
+        /*Search the golden frame.*/
+        oc_mcenc_search(cpi,&mcenc,mbi,1,NULL,&mb->gsatd,NULL);
       }
-
-      if(cpi->FrameType == KEY_FRAME){
-        mb->mode = CODE_INTRA;
+      if(cpi->FrameType==KEY_FRAME){
+        mb->mode=CODE_INTRA;
         /* Transform, quantize, collect rho metrics */
-        TQMB_Y(cpi, mb, j, &ps, rho_count, 0, NULL, &fr);
-
-      }else{
-
-        /**************************************************************
-           Find the block choice with the lowest estimated coding cost
-
-           NOTE THAT if U or V is coded but no Y from a macro block then
-           the mode will be CODE_INTER_NO_MV as this is the default
-           state to which the mode data structure is initialised in
-           encoder and decoder at the start of each frame. */
-
-        /* block coding cost is estimated from correlated SAD metrics */
-        /* At this point, all blocks that are in frame are still marked coded */
+        TQMB_Y(cpi,mb,j,&ps,rho_count,0,NULL,&fr);
+      }
+      else{
+        oc_mode_choice modes[8];
+        int            mb_mv_bits_0;
+        int            mb_gmv_bits_0;
+        int            mb_4mv_bits_0;
+        int            mb_4mv_bits_1;
+        int            inter_mv_pref;
+        int            mode;
+        /*Find the block choice with the lowest estimated coding cost.
+          If a Cb or Cr block is coded but no Y' block from a macro block then
+           the mode MUST be CODE_INTER_NO_MV.
+          This is the default state to which the mode data structure is
+           initialised in encoder and decoder at the start of each frame.*/
+        /*Block coding cost is estimated from correlated SATD metrics.*/
+        /*At this point, all blocks that are in frame are still marked coded.*/
         if(!recode){
           memcpy(mb->unref_mv,mb->analysis_mv[0],sizeof(mb->unref_mv));
           mb->refined=0;
         }
-        cost[CODE_INTER_NO_MV] =
-          cost_inter_nomv(cpi, qi, mbi, &overhead[CODE_INTER_NO_MV]);
-        cost[CODE_INTRA] =
-          cost_intra(cpi, qi, mbi, &intrabits, &overhead[CODE_INTRA]);
-        cost[CODE_INTER_PLUS_MV] =
-          cost_inter1mv(cpi,qi,mbi,0,mb->unref_mv[0],
-           &mb_mv_bits_0,&overhead[CODE_INTER_PLUS_MV]);
-        cost[CODE_INTER_LAST_MV] =
-          cost_inter(cpi, qi, mbi, last_mv[0], last_mv[1], CODE_INTER_LAST_MV, &overhead[CODE_INTER_LAST_MV]);
-        cost[CODE_INTER_PRIOR_LAST] =
-          cost_inter(cpi, qi, mbi, prior_mv[0], prior_mv[1], CODE_INTER_PRIOR_LAST, &overhead[CODE_INTER_PRIOR_LAST]);
-        cost[CODE_USING_GOLDEN] =
-          cost_inter(cpi, qi, mbi, 0, 0, CODE_USING_GOLDEN, &overhead[CODE_USING_GOLDEN]);
-        cost[CODE_GOLDEN_MV] =
-          cost_inter1mv(cpi,qi,mbi,1,mb->unref_mv[1],
-           &mb_gmv_bits_0, &overhead[CODE_GOLDEN_MV]);
-        cost[CODE_INTER_FOURMV] =
-          cost_inter4mv(cpi, qi, mbi, mb->block_mv, &mb_4mv_bits_0, &mb_4mv_bits_1, &overhead[CODE_INTER_FOURMV]);
-
+        oc_cost_inter_nomv(cpi,modes+CODE_INTER_NO_MV,mbi,CODE_INTER_NO_MV,qi);
+        oc_cost_intra(cpi,modes+CODE_INTRA,mbi,qi);
+        intrabits+=modes[CODE_INTRA].rate;
+        mb_mv_bits_0=oc_cost_inter1mv(cpi,modes+CODE_INTER_PLUS_MV,mbi,
+         CODE_INTER_PLUS_MV,mb->unref_mv[0],qi);
+        oc_cost_inter(cpi,modes+CODE_INTER_LAST_MV,mbi,
+         CODE_INTER_LAST_MV,last_mv,qi);
+        oc_cost_inter(cpi,modes+CODE_INTER_PRIOR_LAST,mbi,
+         CODE_INTER_PRIOR_LAST,prior_mv,qi);
+        oc_cost_inter_nomv(cpi,modes+CODE_USING_GOLDEN,mbi,
+         CODE_USING_GOLDEN,qi);
+        mb_gmv_bits_0=oc_cost_inter1mv(cpi,modes+CODE_GOLDEN_MV,mbi,
+         CODE_GOLDEN_MV,mb->unref_mv[1],qi);
+        mb_4mv_bits_0=oc_cost_inter4mv(cpi,modes+CODE_INTER_FOURMV,mbi,
+         mb->block_mv,qi);
+        mb_4mv_bits_1=48;
         /*The explicit MV modes (2,6,7) have not yet gone through halfpel
            refinement.
           We choose the explicit MV mode that's already furthest ahead on bits
            and refine only that one.
           We have to be careful to remember which ones we've refined so that
            we don't refine it again if we re-encode this frame.*/
-        if(cost[CODE_INTER_FOURMV]<cost[CODE_INTER_PLUS_MV] && cost[CODE_INTER_FOURMV]<cost[CODE_GOLDEN_MV]){
+        inter_mv_pref=cpi->lambda*3<<OC_BIT_SCALE;
+        if(modes[CODE_INTER_FOURMV].cost<modes[CODE_INTER_PLUS_MV].cost&&
+         modes[CODE_INTER_FOURMV].cost<modes[CODE_GOLDEN_MV].cost){
           if(!(mb->refined&0x80)){
-            oc_mcenc_refine4mv(cpi, mbi, block_err);
+            oc_mcenc_refine4mv(cpi, mbi, mb->block_satd);
             mb->refined|=0x80;
           }
-          cost[CODE_INTER_FOURMV] =
-            cost_inter4mv(cpi, qi, mbi, mb->ref_mv,&mb_4mv_bits_0, &mb_4mv_bits_1, &overhead[CODE_INTER_FOURMV]);
-        }else if (cost[CODE_GOLDEN_MV]<cost[CODE_INTER_PLUS_MV]-384){
+          mb_4mv_bits_0=oc_cost_inter4mv(cpi,modes+CODE_INTER_FOURMV,mbi,
+           mb->ref_mv,qi);
+        }
+        else if(modes[CODE_GOLDEN_MV].cost+inter_mv_pref<
+         modes[CODE_INTER_PLUS_MV].cost){
           if(!(mb->refined&0x40)){
-            oc_mcenc_refine1mv(cpi,mbi,1,gerror);
+            oc_mcenc_refine1mv(cpi,mbi,1,mb->gsatd);
             mb->refined|=0x40;
           }
-          cost[CODE_GOLDEN_MV] =
-            cost_inter1mv(cpi,qi,mbi,1,mb->analysis_mv[0][1],
-             &mb_gmv_bits_0,&overhead[CODE_GOLDEN_MV]);
+          mb_gmv_bits_0=oc_cost_inter1mv(cpi,modes+CODE_GOLDEN_MV,mbi,
+           CODE_GOLDEN_MV,mb->analysis_mv[0][1],qi);
         }
         if(!(mb->refined&0x04)){
-          oc_mcenc_refine1mv(cpi,mbi,0,aerror);
+          oc_mcenc_refine1mv(cpi,mbi,0,mb->asatd);
           mb->refined|=0x04;
         }
-        cost[CODE_INTER_PLUS_MV] =
-          cost_inter1mv(cpi,qi,mbi,0,mb->analysis_mv[0][0],
-           &mb_mv_bits_0, &overhead[CODE_INTER_PLUS_MV]);
-
-        /* Finally, pick the mode with the cheapest estimated bit cost.*/
-        /* prefer CODE_INTER_PLUS_MV, but not over LAST and LAST2 */
+        mb_mv_bits_0=oc_cost_inter1mv(cpi,modes+CODE_INTER_PLUS_MV,mbi,
+         CODE_INTER_PLUS_MV,mb->analysis_mv[0][0],qi);
+        /*Finally, pick the mode with the cheapest estimated bit cost.*/
+        /*We prefer CODE_INTER_PLUS_MV, but not over LAST and LAST2.*/
         mode=0;
-        if(cost[1] < cost[0])mode=1;
-        if(cost[3] < cost[mode])mode=3;
-        if(cost[4] < cost[mode])mode=4;
-        if(cost[5] < cost[mode])mode=5;
-        if(cost[6] < cost[mode])mode=6;
-        if(cost[7] < cost[mode])mode=7;
-        if(mode == CODE_INTER_LAST_MV || mode == CODE_INTER_PRIOR_LAST){
-          if(cost[2] < cost[mode])mode=2;
-        }else{
-          if(cost[2]-384 < cost[mode])mode=2;
+        if(modes[1].cost<modes[0].cost)mode=1;
+        if(modes[3].cost<modes[mode].cost)mode=3;
+        if(modes[4].cost<modes[mode].cost)mode=4;
+        if(modes[5].cost<modes[mode].cost)mode=5;
+        if(modes[6].cost<modes[mode].cost)mode=6;
+        if(modes[7].cost<modes[mode].cost)mode=7;
+        if(mode==CODE_INTER_LAST_MV||mode==CODE_INTER_PRIOR_LAST){
+          inter_mv_pref=0;
         }
+        if(modes[2].cost<modes[mode].cost+inter_mv_pref)mode=2;
         /*If we picked something other than 4MV, propagate the MV to the
            blocks.*/
         if(mode!=CODE_INTER_FOURMV){
@@ -1069,7 +1016,7 @@ int PickModes(CP_INSTANCE *cpi, int recode){
         }
         mb->mode=mode;
         /* Transform, quantize, collect rho metrics */
-        if(TQMB_Y(cpi,mb,j,&ps,rho_count,overhead[mode],&mb_mv_bits_0,&fr)){
+        if(TQMB_Y(cpi,mb,j,&ps,rho_count,modes[mode].overhead,&mb_mv_bits_0,&fr)){
           switch(mb->mode){
             case CODE_INTER_PLUS_MV:{
               prior_mv[0]=last_mv[0];
@@ -1110,15 +1057,14 @@ int PickModes(CP_INSTANCE *cpi, int recode){
                 else mb->mv[bi][0]=mb->mv[bi][1]=0;
               }
               if(mb->coded!=0xF){
-                /*TODO: Use OC_SET_CHROMA_MVS_TABLE from decoder; 4:2:0 only
-                   for now.*/
-                oc_set_chroma_mvs00(mb->cbmvs,mb->mv);
+                (*OC_SET_CHROMA_MVS_TABLE[cpi->info.pixelformat])(mb->cbmvs,
+                 (const oc_mv *)mb->mv);
               }
             }break;
             default:break;
           }
           oc_mode_scheme_chooser_update(&cpi->chooser,mb->mode);
-          interbits+=cost[mb->mode];
+          interbits+=modes[mb->mode].rate+modes[mb->mode].overhead;
         }
       }
     }
@@ -1177,64 +1123,134 @@ int PickModes(CP_INSTANCE *cpi, int recode){
   }
   return 0;
 }
-#ifdef COLLECT_METRICS
 
-#include <stdio.h>
-#include <math.h>
+#if defined(OC_COLLECT_METRICS)
+# include <stdio.h>
+# include <math.h>
 
-#define ZWEIGHT 100
-#define BIN(sad) (OC_MINI((sad)>>OC_SAD_SHIFT,(OC_SAD_BINS-1)))
+# define OC_ZWEIGHT   (0.25)
+# define OC_BIN(_sad) (OC_MINI((_sad)>>OC_SAD_SHIFT,OC_SAD_BINS-1))
 
-static void UpdateModeEstimation(CP_INSTANCE *cpi){
-  /* compile collected SAD/rate metrics into an immediately useful
-     mode estimation form */
+static void oc_mode_metrics_add(oc_mode_metrics *_metrics,
+ double _w,int _sad,int _rate,double _rmse){
+  double rate;
+  /*Accumulate statistics without the scaling; this lets us change the scale
+     factor yet still use old data.*/
+  rate=ldexp(_rate,-OC_BIT_SCALE);
+  if(_metrics->fragw>0){
+    double dsad;
+    double drate;
+    double drmse;
+    double w;
+    dsad=_sad-_metrics->sad/_metrics->fragw;
+    drate=rate-_metrics->rate/_metrics->fragw;
+    drmse=_rmse-_metrics->rmse/_metrics->fragw;
+    w=_metrics->fragw*_w/(_metrics->fragw+_w);
+    _metrics->sad2+=dsad*dsad*w;
+    _metrics->sadrate+=dsad*drate*w;
+    _metrics->rate2+=drate*drate*w;
+    _metrics->sadrmse+=dsad*drmse*w;
+    _metrics->rmse2+=drmse*drmse*w;
+  }
+  _metrics->fragw+=_w;
+  _metrics->sad+=_sad*_w;
+  _metrics->rate+=rate*_w;
+  _metrics->rmse+=_rmse*_w;
+}
 
-  int plane,mode,bin;
-  int qi = cpi->BaseQ; /* temporary */
+static void oc_mode_metrics_merge(oc_mode_metrics *_dst,
+ const oc_mode_metrics *_src,int _n){
+  int i;
+  /*Find a non-empty set of metrics.*/
+  for(i=0;i<_n&&_src[i].fragw<=0;i++);
+  if(i>=_n){
+    memset(_dst,0,sizeof(*_dst));
+    return;
+  }
+  memcpy(_dst,_src+i,sizeof(*_dst));
+  /*And iterate over the remaining non-empty sets of metrics.*/
+  for(i++;i<_n;i++)if(_src[i].fragw>0){
+    double wa;
+    double wb;
+    double dsad;
+    double drate;
+    double drmse;
+    double w;
+    wa=_dst->fragw;
+    wb=_src[i].fragw;
+    dsad=_src[i].sad/wb-_dst->sad/wa;
+    drate=_src[i].rate/wb-_dst->rate/wa;
+    drmse=_src[i].rmse/wb-_dst->rmse/wa;
+    w=wa*wb/(wa+wb);
+    _dst->fragw+=_src[i].fragw;
+    _dst->sad+=_src[i].sad;
+    _dst->rate+=_src[i].rate;
+    _dst->rmse+=_src[i].rmse;
+    _dst->sad2+=_src[i].sad2+dsad*dsad*w;
+    _dst->sadrate+=_src[i].sadrate+dsad*drate*w;
+    _dst->rate2+=_src[i].rate2+drate*drate*w;
+    _dst->sadrmse+=_src[i].sadrmse+dsad*drmse*w;
+    _dst->rmse2+=_src[i].rmse2+drmse*drmse*w;
+  }
+}
 
-  /* Convert raw collected data into cleaned up sample points */
-  /* metrics are collected into fewer bins than we eventually use as a
-     bitrate metric in mode selection. */
-
-  for(plane=0;plane<3;plane++)
-    for(mode=0;mode<2;mode++){
-      ogg_int64_t lastx = -1;
-      ogg_int64_t lasty = -1;
-      int a = -1;
-      int b = -1;
-      ogg_int64_t sadx=0;
-      ogg_int64_t bity=0;
-      ogg_int64_t frags=0;
-      int rbin=0;
+static void oc_enc_mode_metrics_update(CP_INSTANCE *cpi,int _qi){
+  int pli;
+  int qti;
+  oc_enc_restore_fpu(cpi);
+  /*Compile collected SAD/rate/RMSE metrics into a form that's immediately
+     useful for mode decision.*/
+  /*Convert raw collected data into cleaned up sample points.*/
+  for(pli=0;pli<3;pli++){
+    for(qti=0;qti<2;qti++){
+      double fragw;
+      int    bin0;
+      int    bin1;
+      int    bin;
+      fragw=0;
+      bin0=bin1=0;
       for(bin=0;bin<OC_SAD_BINS;bin++){
-        sadx += mode_metric[qi][plane][mode].sad[bin];
-        bity += mode_metric[qi][plane][mode].bits[bin];
-        frags += mode_metric[qi][plane][mode].frag[bin];
-        if(frags > ZWEIGHT){
-          sadx = (sadx + (frags>>1))/frags;
-          bity = (bity + (frags>>1))/frags;
-          if(lastx != -1LL){
-            b = ((bity - lasty)<<8)/(sadx-lastx);
-            a = lasty - (((lastx * b) + (1<<7))>>8);
-
-            for(;rbin<<OC_SAD_SHIFT <= sadx && rbin <= OC_SAD_BINS;rbin++)
-              mode_rate[qi][plane][mode][rbin] = a + ((b * (rbin<<OC_SAD_SHIFT) + (1<<7))>>8);
-
-          }
-          lastx = sadx;
-          lasty = bity;
-          frags = 0;
+        oc_mode_metrics metrics;
+        OC_MODE_RD[_qi][pli][qti][bin].rate=0;
+        OC_MODE_RD[_qi][pli][qti][bin].rmse=0;
+        /*Find some points on either side of the current bin.*/
+        while((bin1<bin+1||fragw<OC_ZWEIGHT)&&bin1<OC_SAD_BINS-1){
+          fragw+=OC_MODE_METRICS[_qi][pli][qti][bin1++].fragw;
+        }
+        while(bin0+1<bin&&bin0+1<bin1&&
+         fragw-OC_MODE_METRICS[_qi][pli][qti][bin0].fragw>=OC_ZWEIGHT){
+          fragw-=OC_MODE_METRICS[_qi][pli][qti][bin0++].fragw;
+        }
+        /*Merge statistics and fit lines.*/
+        oc_mode_metrics_merge(&metrics,
+         OC_MODE_METRICS[_qi][pli][qti]+bin0,bin1-bin0);
+        if(metrics.fragw>0&&metrics.sad2>0){
+          double a;
+          double b;
+          double msad;
+          double mrate;
+          double mrmse;
+          double rate;
+          double rmse;
+          msad=metrics.sad/metrics.fragw;
+          mrate=metrics.rate/metrics.fragw;
+          mrmse=metrics.rmse/metrics.fragw;
+          /*Compute the points on these lines corresponding to the actual bin
+             value.*/
+          b=metrics.sadrate/metrics.sad2;
+          a=mrate-b*msad;
+          rate=ldexp(a+b*(bin<<OC_SAD_SHIFT),OC_BIT_SCALE);
+          OC_MODE_RD[_qi][pli][qti][bin].rate=
+           (ogg_int16_t)OC_CLAMPI(-32768,(int)(rate+0.5),32767);
+          b=metrics.sadrmse/metrics.sad2;
+          a=mrmse-b*msad;
+          rmse=ldexp(a+b*(bin<<OC_SAD_SHIFT),OC_RMSE_SCALE);
+          OC_MODE_RD[_qi][pli][qti][bin].rmse=
+           (ogg_int16_t)OC_CLAMPI(-32768,(int)(rmse+0.5),32767);
         }
       }
-      if(lastx!=-1LL){
-        for(;rbin <= OC_SAD_BINS;rbin++)
-          mode_rate[qi][plane][mode][rbin] = mode_rate[qi][plane][mode][rbin-1];
-      }else{
-        for(;rbin <= OC_SAD_BINS;rbin++)
-          mode_rate[qi][plane][mode][rbin] = 0;
-
-      }
     }
+  }
 }
 
 static int parse_eob_run(int token, int eb){
@@ -1304,6 +1320,7 @@ static void ModeMetricsGroup(CP_INSTANCE *cpi, int group, int huffY, int huffC, 
 }
 
 void ModeMetrics(CP_INSTANCE *cpi){
+  double fragw;
   int interp = (cpi->FrameType!=KEY_FRAME);
   int huff[4];
   int fi,gi;
@@ -1316,6 +1333,10 @@ void ModeMetrics(CP_INSTANCE *cpi){
   int eobcounts[64];
   int qi = cpi->BaseQ; /* temporary */
   int actual_bits[cpi->frag_total];
+  oc_enc_restore_fpu(cpi);
+  /*Weight the fragments by the inverse frame size; this prevents HD content
+     from dominating the statistics.*/
+  fragw=1.0/cpi->frag_n[0];
   memset(actual_bits,0,sizeof(actual_bits));
   memset(eobcounts,0,sizeof(eobcounts));
   huff[0] = cpi->huffchoice[interp][0][0];
@@ -1326,9 +1347,17 @@ void ModeMetrics(CP_INSTANCE *cpi){
   memset(cpi->dist_dist,0,sizeof(cpi->dist_dist));
   memset(cpi->dist_bits,0,sizeof(cpi->dist_bits));
 
-  if(mode_metrics==0){
-    memset(mode_metric,0,sizeof(mode_metric));
-    mode_metrics=1;
+  if(!oc_has_mode_metrics){
+    FILE *fmetrics;
+    int   qi;
+    memset(OC_MODE_METRICS,0,sizeof(OC_MODE_METRICS));
+    fmetrics=fopen("modedec.stats","rb");
+    if(fmetrics!=NULL){
+      fread(OC_MODE_METRICS,sizeof(OC_MODE_METRICS),1,fmetrics);
+      fclose(fmetrics);
+    }
+    for(qi=0;qi<64;qi++)oc_enc_mode_metrics_update(cpi,qi);
+    oc_has_mode_metrics=1;
   }
 
   /* count bits for tokens */
@@ -1348,108 +1377,121 @@ void ModeMetrics(CP_INSTANCE *cpi){
     macroblock_t *mb = &cpi->macro[mbi];
     int mode = mb->mode;
     int plane = (fi<y ? 0 : (fi<u ? 1 : 2));
-    int bin = BIN(sp[fi]);
-    mode_metric[qi][plane][mode==CODE_INTRA].frag[bin]++;
-    mode_metric[qi][plane][mode==CODE_INTRA].sad[bin] += sp[fi];
-    mode_metric[qi][plane][mode==CODE_INTRA].bits[bin] += actual_bits[fi];
-    if(0){
-      int bi = cpi->frag_buffer_index[fi];
-      unsigned char *frame = cpi->frame+bi;
-      unsigned char *recon = cpi->lastrecon+bi;
-      int stride = cpi->stride[plane];
-      int lssd=0;
-      int xi,yi;
-      for(yi=0;yi<8;yi++){
-        for(xi=0;xi<8;xi++)
-          lssd += (frame[xi]-recon[xi])*(frame[xi]-recon[xi]);
-        frame+=stride;
-        recon+=stride;
-      }
-      cpi->dist_dist[plane][mode] += lssd;
-      cpi->dist_bits[plane][mode] += actual_bits[fi];
-    }
+    int bin = OC_BIN(sp[fi]);
+    oc_mode_metrics_add(OC_MODE_METRICS[qi][plane][mode!=CODE_INTRA]+bin,
+     fragw,sp[fi],actual_bits[fi],sqrt(cpi->frag_ssd[fi]));
   }
   /* update global SAD/rate estimation matrix */
-  UpdateModeEstimation(cpi);
+  oc_enc_mode_metrics_update(cpi,qi);
 }
 
-void DumpMetrics(CP_INSTANCE *cpi){
-  int qi,plane,mode,bin;
-
-  fprintf(stdout,
-          "/* file generated by libtheora with COLLECT_METRICS defined at compile time */\n\n"
-
-          "#define OC_BIT_SCALE (7)\n"
-          "#define OC_SAD_BINS (%d)\n"
-          "#define OC_SAD_SHIFT (%d)\n"
-          "\n"
-
-          "#ifdef COLLECT_METRICS\n"
-          "typedef struct {\n"
-          "  ogg_int64_t      bits[OC_SAD_BINS];\n"
-          "  ogg_int64_t      frag[OC_SAD_BINS];\n"
-          "  ogg_int64_t      sad[OC_SAD_BINS];\n"
-          "} mode_metric_t;\n"
-
-          "int              mode_metrics = 1;\n"
-          "mode_metric_t    mode_metric[64][3][2]={\n",OC_SAD_BINS,OC_SAD_SHIFT);
-
-  for(qi=0;qi<64;qi++){
-    fprintf(stdout,"  {\n");
-    for(plane=0;plane<3;plane++){
-      fprintf(stdout,"    {\n");
-      for(mode=0;mode<2;mode++){
-        fprintf(stdout,"      { /* qi=%d %c %s */\n",qi,(plane?(plane==1?'U':'V'):'Y'),(mode?"INTRA":"INTER"));
-
-        fprintf(stdout,"        { ");
-        for(bin=0;bin<OC_SAD_BINS;bin++){
-          if(bin && !(bin&0x3))fprintf(stdout,"\n          ");
-          fprintf(stdout,"%12ldLL,",mode_metric[qi][plane][mode].bits[bin]);
-        }
-        fprintf(stdout," },\n");
-        fprintf(stdout,"        { ");
-        for(bin=0;bin<OC_SAD_BINS;bin++){
-          if(bin && !(bin&0x3))fprintf(stdout,"\n          ");
-          fprintf(stdout,"%12ldLL,",mode_metric[qi][plane][mode].frag[bin]);
-        }
-        fprintf(stdout," },\n");
-        fprintf(stdout,"        { ");
-        for(bin=0;bin<OC_SAD_BINS;bin++){
-          if(bin && !(bin&0x3))fprintf(stdout,"\n          ");
-          fprintf(stdout,"%12ldLL,",mode_metric[qi][plane][mode].sad[bin]);
-        }
-        fprintf(stdout," },\n");
-        fprintf(stdout,"      },\n");
-
-      }
-      fprintf(stdout,"    },\n");
-    }
-    fprintf(stdout,"  },\n");
+void oc_enc_mode_metrics_dump(CP_INSTANCE *cpi){
+  FILE *fmetrics;
+  int   qi;
+  /*Generate sample points for complete list of QI values.*/
+  for(qi=0;qi<64;qi++)oc_enc_mode_metrics_update(cpi,qi);
+  fmetrics=fopen("modedec.stats","wb");
+  if(fmetrics!=NULL){
+    fwrite(OC_MODE_METRICS,sizeof(OC_MODE_METRICS),1,fmetrics);
+    fclose(fmetrics);
   }
-  fprintf(stdout,"};\n\n#endif\n\n");
-
   fprintf(stdout,
-          "ogg_int32_t     mode_rate[64][3][2][OC_SAD_BINS+1]={\n");
+   "/*File generated by libtheora with OC_COLLECT_METRICS"
+   " defined at compile time.*/\n"
+   "#if !defined(_modedec_H)\n"
+   "# define _modedec_H (1)\n"
+   "\n"
+   "\n"
+   "\n"
+   "# if defined(OC_COLLECT_METRICS)\n"
+   "typedef struct oc_mode_metrics oc_mode_metrics;\n"
+   "# endif\n"
+   "typedef struct oc_mode_rd      oc_mode_rd;\n"
+   "\n"
+   "\n"
+   "\n"
+   "/*The number of extra bits of precision at which to store rate"
+   " metrics.*/\n"
+   "# define OC_BIT_SCALE  (%i)\n"
+   "/*The number of extra bits of precision at which to store RMSE metrics.\n"
+   "  This must be at least half OC_BIT_SCALE (rounded up).*/\n"
+   "# define OC_RMSE_SCALE (%i)\n"
+   "/*The number of bins to partition statistics into.*/\n"
+   "# define OC_SAD_BINS   (%i)\n"
+   "/*The number of bits of precision to drop"
+   " from SAD scores to assign them to a\n"
+   "   bin.*/\n"
+   "# define OC_SAD_SHIFT  (%i)\n"
+   "\n"
+   "\n"
+   "\n"
+   "# if defined(OC_COLLECT_METRICS)\n"
+   "struct oc_mode_metrics{\n"
+   "  double fragw;\n"
+   "  double sad;\n"
+   "  double rate;\n"
+   "  double rmse;\n"
+   "  double sad2;\n"
+   "  double sadrate;\n"
+   "  double rate2;\n"
+   "  double sadrmse;\n"
+   "  double rmse2;\n"
+   "};\n"
+   "\n"
+   "\n"
+   "int             oc_has_mode_metrics;\n"
+   "oc_mode_metrics OC_MODE_METRICS[64][3][2][OC_SAD_BINS];\n"
+   "# endif\n"
+   "\n"
+   "\n"
+   "\n"
+   "struct oc_mode_rd{\n"
+   "  ogg_int16_t rate;\n"
+   "  ogg_int16_t rmse;\n"
+   "};\n"
+   "\n"
+   "\n"
+   "# if !defined(OC_COLLECT_METRICS)\n"
+   "static const\n"
+   "# endif\n"
+   "oc_mode_rd OC_MODE_RD[64][3][2][OC_SAD_BINS]={\n",
+   OC_BIT_SCALE,OC_RMSE_SCALE,OC_SAD_BINS,OC_SAD_SHIFT);
   for(qi=0;qi<64;qi++){
+    int pli;
     fprintf(stdout,"  {\n");
-    for(plane=0;plane<3;plane++){
+    for(pli=0;pli<3;pli++){
+      int qti;
       fprintf(stdout,"    {\n");
-      for(mode=0;mode<2;mode++){
-        fprintf(stdout,"      { /* qi=%d %c %s */\n        ",qi,(plane?(plane==1?'U':'V'):'Y'),(mode?"INTRA":"INTER"));
-
-        for(bin=0;bin<OC_SAD_BINS+1;bin++){
-          if(bin && !(bin&0x7))fprintf(stdout,"\n        ");
-          fprintf(stdout,"%6d,",mode_rate[qi][plane][mode][bin]);
+      for(qti=0;qti<2;qti++){
+        int bin;
+        static const char *pl_names[3]={"Y'","Cb","Cr"};
+        static const char *qti_names[2]={"INTRA","INTER"};
+        fprintf(stdout,"      /*%s  qi=%i  %s*/\n",
+         pl_names[pli],qi,qti_names[qti]);
+        fprintf(stdout,"      {\n");
+        fprintf(stdout,"        ");
+        for(bin=0;bin<OC_SAD_BINS;bin++){
+          if(bin&&!(bin&0x3))fprintf(stdout,"\n        ");
+          fprintf(stdout,"{%5i,%5i}",
+           OC_MODE_RD[qi][pli][qti][bin].rate,
+           OC_MODE_RD[qi][pli][qti][bin].rmse);
+          if(bin+1<OC_SAD_BINS)fprintf(stdout,",");
         }
-
-        fprintf(stdout," },\n");
+        fprintf(stdout,"\n      }");
+        if(qti<1)fprintf(stdout,",");
+        fprintf(stdout,"\n");
       }
-      fprintf(stdout,"    },\n");
+      fprintf(stdout,"    }");
+      if(pli<2)fprintf(stdout,",");
+      fprintf(stdout,"\n");
     }
-    fprintf(stdout,"  },\n");
+    fprintf(stdout,"  }");
+    if(qi<63)fprintf(stdout,",");
+    fprintf(stdout,"\n");
   }
-  fprintf(stdout,"};\n\n");
-
+  fprintf(stdout,
+   "};\n"
+   "\n"
+   "#endif\n");
 }
-
 #endif

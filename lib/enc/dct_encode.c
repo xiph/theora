@@ -236,7 +236,7 @@ void tokenlog_rollback(CP_INSTANCE *cpi, token_checkpoint_t *stack,int n){
     if(stack[i].count>=0) cpi->dct_token_count[coeff] = stack[i].count; 
     cpi->eob_run[coeff] = stack[i].run;
     cpi->eob_pre[coeff] = stack[i].pre;
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
     cpi->dct_eob_fi_count[coeff] = stack[i].runstack;
 #endif
   }
@@ -279,7 +279,7 @@ static void tokenlog_mark(CP_INSTANCE *cpi, int coeff, token_checkpoint_t **stac
   (*stack)->count = -1;
   (*stack)->run = cpi->eob_run[coeff];
   (*stack)->pre = cpi->eob_pre[coeff];
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
   (*stack)->runstack = cpi->dct_eob_fi_count[coeff];
 #endif
   (*stack)++;
@@ -297,7 +297,7 @@ static void token_add(CP_INSTANCE *cpi, int chroma, int coeff,
     (*stack)->chroma = chroma;
     (*stack)->run = cpi->eob_run[coeff];
     (*stack)->pre = cpi->eob_pre[coeff];
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
     (*stack)->runstack = cpi->dct_eob_fi_count[coeff];
 #endif
     (*stack)++;
@@ -312,7 +312,7 @@ static void token_prepend(CP_INSTANCE *cpi, int chroma, int coeff,
   
   cpi->dct_token[coeff]--;
   cpi->dct_token_eb[coeff]--;
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
   cpi->dct_token_frag[coeff]--;
 #endif
   cpi->dct_token[coeff][0] = token;
@@ -352,7 +352,7 @@ static void token_add_raw(CP_INSTANCE *cpi,
     tokenize_eobrun(cpi,coeff,cpi->eob_run[coeff],NULL);
     cpi->eob_run[coeff]=0;
   }
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
   cpi->dct_token_frag[coeff][cpi->dct_token_count[coeff]] = fi;
 #endif
   token_add(cpi,chroma,coeff,token,eb,NULL);
@@ -375,7 +375,7 @@ static int tokenize_dctval(CP_INSTANCE *cpi,
     tokenize_eobrun(cpi,coeff,cpi->eob_run[coeff],stack);
     cpi->eob_run[coeff]=0;
   }
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
   cpi->dct_token_frag[coeff][cpi->dct_token_count[coeff]] = fi;
 #endif
   
@@ -408,7 +408,7 @@ static int tokenize_mark_run(CP_INSTANCE *cpi,
     cpi->eob_run[coeff]++;
     cpi->eob_run[coeff]|= !chroma<<15;
   }	  
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
   cpi->dct_eob_fi_stack[coeff][cpi->dct_eob_fi_count[coeff]++]=fi;
 #endif
   return cost;
@@ -615,7 +615,7 @@ void dct_tokenize_init (CP_INSTANCE *cpi){
   memset(cpi->ac1_bits, 0, sizeof(cpi->ac1_bits));
   memset(cpi->acN_bits, 0, sizeof(cpi->acN_bits));
   memset(cpi->dct_token_count, 0, sizeof(cpi->dct_token_count));
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
   memset(cpi->dct_eob_fi_count, 0, sizeof(cpi->dct_eob_fi_count));
 #endif
 
@@ -623,7 +623,7 @@ void dct_tokenize_init (CP_INSTANCE *cpi){
     cpi->dct_token[i] = cpi->dct_token_storage + cpi->stack_offset*i;
     cpi->dct_token_eb[i] = cpi->dct_token_eb_storage + cpi->stack_offset*i;
 
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
     cpi->dct_eob_fi_stack[i] = cpi->dct_eob_fi_storage + cpi->frag_total*i;
     cpi->dct_token_frag[i] = cpi->dct_token_frag_storage + cpi->stack_offset*i;
 #endif
@@ -657,7 +657,7 @@ void dct_tokenize_finish (CP_INSTANCE *cpi){
   memset(cpi->ac1_bits, 0, sizeof(cpi->ac1_bits));
   cpi->dct_token_count[1]=0;
   cpi->eob_pre[1]=cpi->eob_run[1]=0;
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
   /* reset and reuse as a counter */
   cpi->dct_eob_fi_count[1]=0;
 #endif

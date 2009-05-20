@@ -118,8 +118,10 @@
 
 #define OC_LOOP_FILTER_H_MMX(_pix,_ystride,_ll) \
   do{ \
-    ptrdiff_t ystride3; \
-    ptrdiff_t d; \
+    unsigned char *pix; \
+    ptrdiff_t      ystride3; \
+    ptrdiff_t      d; \
+    pix=(_pix)-2; \
     __asm__ __volatile__( \
       /*x x x x d0 c0 b0 a0*/ \
       "movd (%[pix]),%%mm0\n\t" \
@@ -202,8 +204,8 @@
       "movw %w[d],1(%[pix],%[ystride],2)\n\t" \
       "shr $16,%[d]\n\t" \
       "movw %w[d],1(%[pix],%[ystride3])\n\t" \
-      :[ystride3]"=&r"(ystride3),[d]"=&r"(d) \
-      :[pix]"r"(_pix-2),[ystride]"r"((ptrdiff_t)(_ystride)),[ll]"r"(_ll) \
+      :[pix]"+r"(pix),[ystride3]"=&r"(ystride3),[d]"=&r"(d) \
+      :[ystride]"r"((ptrdiff_t)(_ystride)),[ll]"r"(_ll) \
       :"memory" \
     ); \
   } \

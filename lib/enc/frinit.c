@@ -32,9 +32,10 @@ void ClearFrameInfo(CP_INSTANCE *cpi){
   if(cpi->frag_buffer_index) _ogg_free(cpi->frag_buffer_index);
   if(cpi->frag_dc) _ogg_free(cpi->frag_dc);
   if(cpi->frag_dc_tmp) _ogg_free(cpi->frag_dc_tmp);
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
   if(cpi->frag_mbi) _ogg_free(cpi->frag_mbi);
   if(cpi->frag_sad) _ogg_free(cpi->frag_sad);
+  if(cpi->frag_ssd) _ogg_free(cpi->frag_ssd);
   if(cpi->dct_token_frag_storage) _ogg_free(cpi->dct_token_frag_storage);
   if(cpi->dct_eob_fi_storage) _ogg_free(cpi->dct_eob_fi_storage);
 #endif
@@ -137,11 +138,11 @@ void InitFrameInfo(CP_INSTANCE *cpi){
   cpi->fr_block = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->fr_block));
   cpi->fr_block_bits = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->fr_block_bits));
 
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
  {
-   int i;
    cpi->frag_mbi = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->frag_mbi));
    cpi->frag_sad = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->frag_sad));
+   cpi->frag_ssd = _ogg_calloc(cpi->frag_total+1, sizeof(*cpi->frag_ssd));
    cpi->dct_token_frag_storage = _ogg_malloc(cpi->stack_offset*BLOCK_SIZE*sizeof(*cpi->dct_token_frag_storage));
    cpi->dct_eob_fi_storage = _ogg_malloc(cpi->frag_total*BLOCK_SIZE*sizeof(*cpi->dct_eob_fi_storage));
  }
@@ -259,7 +260,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
           cpi->macro[macroindex].Ryuv[0][frag] = cpi->frag_total; //default
           if(Hrow<cpi->frag_v[0] && Hcol<cpi->frag_h[0]){
             cpi->macro[macroindex].Hyuv[0][frag] = Hrow*cpi->frag_h[0] + Hcol;
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
             cpi->frag_mbi[Hrow*cpi->frag_h[0] + Hcol] = macroindex;
 #endif
           }
@@ -279,7 +280,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
         if(row<cpi->frag_v[1] && col<cpi->frag_h[1]){
           cpi->macro[macroindex].Hyuv[1][0] = cpi->frag_n[0] + macroindex;
           cpi->macro[macroindex].Ryuv[1][0] = cpi->frag_n[0] + macroindex;
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
           cpi->frag_mbi[cpi->frag_n[0] + macroindex] = macroindex;
 #endif
         }
@@ -296,7 +297,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
         if(row<cpi->frag_v[2] && col<cpi->frag_h[2]){
           cpi->macro[macroindex].Hyuv[2][0] = cpi->frag_n[0] + cpi->frag_n[1] + macroindex;
           cpi->macro[macroindex].Ryuv[2][0] = cpi->frag_n[0] + cpi->frag_n[1] + macroindex;
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
           cpi->frag_mbi[cpi->frag_n[0] + cpi->frag_n[1] + macroindex] = macroindex;
 #endif
         }
@@ -386,7 +387,7 @@ void InitFrameInfo(CP_INSTANCE *cpi){
       }
     cpi->macro[cpi->macro_total].ncneighbors=0;
     cpi->macro[cpi->macro_total].npneighbors=0;
-#ifdef COLLECT_METRICS
+#if defined(OC_COLLECT_METRICS)
     cpi->frag_mbi[cpi->frag_total] = cpi->macro_total;
 #endif
   }
