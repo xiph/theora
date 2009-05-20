@@ -120,7 +120,7 @@ noinst_HEADERS = \
 	enc/enquant.h \
 	enc/hufftables.h \
 	enc/mathops.h \
-	enc/mode_select.h \
+	enc/modedec.h \
 	enc/quant_lookup.h \
 	enc/toplevel_lookup.h \
 	dec/apiwrapper.h \
