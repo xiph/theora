@@ -207,7 +207,7 @@ AM_CONDITIONAL([CPU_x86_32], [test x$cpu_x86_32 = xyes])
 # Test whenever ld supports -version-script
 AC_PROG_LD
 AC_PROG_LD_GNU
-AC_MSG_CHECKING([library versioning support])
+AC_MSG_CHECKING([how to control symbol export])
 
 THDEC_VERSION_ARG=""
 THENC_VERSION_ARG=""
@@ -220,13 +220,26 @@ if test "x$lt_cv_prog_gnu_ld" = "xyes"; then
     THENC_VERSION_ARG="-export-symbols \$(top_srcdir)/win32/xmingw32/libtheoraenc-all.def"
     THENC_VERSION_ARG="$THENC_VERSION_ARG -ltheoradec"
     THC_VERSION_ARG="-export-symbols \$(top_srcdir)/win32/libtheora.def"
-    AC_MSG_RESULT([no])
+    AC_MSG_RESULT([-export-symbols])
     ;;
   linux* | solaris* )
     THDEC_VERSION_ARG='-Wl,--version-script=$(srcdir)/Version_script-dec'
     THENC_VERSION_ARG='-Wl,--version-script=$(srcdir)/Version_script-enc'
     TH_VERSION_ARG='-Wl,--version-script=$(srcdir)/Version_script'
-    AC_MSG_RESULT([yes])
+    AC_MSG_RESULT([--version-script])
+    ;;
+  *)
+    # build without versioning
+    AC_MSG_RESULT([no])
+    ;;
+ esac
+else
+ case "$target_os" in
+  darwin*)
+    THDEC_VERSION_ARG='-Wl,-exported_symbols_list,$(srcdir)/theoradec.exp'
+    THENC_VERSION_ARG='-Wl,-exported_symbols_list,$(srcdir)/theoraenc.exp'
+    TH_VERSION_ARG='-Wl,-exported_symbols_list,$(srcdir)/theora.exp'
+    AC_MSG_RESULT([-exported_symbols_list])
     ;;
   *)
     # build without versioning
