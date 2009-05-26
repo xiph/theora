@@ -132,7 +132,6 @@ env.ParseConfig('pkg-config --cflags --libs ogg')
 
 libtheoradec_Sources = Split(decoder_sources)
 libtheoraenc_Sources = Split(encoder_sources)
-libtheora_Sources = Split(decoder_sources + encoder_sources)
 
 libtheoradec_a = env.Library('lib/theoradec',
 	path('lib', libtheoradec_Sources))
@@ -144,16 +143,12 @@ libtheoraenc_a = env.Library('lib/theoraenc',
 libtheoraenc_so = env.SharedLibrary('lib/theoraenc',
 	path('lib', libtheoraenc_Sources) + [libtheoradec_so])
 
-libtheora_a = env.Library('lib/theora',
-	path('lib', libtheora_Sources))
-libtheora_so = env.SharedLibrary('lib/theora',
-	path('lib', libtheora_Sources))
-
 #installing
 prefix='/usr'
 lib_dir = prefix + '/lib'
 env.Alias('install', prefix)
-env.Install(lib_dir, [libtheora_a, libtheora_so])
+env.Install(lib_dir, [libtheoradec_a, libtheoradec_so])
+env.Install(lib_dir, [libtheoraenc_a, libtheoraenc_so])
 
 # example programs
 dump_video = env.Clone()
