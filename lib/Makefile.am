@@ -3,17 +3,27 @@ AM_CFLAGS = $(OGG_CFLAGS) $(CAIRO_CFLAGS)
 
 EXTRA_DIST = \
 	cpu.c \
-        enc/x86/fdct_mmx.c \
-        enc/x86/fdct_sse2.c \
-        enc/x86/mmxenc.c \
-        enc/x86/mmxencfrag.c \
-        enc/x86/x86enc.c \
-        enc/x86_32_vs/dsp_mmx.c \
-        enc/x86_32_vs/fdct_mmx.c \
-        enc/dct_encode.c \
-        enc/encode.c \
-        enc/encoder_toplevel.c \
-        dec/x86_vc
+	enc/x86/dsp_sse2.c \
+	enc/x86/mmxenc.c \
+	enc/x86/mmxencfrag.c \
+	enc/x86/mmxfdct.c \
+	enc/x86/sse2fdct.c \
+	enc/x86/x86enc.c \
+	enc/x86/x86enc.h \
+	enc/x86_32_vs/dsp_mmx.c \
+	enc/x86_32_vs/fdct_mmx.c \
+	enc/x86_32_vs/recon_mmx.c \
+	enc/dct_encode.c \
+	enc/encode.c \
+	enc/encoder_toplevel.c \
+	dec/x86/mmxfrag.c \
+	dec/x86/mmxfrag.h \
+	dec/x86/mmxidct.c \
+	dec/x86/mmxloop.h \
+	dec/x86/mmxstate.c \
+	dec/x86/x86int.h \
+	dec/x86/x86state.c \
+	dec/x86_vc
 
 lib_LTLIBRARIES = libtheoradec.la libtheoraenc.la libtheora.la
 
@@ -118,6 +128,7 @@ noinst_HEADERS = \
 	enc/encoder_huffman.h \
 	enc/encoder_lookup.h \
 	enc/enquant.h \
+	enc/huffenc.h \
 	enc/hufftables.h \
 	enc/mathops.h \
 	enc/modedec.h \
