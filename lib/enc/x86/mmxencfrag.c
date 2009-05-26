@@ -501,7 +501,7 @@ static unsigned oc_int_frag_satd_thresh_mmxext(const unsigned char *_src,
     "movq 0x40(%[buf]),%%mm0\n\t"
     "cmp %[ret2],%[ret]\n\t"
     "movq 0x48(%[buf]),%%mm4\n\t"
-    "jae %=1f\n\t"
+    "jae 1f\n\t"
     OC_HADAMARD_ABS_ACCUM_8x4("0x68","0x78")
     "pmaddwd %%mm7,%%mm0\n\t"
     /*There isn't much to stick in here to hide the latency this time, but the
@@ -514,7 +514,7 @@ static unsigned oc_int_frag_satd_thresh_mmxext(const unsigned char *_src,
     "movd %%mm4,%[ret2]\n\t"
     "lea (%[ret],%[ret2],2),%[ret]\n\t"
     ".p2align 4,,15\n\t"
-    "%=1:\n\t"
+    "1:\n\t"
     /*Although it looks like we're using 7 registers here, gcc can alias %[ret]
        and %[ret2] with some of the inputs, since for once we don't write to
        them until after we're done using everything but %[buf] (which is also
