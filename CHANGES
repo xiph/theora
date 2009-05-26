@@ -1,9 +1,15 @@
 libtheora 1.1alpha2 (unreleased snapshot)
 
- - MSVC project files updated, but assembly is disabled.
  - Reduce lambda for small quantizers.
+ - New encoder fDCT does better on smooth gradients
+ - Use SATD for mode decisions (1-2% bitrate reduction)
+ - Assembly rewrite for new features and general speed up
+ - Share code between the encoder and decoder for performance
+ - Fix 4:2:2 decoding and telemetry
+ - MSVC project files updated, but assembly is disabled.
  - New configure option --disable-spec to work around toolchain
    detection failures.
+ - Limit symbol exports on MacOS X.
  - Port remaining unit tests from the 1.0 release.
 
 libtheora 1.1alpha1 (2009 March 27)
