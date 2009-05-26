@@ -147,14 +147,14 @@ noinst_HEADERS = \
 
 libtheoradec_la_SOURCES = \
 	$(decoder_sources) \
-	Version_script-dec
+	Version_script-dec theoradec.exp
 libtheoradec_la_LDFLAGS = \
   -version-info @THDEC_LIB_CURRENT@:@THDEC_LIB_REVISION@:@THDEC_LIB_AGE@ \
   @THEORADEC_LDFLAGS@ @CAIRO_LIBS@
 
 libtheoraenc_la_SOURCES = \
 	$(encoder_sources) \
-	Version_script-enc
+	Version_script-enc theoraenc.exp
 libtheoraenc_la_LDFLAGS = \
   -version-info @THENC_LIB_CURRENT@:@THENC_LIB_REVISION@:@THENC_LIB_AGE@ \
   @THEORAENC_LDFLAGS@ $(OGG_LIBS)
@@ -162,7 +162,7 @@ libtheoraenc_la_LDFLAGS = \
 libtheora_la_SOURCES = \
 	$(decoder_sources) \
 	$(encoder_uniq_sources) \
-	Version_script
+	Version_script theora.exp
 libtheora_la_LDFLAGS = \
   -version-info @TH_LIB_CURRENT@:@TH_LIB_REVISION@:@TH_LIB_AGE@ \
   @THEORA_LDFLAGS@ @CAIRO_LIBS@ $(OGG_LIBS)
