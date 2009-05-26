@@ -1,4 +1,4 @@
-libtheora 1.1alpha2 (unreleased snapshot)
+libtheora 1.1alpha2 (2009 May 26)
 
  - Reduce lambda for small quantizers.
  - New encoder fDCT does better on smooth gradients
