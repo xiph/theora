@@ -639,7 +639,7 @@ static int TQB (CP_INSTANCE *cpi,plane_state_t *ps,int mode,int fi,
   cpi->frag_dc[fi] = data[0];
 
   /* tokenize */
-  cost = dct_tokenize_AC(cpi, fi, data, dequant, buffer, fi>=cpi->frag_n[0], stack);
+  cost = dct_tokenize_AC(cpi, fi, data, dequant, buffer, fi>=cpi->frag_n[0], stack,mode==CODE_INTRA?3:0);
 
   /*Reconstruct.*/
   oc_enc_dequant_idct8x8(cpi,buffer,data,

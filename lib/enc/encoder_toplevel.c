@@ -179,7 +179,7 @@ static int oc_enc_select_qi(CP_INSTANCE *cpi,int _qti,int _trial){
      minimum quality permitted.*/
   if(rate_total<=0)log_qtarget=OC_QUANT_MAX_LOG;
   else{
-    static const unsigned char KEY_RATIO[2]={29,32};
+    static const unsigned char KEY_RATIO[2]={32,17};
     ogg_int64_t   log_scale0;
     ogg_int64_t   log_scale1;
     ogg_int64_t   prevr;

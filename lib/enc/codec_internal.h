@@ -396,7 +396,7 @@ extern int dct_tokenize_AC (CP_INSTANCE *cpi,
 			    const ogg_int16_t *dequant, 
 			    const ogg_int16_t *origdct, 
 			    const int chroma, 
-			    token_checkpoint_t **stack);
+			    token_checkpoint_t **stack,int _acmin);
 extern void dct_tokenize_finish (CP_INSTANCE *cpi);
 extern void dct_tokenize_mark_ac_chroma (CP_INSTANCE *cpi);
 

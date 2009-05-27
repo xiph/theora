@@ -470,7 +470,7 @@ static int tokenize_eobcost(CP_INSTANCE *cpi,int chroma, int coeff){
 int dct_tokenize_AC(CP_INSTANCE *cpi, const int fi, 
 		    ogg_int16_t *dct, const ogg_int16_t *dequant, 
 		    const ogg_int16_t *origdct, const int chroma, 
-		    token_checkpoint_t **stack){
+		    token_checkpoint_t **stack,int _acmin){
   int coeff = 1; /* skip DC for now */
   int i = coeff;
   int retcost = 0;
@@ -487,6 +487,7 @@ int dct_tokenize_AC(CP_INSTANCE *cpi, const int fi,
 
     while((j < BLOCK_SIZE) && !dct[j] ) j++;
 
+  if(i>=_acmin){
     if(j==BLOCK_SIZE){
       cost = tokenize_eobcost(cpi,chroma,coeff);
       if(i+1<BLOCK_SIZE) 
@@ -518,6 +519,10 @@ int dct_tokenize_AC(CP_INSTANCE *cpi, const int fi,
       i=j;
       continue;
     }
+  }
+  else{
+    bestcost = tokenize_dctcost(cpi,chroma,coeff,i,d);
+  }
     
     retcost+=bestcost;
 	
