@@ -1,3 +1,7 @@
+libtheora 1.1alpha3 (unreleased snapshot)
+
+ - no changes recorded
+
 libtheora 1.1alpha2 (2009 May 26)
 
  - Reduce lambda for small quantizers.
