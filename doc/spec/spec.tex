@@ -2156,10 +2156,10 @@ See Figure~\ref{fig:pic-frame}.
 Again, 24 bits are read instead of 20.
 \item
 Read an 8-bit unsigned integer as \bitvar{PICX}.
-This MUST be no greater than $(\bitvar{FMBW}*16-\bitvar{PICX})$.
+This MUST be no greater than $(\bitvar{FMBW}*16-\bitvar{PICW})$.
 \item
 Read an 8-bit unsigned integer as \bitvar{PICY}.
-This MUST be no greater than $(\bitvar{FMBH}*16-\bitvar{PICY})$.
+This MUST be no greater than $(\bitvar{FMBH}*16-\bitvar{PICH})$.
 Together with \bitvar{PICX}, this specifies the location of the lower-left
  corner of the displayable picture region.
 See Figure~\ref{fig:pic-frame}.
@@ -7981,7 +7981,7 @@ This facilitates seeking while limiting the buffering requirements of the
 \section{VP3 Compatibility}
 \label{app:vp3-compat}
 This section lists all of the encoder and decoder issues that may affect VP3
- compatibly.
+ compatibility.
 Each is described in more detail in the text itself.
 This list is provided merely for reference.
 
