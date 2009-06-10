@@ -1958,7 +1958,7 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
       cheight=yheight>>!(info->pixel_fmt&2);
       yplane_sz=yhstride*(size_t)yheight;
       cplane_sz=chstride*(size_t)cheight;
-      memset(_dec->state.ref_frame_data,0x80,yplane_sz+2*cplane_sz);
+      memset(_dec->state.ref_frame_data[0],0x80,yplane_sz+2*cplane_sz);
     }
     else{
       for(refi=0;refi==_dec->state.ref_frame_idx[OC_FRAME_GOLD]||
