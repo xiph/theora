@@ -473,6 +473,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   int                  mv_offs[2];
   int                  nmv_offs;
   int                  ac_bits;
+  int                  borderi;
   int                  pi;
   int                  zzi;
   frags=_enc->state.frags;
@@ -532,21 +533,42 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   }
 #endif
   frame_type=_enc->state.frame_type;
+  borderi=frags[_fragi].borderi;
   uncoded_ssd=uncoded_dc=0;
   if(frame_type!=OC_INTRA_FRAME){
     if(mb_mode==OC_MODE_INTER_NOMV){
-      for(pi=0;pi<64;pi++){
-        uncoded_ssd+=data[pi]*data[pi];
-        uncoded_dc+=data[pi];
+      if(borderi<0){
+        for(pi=0;pi<64;pi++){
+          uncoded_ssd+=data[pi]*data[pi];
+          uncoded_dc+=data[pi];
+        }
+      }
+      else{
+        ogg_int64_t mask;
+        mask=_enc->state.borders[borderi].mask;
+        for(pi=0;pi<64;pi++,mask>>=1)if(mask&1){
+          uncoded_ssd+=data[pi]*data[pi];
+          uncoded_dc+=data[pi];
+        }
       }
     }
     else{
       oc_enc_frag_sub(_enc,buffer,src,
        _enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_PREV]]
        +frag_offs,ystride);
-      for(pi=0;pi<64;pi++){
-        uncoded_ssd+=buffer[pi]*buffer[pi];
-        uncoded_dc+=buffer[pi];
+      if(borderi<0){
+        for(pi=0;pi<64;pi++){
+          uncoded_ssd+=buffer[pi]*buffer[pi];
+          uncoded_dc+=buffer[pi];
+        }
+      }
+      else{
+        ogg_int64_t mask;
+        mask=_enc->state.borders[borderi].mask;
+        for(pi=0;pi<64;pi++,mask>>=1)if(mask&1){
+          uncoded_ssd+=buffer[pi]*buffer[pi];
+          uncoded_dc+=buffer[pi];
+        }
       }
     }
     /*Scale to match DCT domain.*/
@@ -603,9 +625,19 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
     /*In retrospect, should we have skipped this block?*/
     oc_enc_frag_sub(_enc,buffer,src,dst,ystride);
     coded_ssd=coded_dc=0;
-    for(pi=0;pi<64;pi++){
-      coded_ssd+=buffer[pi]*buffer[pi];
-      coded_dc+=buffer[pi];
+    if(borderi<0){
+      for(pi=0;pi<64;pi++){
+        coded_ssd+=buffer[pi]*buffer[pi];
+        coded_dc+=buffer[pi];
+      }
+    }
+    else{
+      ogg_int64_t mask;
+      mask=_enc->state.borders[borderi].mask;
+      for(pi=0;pi<64;pi++,mask>>=1)if(mask&1){
+        coded_ssd+=buffer[pi]*buffer[pi];
+        coded_dc+=buffer[pi];
+      }
     }
     /*Scale to match DCT domain.*/
     coded_ssd<<=4;

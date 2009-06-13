@@ -70,7 +70,7 @@ endif
 
 encoder_uniq_sources = \
 	enc/analyze.c \
-	enc/dct.c \
+	enc/fdct.c \
 	enc/encfrag.c \
 	enc/encapiwrapper.c \
 	enc/encinfo.c \
