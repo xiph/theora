@@ -1114,8 +1114,8 @@ int th_encode_flushheader(th_enc_ctx *_enc,th_comment *_tc,ogg_packet *_op){
 }
 
 static void oc_img_plane_copy_pad(th_img_plane *_dst,th_img_plane *_src,
- ogg_uint32_t _pic_x,ogg_uint32_t _pic_y,
- ogg_uint32_t _pic_width,ogg_uint32_t _pic_height){
+ ogg_int32_t _pic_x,ogg_int32_t _pic_y,
+ ogg_int32_t _pic_width,ogg_int32_t _pic_height){
   unsigned char *dst;
   int            dstride;
   ogg_uint32_t   frame_width;
@@ -1144,8 +1144,8 @@ static void oc_img_plane_copy_pad(th_img_plane *_dst,th_img_plane *_src,
     sstride=_src->stride;
     dst_data=_dst->data;
     src_data=_src->data;
-    dst=dst_data+_pic_y*dstride+_pic_x;
-    src=src_data+_pic_y*sstride+_pic_x;
+    dst=dst_data+_pic_y*(ptrdiff_t)dstride+_pic_x;
+    src=src_data+_pic_y*(ptrdiff_t)sstride+_pic_x;
     for(y=0;y<_pic_height;y++){
       memcpy(dst,src,_pic_width);
       dst+=dstride;
@@ -1154,7 +1154,7 @@ static void oc_img_plane_copy_pad(th_img_plane *_dst,th_img_plane *_src,
     /*Step 2: Perform a low-pass extension into the padding region.*/
     /*Left side.*/
     for(x=_pic_x;x-->0;){
-      dst=dst_data+_pic_y*dstride+x;
+      dst=dst_data+_pic_y*(ptrdiff_t)dstride+x;
       for(y=0;y<_pic_height;y++){
         dst[0]=(dst[1]<<1)+(dst-(dstride&-(y>0)))[1]
          +(dst+(dstride&-(y+1<_pic_height)))[1]+2>>2;
@@ -1163,7 +1163,7 @@ static void oc_img_plane_copy_pad(th_img_plane *_dst,th_img_plane *_src,
     }
     /*Right side.*/
     for(x=_pic_x+_pic_width;x<frame_width;x++){
-      dst=dst_data+_pic_y*dstride+x-1;
+      dst=dst_data+_pic_y*(ptrdiff_t)dstride+x-1;
       for(y=0;y<_pic_height;y++){
         dst[1]=(dst[0]<<1)+(dst-(dstride&-(y>0)))[0]
          +(dst+(dstride&-(y+1<_pic_height)))[0]+2>>2;
@@ -1171,7 +1171,7 @@ static void oc_img_plane_copy_pad(th_img_plane *_dst,th_img_plane *_src,
       }
     }
     /*Top.*/
-    dst=dst_data+_pic_y*dstride;
+    dst=dst_data+_pic_y*(ptrdiff_t)dstride;
     for(y=_pic_y;y-->0;){
       for(x=0;x<frame_width;x++){
         (dst-dstride)[x]=(dst[x]<<1)+dst[x-(x>0)]
@@ -1180,7 +1180,7 @@ static void oc_img_plane_copy_pad(th_img_plane *_dst,th_img_plane *_src,
       dst-=dstride;
     }
     /*Bottom.*/
-    dst=dst_data+(_pic_y+_pic_height)*dstride;
+    dst=dst_data+(_pic_y+_pic_height)*(ptrdiff_t)dstride;
     for(y=_pic_y+_pic_height;y<frame_height;y++){
       for(x=0;x<frame_width;x++){
         dst[x]=((dst-dstride)[x]<<1)+(dst-dstride)[x-(x>0)]
