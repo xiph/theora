@@ -120,8 +120,8 @@ int theora_encode_comment(theora_comment *_tc,ogg_packet *_op){
   int             ret;
   packet_state=OC_PACKET_COMMENT_HDR;
   oggpackB_writeinit(&opb);
-  ret=oc_state_flushheader(NULL,&packet_state,&opb,NULL,NULL,NULL,
-   (th_comment *)_tc,_op);
+  ret=oc_state_flushheader(NULL,&packet_state,&opb,NULL,NULL,
+   th_version_string(),(th_comment *)_tc,_op);
   if(ret>=0){
     /*The oggpack_buffer's lifetime ends with this function, so we have to
        copy out the packet contents.
