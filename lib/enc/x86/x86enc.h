@@ -17,10 +17,10 @@
 
 #if !defined(_x86_x86enc_H)
 # define _x86_x86enc_H (1)
-# include "../codec_internal.h"
+# include "../encint.h"
 # include "../../dec/x86/x86int.h"
 
-void oc_enc_vtable_init_x86(CP_INSTANCE *_cpi);
+void oc_enc_vtable_init_x86(oc_enc_ctx *_enc);
 
 unsigned oc_enc_frag_sad_mmxext(const unsigned char *_src,
  const unsigned char *_ref,int _ystride);
@@ -43,6 +43,5 @@ void oc_enc_frag_copy2_mmxext(unsigned char *_dst,
  const unsigned char *_src1,const unsigned char *_src2,int _ystride);
 void oc_enc_fdct8x8_mmx(ogg_int16_t _y[64],const ogg_int16_t _x[64]);
 void oc_enc_fdct8x8_x86_64sse2(ogg_int16_t _y[64],const ogg_int16_t _x[64]);
-void oc_enc_loop_filter_mmx(CP_INSTANCE *_cpi,int _flimit);
 
 #endif

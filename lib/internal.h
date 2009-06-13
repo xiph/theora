@@ -14,7 +14,6 @@
     last mod: $Id$
 
  ********************************************************************/
-
 #if !defined(_internal_H)
 # define _internal_H (1)
 # include <stdlib.h>
@@ -25,10 +24,10 @@
 # include "theora/theora.h"
 
 # if defined(_MSC_VER)
-/*Thank you Microsoft, I know the order of operations.*/
-#  pragma warning(disable:4554)
 /*Disable missing EMMS warnings.*/
 #  pragma warning(disable:4799)
+/*Thank you Microsoft, I know the order of operations.*/
+#  pragma warning(disable:4554)
 # endif
 /*You, too, gcc.*/
 # if defined(__GNUC_PREREQ)
@@ -210,10 +209,7 @@ struct oc_sb_flags{
 
 /*Information about a fragment which intersects the border of the displayable
    region.
-  This marks which pixels belong to the displayable region, and is used to
-   ensure that pixels outside of this region are never referenced.
-  This allows applications to pass in buffers that are really the size of the
-   displayable region without causing a segfault.*/
+  This marks which pixels belong to the displayable region.*/
 struct oc_border_info{
   /*A bit mask marking which pixels are in the displayable region.
     Pixel (x,y) corresponds to bit (y<<3|x).*/
@@ -235,8 +231,8 @@ struct oc_fragment{
      frame, not just the displayable one.
     There are no fragments outside the coded frame by construction.*/
   unsigned   invalid:1;
-  /*The quality index used for this fragment's AC coefficients.*/
-  unsigned   qi:6;
+  /*The index of the quality index used for this fragment's AC coefficients.*/
+  unsigned   qii:6;
   /*The mode of the macroblock this fragment belongs to.*/
   unsigned   mb_mode:3;
   /*The index of the associated border information for fragments which lie
@@ -301,7 +297,7 @@ struct oc_base_opt_vtable{
 
 
 
-/*Common state information between the encoder and decoder.*/
+/*State information common to both the encoder and decoder.*/
 struct oc_theora_state{
   /*The stream information.*/
   th_info             info;
@@ -326,12 +322,6 @@ struct oc_theora_state{
   oc_sb_flags        *sb_flags;
   /*The total number of super blocks in a single frame.*/
   unsigned            nsbs;
-  /*The number of macro blocks in the X direction.*/
-  unsigned            nhmbs;
-  /*The number of macro blocks in the Y direction.*/
-  unsigned            nvmbs;
-  /*The total number of macro blocks.*/
-  size_t              nmbs;
   /*The fragments from each color plane that belong to each macro block.
     Fragments are stored in image order (left to right then top to bottom).
     When chroma components are decimated, the extra fragments have an index of
@@ -341,32 +331,33 @@ struct oc_theora_state{
     A negative number indicates the macro block lies entirely outside the
      coded frame.*/
   signed char        *mb_modes;
-  /*The list of coded fragments, in coded order.*/
+  /*The number of macro blocks in the X direction.*/
+  unsigned            nhmbs;
+  /*The number of macro blocks in the Y direction.*/
+  unsigned            nvmbs;
+  /*The total number of macro blocks.*/
+  size_t              nmbs;
+  /*The list of coded fragments, in coded order.
+    Uncoded fragments are stored in reverse order from the end of the list.*/
   ptrdiff_t          *coded_fragis;
   /*The number of coded fragments in each plane.*/
   ptrdiff_t           ncoded_fragis[3];
-  /*The list of uncoded fragments.
-    This just past the end of the list, which is in reverse order, and
-     uses the same block of allocated storage as the coded_fragis list.*/
-  ptrdiff_t          *uncoded_fragis;
-  /*The number of uncoded fragments in each plane.*/
-  ptrdiff_t           nuncoded_fragis[3];
-  /*The list of coded macro blocks in the Y plane, in coded order.*/
-  unsigned           *coded_mbis;
-  /*The number of coded macro blocks in the Y plane.*/
-  size_t              ncoded_mbis;
+  /*The total number of coded fragments.*/
+  ptrdiff_t           ntotal_coded_fragis;
+  /*The index of the buffers being used for each OC_FRAME_* reference frame.*/
+  int                 ref_frame_idx[4];
+  /*The actual buffers used for the previously decoded frames.*/
+  th_ycbcr_buffer     ref_frame_bufs[4];
+  /*The storage for the reference frame buffers.*/
+  unsigned char      *ref_frame_data[4];
+  /*The strides for each plane in the reference frames.*/
+  int                 ref_ystride[3];
   /*The number of unique border patterns.*/
   int                 nborders;
   /*The unique border patterns for all border fragments.
     The borderi field of fragments which straddle the border indexes this
      list.*/
   oc_border_info      borders[16];
-  /*The index of the buffers being used for each OC_FRAME_* reference frame.*/
-  int                 ref_frame_idx[3];
-  /*The actual buffers used for the previously decoded frames.*/
-  th_ycbcr_buffer     ref_frame_bufs[3];
-  /*The storage for the reference frame buffers.*/
-  unsigned char      *ref_frame_data[3];
   /*The frame number of the last keyframe.*/
   ogg_int64_t         keyframe_num;
   /*The frame number of the current frame.*/
@@ -374,15 +365,17 @@ struct oc_theora_state{
   /*The granpos of the current frame.*/
   ogg_int64_t         granpos;
   /*The type of the current frame.*/
-  int                 frame_type;
-  /*The quality indices of the current frame.*/
-  unsigned char       qis[3];
+  unsigned char       frame_type;
+  /*The bias to add to the frame count when computing granule positions.*/
+  unsigned char       granpos_bias;
   /*The number of quality indices used in the current frame.*/
   unsigned char       nqis;
-  /*The dequantization tables.
-    Note that these are stored in zig-zag order.*/
-  oc_quant_table     *dequant_tables[2][3];
-  oc_quant_tables     dequant_table_data[2][3]OC_ALIGN16;
+  /*The quality indices of the current frame.*/
+  unsigned char       qis[3];
+  /*The dequantization tables, stored in zig-zag order, and indexed by
+     qi, pli, qti, and zzi.*/
+  ogg_uint16_t       *dequant_tables[64][3][2];
+  oc_quant_table      dequant_table_data[64][3][2]OC_ALIGN16;
   /*Loop filter strength parameters.*/
   unsigned char       loop_filter_limits[64];
 };
@@ -437,7 +430,7 @@ ptrdiff_t oc_dct_token_skip(int _token,int _extra_bits);
 int oc_frag_pred_dc(const oc_fragment *_frag,
  const oc_fragment_plane *_fplane,int _x,int _y,int _pred_last[3]);
 
-int oc_state_init(oc_theora_state *_state,const th_info *_info);
+int oc_state_init(oc_theora_state *_state,const th_info *_info,int _nrefs);
 void oc_state_clear(oc_theora_state *_state);
 void oc_state_vtable_init_c(oc_theora_state *_state);
 void oc_state_borders_fill_rows(oc_theora_state *_state,int _refi,int _pli,
@@ -447,8 +440,8 @@ void oc_state_borders_fill(oc_theora_state *_state,int _refi);
 void oc_state_fill_buffer_ptrs(oc_theora_state *_state,int _buf_idx,
  th_ycbcr_buffer _img);
 int oc_state_mbi_for_pos(oc_theora_state *_state,int _mbx,int _mby);
-int oc_state_get_mv_offsets(const oc_theora_state *_state,int *_offsets,
- int _dx,int _dy,int _ystride,int _pli);
+int oc_state_get_mv_offsets(const oc_theora_state *_state,int _offsets[2],
+ int _pli,int _dx,int _dy);
 
 int oc_state_loop_filter_init(oc_theora_state *_state,int *_bv);
 void oc_state_loop_filter(oc_theora_state *_state,int _frame);

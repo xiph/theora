@@ -121,13 +121,9 @@ static void oc_sb_create_plane_mapping(oc_sb_map _sb_maps[],
 static void oc_mb_fill_ymapping(oc_mb_map_plane _mb_map[3],
  const oc_fragment_plane *_fplane,int _xfrag0,int _yfrag0){
   int i;
-  for(i=0;i<2;i++){
-    int j;
-    if(_yfrag0+i>=_fplane->nvfrags)break;
-    for(j=0;j<2;j++){
-      if(_xfrag0+j>=_fplane->nhfrags)break;
-      _mb_map[0][i<<1|j]=(_yfrag0+i)*(ptrdiff_t)_fplane->nhfrags+_xfrag0+j;
-    }
+  int j;
+  for(i=0;i<2;i++)for(j=0;j<2;j++){
+    _mb_map[0][i<<1|j]=(_yfrag0+i)*(ptrdiff_t)_fplane->nhfrags+_xfrag0+j;
   }
 }
 
@@ -161,7 +157,6 @@ static void oc_mb_fill_cmapping01(oc_mb_map_plane _mb_map[3],
   _yfrag0>>=1;
   fragi=_yfrag0*(ptrdiff_t)_fplanes[1].nhfrags+_xfrag0;
   for(j=0;j<2;j++){
-    if(_xfrag0+j>=_fplanes[1].nhfrags)break;
     _mb_map[1][j]=fragi+_fplanes[1].froffset;
     _mb_map[2][j]=fragi+_fplanes[2].froffset;
     fragi++;
@@ -181,7 +176,6 @@ static void oc_mb_fill_cmapping10(oc_mb_map_plane _mb_map[3],
   _xfrag0>>=1;
   fragi=_yfrag0*(ptrdiff_t)_fplanes[1].nhfrags+_xfrag0;
   for(i=0;i<2;i++){
-    if(_yfrag0+i>=_fplanes[1].nvfrags)break;
     _mb_map[1][i<<1]=fragi+_fplanes[1].froffset;
     _mb_map[2][i<<1]=fragi+_fplanes[2].froffset;
     fragi+=_fplanes[1].nhfrags;
@@ -197,10 +191,8 @@ static void oc_mb_fill_cmapping11(oc_mb_map_plane _mb_map[3],
  const oc_fragment_plane _fplanes[3]){
   int k;
   for(k=0;k<4;k++){
-    if(_mb_map[0][k]>=0){
-      _mb_map[1][k]=_mb_map[0][k]+_fplanes[1].froffset;
-      _mb_map[2][k]=_mb_map[0][k]+_fplanes[2].froffset;
-    }
+    _mb_map[1][k]=_mb_map[0][k]+_fplanes[1].froffset;
+    _mb_map[2][k]=_mb_map[0][k]+_fplanes[2].froffset;
   }
 }
 
@@ -440,8 +432,6 @@ static int oc_state_frarray_init(oc_theora_state *_state){
   _state->mb_maps=_ogg_calloc(nmbs,sizeof(*_state->mb_maps));
   _state->mb_modes=_ogg_calloc(nmbs,sizeof(*_state->mb_modes));
   _state->coded_fragis=_ogg_malloc(nfrags*sizeof(*_state->coded_fragis));
-  _state->uncoded_fragis=_state->coded_fragis+nfrags;
-  _state->coded_mbis=_ogg_malloc(nmbs*sizeof(*_state->coded_mbis));
   /*Create the mapping from super blocks to fragments.*/
   for(pli=0;pli<3;pli++){
     oc_fragment_plane *fplane;
@@ -459,7 +449,6 @@ static int oc_state_frarray_init(oc_theora_state *_state){
 }
 
 static void oc_state_frarray_clear(oc_theora_state *_state){
-  _ogg_free(_state->coded_mbis);
   _ogg_free(_state->coded_fragis);
   _ogg_free(_state->mb_modes);
   _ogg_free(_state->mb_maps);
@@ -475,8 +464,8 @@ static void oc_state_frarray_clear(oc_theora_state *_state){
    unrestricted motion vectors without special casing the boundary.
   If chroma is decimated in either direction, the padding is reduced by a
    factor of 2 on the appropriate sides.
-  _enc: The encoding context to store the buffers in.*/
-static int oc_state_ref_bufs_init(oc_theora_state *_state){
+  _nrefs: The number of reference buffers to init; must be 3 or 4.*/
+static int oc_state_ref_bufs_init(oc_theora_state *_state,int _nrefs){
   th_info       *info;
   unsigned char *ref_frame_data;
   size_t         ref_frame_data_sz;
@@ -495,6 +484,7 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state){
   int            vdec;
   int            rfi;
   int            pli;
+  if(_nrefs<3||_nrefs>4)return TH_EINVAL;
   info=&_state->info;
   /*Compute the image buffer parameters for each plane.*/
   hdec=!(info->pixel_fmt&1);
@@ -508,11 +498,11 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state){
   yoffset=OC_UMV_PADDING+OC_UMV_PADDING*(ptrdiff_t)yhstride;
   coffset=(OC_UMV_PADDING>>hdec)+(OC_UMV_PADDING>>vdec)*(ptrdiff_t)chstride;
   ref_frame_sz=yplane_sz+2*cplane_sz;
-  ref_frame_data_sz=3*ref_frame_sz;
+  ref_frame_data_sz=_nrefs*ref_frame_sz;
   /*Check for overflow.
     The same caveats apply as for oc_state_frarray_init().*/
   if(yplane_sz/yhstride!=yheight||2*cplane_sz<cplane_sz||
-   ref_frame_sz<yplane_sz||ref_frame_data_sz/3!=ref_frame_sz){
+   ref_frame_sz<yplane_sz||ref_frame_data_sz/_nrefs!=ref_frame_sz){
     return TH_EIMPL;
   }
   ref_frame_data=_ogg_malloc(ref_frame_data_sz);
@@ -526,12 +516,12 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state){
    info->frame_height>>vdec;
   _state->ref_frame_bufs[0][1].stride=_state->ref_frame_bufs[0][2].stride=
    chstride;
-  memcpy(_state->ref_frame_bufs[1],_state->ref_frame_bufs[0],
-   sizeof(_state->ref_frame_bufs[0]));
-  memcpy(_state->ref_frame_bufs[2],_state->ref_frame_bufs[0],
-   sizeof(_state->ref_frame_bufs[0]));
+  for(rfi=1;rfi<_nrefs;rfi++){
+    memcpy(_state->ref_frame_bufs[rfi],_state->ref_frame_bufs[0],
+     sizeof(_state->ref_frame_bufs[0]));
+  }
   /*Set up the data pointers for the image buffers.*/
-  for(rfi=0;rfi<3;rfi++){
+  for(rfi=0;rfi<_nrefs;rfi++){
     _state->ref_frame_data[rfi]=ref_frame_data;
     _state->ref_frame_bufs[rfi][0].data=ref_frame_data+yoffset;
     ref_frame_data+=yplane_sz;
@@ -545,6 +535,8 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state){
     oc_ycbcr_buffer_flip(_state->ref_frame_bufs[rfi],
      _state->ref_frame_bufs[rfi]);
   }
+  _state->ref_ystride[0]=-yhstride;
+  _state->ref_ystride[1]=_state->ref_ystride[2]=-chstride;
   /*Initialize the fragment buffer offsets.*/
   ref_frame_data=_state->ref_frame_data[0];
   frag_buf_offs=_state->frag_buf_offs=
@@ -578,6 +570,7 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state){
   _state->ref_frame_idx[OC_FRAME_GOLD]=
    _state->ref_frame_idx[OC_FRAME_PREV]=
    _state->ref_frame_idx[OC_FRAME_SELF]=-1;
+  _state->ref_frame_idx[OC_FRAME_IO]=_nrefs>3?3:-1;
   return 0;
 }
 
@@ -610,8 +603,7 @@ void oc_state_vtable_init(oc_theora_state *_state){
 }
 
 
-int oc_state_init(oc_theora_state *_state,const th_info *_info){
-  int old_granpos;
+int oc_state_init(oc_theora_state *_state,const th_info *_info,int _nrefs){
   int ret;
   /*First validate the parameters.*/
   if(_info==NULL)return TH_EFAULT;
@@ -648,22 +640,20 @@ int oc_state_init(oc_theora_state *_state,const th_info *_info){
   oc_state_vtable_init(_state);
   ret=oc_state_frarray_init(_state);
   if(ret<0)return ret;
-  ret=oc_state_ref_bufs_init(_state);
+  ret=oc_state_ref_bufs_init(_state,_nrefs);
   if(ret<0)return ret;
   /*If the keyframe_granule_shift is out of range, use the maximum allowable
      value.*/
   if(_info->keyframe_granule_shift<0||_info->keyframe_granule_shift>31){
     _state->info.keyframe_granule_shift=31;
   }
-  _state->keyframe_num=1;
-  _state->curframe_num=0;
+  _state->keyframe_num=0;
+  _state->curframe_num=-1;
   /*3.2.0 streams mark the frame index instead of the frame count.
     This was changed with stream version 3.2.1 to conform to other Ogg
      codecs.
-    We subtract an extra one from the frame number for old streams.*/
-  old_granpos=!TH_VERSION_CHECK(_info,3,2,1);
-  _state->curframe_num-=old_granpos;
-  _state->keyframe_num-=old_granpos;
+    We add an extra bias when computing granule positions for new streams.*/
+  _state->granpos_bias=TH_VERSION_CHECK(_info,3,2,1);
   return 0;
 }
 
@@ -748,28 +738,18 @@ void oc_state_borders_fill(oc_theora_state *_state,int _refi){
   }
 }
 
-/*Returns the macro block index of the macro block in the given position.
-  _state: The Theora state the macro block is contained in.
-  _mbx:   The X coordinate of the macro block (in macro blocks, not pixels).
-  _mby:   The Y coordinate of the macro block (in macro blocks, not pixels).
-  Return: The index of the macro block in the given position.*/
-int oc_state_mbi_for_pos(oc_theora_state *_state,int _mbx,int _mby){
-  return ((_mbx&~1)<<1)+(_mby&~1)*_state->nhmbs+OC_MB_MAP[_mby&1][_mbx&1];
-}
-
 /*Determines the offsets in an image buffer to use for motion compensation.
   _state:   The Theora state the offsets are to be computed with.
   _offsets: Returns the offset for the buffer(s).
             _offsets[0] is always set.
             _offsets[1] is set if the motion vector has non-zero fractional
              components.
+  _pli:     The color plane index.
   _dx:      The X component of the motion vector.
   _dy:      The Y component of the motion vector.
-  _ystride: The Y stride in the buffer the motion vector points into.
-  _pli:     The color plane index.
   Return: The number of offsets returned: 1 or 2.*/
 int oc_state_get_mv_offsets(const oc_theora_state *_state,int _offsets[2],
- int _dx,int _dy,int _ystride,int _pli){
+ int _pli,int _dx,int _dy){
   /*Here is a brief description of how Theora handles motion vectors:
     Motion vector components are specified to half-pixel accuracy in
      undecimated directions of each plane, and quarter-pixel accuracy in
@@ -786,11 +766,13 @@ int oc_state_get_mv_offsets(const oc_theora_state *_state,int _offsets[2],
      appropriate amount, always truncating _away_ from zero.*/
 #if 0
   /*This version of the code doesn't use any tables, but is slower.*/
+  int ystride;
   int xprec;
   int yprec;
   int xfrac;
   int yfrac;
   int offs;
+  ystride=_state->ref_ystride[_pli];
   /*These two variables decide whether we are in half- or quarter-pixel
      precision in each component.*/
   xprec=1+(_pli!=0&&!(_state->info.pixel_fmt&1));
@@ -799,13 +781,13 @@ int oc_state_get_mv_offsets(const oc_theora_state *_state,int _offsets[2],
      if any of them are non-zero.*/
   xfrac=OC_SIGNMASK(-(_dx&(xprec|1)));
   yfrac=OC_SIGNMASK(-(_dy&(yprec|1)));
-  offs=(_dx>>xprec)+(_dy>>yprec)*_ystride;
+  offs=(_dx>>xprec)+(_dy>>yprec)*ystride;
   if(xfrac||yfrac){
     int xmask;
     int ymask;
     xmask=OC_SIGNMASK(_dx);
     ymask=OC_SIGNMASK(_dy);
-    yfrac&=_ystride;
+    yfrac&=ystride;
     _offsets[0]=offs-(xfrac&xmask)+(yfrac&ymask);
     _offsets[1]=offs-(xfrac&~xmask)+(yfrac&~ymask);
     return 2;
@@ -845,6 +827,7 @@ int oc_state_get_mv_offsets(const oc_theora_state *_state,int _offsets[2],
       0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1
     }
   };
+  int ystride;
   int qpx;
   int qpy;
   int mx;
@@ -852,15 +835,16 @@ int oc_state_get_mv_offsets(const oc_theora_state *_state,int _offsets[2],
   int mx2;
   int my2;
   int offs;
+  ystride=_state->ref_ystride[_pli];
   qpy=_pli!=0&&!(_state->info.pixel_fmt&2);
   my=OC_MVMAP[qpy][_dy+31];
   my2=OC_MVMAP2[qpy][_dy+31];
   qpx=_pli!=0&&!(_state->info.pixel_fmt&1);
   mx=OC_MVMAP[qpx][_dx+31];
   mx2=OC_MVMAP2[qpx][_dx+31];
-  offs=my*_ystride+mx;
+  offs=my*ystride+mx;
   if(mx2||my2){
-    _offsets[1]=offs+my2*_ystride+mx2;
+    _offsets[1]=offs+my2*ystride+mx2;
     _offsets[0]=offs;
     return 2;
   }
@@ -890,7 +874,7 @@ void oc_state_frag_recon_c(const oc_theora_state *_state,ptrdiff_t _fragi,
   /*Fill in the target buffer.*/
   frag_buf_off=_state->frag_buf_offs[_fragi];
   mb_mode=_state->frags[_fragi].mb_mode;
-  ystride=_state->ref_frame_bufs[0][_pli].stride;
+  ystride=_state->ref_ystride[_pli];
   dst=_state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_SELF]]+frag_buf_off;
   if(mb_mode==OC_MODE_INTRA)oc_frag_recon_intra(_state,dst,ystride,res_buf);
   else{
@@ -900,7 +884,7 @@ void oc_state_frag_recon_c(const oc_theora_state *_state,ptrdiff_t _fragi,
      _state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_FOR_MODE[mb_mode]]]
      +frag_buf_off;
     if(oc_state_get_mv_offsets(_state,mvoffsets,
-     _state->frag_mvs[_fragi][0],_state->frag_mvs[_fragi][1],ystride,_pli)>1){
+     _state->frag_mvs[_fragi][0],_state->frag_mvs[_fragi][1],_pli)>1){
       oc_frag_recon_inter2(_state,
        dst,ref+mvoffsets[0],ref+mvoffsets[1],ystride,res_buf);
     }
@@ -932,7 +916,7 @@ void oc_state_frag_copy_list_c(const oc_theora_state *_state,
   int                  ystride;
   dst_frame_data=_state->ref_frame_data[_state->ref_frame_idx[_dst_frame]];
   src_frame_data=_state->ref_frame_data[_state->ref_frame_idx[_src_frame]];
-  ystride=_state->ref_frame_bufs[0][_pli].stride;
+  ystride=_state->ref_ystride[_pli];
   frag_buf_offs=_state->frag_buf_offs;
   for(fragii=0;fragii<_nfragis;fragii++){
     ptrdiff_t frag_buf_off;
@@ -1007,7 +991,6 @@ void oc_state_loop_filter_frag_rows(const oc_theora_state *_state,int _bv[256],
 
 void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,int *_bv,
  int _refi,int _pli,int _fragy0,int _fragy_end){
-  const th_img_plane      *iplane;
   const oc_fragment_plane *fplane;
   const oc_fragment       *frags;
   const ptrdiff_t         *frag_buf_offs;
@@ -1019,7 +1002,6 @@ void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,int *_bv,
   int                      ystride;
   int                      nhfrags;
   _bv+=127;
-  iplane=_state->ref_frame_bufs[_refi]+_pli;
   fplane=_state->fplanes+_pli;
   nhfrags=fplane->nhfrags;
   /*The following loops are constructed somewhat non-intuitively on purpose.
@@ -1031,7 +1013,7 @@ void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,int *_bv,
   fragi_bot=fragi_top+fplane->nfrags;
   fragi0=fragi_top+_fragy0*(ptrdiff_t)nhfrags;
   fragi0_end=fragi0+(_fragy_end-_fragy0)*(ptrdiff_t)nhfrags;
-  ystride=iplane->stride;
+  ystride=_state->ref_ystride[_pli];
   frags=_state->frags;
   frag_buf_offs=_state->frag_buf_offs;
   ref_frame_data=_state->ref_frame_data[_refi];
@@ -1174,6 +1156,7 @@ int oc_state_dump_frame(const oc_theora_state *_state,int _frame,
       png_set_cHRM_fixed(png,info,31271,32902,
        64000,33000,29000,60000,15000,6000);
     }break;
+    default:break;
   }
   png_set_pHYs(png,info,_state->info.aspect_numerator,
    _state->info.aspect_denominator,0);

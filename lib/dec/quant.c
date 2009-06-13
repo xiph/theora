@@ -37,7 +37,7 @@ static const unsigned OC_AC_QUANT_MIN[2]={2<<2,4<<2};
   However, a much, much better option is to only store the quantization
    matrices being used for the current frame, and to recalculate these as the
    qi values change between frames (this is what VP3 did).*/
-void oc_dequant_tables_init(oc_quant_table *_dequant[2][3],
+void oc_dequant_tables_init(ogg_uint16_t *_dequant[64][3][2],
  int _pp_dc_scale[64],const th_quant_info *_qinfo){
   /*Coding mode: intra or inter.*/
   int          qti;
@@ -48,13 +48,11 @@ void oc_dequant_tables_init(oc_quant_table *_dequant[2][3],
     int qi;
     /*Range iterator.*/
     int qri;
-    for(qi=0,qri=0; qri<=_qinfo->qi_ranges[qti][pli].nranges;qri++){
-      oc_quant_table *qtables;
-      th_quant_base   base;
-      ogg_uint32_t    q;
-      int             qi_start;
-      int             qi_end;
-      qtables=_dequant[qti][pli];
+    for(qi=0,qri=0;qri<=_qinfo->qi_ranges[qti][pli].nranges;qri++){
+      th_quant_base base;
+      ogg_uint32_t  q;
+      int           qi_start;
+      int           qi_end;
       memcpy(base,_qinfo->qi_ranges[qti][pli].base_matrices[qri],
        sizeof(base));
       qi_start=qi;
@@ -62,9 +60,9 @@ void oc_dequant_tables_init(oc_quant_table *_dequant[2][3],
       else qi_end=qi+_qinfo->qi_ranges[qti][pli].sizes[qri];
       /*Iterate over quality indicies in this range.*/
       for(;;){
-        ogg_uint32_t  qfac;
-        int           zzi;
-        int           ci;
+        ogg_uint32_t qfac;
+        int          zzi;
+        int          ci;
         /*In the original VP3.2 code, the rounding offset and the size of the
            dead zone around 0 were controlled by a "sharpness" parameter.
           The size of our dead zone is now controlled by the per-coefficient
@@ -80,12 +78,31 @@ void oc_dequant_tables_init(oc_quant_table *_dequant[2][3],
         /*Scale DC the coefficient from the proper table.*/
         q=(qfac/100)<<2;
         q=OC_CLAMPI(OC_DC_QUANT_MIN[qti],q,OC_QUANT_MAX);
-        qtables[qi][0]=(ogg_uint16_t)q;
+        _dequant[qi][pli][qti][0]=(ogg_uint16_t)q;
         /*Now scale AC coefficients from the proper table.*/
         for(zzi=1;zzi<64;zzi++){
           q=((ogg_uint32_t)_qinfo->ac_scale[qi]*base[OC_FZIG_ZAG[zzi]]/100)<<2;
           q=OC_CLAMPI(OC_AC_QUANT_MIN[qti],q,OC_QUANT_MAX);
-          qtables[qi][zzi]=(ogg_uint16_t)q;
+          _dequant[qi][pli][qti][zzi]=(ogg_uint16_t)q;
+        }
+        /*If this is a duplicate of a previous matrix, use that instead.
+          This simple check helps us improve cache coherency later.*/
+        {
+          int dupe;
+          int qtj;
+          int plj;
+          dupe=0;
+          for(qtj=0;qtj<=qti;qtj++){
+            for(plj=0;plj<(qtj<qti?3:pli);plj++){
+              if(!memcmp(_dequant[qi][pli][qti],_dequant[qi][plj][qtj],
+               sizeof(oc_quant_table))){
+                dupe=1;
+                break;
+              }
+            }
+            if(dupe)break;
+          }
+          if(dupe)_dequant[qi][pli][qti]=_dequant[qi][plj][qtj];
         }
         if(++qi>=qi_end)break;
         /*Interpolate the next base matrix.*/
@@ -97,26 +114,6 @@ void oc_dequant_tables_init(oc_quant_table *_dequant[2][3],
            (2*_qinfo->qi_ranges[qti][pli].sizes[qri]));
         }
       }
-    }
-    /*Staging matrices complete; commit to memory only if this isn't a
-       duplicate of a preceeding set of matrices.
-      This simple check helps us improve cache coherency later.*/
-    {
-      int dupe;
-      int qtj;
-      int plj;
-      dupe=0;
-      for(qtj=0;qtj<=qti;qtj++){
-        for(plj=0;plj<(qtj<qti?3:pli);plj++){
-          if(!memcmp(_dequant[qti][pli],_dequant[qtj][plj],
-           sizeof(oc_quant_tables))){
-            dupe=1;
-            break;
-          }
-        }
-        if(dupe)break;
-      }
-      if(dupe)_dequant[qti][pli]=_dequant[qtj][plj];
     }
   }
 }

@@ -85,15 +85,19 @@ struct th_dec_ctx{
   unsigned char       *pp_frame_data;
   /*Whether or not the post-processsed frame buffer has space for chroma.*/
   int                  pp_frame_has_chroma;
-  /*The buffer used for the post-processed frame.*/
+  /*The buffer used for the post-processed frame.
+    Note that this is _not_ guaranteed to have the same strides and offsets as
+     the reference frame buffers.*/
   th_ycbcr_buffer      pp_frame_buf;
   /*The striped decode callback function.*/
   th_stripe_callback   stripe_cb;
+# if defined(HAVE_CAIRO)
   /*Output metrics for debugging.*/
   int                  telemetry;
   int                  telemetry_mbmode;
   int                  telemetry_mv;
   unsigned char       *telemetry_frame_data;
+# endif
 };
 
 #endif

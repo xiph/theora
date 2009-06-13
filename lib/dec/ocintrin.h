@@ -85,21 +85,32 @@
   When _rval is (1<<_shift-1), this is equivalent to division with rounding
    ties away from zero.*/
 #define OC_DIV_ROUND_POW2(_dividend,_shift,_rval)\
- ((_dividend)+OC_SIGNMASK(_dividend)+(_rval)>>(_shift))
+  ((_dividend)+OC_SIGNMASK(_dividend)+(_rval)>>(_shift))
 /*Divides a _x by 2, rounding towards even numbers.*/
 #define OC_DIV2_RE(_x) ((_x)+((_x)>>1&1)>>1)
 /*Divides a _x by (1<<(_shift)), rounding towards even numbers.*/
 #define OC_DIV_POW2_RE(_x,_shift) \
- ((_x)+((_x)>>(_shift)&1)+((1<<(_shift))-1>>1)>>(_shift))
+  ((_x)+((_x)>>(_shift)&1)+((1<<(_shift))-1>>1)>>(_shift))
 /*Swaps two integers _a and _b if _a>_b.*/
-#define OC_SORT2I(_a,_b)\
-  do{\
-    int t__;\
-    t__=((_a)^(_b))&-((_b)<(_a));\
-    (_a)^=t__;\
-    (_b)^=t__;\
-  }\
-  while(0)\
+#define OC_SORT2I(_a,_b) \
+  do{ \
+    int t__; \
+    t__=((_a)^(_b))&-((_b)<(_a)); \
+    (_a)^=t__; \
+    (_b)^=t__; \
+  } \
+  while(0)
+
+/*Accesses one of four (signed) bytes given an index.
+  This can be used to avoid small lookup tables.*/
+#define OC_BYTE_TABLE32(_a,_b,_c,_d,_i) \
+  ((signed char) \
+   (((_a)&0xFF|((_b)&0xFF)<<8|((_c)&0xFF)<<16|((_d)&0xFF)<<24)>>(_i)*8))
+/*Accesses one of eight (unsigned) nibbles given an index.
+  This can be used to avoid small lookup tables.*/
+#define OC_UNIBBLE_TABLE32(_a,_b,_c,_d,_e,_f,_g,_h,_i) \
+  ((((_a)&0xF|((_b)&0xF)<<4|((_c)&0xF)<<8|((_d)&0xF)<<12| \
+   ((_e)&0xF)<<16|((_f)&0xF)<<20|((_g)&0xF)<<24|((_h)&0xF)<<28)>>(_i)*4)&0xF)
 
 
 

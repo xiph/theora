@@ -121,9 +121,9 @@ typedef ptrdiff_t (*oc_token_skip_func)(int _token,int _extra_bits);
 
 /*Handles the simple end of block tokens.*/
 static ptrdiff_t oc_token_skip_eob(int _token,int _extra_bits){
-  static const unsigned char NBLOCKS_ADJUST[OC_NDCT_EOB_TOKEN_MAX]=
-   {1,2,3,4,8,16,0};
-  return -_extra_bits-NBLOCKS_ADJUST[_token];
+  int nblocks_adjust;
+  nblocks_adjust=OC_UNIBBLE_TABLE32(0,1,2,3,7,15,0,0,_token)+1;
+  return -_extra_bits-nblocks_adjust;
 }
 
 /*The last EOB token has a special case, where an EOB run of size zero ends all
@@ -150,16 +150,15 @@ static ptrdiff_t oc_token_skip_run_cat1a(int _token){
   return _token-OC_DCT_RUN_CAT1A+2;
 }
 
-/*Handles category 1b and 2 zero run/coefficient value combo tokens.*/
+/*Handles category 1b, 1c, 2a, and 2b zero run/coefficient value combo tokens.*/
 static ptrdiff_t oc_token_skip_run(int _token,int _extra_bits){
-  static const unsigned char NCOEFFS_ADJUST[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
-    7,11,2,3
-  };
-  static const unsigned char NCOEFFS_MASK[OC_NDCT_RUN_MAX-OC_DCT_RUN_CAT1B]={
-    3,7,0,1
-  };
-  _token-=OC_DCT_RUN_CAT1B;
-  return (_extra_bits&NCOEFFS_MASK[_token])+NCOEFFS_ADJUST[_token];
+  int run_cati;
+  int ncoeffs_mask;
+  int ncoeffs_adjust;
+  run_cati=_token-OC_DCT_RUN_CAT1B;
+  ncoeffs_mask=OC_BYTE_TABLE32(3,7,0,1,run_cati);
+  ncoeffs_adjust=OC_BYTE_TABLE32(7,11,2,3,run_cati);
+  return (_extra_bits&ncoeffs_mask)+ncoeffs_adjust;
 }
 
 /*A jump table for computing the number of coefficients or blocks to skip for

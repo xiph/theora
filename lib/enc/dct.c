@@ -15,7 +15,7 @@
 
  ********************************************************************/
 
-#include "codec_internal.h"
+#include "encint.h"
 #include "../dec/dct.h"
 
 
@@ -122,9 +122,9 @@ static void oc_fdct8(ogg_int16_t *_y,const ogg_int16_t _x[8]){
   _y[7]=v;
 }
 
-void oc_enc_fdct8x8(const CP_INSTANCE *_cpi,ogg_int16_t _y[64],
+void oc_enc_fdct8x8(const oc_enc_ctx *_enc,ogg_int16_t _y[64],
  const ogg_int16_t _x[64]){
-  (*_cpi->opt_vtable.fdct8x8)(_y,_x);
+  (*_enc->opt_vtable.fdct8x8)(_y,_x);
 }
 
 /*Performs a forward 8x8 Type-II DCT transform.

@@ -15,7 +15,7 @@
 
  ********************************************************************/
 
-#include "codec_internal.h"
+#include "encint.h"
 
 /*The default quantization parameters used by VP3.1.*/
 static const int OC_VP31_RANGE_SIZES[1]={63};

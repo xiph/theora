@@ -147,7 +147,7 @@ static const ogg_int64_t OC_ATANH_LOG2[32]={
   0x2E2A8ECA5705FC2FLL,0x2E2A8ECA5705FC2FLL
 };
 
-/*Computes the binary exponential of _log2, a log base 2 in Q57 format.*/
+/*Computes the binary exponential of _z, a log base 2 in Q57 format.*/
 ogg_int64_t oc_bexp64(ogg_int64_t _z){
   ogg_int64_t w;
   ogg_int64_t z;

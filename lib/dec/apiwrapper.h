@@ -20,8 +20,7 @@
 # include <ogg/ogg.h>
 # include <theora/theora.h>
 # include "theora/theoradec.h"
-/*# include "theora/theoraenc.h"*/
-typedef struct th_enc_ctx th_enc_ctx;
+# include "theora/theoraenc.h"
 # include "../internal.h"
 
 typedef struct th_api_wrapper th_api_wrapper;

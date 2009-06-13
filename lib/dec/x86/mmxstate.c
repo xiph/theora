@@ -47,8 +47,8 @@ void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
     ref=
      _state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_FOR_MODE[mb_mode]]]
      +frag_buf_off;
-    if(oc_state_get_mv_offsets(_state,mvoffsets,
-     _state->frag_mvs[_fragi][0],_state->frag_mvs[_fragi][1],ystride,_pli)>1){
+    if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,
+     _state->frag_mvs[_fragi][0],_state->frag_mvs[_fragi][1])>1){
       oc_frag_recon_inter2_mmx(dst,ref+mvoffsets[0],ref+mvoffsets[1],ystride,
        res_buf);
     }

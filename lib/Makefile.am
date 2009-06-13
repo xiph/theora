@@ -4,7 +4,6 @@ AM_CFLAGS = $(OGG_CFLAGS) $(CAIRO_CFLAGS)
 EXTRA_DIST = \
 	cpu.c \
 	enc/x86/dsp_sse2.c \
-	enc/x86/mmxenc.c \
 	enc/x86/mmxencfrag.c \
 	enc/x86/mmxfdct.c \
 	enc/x86/sse2fdct.c \
@@ -13,9 +12,11 @@ EXTRA_DIST = \
 	enc/x86_32_vs/dsp_mmx.c \
 	enc/x86_32_vs/fdct_mmx.c \
 	enc/x86_32_vs/recon_mmx.c \
-	enc/dct_encode.c \
+	enc/analyize.c \
+	enc/encinfo.c \
 	enc/encode.c \
-	enc/encoder_toplevel.c \
+	enc/rate.c \
+	enc/tokenize.c \
 	dec/x86/mmxfrag.c \
 	dec/x86/mmxfrag.h \
 	dec/x86/mmxidct.c \
@@ -28,12 +29,13 @@ EXTRA_DIST = \
 lib_LTLIBRARIES = libtheoradec.la libtheoraenc.la libtheora.la
 
 if THEORA_DISABLE_ENCODE
-encoder_sources = \
-	enc/encapiwrapper.c \
+encoder_uniq_sources = \
 	enc/encoder_disabled.c
+
+encoder_sources = \
+	$(encoder_uniq_sources)
 else
 encoder_uniq_x86_sources = \
-	enc/x86/mmxenc.c \
 	enc/x86/mmxencfrag.c \
 	enc/x86/mmxfdct.c \
 	enc/x86/x86enc.c
@@ -43,7 +45,9 @@ encoder_uniq_x86_64_sources = \
 
 encoder_shared_x86_sources = \
 	dec/x86/mmxfrag.c \
-	dec/x86/mmxidct.c
+	dec/x86/mmxidct.c \
+	dec/x86/mmxstate.c \
+	dec/x86/x86state.c
 
 encoder_shared_x86_64_sources =
 
@@ -65,26 +69,27 @@ endif
 endif
 
 encoder_uniq_sources = \
+	enc/analyze.c \
 	enc/dct.c \
-	enc/dct_decode.c \
-	enc/dct_encode.c \
 	enc/encfrag.c \
 	enc/encapiwrapper.c \
+	enc/encinfo.c \
 	enc/encode.c \
-	enc/encoder_toplevel.c \
-	enc/encoder_quant.c \
-	enc/frarray.c \
-	enc/frinit.c \
+	enc/enquant.c \
 	enc/huffenc.c \
 	enc/mathops.c \
 	enc/mcenc.c \
-	enc/mode.c \
+	enc/rate.c \
+	enc/tokenize.c \
 	$(encoder_uniq_arch_sources)
 
 encoder_sources = \
+	dec/apiwrapper.c \
 	dec/fragment.c \
 	dec/idct.c \
 	dec/internal.c \
+	dec/state.c \
+	dec/quant.c \
 	$(encoder_shared_arch_sources) \
 	$(encoder_uniq_sources)
 
@@ -124,16 +129,10 @@ decoder_sources = \
 noinst_HEADERS = \
 	cpu.h \
 	internal.h \
-	enc/codec_internal.h \
-	enc/encoder_huffman.h \
-	enc/encoder_lookup.h \
 	enc/enquant.h \
 	enc/huffenc.h \
-	enc/hufftables.h \
 	enc/mathops.h \
 	enc/modedec.h \
-	enc/quant_lookup.h \
-	enc/toplevel_lookup.h \
 	dec/apiwrapper.h \
 	dec/bitpack.h \
 	dec/dct.h \
