@@ -41,8 +41,7 @@ int oc_state_flushheader(oc_theora_state *_state,int *_packet_state,
       oggpackB_write(_opb,_state->info.pic_width,24);
       oggpackB_write(_opb,_state->info.pic_height,24);
       oggpackB_write(_opb,_state->info.pic_x,8);
-      oggpackB_write(_opb,_state->info.frame_height-
-       _state->info.pic_height-_state->info.pic_y,8);
+      oggpackB_write(_opb,_state->info.pic_y,8);
       oggpackB_write(_opb,_state->info.fps_numerator,32);
       oggpackB_write(_opb,_state->info.fps_denominator,32);
       oggpackB_write(_opb,_state->info.aspect_numerator,24);
