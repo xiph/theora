@@ -34,6 +34,20 @@ noop_test_info ()
 }
 
 static int
+noop_test_comments ()
+{
+  th_comment tc;
+
+  INFO ("+ Initializing th_comment struct");
+  th_comment_init (&tc);
+
+  INFO ("+ Clearing empty th_comment struct")
+  th_comment_clear (&tc);
+
+  return 0;
+}
+
+static int
 noop_test_encode ()
 {
   th_info ti;
@@ -65,24 +79,13 @@ noop_test_encode ()
   return 0;
 }
 
-static int
-noop_test_comments ()
-{
-  th_comment tc;
-
-  th_comment_init (&tc);
-  th_comment_clear (&tc);
-
-  return 0;
-}
-
 int main(int argc, char *argv[])
 {
   noop_test_info ();
 
-  noop_test_encode ();
-
   noop_test_comments ();
+
+  noop_test_encode ();
 
   exit (0);
 }
