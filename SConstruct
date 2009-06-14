@@ -6,23 +6,24 @@ import SCons
 def path(prefix, list): return [join(prefix, x) for x in list]
 
 encoder_sources = """
+	dec/apiwrapper.c
 	dec/fragment.c
 	dec/idct.c
 	dec/internal.c
-	enc/dct.c
-	enc/dct_decode.c
-	enc/dct_encode.c
+	dec/state.c
+	dec/quant.c
+	enc/analyze.c
 	enc/encfrag.c
 	enc/encapiwrapper.c
+	enc/encinfo.c
 	enc/encode.c
-	enc/encoder_toplevel.c
-	enc/encoder_quant.c 
-	enc/frarray.c
-	enc/frinit.c
+	enc/enquant.c
+	enc/fdct.c
 	enc/huffenc.c
 	enc/mathops.c
 	enc/mcenc.c
-	enc/mode.c
+	enc/rate.c
+	enc/tokenize.c
 """
 
 decoder_sources = """
@@ -134,12 +135,13 @@ if conf.CheckHost_x86_32():
         dec/x86/x86state.c
   """
   encoder_sources += """
-	enc/x86/mmxenc.c
 	enc/x86/mmxencfrag.c
 	enc/x86/mmxfdct.c
 	enc/x86/x86enc.c
 	dec/x86/mmxfrag.c
 	dec/x86/mmxidct.c
+	dec/x86/mmxstate.c
+	dec/x86/x86state.c
   """
 elif conf.CheckHost_x86_64():
   env.Append(CPPDEFINES='USE_ASM')
@@ -150,13 +152,14 @@ elif conf.CheckHost_x86_64():
         dec/x86/x86state.c
   """
   encoder_sources += """
-	enc/x86/mmxenc.c
 	enc/x86/mmxencfrag.c
 	enc/x86/mmxfdct.c
 	enc/x86/x86enc.c
 	enc/x86/sse2fdct.c
 	dec/x86/mmxfrag.c
 	dec/x86/mmxidct.c
+	dec/x86/mmxstate.c
+	dec/x86/x86state.c
   """
 
 env = conf.Finish()
