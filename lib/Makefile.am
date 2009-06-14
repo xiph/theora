@@ -70,12 +70,12 @@ endif
 
 encoder_uniq_sources = \
 	enc/analyze.c \
-	enc/fdct.c \
-	enc/encfrag.c \
 	enc/encapiwrapper.c \
+	enc/encfrag.c \
 	enc/encinfo.c \
 	enc/encode.c \
 	enc/enquant.c \
+	enc/fdct.c \
 	enc/huffenc.c \
 	enc/mathops.c \
 	enc/mcenc.c \
@@ -96,8 +96,8 @@ encoder_sources = \
 endif
 
 decoder_x86_sources = \
-	dec/x86/mmxidct.c \
 	dec/x86/mmxfrag.c \
+	dec/x86/mmxidct.c \
 	dec/x86/mmxstate.c \
 	dec/x86/x86state.c
 if CPU_x86_64
