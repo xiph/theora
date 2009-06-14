@@ -20,6 +20,20 @@
 #include "tests.h"
 
 static int
+noop_test_info ()
+{
+  th_info ti;
+
+  INFO ("+ Initializing th_info struct");
+  th_info_init (&ti);
+
+  INFO ("+ Clearing empty th_info struct");
+  th_info_clear (&ti);
+
+  return 0;
+}
+
+static int
 noop_test_encode ()
 {
   th_info ti;
@@ -42,7 +56,7 @@ noop_test_encode ()
   if (te == NULL)
     FAIL("td_encode_alloc returned a null pointer");
 
-  INFO ("+ Clearing theora_info struct");
+  INFO ("+ Clearing th_info struct");
   th_info_clear (&ti);
 
   INFO ("+ Freeing encoder context");
@@ -64,6 +78,8 @@ noop_test_comments ()
 
 int main(int argc, char *argv[])
 {
+  noop_test_info ();
+
   noop_test_encode ();
 
   noop_test_comments ();
