@@ -617,11 +617,11 @@ int oc_state_init(oc_theora_state *_state,const th_info *_info,int _nrefs){
     The displayable frame must fit inside the encoded frame.
     The color space must be one known by the encoder.*/
   if((_info->frame_width&0xF)||(_info->frame_height&0xF)||
-   _info->frame_width>=0x100000||_info->frame_height>=0x100000||
+   _info->frame_width<=0||_info->frame_width>=0x100000||
+   _info->frame_height<=0||_info->frame_height>=0x100000||
    _info->pic_x+_info->pic_width>_info->frame_width||
    _info->pic_y+_info->pic_height>_info->frame_height||
-   _info->pic_x>255||
-   _info->frame_height-_info->pic_height-_info->pic_y>255||
+   _info->pic_x>255||_info->frame_height-_info->pic_height-_info->pic_y>255||
    /*Note: the following <0 comparisons may generate spurious warnings on
       platforms where enums are unsigned.
      We could cast them to unsigned and just use the following >= comparison,
