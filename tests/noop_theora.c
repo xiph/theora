@@ -28,6 +28,10 @@ noop_test_encode ()
   INFO ("+ Initializing theora_info struct");
   theora_info_init (&ti);
 
+  INFO ("+ Setting a 16x16 frame");
+  ti.width = 16;
+  ti.height = 16;
+
   INFO ("+ Initializing theora_state for encoding");
   if (theora_encode_init (&th, &ti) != OC_DISABLED) {
     INFO ("+ Clearing theora_state");

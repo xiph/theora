@@ -25,8 +25,17 @@ noop_test_encode ()
   th_info ti;
   th_enc_ctx *te;
 
-  INFO ("+ Initializing theora_info struct");
+  INFO ("+ Initializing th_info struct");
   th_info_init (&ti);
+
+  INFO ("+ Allocating encoder context with empty th_info");
+  te = th_encode_alloc(&ti);
+  if (te != NULL)
+    FAIL("td_encode_alloc accepted an unconfigured th_info");
+
+  INFO ("+ Setting 16x16 image size");
+  ti.frame_width = 16;
+  ti.frame_height = 16;
 
   INFO ("+ Allocating encoder context");
   te = th_encode_alloc(&ti);
