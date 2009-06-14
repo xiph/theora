@@ -16,6 +16,7 @@
  ********************************************************************/
 
 #include <theora/theoraenc.h>
+#include <theora/theoradec.h>
 
 #include "tests.h"
 
@@ -56,7 +57,7 @@ noop_test_encode ()
   INFO ("+ Initializing th_info struct");
   th_info_init (&ti);
 
-  INFO ("+ Allocating encoder context with empty th_info");
+  INFO ("+ Testing encoder context with empty th_info");
   te = th_encode_alloc(&ti);
   if (te != NULL)
     FAIL("td_encode_alloc accepted an unconfigured th_info");
@@ -79,6 +80,31 @@ noop_test_encode ()
   return 0;
 }
 
+static int
+noop_test_decode ()
+{
+  th_info ti;
+  th_dec_ctx *td;
+
+  INFO ("+ Testing decoder context with null info and setup");
+  td = th_decode_alloc(NULL, NULL);
+  if (td != NULL)
+    FAIL("td_decode_alloc accepted null info pointers");
+
+  INFO ("+ Initializing th_info struct");
+  th_info_init (&ti);
+
+  INFO ("+ Testing decoder context with empty info and null setup");
+  td = th_decode_alloc(&ti, NULL);
+  if (td != NULL)
+    FAIL("td_decode_alloc accepted null info pointers");
+
+  INFO ("+ Clearing th_info struct");
+  th_info_clear (&ti);
+
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   noop_test_info ();
@@ -86,6 +112,8 @@ int main(int argc, char *argv[])
   noop_test_comments ();
 
   noop_test_encode ();
+
+  noop_test_decode ();
 
   exit (0);
 }
