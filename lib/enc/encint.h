@@ -253,9 +253,9 @@ struct th_enc_ctx{
   int                      dc_pred_last[3][3];
 #if defined(OC_COLLECT_METRICS)
   /*Fragment SATD statistics for MB mode estimation metrics.*/
-  int                     *frag_satd;
+  unsigned                *frag_satd;
   /*Fragment SSD statistics for MB mode estimation metrics.*/
-  int                     *frag_ssd;
+  unsigned                *frag_ssd;
 #endif
   /*The R-D optimization parameter.*/
   int                      lambda;
@@ -281,8 +281,8 @@ struct th_enc_ctx{
 
 int oc_enc_analyze(oc_enc_ctx *_enc,int _frame_type,int _recode);
 #if defined(OC_COLLECT_METRICS)
-extern void ModeMetrics(oc_enc_ctx *_enc);
-extern void oc_enc_mode_metrics_dump(oc_enc_ctx *_enc);
+void oc_enc_mode_metrics_collect(oc_enc_ctx *_enc);
+void oc_enc_mode_metrics_dump(oc_enc_ctx *_enc);
 #endif
 
 

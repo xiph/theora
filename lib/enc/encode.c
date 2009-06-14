@@ -709,7 +709,7 @@ static void oc_enc_frame_pack(oc_enc_ctx *_enc){
   /*Success: Mark the packet as ready to be flushed.*/
   _enc->packet_state=OC_PACKET_READY;
 #if defined(OC_COLLECT_METRICS)
-  ModeMetrics(_enc);
+  oc_enc_mode_metrics_collect(_enc);
 #endif
 }
 

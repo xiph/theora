@@ -1652,86 +1652,31 @@ static void oc_enc_mode_metrics_update(oc_enc_ctx *_enc,int _qi){
   }
 }
 
-
-static void ModeMetricsGroup(oc_enc_ctx *_enc, int group, int huffY, int huffC, int eobcounts[64], int *actual_bits){
-  int       *stack;
-  ptrdiff_t *tfi;
-  int        ty;
-  int        tn;
-  int        ti;
-  stack=_enc->dct_eob_fi_stack[group];
-  tfi=_enc->dct_token_frag[group];
-  ty=_enc->dct_token_ycount[group];
-  tn=_enc->dct_token_count[group];
-  for(ti=0;ti<tn;ti++){
-    ptrdiff_t fragi;
-    int       token;
-    int       bits;
-    token=_enc->dct_token[group][ti];
-    bits=_enc->huff_codes[ti<ty?huffY:huffC][token].nbits
-     +OC_DCT_TOKEN_EXTRA_BITS[token];
-    /*Not an EOB run; this token belongs to a single fragment.*/
-    if(token>=OC_NDCT_EOB_TOKEN_MAX)fragi=tfi[ti];
-    else{
-      int run;
-      int fragi;
-      run=-oc_dct_token_skip(token,_enc->dct_token_eb[group][ti]);
-      fragi=stack[eobcounts[group]];
-      /*Tokens follow EOB so it must be entirely contained within this
-         plane/group.*/
-      if(ti+1<tn)eobcounts[group]+=run;
-      /*EOB is the last token in this plane/group, so it may span into the
-         next plane/group.*/
-      else{
-        int n;
-        n=_enc->dct_eob_fi_count[group];
-        while(run){
-          int rem;
-          rem=n-eobcounts[group];
-          if(rem>run)rem=run;
-          eobcounts[group]+=rem;
-          run-=rem;
-          if(run){
-            group++;
-            n=_enc->dct_eob_fi_count[group];
-            stack=_enc->dct_eob_fi_stack[group];
-          }
-        }
-      }
-    }
-    actual_bits[fragi]+=bits<<OC_BIT_SCALE;
-  }
-}
-
-/*TODO: This code has bitrotted and needs to be re-written.*/
-void ModeMetrics(oc_enc_ctx *_enc){
-  int actual_bits[_enc->frag_total];
-  int          eobcounts[64];
-  int          huff[4];
-  oc_fragment *frags;
-  int         *sp;
-  int         *mp;
-  double       fragw;
-  int          pli;
-  int          qti;
-  int          qi;
-  int          zzi;
-  ptrdiff_t    fragi;
-  qti=_enc->state.frame_type;
-  frags=_enc->state.frags;
-  sp=_enc->frag_satd;
-  mp=_enc->frag_mbi;
+void oc_enc_mode_metrics_collect(oc_enc_ctx *_enc){
+  static const unsigned char OC_ZZI_HUFF_OFFSET[64]={
+     0,16,16,16,16,16,32,32,
+    32,32,32,32,32,32,32,48,
+    48,48,48,48,48,48,48,48,
+    48,48,48,48,64,64,64,64,
+    64,64,64,64,64,64,64,64,
+    64,64,64,64,64,64,64,64,
+    64,64,64,64,64,64,64,64
+  };
+  const oc_fragment *frags;
+  const unsigned    *frag_satd;
+  const unsigned    *frag_ssd;
+  const ptrdiff_t   *coded_fragis;
+  ptrdiff_t          ncoded_fragis;
+  ptrdiff_t          fragii;
+  double             fragw;
+  int                qti;
+  int                qi;
+  int                pli;
+  int                zzi;
+  int                token;
+  int                eb;
   oc_restore_fpu(&_enc->state);
-  /*Weight the fragments by the inverse frame size; this prevents HD content
-     from dominating the statistics.*/
-  memset(actual_bits,0,sizeof(actual_bits));
-  memset(eobcounts,0,sizeof(eobcounts));
-  huff[0]=_enc->huff_idxs[qti][0][0];
-  huff[1]=_enc->huff_idxs[qti][0][1];
-  huff[2]=_enc->huff_idxs[qti][1][0];
-  huff[3]=_enc->huff_idxs[qti][1][1];
-  memset(_enc->dist_dist,0,sizeof(_enc->dist_dist));
-  memset(_enc->dist_bits,0,sizeof(_enc->dist_bits));
+  /*Load any existing mode metrics if we haven't already.*/
   if(!oc_has_mode_metrics){
     FILE *fmetrics;
     memset(OC_MODE_METRICS,0,sizeof(OC_MODE_METRICS));
@@ -1743,35 +1688,81 @@ void ModeMetrics(oc_enc_ctx *_enc){
     for(qi=0;qi<64;qi++)oc_enc_mode_metrics_update(_enc,qi);
     oc_has_mode_metrics=1;
   }
-  /*Count bits for tokens.*/
-  ModeMetricsGroup(_enc, 0, huff[0], huff[1], eobcounts, actual_bits);
-  for(zzi=1;zzi<6;zzi++)
-    ModeMetricsGroup(_enc, zzi,  huff[2]+16, huff[3]+16, eobcounts, actual_bits);
-  for(;zzi<15;zzi++)
-    ModeMetricsGroup(_enc, zzi, huff[2]+32, huff[3]+32, eobcounts, actual_bits);
-  for(;zzi<28;zzi++)
-    ModeMetricsGroup(_enc, zzi, huff[2]+48, huff[3]+48, eobcounts, actual_bits);
-  for(;zzi<64;zzi++)
-    ModeMetricsGroup(_enc, zzi, huff[2]+64, huff[3]+64, eobcounts, actual_bits);
-  /*Accumulate.*/
-  fragw=1.0/_enc->state.nfrags;
+  qti=_enc->state.frame_type;
   qi=_enc->state.qis[0];
+  frags=_enc->state.frags;
+  frag_satd=_enc->frag_satd;
+  frag_ssd=_enc->frag_ssd;
+  coded_fragis=_enc->state.coded_fragis;
+  ncoded_fragis=fragii=0;
+  /*Weight the fragments by the inverse frame size; this prevents HD content
+     from dominating the statistics.*/
+  fragw=1.0/_enc->state.nfrags;
   for(pli=0;pli<3;pli++){
-    ptrdiff_t fragi_end;
-    fragi=_enc->state.fplanes[pli].froffset;
-    fragi_end=fragi+_enc->state.fplanes[pli].nfrags;
-    for(;fragi<fragi_end;fragi++)if(frags[fragi].coded){
-      int mbi;
-      int mb_mode;
-      int bin;
-      mbi=mp[fragi];
-      mb_mode=_enc->state.mb_modes[mbi];
-      bin=OC_BIN(sp[fragi]);
+    ptrdiff_t ti[64];
+    int       eob_runs[64];
+    int       eob_rem[64];
+    /*Set up token indices and eob run counts.
+      We don't bother trying to figure out the real cost of the runs that span
+       coefficients; instead we use the costs that were available when R-D
+       token optimization was done.*/
+    for(zzi=0;zzi<64;zzi++){
+      ti[zzi]=_enc->dct_token_offs[pli][zzi];
+      if(ti[zzi]>0){
+        token=_enc->dct_tokens[pli][zzi][0];
+        eb=_enc->extra_bits[pli][zzi][0];
+        eob_runs[zzi]=-oc_dct_token_skip(token,eb);
+      }
+      else eob_runs[zzi]=0;
+    }
+    memcpy(eob_rem,eob_runs,sizeof(eob_rem));
+    /*Scan the list of coded fragments for this plane.*/
+    ncoded_fragis+=_enc->state.ncoded_fragis[pli];
+    for(;fragii<ncoded_fragis;fragii++){
+      ptrdiff_t    fragi;
+      ogg_uint32_t frag_bits;
+      int          huffi;
+      int          skip;
+      int          mb_mode;
+      unsigned     satd;
+      int          bin;
+      fragi=coded_fragis[fragii];
+      frag_bits=0;
+      for(zzi=0;zzi<64;){
+        if(eob_rem[zzi]>0){
+          /*We've reached the end of the block.*/
+          eob_rem[zzi]--;
+          break;
+        }
+        huffi=_enc->huff_idxs[qti][zzi>0][pli+1>>1]
+         +OC_ZZI_HUFF_OFFSET[zzi];
+        if(eob_runs[zzi]>0){
+          /*This token caused an EOB run to be flushed.
+            Therefore it gets the bits associated with it.*/
+          frag_bits+=_enc->huff_codes[huffi][token].nbits
+           +OC_DCT_TOKEN_EXTRA_BITS[token];
+          eob_runs[zzi]=0;
+        }
+        token=_enc->dct_tokens[pli][zzi][ti[zzi]];
+        eb=_enc->extra_bits[pli][zzi][ti[zzi]];
+        ti[zzi]++;
+        skip=oc_dct_token_skip(token,eb);
+        if(skip<0)eob_runs[zzi]=eob_rem[zzi]=-skip;
+        else{
+          /*A regular DCT value token; accumulate the bits for it.*/
+          frag_bits+=_enc->huff_codes[huffi][token].nbits
+           +OC_DCT_TOKEN_EXTRA_BITS[token];
+          zzi+=skip;
+        }
+      }
+      mb_mode=frags[fragi].mb_mode;
+      satd=frag_satd[fragi];
+      bin=OC_MINI(satd>>OC_SAD_SHIFT,OC_SAD_BINS-1);
       oc_mode_metrics_add(OC_MODE_METRICS[qi][pli][mb_mode!=OC_MODE_INTRA]+bin,
-       fragw,sp[fragi],actual_bits[fragi],sqrt(_enc->frag_ssd[fragi]));
+       fragw,satd,frag_bits<<OC_BIT_SCALE,sqrt(frag_ssd[fragi]));
     }
   }
-  /*Update global SAD/rate estimation matrix.*/
+  /*Update global SATD/rate/RMSE estimation matrix.*/
   oc_enc_mode_metrics_update(_enc,qi);
 }
 

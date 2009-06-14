@@ -680,8 +680,8 @@ static unsigned oc_mcenc_ysatd_halfpel_brefine(const oc_enc_ctx *_enc,
     dx=OC_SQUARE_DX[site];
     dy=OC_SQUARE_DY[site];
     /*The following code SHOULD be equivalent to
-        oc_state_get_mv_offsets(&_mcenc->enc.state,&mvoffset0,&mvoffset1,
-         (_vec[0]<<1)+dx,(_vec[1]<<1)+dy,ref_ystride,0);
+        oc_state_get_mv_offsets(&_enc->state,&mvoffsets,0,
+         (_vec[0]<<1)+dx,(_vec[1]<<1)+dy);
       However, it should also be much faster, as it involves no multiplies and
        doesn't have to handle chroma vectors.*/
     xmask=OC_SIGNMASK(((_vec[0]<<1)+dx)^dx);
