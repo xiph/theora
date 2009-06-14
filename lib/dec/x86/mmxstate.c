@@ -38,7 +38,7 @@ void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
   /*Fill in the target buffer.*/
   frag_buf_off=_state->frag_buf_offs[_fragi];
   mb_mode=_state->frags[_fragi].mb_mode;
-  ystride=_state->ref_frame_bufs[0][_pli].stride;
+  ystride=_state->ref_ystride[_pli];
   dst=_state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_SELF]]+frag_buf_off;
   if(mb_mode==OC_MODE_INTRA)oc_frag_recon_intra_mmx(dst,ystride,res_buf);
   else{
