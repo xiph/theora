@@ -861,14 +861,20 @@ static int oc_enc_set_quant_params(oc_enc_ctx *_enc,
 }
 
 static int oc_enc_init(oc_enc_ctx *_enc,const th_info *_info){
-  int ret;
-  int pli;
+  th_info info;
+  int     ret;
+  int     pli;
+  /*Clean up the requested settings.*/
+  memcpy(&info,_info,sizeof(info));
+  info.version_major=TH_VERSION_MAJOR;
+  info.version_minor=TH_VERSION_MINOR;
+  info.version_subminor=TH_VERSION_SUB;
+  if(info.quality>63)info.quality=63;
+  if(info.quality<0)info.quality=32;
+  if(info.target_bitrate<0)info.target_bitrate=0;
   /*Initialize the shared encoder/decoder state.*/
-  ret=oc_state_init(&_enc->state,_info,4);
+  ret=oc_state_init(&_enc->state,&info,4);
   if(ret<0)return ret;
-  if(_enc->state.info.quality>63)_enc->state.info.quality=63;
-  if(_enc->state.info.quality<0)_enc->state.info.quality=32;
-  if(_enc->state.info.target_bitrate<0)_enc->state.info.target_bitrate=0;
   _enc->mb_info=_ogg_calloc(_enc->state.nmbs,sizeof(*_enc->mb_info));
   _enc->frag_dc=_ogg_calloc(_enc->state.nfrags,sizeof(*_enc->frag_dc));
   _enc->coded_mbis=
