@@ -69,15 +69,6 @@ WORKDIR = objs
 
 # C source file lists
 
-LIBTHEORA_SHARED_CSOURCES = \
-dec/fragment.c \
-dec/idct.c \
-dec/internal.c \
-$(if $(findstring -DOC_X86_ASM,${CFLAGS}), \
-dec/x86/mmxidct.c \
-dec/x86/mmxfrag.c \
-)
-
 LIBTHEORADEC_CSOURCES = \
 dec/apiwrapper.c \
 dec/bitpack.c \
@@ -85,32 +76,44 @@ dec/decapiwrapper.c \
 dec/decinfo.c \
 dec/decode.c \
 dec/dequant.c \
+dec/fragment.c \
 dec/huffdec.c \
+dec/idct.c \
 dec/info.c \
+dec/internal.c \
 dec/quant.c \
 dec/state.c \
 $(if $(findstring -DOC_X86_ASM,${CFLAGS}), \
+dec/x86/mmxidct.c \
+dec/x86/mmxfrag.c \
 dec/x86/mmxstate.c \
 dec/x86/x86state.c \
 )
 
 LIBTHEORAENC_CSOURCES = \
-enc/dct.c \
-enc/dct_decode.c \
-enc/dct_encode.c \
-enc/encapiwrapper.c \
+dec/apiwrapper.c \
+dec/fragment.c \
+dec/idct.c \
+dec/internal.c \
+dec/state.c \
+dec/quant.c \
+enc/analyze.c \
+enc/fdct.c \
 enc/encfrag.c \
+enc/encapiwrapper.c \
+enc/encinfo.c \
 enc/encode.c \
-enc/encoder_toplevel.c \
-enc/encoder_quant.c \
-enc/frarray.c \
-enc/frinit.c \
+enc/enquant.c \
 enc/huffenc.c \
 enc/mathops.c \
 enc/mcenc.c \
-enc/mode.c \
+enc/rate.c \
+enc/tokenize.c \
 $(if $(findstring -DOC_X86_ASM,${CFLAGS}), \
-enc/x86/mmxenc.c \
+dec/x86/mmxfrag.c \
+dec/x86/mmxidct.c \
+dec/x86/mmxstate.c \
+dec/x86/x86state.c \
 enc/x86/mmxencfrag.c \
 enc/x86/mmxfdct.c \
 enc/x86/x86enc.c \
@@ -122,16 +125,10 @@ ENCODER_EXAMPLE_CSOURCES = encoder_example.c
 PLAYER_EXAMPLE_CSOURCES = player_example.c
 
 # Create object file list.
-LIBTHEORA_SHARED_OBJS:= ${LIBTHEORA_SHARED_CSOURCES:%.c=${WORKDIR}/%.o}
-LIBTHEORAD_SHARED_OBJS:= ${LIBTHEORA_SHARED_CSOURCES:%.c=${WORKDIR}/%.do}
-LIBTHEORADEC_OBJS:= ${LIBTHEORA_SHARED_OBJS} \
- ${LIBTHEORADEC_CSOURCES:%.c=${WORKDIR}/%.o}
-LIBTHEORADECD_OBJS:= ${LIBTHEORAD_SHARED_OBJS} \
- ${LIBTHEORADEC_CSOURCES:%.c=${WORKDIR}/%.do}
-LIBTHEORAENC_OBJS:= ${LIBTHEORA_SHARED_OBJS} \
- ${LIBTHEORAENC_CSOURCES:%.c=${WORKDIR}/%.o}
-LIBTHEORAENCD_OBJS:= ${LIBTHEORAD_SHARED_OBJS} \
- ${LIBTHEORAENC_CSOURCES:%.c=${WORKDIR}/%.do}
+LIBTHEORADEC_OBJS:= ${LIBTHEORADEC_CSOURCES:%.c=${WORKDIR}/%.o}
+LIBTHEORADECD_OBJS:= ${LIBTHEORADEC_CSOURCES:%.c=${WORKDIR}/%.do}
+LIBTHEORAENC_OBJS:=  ${LIBTHEORAENC_CSOURCES:%.c=${WORKDIR}/%.o}
+LIBTHEORAENCD_OBJS:= ${LIBTHEORAENC_CSOURCES:%.c=${WORKDIR}/%.do}
 DUMP_VIDEO_OBJS:= ${DUMP_VIDEO_CSOURCES:%.c=${WORKDIR}/%.o}
 ENCODER_EXAMPLE_OBJS:= ${ENCODER_EXAMPLE_CSOURCES:%.c=${WORKDIR}/%.o}
 PLAYER_EXAMPLE_OBJS:= ${PLAYER_EXAMPLE_CSOURCES:%.c=${WORKDIR}/%.o}
@@ -152,15 +149,14 @@ ALL_DEPS:= ${ALL_OBJS:%.o=%.d}
 ALL_DEPS:= ${ALL_DEPS:%.do=%.dd}
 ALL_DEPS:= ${ALL_DEPS:%.rco=%.d}
 # Prepend source path to file names.
-LIBTHEORA_SHARED_CSOURCES:= ${LIBTHEORA_SHARED_CSOURCES:%=${LIBSRCDIR}/%}
 LIBTHEORADEC_CSOURCES:= ${LIBTHEORADEC_CSOURCES:%=${LIBSRCDIR}/%}
 LIBTHEORAENC_CSOURCES:= ${LIBTHEORAENC_CSOURCES:%=${LIBSRCDIR}/%}
 DUMP_VIDEO_CSOURCES:= ${DUMP_VIDEO_CSOURCES:%=${BINSRCDIR}/%}
 ENCODER_EXAMPLE_CSOURCES:= ${ENCODER_EXAMPLE_CSOURCES:%=${BINSRCDIR}/%}
 PLAYER_EXAMPLE_CSOURCES:= ${PLAYER_EXAMPLE_CSOURCES:%=${BINSRCDIR}/%}
-ALL_CSOURCES:= ${LIBTHEORA_SHARED_CSOURCES} ${LIBTHEORADEC_CSOURCES} \
- ${LIBTHEORAENC_CSOURCES} ${DUMP_VIDEO_CSOURCES} ${ENCODER_EXAMPLE_CSOURCES} \
- ${PLAYER_EXAMPLE_CSOURCES}
+ALL_CSOURCES:= ${LIBTHEORADEC_CSOURCES} ${LIBTHEORAENC_CSOURCES} \
+ ${DUMP_VIDEO_CSOURCES} ${PLAYER_EXAMPLE_CSOURCES} \
+ ${ENCODER_EXAMPLE_CSOURCES}
 LIBTHEORAENC_RCO:= ${WORKDIR}/${LIBTHEORAENC_TARGET:%.dll=%.rco}
 LIBTHEORAENCD_RCO:= ${WORKDIR}/${LIBTHEORAENCD_TARGET:%.dll=%.rco}
 LIBTHEORAENC70_RCO:= ${WORKDIR}/${LIBTHEORAENC70_TARGET:%.dll=%.rco}
