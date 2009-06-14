@@ -335,6 +335,10 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,ptrdiff_t _fragi,ogg_int16_t *_qdct,
  oc_token_checkpoint **_stack,int _acmin);
 void oc_enc_tokenlog_rollback(oc_enc_ctx *_enc,
  const oc_token_checkpoint *_stack,int _n);
+void oc_enc_pred_dc_frag_rows(oc_enc_ctx *_enc,int _pli,int _y0,int _yend);
+void oc_enc_tokenize_dc_frag_list(oc_enc_ctx *_enc,int _pli,
+ const ptrdiff_t *_coded_fragis,ptrdiff_t _ncoded_fragis,
+ int _prev_ndct_tokens1,int _prev_eob_run1);
 void oc_enc_tokenize_finish(oc_enc_ctx *_enc);
 
 

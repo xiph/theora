@@ -264,22 +264,22 @@ void oc_mcenc_search(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,int _mbi,int _frame){
      may cause increased degredation in many blocks to come.
     We could artificially reduce lambda to compensate, but it's faster to just
      disable it entirely, and use D (the distortion) as the sole criterion.*/
-  const ptrdiff_t       *frag_buf_offs;
-  const ptrdiff_t       *fragis;
-  const unsigned char   *src;
-  const unsigned char   *ref;
-  int                    ystride;
-  oc_mb_enc_info        *embs;
-  ogg_int32_t            hit_cache[31];
-  ogg_int32_t            hitbit;
-  unsigned               best_block_err[4];
-  unsigned               block_err[4];
-  unsigned               best_err;
-  int                    best_vec[2];
-  int                    best_block_vec[4][2];
-  int                    candx;
-  int                    candy;
-  int                    bi;
+  const ptrdiff_t     *frag_buf_offs;
+  const ptrdiff_t     *fragis;
+  const unsigned char *src;
+  const unsigned char *ref;
+  int                  ystride;
+  oc_mb_enc_info      *embs;
+  ogg_int32_t          hit_cache[31];
+  ogg_int32_t          hitbit;
+  unsigned             best_block_err[4];
+  unsigned             block_err[4];
+  unsigned             best_err;
+  int                  best_vec[2];
+  int                  best_block_vec[4][2];
+  int                  candx;
+  int                  candy;
+  int                  bi;
   embs=_enc->mb_info;
   /*Find some candidate motion vectors.*/
   oc_mcenc_find_candidates(_enc,_mcenc,_mbi,_frame);
@@ -701,14 +701,14 @@ static unsigned oc_mcenc_ysatd_halfpel_brefine(const oc_enc_ctx *_enc,
 }
 
 void oc_mcenc_refine4mv(oc_enc_ctx *_enc,int _mbi){
-  oc_mb_enc_info        *embs;
-  const ptrdiff_t       *frag_buf_offs;
-  const ptrdiff_t       *fragis;
-  const unsigned char   *src;
-  const unsigned char   *ref;
-  int                    offset_y[9];
-  int                    ystride;
-  int                    bi;
+  oc_mb_enc_info      *embs;
+  const ptrdiff_t     *frag_buf_offs;
+  const ptrdiff_t     *fragis;
+  const unsigned char *src;
+  const unsigned char *ref;
+  int                  offset_y[9];
+  int                  ystride;
+  int                  bi;
   ystride=_enc->state.ref_ystride[0];
   frag_buf_offs=_enc->state.frag_buf_offs;
   fragis=_enc->state.mb_maps[_mbi][0];

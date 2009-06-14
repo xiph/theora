@@ -946,6 +946,15 @@ static void oc_enc_compress_keyframe(oc_enc_ctx *_enc,int _recode){
   oc_enc_calc_lambda(_enc,OC_INTRA_FRAME);
   oc_enc_analyze(_enc,OC_INTRA_FRAME,_recode);
   oc_enc_frame_pack(_enc);
+  /*On the first frame, the previous call was an initial dry-run to prime
+     feed-forward statistics.*/
+  if(!_recode&&_enc->state.curframe_num==0){
+    if(_enc->state.info.target_bitrate>0){
+      oc_enc_update_rc_state(_enc,oggpackB_bytes(&_enc->opb)<<3,
+       OC_INTRA_FRAME,_enc->state.qis[0],1);
+    }
+    oc_enc_compress_keyframe(_enc,1);
+  }
 }
 
 static void oc_enc_compress_frame(oc_enc_ctx *_enc,int _recode){
@@ -1261,40 +1270,15 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
   _enc->state.ref_frame_idx[OC_FRAME_SELF]=refi;
   _enc->state.curframe_num+=_enc->prev_dup_count+1;
   /*Step 4: Compress the frame.*/
-  /*Don't allow the generation of invalid files that overflow the
-     keyframe_granule_shift.*/
+  /*Start with a keyframe, and don't allow the generation of invalid files that
+     overflow the keyframe_granule_shift.*/
   if(_enc->state.curframe_num==0||
    _enc->state.curframe_num-_enc->state.keyframe_num+_enc->dup_count>=
    _enc->keyframe_frequency_force){
     oc_enc_compress_keyframe(_enc,0);
-    /*On the first frame, the previous call was an initial dry-run to prime
-       feed-forward statistics.*/
-    if(_enc->state.curframe_num==0){
-      if(_enc->state.info.target_bitrate>0){
-        oc_enc_update_rc_state(_enc,oggpackB_bytes(&_enc->opb)<<3,
-         OC_INTRA_FRAME,_enc->state.qis[0],1);
-      }
-      oc_enc_compress_keyframe(_enc,1);
-    }
   }
   /*Compress the frame.*/
   else oc_enc_compress_frame(_enc,0);
-  /*Step 5: Finish reconstruction.
-    TODO: Move this inline with compression process.*/
-  {
-    int bv[256];
-    int loop_filter;
-    loop_filter=!oc_state_loop_filter_init(&_enc->state,bv);
-    for(pli=0;pli<3;pli++){
-      if(loop_filter){
-        oc_state_loop_filter_frag_rows(&_enc->state,bv,refi,pli,
-         0,_enc->state.fplanes[pli].nvfrags);
-      }
-      oc_state_borders_fill_rows(&_enc->state,refi,pli,
-       0,_enc->state.ref_frame_bufs[refi][pli].height);
-      oc_state_borders_fill_caps(&_enc->state,refi,pli);
-    }
-  }
   oc_restore_fpu(&_enc->state);
   /*Update state variables.*/
   _enc->packet_state=OC_PACKET_READY;

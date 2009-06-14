@@ -392,7 +392,7 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,ptrdiff_t _fragi,ogg_int16_t *_qdct,
   return total_bits;
 }
 
-static void oc_enc_pred_dc_rows(oc_enc_ctx *_enc,int _pli,int _y0,int _yend){
+void oc_enc_pred_dc_frag_rows(oc_enc_ctx *_enc,int _pli,int _y0,int _yend){
   const oc_fragment_plane *fplane;
   const oc_fragment       *frags;
   ogg_int16_t             *frag_dc;
@@ -420,62 +420,107 @@ static void oc_enc_pred_dc_rows(oc_enc_ctx *_enc,int _pli,int _y0,int _yend){
   }
 }
 
-static void oc_enc_tokenize_dc(oc_enc_ctx *_enc){
+void oc_enc_tokenize_dc_frag_list(oc_enc_ctx *_enc,int _pli,
+ const ptrdiff_t *_coded_fragis,ptrdiff_t _ncoded_fragis,
+ int _prev_ndct_tokens1,int _prev_eob_run1){
   const ogg_int16_t *frag_dc;
-  const ptrdiff_t   *coded_fragis;
-  ptrdiff_t          ncoded_fragis;
   ptrdiff_t          fragii;
-  int                pli;
+  unsigned char     *dct_tokens0;
+  unsigned char     *dct_tokens1;
+  ogg_uint16_t      *extra_bits0;
+  ogg_uint16_t      *extra_bits1;
+  ptrdiff_t          ti0;
+  ptrdiff_t          ti1r;
+  ptrdiff_t          ti1w;
+  int                eob_run0;
+  int                eob_run1;
+  int                neobs1;
+  int                token;
+  int                eb;
+  /*eb1 and token1 are always initialized before use; if your compiler thinks
+     otherwise, it is dumb.*/
+  int                token1;
+  int                eb1;
+  /*Return immediately if there are no coded fragments; otherwise we'd flush
+     any trailing EOB run into the AC 1 list and never read it back out.*/
+  if(_ncoded_fragis<=0)return;
   frag_dc=_enc->frag_dc;
-  coded_fragis=_enc->state.coded_fragis;
-  ncoded_fragis=fragii=0;
-  for(pli=0;pli<3;pli++){
-    unsigned char *dct_tokens0;
-    unsigned char *dct_tokens1;
-    ogg_uint16_t  *extra_bits0;
-    ogg_uint16_t  *extra_bits1;
-    ptrdiff_t      ti0;
-    ptrdiff_t      ti1r;
-    ptrdiff_t      ti1w;
-    int            eob_run0;
-    int            eob_run1;
-    int            neobs1;
-    int            token;
-    int            eb;
-    int            token1;
-    int            eb1;
-    /*TODO: Move this inline with reconstruction.*/
-    oc_enc_pred_dc_rows(_enc,pli,0,_enc->state.fplanes[pli].nvfrags);
-    dct_tokens0=_enc->dct_tokens[pli][0];
-    dct_tokens1=_enc->dct_tokens[pli][1];
-    extra_bits0=_enc->extra_bits[pli][0];
-    extra_bits1=_enc->extra_bits[pli][1];
-    ncoded_fragis+=_enc->state.ncoded_fragis[pli];
-    ti0=ti1w=ti1r=0;
-    eob_run0=eob_run1=neobs1=0;
-    for(;fragii<ncoded_fragis;fragii++){
-      int val;
-      /*All tokens in the 1st AC coefficient stack are regenerated as the DC
-         coefficients are produced.
-        This can be done in-place; stack 1 cannot get larger.*/
-      if(!neobs1){
-        /*There's no active EOB run in stack 1; read the next token.*/
-        token1=dct_tokens1[ti1r];
-        eb1=extra_bits1[ti1r];
-        ti1r++;
-        if(token1<OC_NDCT_EOB_TOKEN_MAX){
-          neobs1=oc_decode_eob_token(token1,eb1);
-          /*It's an EOB run; add it to the current (inactive) one.
-            Because we may have moved entries to stack 0, we may have an
-             opportunity to merge two EOB runs in stack 1.*/
-          eob_run1+=neobs1;
-        }
+  dct_tokens0=_enc->dct_tokens[_pli][0];
+  dct_tokens1=_enc->dct_tokens[_pli][1];
+  extra_bits0=_enc->extra_bits[_pli][0];
+  extra_bits1=_enc->extra_bits[_pli][1];
+  ti0=_enc->ndct_tokens[_pli][0];
+  ti1w=ti1r=_prev_ndct_tokens1;
+  eob_run0=_enc->eob_run[_pli][0];
+  /*Flush any trailing EOB run for the 1st AC coefficient.
+    This is needed to allow us to track tokens to the end of the list.*/
+  eob_run1=_enc->eob_run[_pli][1];
+  if(eob_run1>0)oc_enc_eob_log(_enc,_pli,1,eob_run1);
+  /*If there was an active EOB run at the start of the 1st AC stack, read it
+     in and decode it.*/
+  if(_prev_eob_run1>0){
+    token1=dct_tokens1[ti1r];
+    eb1=extra_bits1[ti1r];
+    ti1r++;
+    eob_run1=oc_decode_eob_token(token1,eb1);
+    /*Consume the portion of the run that came before these fragments.*/
+    neobs1=eob_run1-_prev_eob_run1;
+  }
+  else eob_run1=neobs1=0;
+  for(fragii=0;fragii<_ncoded_fragis;fragii++){
+    int val;
+    /*All tokens in the 1st AC coefficient stack are regenerated as the DC
+       coefficients are produced.
+      This can be done in-place; stack 1 cannot get larger.*/
+    if(!neobs1){
+      /*There's no active EOB run in stack 1; read the next token.*/
+      token1=dct_tokens1[ti1r];
+      eb1=extra_bits1[ti1r];
+      ti1r++;
+      if(token1<OC_NDCT_EOB_TOKEN_MAX){
+        neobs1=oc_decode_eob_token(token1,eb1);
+        /*It's an EOB run; add it to the current (inactive) one.
+          Because we may have moved entries to stack 0, we may have an
+           opportunity to merge two EOB runs in stack 1.*/
+        eob_run1+=neobs1;
       }
-      val=frag_dc[coded_fragis[fragii]];
-      if(val){
-        /*There was a non-zero DC value, so there's no alteration to stack 1
-           for this fragment; just code the stack 0 token.*/
-        /*Flush any pending EOB run.*/
+    }
+    val=frag_dc[_coded_fragis[fragii]];
+    if(val){
+      /*There was a non-zero DC value, so there's no alteration to stack 1
+         for this fragment; just code the stack 0 token.*/
+      /*Flush any pending EOB run.*/
+      if(eob_run0>0){
+        token=oc_make_eob_token_full(eob_run0,&eb);
+        dct_tokens0[ti0]=(unsigned char)token;
+        extra_bits0[ti0]=(ogg_uint16_t)eb;
+        ti0++;
+        eob_run0=0;
+      }
+      token=oc_make_dct_token_full(0,0,val,&eb);
+      dct_tokens0[ti0]=(unsigned char)token;
+      extra_bits0[ti0]=(ogg_uint16_t)eb;
+      ti0++;
+    }
+    else{
+      /*Zero DC value; that means the entry in stack 1 might need to be coded
+         from stack 0.
+        This requires a stack 1 fixup.*/
+      if(neobs1>0){
+        /*We're in the middle of an active EOB run in stack 1.
+          Move it to stack 0.*/
+        if(++eob_run0>=4095){
+          token=oc_make_eob_token_full(eob_run0,&eb);
+          dct_tokens0[ti0]=(unsigned char)token;
+          extra_bits0[ti0]=(ogg_uint16_t)eb;
+          ti0++;
+          eob_run0=0;
+        }
+        eob_run1--;
+      }
+      else{
+        /*No active EOB run in stack 1, so we can't extend one in stack 0.
+          Flush it if we've got it.*/
         if(eob_run0>0){
           token=oc_make_eob_token_full(eob_run0,&eb);
           dct_tokens0[ti0]=(unsigned char)token;
@@ -483,176 +528,134 @@ static void oc_enc_tokenize_dc(oc_enc_ctx *_enc){
           ti0++;
           eob_run0=0;
         }
-        token=oc_make_dct_token_full(0,0,val,&eb);
-        dct_tokens0[ti0]=(unsigned char)token;
-        extra_bits0[ti0]=(ogg_uint16_t)eb;
+        /*Stack 1 token is one of: a pure zero run token, a single
+           coefficient token, or a zero run/coefficient combo token.
+          A zero run token is expanded and moved to token stack 0, and the
+           stack 1 entry dropped.
+          A single coefficient value may be transformed into combo token that
+           is moved to stack 0, or if it cannot be combined, it is left alone
+           and a single length-1 zero run is emitted in stack 0.
+          A combo token is extended and moved to stack 0.
+          During AC coding, we restrict the run lengths on combo tokens for
+           stack 1 to guarantee we can extend them.*/
+        switch(token1){
+          case OC_DCT_SHORT_ZRL_TOKEN:{
+            if(eb1<7){
+              dct_tokens0[ti0]=OC_DCT_SHORT_ZRL_TOKEN;
+              extra_bits0[ti0]=(ogg_uint16_t)(eb1+1);
+              ti0++;
+              /*Don't write the AC coefficient back out.*/
+              continue;
+            }
+            /*Fall through.*/
+          }
+          case OC_DCT_ZRL_TOKEN:{
+            dct_tokens0[ti0]=OC_DCT_ZRL_TOKEN;
+            extra_bits0[ti0]=(ogg_uint16_t)(eb1+1);
+            ti0++;
+            /*Don't write the AC coefficient back out.*/
+          }continue;
+          case OC_ONE_TOKEN:
+          case OC_MINUS_ONE_TOKEN:{
+            dct_tokens0[ti0]=OC_DCT_RUN_CAT1A;
+            extra_bits0[ti0]=(ogg_uint16_t)(token1-OC_ONE_TOKEN);
+            ti0++;
+            /*Don't write the AC coefficient back out.*/
+          }continue;
+          case OC_TWO_TOKEN:
+          case OC_MINUS_TWO_TOKEN:{
+            dct_tokens0[ti0]=OC_DCT_RUN_CAT2A;
+            extra_bits0[ti0]=(ogg_uint16_t)(token1-OC_TWO_TOKEN<<1);
+            ti0++;
+            /*Don't write the AC coefficient back out.*/
+          }continue;
+          case OC_DCT_VAL_CAT2:{
+            dct_tokens0[ti0]=OC_DCT_RUN_CAT2A;
+            extra_bits0[ti0]=(ogg_uint16_t)((eb1<<1)+1);
+            ti0++;
+            /*Don't write the AC coefficient back out.*/
+          }continue;
+          case OC_DCT_RUN_CAT1A:
+          case OC_DCT_RUN_CAT1A+1:
+          case OC_DCT_RUN_CAT1A+2:
+          case OC_DCT_RUN_CAT1A+3:{
+            dct_tokens0[ti0]=(unsigned char)(token1+1);
+            extra_bits0[ti0]=(ogg_uint16_t)eb1;
+            ti0++;
+            /*Don't write the AC coefficient back out.*/
+          }continue;
+          case OC_DCT_RUN_CAT1A+4:{
+            dct_tokens0[ti0]=OC_DCT_RUN_CAT1B;
+            extra_bits0[ti0]=(ogg_uint16_t)(eb1<<2);
+            ti0++;
+            /*Don't write the AC coefficient back out.*/
+          }continue;
+          case OC_DCT_RUN_CAT1B:{
+            if((eb1&3)<3){
+              dct_tokens0[ti0]=OC_DCT_RUN_CAT1B;
+              extra_bits0[ti0]=(ogg_uint16_t)(eb1+1);
+              ti0++;
+              /*Don't write the AC coefficient back out.*/
+              continue;
+            }
+            eb1=((eb1&4)<<1)-1;
+            /*Fall through.*/
+          }
+          case OC_DCT_RUN_CAT1C:{
+            dct_tokens0[ti0]=OC_DCT_RUN_CAT1C;
+            extra_bits0[ti0]=(ogg_uint16_t)(eb1+1);
+            ti0++;
+            /*Don't write the AC coefficient back out.*/
+          }continue;
+          case OC_DCT_RUN_CAT2A:{
+            eb1=(eb1<<1)-1;
+            /*Fall through.*/
+          }
+          case OC_DCT_RUN_CAT2B:{
+            dct_tokens0[ti0]=OC_DCT_RUN_CAT2B;
+            extra_bits0[ti0]=(ogg_uint16_t)(eb1+1);
+            ti0++;
+            /*Don't write the AC coefficient back out.*/
+          }continue;
+        }
+        /*We can't merge tokens, write a short zero run and keep going.*/
+        dct_tokens0[ti0]=OC_DCT_SHORT_ZRL_TOKEN;
+        extra_bits0[ti0]=0;
         ti0++;
       }
-      else{
-        /*Zero DC value; that means the entry in stack 1 might need to be coded
-           from stack 0.
-          This requires a stack 1 fixup.*/
-        if(neobs1){
-          /*We're in the middle of an active EOB run in stack 1.
-            Move it to stack 0.*/
-          if(++eob_run0>=4095){
-            token=oc_make_eob_token_full(eob_run0,&eb);
-            dct_tokens0[ti0]=(unsigned char)token;
-            extra_bits0[ti0]=(ogg_uint16_t)eb;
-            ti0++;
-            eob_run0=0;
-          }
-          eob_run1--;
-        }
-        else{
-          /*No active EOB run in stack 1, so we can't extend one in stack 0.
-            Flush it if we've got it.*/
-          if(eob_run0>0){
-            token=oc_make_eob_token_full(eob_run0,&eb);
-            dct_tokens0[ti0]=(unsigned char)token;
-            extra_bits0[ti0]=(ogg_uint16_t)eb;
-            ti0++;
-            eob_run0=0;
-          }
-          /*Stack 1 token is one of: a pure zero run token, a single
-             coefficient token, or a zero run/coefficient combo token.
-            A zero run token is expanded and moved to token stack 0, and the
-             stack 1 entry dropped.
-            A single coefficient value may be transformed into combo token that
-             is moved to stack 0, or if it cannot be combined, it is left alone
-             and a single length-1 zero run is emitted in stack 0.
-            A combo token is extended and moved to stack 0.
-            During AC coding, we restrict the run lengths on combo tokens for
-             stack 1 to guarantee we can extend them.*/
-          switch(token1){
-            case OC_DCT_SHORT_ZRL_TOKEN:{
-              if(eb1<7){
-                dct_tokens0[ti0]=OC_DCT_SHORT_ZRL_TOKEN;
-                extra_bits0[ti0]=(ogg_uint16_t)(eb1+1);
-                ti0++;
-                /*Don't write the AC coefficient back out.*/
-                continue;
-              }
-              /*Fall through.*/
-            }
-            case OC_DCT_ZRL_TOKEN:{
-              dct_tokens0[ti0]=OC_DCT_ZRL_TOKEN;
-              extra_bits0[ti0]=(ogg_uint16_t)(eb1+1);
-              ti0++;
-              /*Don't write the AC coefficient back out.*/
-            }continue;
-            case OC_ONE_TOKEN:
-            case OC_MINUS_ONE_TOKEN:{
-              dct_tokens0[ti0]=OC_DCT_RUN_CAT1A;
-              extra_bits0[ti0]=(ogg_uint16_t)(token1-OC_ONE_TOKEN);
-              ti0++;
-              /*Don't write the AC coefficient back out.*/
-            }continue;
-            case OC_TWO_TOKEN:
-            case OC_MINUS_TWO_TOKEN:{
-              dct_tokens0[ti0]=OC_DCT_RUN_CAT2A;
-              extra_bits0[ti0]=(ogg_uint16_t)(token1-OC_TWO_TOKEN<<1);
-              ti0++;
-              /*Don't write the AC coefficient back out.*/
-            }continue;
-            case OC_DCT_VAL_CAT2:{
-              dct_tokens0[ti0]=OC_DCT_RUN_CAT2A;
-              extra_bits0[ti0]=(ogg_uint16_t)((eb1<<1)+1);
-              ti0++;
-              /*Don't write the AC coefficient back out.*/
-            }continue;
-            case OC_DCT_RUN_CAT1A:
-            case OC_DCT_RUN_CAT1A+1:
-            case OC_DCT_RUN_CAT1A+2:
-            case OC_DCT_RUN_CAT1A+3:{
-              dct_tokens0[ti0]=(unsigned char)(token1+1);
-              extra_bits0[ti0]=(ogg_uint16_t)eb1;
-              ti0++;
-              /*Don't write the AC coefficient back out.*/
-            }continue;
-            case OC_DCT_RUN_CAT1A+4:{
-              dct_tokens0[ti0]=OC_DCT_RUN_CAT1B;
-              extra_bits0[ti0]=(ogg_uint16_t)(eb1<<2);
-              ti0++;
-              /*Don't write the AC coefficient back out.*/
-            }continue;
-            case OC_DCT_RUN_CAT1B:{
-              if((eb1&3)<3){
-                dct_tokens0[ti0]=OC_DCT_RUN_CAT1B;
-                extra_bits0[ti0]=(ogg_uint16_t)(eb1+1);
-                ti0++;
-                /*Don't write the AC coefficient back out.*/
-                continue;
-              }
-              eb1=((eb1&4)<<1)-1;
-              /*Fall through.*/
-            }
-            case OC_DCT_RUN_CAT1C:{
-              dct_tokens0[ti0]=OC_DCT_RUN_CAT1C;
-              extra_bits0[ti0]=(ogg_uint16_t)(eb1+1);
-              ti0++;
-              /*Don't write the AC coefficient back out.*/
-            }continue;
-            case OC_DCT_RUN_CAT2A:{
-              eb1=(eb1<<1)-1;
-              /*Fall through.*/
-            }
-            case OC_DCT_RUN_CAT2B:{
-              dct_tokens0[ti0]=OC_DCT_RUN_CAT2B;
-              extra_bits0[ti0]=(ogg_uint16_t)(eb1+1);
-              ti0++;
-              /*Don't write the AC coefficient back out.*/
-            }continue;
-          }
-          /*We can't merge tokens, write a short zero run and keep going.*/
-          dct_tokens0[ti0]=OC_DCT_SHORT_ZRL_TOKEN;
-          extra_bits0[ti0]=0;
-          ti0++;
-        }
-      }
-      if(!neobs1){
-        /*Flush any (inactive) EOB run.*/
-        if(eob_run1>0){
-          token=oc_make_eob_token_full(eob_run1,&eb);
-          dct_tokens1[ti1w]=(unsigned char)token;
-          extra_bits1[ti1w]=(ogg_uint16_t)eb;
-          ti1w++;
-          eob_run1=0;
-        }
-        /*There's no active EOB run, so log the current token.*/
-        dct_tokens1[ti1w]=(unsigned char)token1;
-        extra_bits1[ti1w]=(ogg_uint16_t)eb1;
+    }
+    if(!neobs1){
+      /*Flush any (inactive) EOB run.*/
+      if(eob_run1>0){
+        token=oc_make_eob_token_full(eob_run1,&eb);
+        dct_tokens1[ti1w]=(unsigned char)token;
+        extra_bits1[ti1w]=(ogg_uint16_t)eb;
         ti1w++;
+        eob_run1=0;
       }
-      else{
-        /*Otherwise consume one EOB from the current run.*/
-        neobs1--;
-        /*If we have more than 4095 EOBs outstanding in stack1, flush the run.*/
-        if(eob_run1-neobs1>=4095){
-          token=oc_make_eob_token_full(4095,&eb);
-          dct_tokens1[ti1w]=(unsigned char)token;
-          extra_bits1[ti1w]=(ogg_uint16_t)eb;
-          ti1w++;
-          eob_run1-=4095;
-        }
-      }
-    }
-    /*Flush the trailing EOB runs.*/
-    if(eob_run0>0){
-      token=oc_make_eob_token_full(eob_run0,&eb);
-      dct_tokens0[ti0]=(unsigned char)token;
-      extra_bits0[ti0]=(ogg_uint16_t)eb;
-      ti0++;
-    }
-    if(eob_run1>0){
-      token=oc_make_eob_token_full(eob_run1,&eb);
-      dct_tokens1[ti1w]=(unsigned char)token;
-      extra_bits1[ti1w]=(ogg_uint16_t)eb;
+      /*There's no active EOB run, so log the current token.*/
+      dct_tokens1[ti1w]=(unsigned char)token1;
+      extra_bits1[ti1w]=(ogg_uint16_t)eb1;
       ti1w++;
     }
-    _enc->ndct_tokens[pli][0]=ti0;
-    _enc->ndct_tokens[pli][1]=ti1w;
+    else{
+      /*Otherwise consume one EOB from the current run.*/
+      neobs1--;
+      /*If we have more than 4095 EOBs outstanding in stack1, flush the run.*/
+      if(eob_run1-neobs1>=4095){
+        token=oc_make_eob_token_full(4095,&eb);
+        dct_tokens1[ti1w]=(unsigned char)token;
+        extra_bits1[ti1w]=(ogg_uint16_t)eb;
+        ti1w++;
+        eob_run1-=4095;
+      }
+    }
   }
+  /*Save the current state.*/
+  _enc->ndct_tokens[_pli][0]=ti0;
+  _enc->ndct_tokens[_pli][1]=ti1w;
+  _enc->eob_run[_pli][0]=eob_run0;
+  _enc->eob_run[_pli][1]=eob_run1;
 }
 
 /*DC prediction, post-facto DC tokenization (has to be completed after DC
@@ -660,16 +663,12 @@ static void oc_enc_tokenize_dc(oc_enc_ctx *_enc){
 void oc_enc_tokenize_finish(oc_enc_ctx *_enc){
   int pli;
   int zzi;
-  /*Emit final EOB runs for the AC coefficients.
-    This must be done before we tokenize the DC coefficients, so we can
-     properly track the 1st AC coefficient to the end of the list.*/
-  for(pli=0;pli<3;pli++)for(zzi=1;zzi<64;zzi++){
+  /*Emit final EOB runs.*/
+  for(pli=0;pli<3;pli++)for(zzi=0;zzi<64;zzi++){
     int eob_run;
     eob_run=_enc->eob_run[pli][zzi];
     if(eob_run>0)oc_enc_eob_log(_enc,pli,zzi,eob_run);
   }
-  /*Fill in the DC token list and fix-up the 1st AC coefficient.*/
-  oc_enc_tokenize_dc(_enc);
   /*Merge the final EOB run of one token list with the start of the next, if
      possible.*/
   for(zzi=0;zzi<64;zzi++)for(pli=0;pli<3;pli++){
@@ -681,6 +680,8 @@ void oc_enc_tokenize_finish(oc_enc_ctx *_enc){
     int       new_eb;
     int       zzj;
     int       plj;
+    /*ti is always initialized before use; if your compiler thinks otherwise,
+       it is dumb.*/
     ptrdiff_t ti;
     int       run_count;
     /*Make sure this coefficient has tokens at all.*/
@@ -704,7 +705,6 @@ void oc_enc_tokenize_finish(oc_enc_ctx *_enc){
     /*Ensure its last token was an EOB run.*/
     if(old_tok1>=OC_NDCT_EOB_TOKEN_MAX)continue;
     /*Pull off the associated extra bits, if any, and decode the runs.*/
-    /*ti is always initialized; if your compiler thinks otherwise, it is dumb.*/
     old_eb1=_enc->extra_bits[plj][zzj][ti];
     old_eb2=_enc->extra_bits[pli][zzi][0];
     run_count=oc_decode_eob_token(old_tok1,old_eb1)

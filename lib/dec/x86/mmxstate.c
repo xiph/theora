@@ -97,7 +97,6 @@ void oc_state_frag_copy_list_mmx(const oc_theora_state *_state,
 void oc_state_loop_filter_frag_rows_mmx(const oc_theora_state *_state,
  int _bv[256],int _refi,int _pli,int _fragy0,int _fragy_end){
   unsigned char OC_ALIGN8  ll[8];
-  const th_img_plane      *iplane;
   const oc_fragment_plane *fplane;
   const oc_fragment       *frags;
   const ptrdiff_t         *frag_buf_offs;
@@ -109,22 +108,21 @@ void oc_state_loop_filter_frag_rows_mmx(const oc_theora_state *_state,
   int                      ystride;
   int                      nhfrags;
   memset(ll,_state->loop_filter_limits[_state->qis[0]],sizeof(ll));
-  iplane=_state->ref_frame_bufs[_refi]+_pli;
   fplane=_state->fplanes+_pli;
   nhfrags=fplane->nhfrags;
+  fragi_top=fplane->froffset;
+  fragi_bot=fragi_top+fplane->nfrags;
+  fragi0=fragi_top+_fragy0*(ptrdiff_t)nhfrags;
+  fragi0_end=fragi0+(_fragy_end-_fragy0)*(ptrdiff_t)nhfrags;
+  ystride=_state->ref_ystride[_pli];
+  frags=_state->frags;
+  frag_buf_offs=_state->frag_buf_offs;
+  ref_frame_data=_state->ref_frame_data[_refi];
   /*The following loops are constructed somewhat non-intuitively on purpose.
     The main idea is: if a block boundary has at least one coded fragment on
      it, the filter is applied to it.
     However, the order that the filters are applied in matters, and VP3 chose
      the somewhat strange ordering used below.*/
-  fragi_top=fplane->froffset;
-  fragi_bot=fragi_top+fplane->nfrags;
-  fragi0=fragi_top+_fragy0*(ptrdiff_t)nhfrags;
-  fragi0_end=fragi0+(_fragy_end-_fragy0)*(ptrdiff_t)nhfrags;
-  ystride=iplane->stride;
-  frags=_state->frags;
-  frag_buf_offs=_state->frag_buf_offs;
-  ref_frame_data=_state->ref_frame_data[_refi];
   while(fragi0<fragi0_end){
     ptrdiff_t fragi;
     ptrdiff_t fragi_end;

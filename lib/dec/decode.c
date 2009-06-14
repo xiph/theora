@@ -1308,7 +1308,7 @@ typedef struct{
   const ptrdiff_t    *uncoded_fragis[3];
   ptrdiff_t           ncoded_fragis[3];
   ptrdiff_t           nuncoded_fragis[3];
-  const ogg_uint16_t *qtables[3][3][2];
+  const ogg_uint16_t *dequant[3][3][2];
   int                 fragy0[3];
   int                 fragy_end[3];
   int                 pred_last[3][3];
@@ -1355,7 +1355,7 @@ static void oc_dec_pipeline_init(oc_dec_ctx *_dec,
   for(pli=0;pli<3;pli++){
     for(qii=0;qii<_dec->state.nqis;qii++){
       for(qti=0;qti<2;qti++){
-        _pipe->qtables[pli][qii][qti]=
+        _pipe->dequant[pli][qii][qti]=
          _dec->state.dequant_tables[_dec->state.qis[qii]][pli][qti];
       }
     }
@@ -1445,7 +1445,7 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
   ti=_pipe->ti[_pli];
   ebi=_pipe->ebi[_pli];
   eob_runs=_pipe->eob_runs[_pli];
-  for(qti=0;qti<2;qti++)dc_quant[qti]=_pipe->qtables[_pli][0][qti][0];
+  for(qti=0;qti<2;qti++)dc_quant[qti]=_pipe->dequant[_pli][0][qti][0];
   for(fragii=0;fragii<ncoded_fragis;fragii++){
     /*This array is made twice as large as necessary so that an invalid zero
        run cannot cause a buffer overflow.*/
@@ -1483,7 +1483,7 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
     /*last_zzi is always initialized.
       If your compiler thinks otherwise, it is dumb.*/
     oc_state_frag_recon(&_dec->state,fragi,_pli,dct_coeffs,last_zzi,zzi,
-     dc_quant[qti],_pipe->qtables[_pli][frags[fragi].qii][qti]);
+     dc_quant[qti],_pipe->dequant[_pli][frags[fragi].qii][qti]);
   }
   _pipe->coded_fragis[_pli]+=ncoded_fragis;
   /*Right now the reconstructed MCU has only the coded blocks in it.*/
@@ -2028,7 +2028,7 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
     oc_ycbcr_buffer_flip(stripe_buf,_dec->pp_frame_buf);
     notstart=0;
     notdone=1;
-    for(stripe_fragy=notstart=0;notdone;stripe_fragy+=pipe.mcu_nvfrags){
+    for(stripe_fragy=0;notdone;stripe_fragy+=pipe.mcu_nvfrags){
       int avail_fragy0;
       int avail_fragy_end;
       avail_fragy0=avail_fragy_end=_dec->state.fplanes[0].nvfrags;

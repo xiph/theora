@@ -1004,11 +1004,6 @@ void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,int *_bv,
   _bv+=127;
   fplane=_state->fplanes+_pli;
   nhfrags=fplane->nhfrags;
-  /*The following loops are constructed somewhat non-intuitively on purpose.
-    The main idea is: if a block boundary has at least one coded fragment on
-     it, the filter is applied to it.
-    However, the order that the filters are applied in matters, and VP3 chose
-     the somewhat strange ordering used below.*/
   fragi_top=fplane->froffset;
   fragi_bot=fragi_top+fplane->nfrags;
   fragi0=fragi_top+_fragy0*(ptrdiff_t)nhfrags;
@@ -1017,6 +1012,11 @@ void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,int *_bv,
   frags=_state->frags;
   frag_buf_offs=_state->frag_buf_offs;
   ref_frame_data=_state->ref_frame_data[_refi];
+  /*The following loops are constructed somewhat non-intuitively on purpose.
+    The main idea is: if a block boundary has at least one coded fragment on
+     it, the filter is applied to it.
+    However, the order that the filters are applied in matters, and VP3 chose
+     the somewhat strange ordering used below.*/
   while(fragi0<fragi0_end){
     ptrdiff_t fragi;
     ptrdiff_t fragi_end;
