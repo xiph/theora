@@ -127,7 +127,7 @@ if build_player_example and not conf.CheckSDL():
   build_player_example=False
 
 if conf.CheckHost_x86_32():
-  env.Append(CPPDEFINES='USE_ASM')
+  env.Append(CPPDEFINES='OC_X86_ASM')
   decoder_sources += """
         dec/x86/mmxidct.c
         dec/x86/mmxfrag.c
@@ -144,7 +144,7 @@ if conf.CheckHost_x86_32():
 	dec/x86/x86state.c
   """
 elif conf.CheckHost_x86_64():
-  env.Append(CPPDEFINES='USE_ASM')
+  env.Append(CPPDEFINES=['OC_X86_ASM', 'OC_X86_64_ASM'])
   decoder_sources += """
         dec/x86/mmxidct.c
         dec/x86/mmxfrag.c
