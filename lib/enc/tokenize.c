@@ -48,42 +48,8 @@ static int oc_decode_eob_token(int _token,int _eb){
   return -oc_dct_token_skip(_token,_eb);
 }
 
-static int oc_make_dct_token(int _zzi,int _zzj,int _val){
-  int zero_run;
-  int token;
-  int val;
-  val=abs(_val);
-  zero_run=_zzj-_zzi;
-  if(zero_run>0){
-    int adj;
-    /*Implement a minor restriction so that we know that extending a combo
-       token from stack 1 will never overflow during DC fix-ups.*/
-    adj=_zzi!=1;
-    if(val<2&&zero_run<17+adj){
-      if(zero_run<6)token=OC_DCT_RUN_CAT1A+zero_run-1;
-      else if(zero_run<10)token=OC_DCT_RUN_CAT1B;
-      else token=OC_DCT_RUN_CAT1C;
-    }
-    else if(val<4&&zero_run<3+adj){
-      if(zero_run<2)token=OC_DCT_RUN_CAT2A;
-      else token=OC_DCT_RUN_CAT2B;
-    }
-    else{
-      if(zero_run<9)token=OC_DCT_SHORT_ZRL_TOKEN;
-      else token=OC_DCT_ZRL_TOKEN;
-    }
-  }
-  else if(val<3)token=OC_ONE_TOKEN+(val-1<<1)+(_val<0);
-  else if(val<7)token=OC_DCT_VAL_CAT2+val-3;
-  else if(val<9)token=OC_DCT_VAL_CAT3;
-  else if(val<13)token=OC_DCT_VAL_CAT4;
-  else if(val<21)token=OC_DCT_VAL_CAT5;
-  else if(val<37)token=OC_DCT_VAL_CAT6;
-  else if(val<69)token=OC_DCT_VAL_CAT7;
-  else token=OC_DCT_VAL_CAT8;
-  return token;
-}
-
+/*TODO: This is now only used during DCT tokenization, and never for runs; it
+   should be simplified.*/
 static int oc_make_dct_token_full(int _zzi,int _zzj,int _val,int *_eb){
   int neg;
   int zero_run;
@@ -219,81 +185,6 @@ static void oc_enc_eob_log(oc_enc_ctx *_enc,
   oc_enc_token_log(_enc,_pli,_zzi,token,eb);
 }
 
-static int oc_enc_tokenize_dctval(oc_enc_ctx *_enc,int _pli,
- int _zzi,int _zzj,int _val){
-  int eob_run;
-  int token;
-  int eb;
-  /*Emit pending EOB run if any.*/
-  eob_run=_enc->eob_run[_pli][_zzi];
-  if(eob_run>0){
-    oc_enc_eob_log(_enc,_pli,_zzi,eob_run);
-    _enc->eob_run[_pli][_zzi]=0;
-  }
-  token=oc_make_dct_token_full(_zzi,_zzj,_val,&eb);
-  oc_enc_token_log(_enc,_pli,_zzi,token,eb);
-  /*Return 0 if we didn't tokenize the value, just the zero run preceding it.*/
-  return _val==0||token!=OC_DCT_SHORT_ZRL_TOKEN&&token!=OC_DCT_ZRL_TOKEN;
-}
-
-static void oc_enc_tokenize_eobrun(oc_enc_ctx *_enc,int _pli,int _zzi){
-  int eob_run;
-  eob_run=_enc->eob_run[_pli][_zzi];
-  eob_run++;
-  if(eob_run>=4095){
-    oc_enc_eob_log(_enc,_pli,_zzi,eob_run);
-    eob_run=0;
-  }
-  _enc->eob_run[_pli][_zzi]=eob_run;
-}
-
-/*The opportunity cost of a DCT coefficient is the cost to flush any pending
-   EOB run plus the cost of the coefficient itself.
-  This encourages us to keep long EOB runs going in the higher/chroma
-   coefficients.
-  Technically this cost should be weighted by the probability that we expect a
-   future fragment to continue it, but that's qi- and zzi-dependent.
-  Note: Assumes AC coefficients only (_zzi>0).*/
-static int oc_enc_tokenize_dctval_bits(oc_enc_ctx *_enc,int _pli,
- int _zzi,int _zzj,int _val){
-  int huffi;
-  int eob_run;
-  int token;
-  int bits;
-  huffi=_enc->huff_idxs[_enc->state.frame_type][1][_pli+1>>1];
-  /*If there was an EOB run pending, count the cost of flushing it.*/
-  eob_run=_enc->eob_run[_pli][_zzi];
-  if(eob_run)bits=oc_token_bits(_enc,huffi,_zzi,oc_make_eob_token(eob_run));
-  else bits=0;
-  /*Count the cost of the token.*/
-  token=oc_make_dct_token(_zzi,_zzj,_val);
-  bits+=oc_token_bits(_enc,huffi,_zzi,token);
-  /*If token was a pure zero run, we've not yet coded the value.*/
-  if(token==OC_DCT_SHORT_ZRL_TOKEN||token==OC_DCT_ZRL_TOKEN){
-    eob_run=_enc->eob_run[_pli][_zzj];
-    if(eob_run)bits+=oc_token_bits(_enc,huffi,_zzj,oc_make_eob_token(eob_run));
-    bits+=oc_token_bits(_enc,huffi,_zzj,oc_make_dct_token(_zzj,_zzj,_val));
-  }
-  return bits;
-}
-
-/*The opportunity cost of an in-progress EOB run of size N+1 is the cost of
-   flushing a run of size N+1 minus the cost of flushing a run of size N.
-  Note: Assumes AC coefficients only (_zzi>0).*/
-static int oc_enc_tokenize_eobrun_bits(oc_enc_ctx *_enc,int _pli,int _zzi){
-  int eob_run;
-  int huffi;
-  eob_run=_enc->eob_run[_pli][_zzi];
-  huffi=_enc->huff_idxs[_enc->state.frame_type][1][_pli+1>>1];
-  if(eob_run>0){
-    /*Note: We must be able to add another block to this run, or we would have
-       flushed it already.*/
-    return oc_token_bits(_enc,huffi,_zzi,oc_make_eob_token(eob_run+1))
-     -oc_token_bits(_enc,huffi,_zzi,oc_make_eob_token(eob_run));
-  }
-  else return oc_token_bits(_enc,huffi,_zzi,OC_DCT_EOB1_TOKEN);
-}
-
 
 void oc_enc_tokenize_start(oc_enc_ctx *_enc){
   memset(_enc->ndct_tokens,0,sizeof(_enc->ndct_tokens));
@@ -302,97 +193,1033 @@ void oc_enc_tokenize_start(oc_enc_ctx *_enc){
   memset(_enc->dc_pred_last,0,sizeof(_enc->dc_pred_last));
 }
 
-/*No final DC to encode yet (DC prediction hasn't been done), so simply assume
-   there will be a nonzero DC value and code.
-  That's not a true assumption but it can be fixed-up as DC is being tokenized
-   later.*/
-int oc_enc_tokenize_ac(oc_enc_ctx *_enc,ptrdiff_t _fragi,ogg_int16_t *_qdct,
- const ogg_uint16_t *_dequant,const ogg_int16_t *_dct,int _pli,
- oc_token_checkpoint **_stack,int _acmin){
+typedef struct oc_quant_token oc_quant_token;
+
+/*A single node in the Viterbi trellis.
+  We maintain up to 2 of these per coefficient:
+    - A token to code if the value is zero (EOB, zero run, or combo token).
+    - A token to code if the value is not zero (DCT value token).*/
+struct oc_quant_token{
+  unsigned char next;
+  signed char   token;
+  ogg_int16_t   eb;
+  ogg_uint32_t  cost;
+  int           bits;
+  int           qc;
+};
+
+int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
+ ogg_int16_t *_qdct,const ogg_uint16_t *_dequant,const ogg_int16_t *_dct,
+ int _zzi,oc_token_checkpoint **_stack,int _acmin){
   oc_token_checkpoint *stack;
+  ogg_int64_t          zflags;
+  ogg_int64_t          nzflags;
+  ogg_int64_t          best_flags;
+  ogg_uint32_t         d2_accum[64];
+  oc_quant_token       tokens[64][2];
+  ogg_uint16_t        *eob_run;
+  ogg_uint32_t         cost;
+  int                  bits;
+  int                  eob;
+  int                  token;
+  int                  eb;
+  int                  next;
+  int                  huffi;
   int                  zzi;
+  int                  ti;
   int                  zzj;
-  int                  total_bits;
-  int                  lambda;
-  stack=*_stack;
-  lambda=_enc->lambda;
-  total_bits=0;
-  /*Skip DC for now.*/
-  zzi=1;
-  for(zzj=zzi;!_qdct[zzj]&&++zzj<64;);
-  while(zzj<64){
-    int v;
-    int d;
-    int mask;
-    int best_bits;
-    int best_d;
-    int zzk;
-    int k;
-    v=_dct[OC_FZIG_ZAG[zzj]];
-    d=_qdct[zzj];
-    for(zzk=zzj+1;zzk<64&&!_qdct[zzk];zzk++);
-    /*Only apply R-D optimizaton if we're past the minimum allowed.*/
-    if(zzj>=_acmin){
-      int best_cost;
-      int bits2;
-      if(zzk>=64){
-        best_bits=oc_enc_tokenize_eobrun_bits(_enc,_pli,zzi);
-        if(zzj+1<64)bits2=oc_enc_tokenize_eobrun_bits(_enc,_pli,zzj+1);
-        else bits2=0;
+  int                  qc;
+  huffi=_enc->huff_idxs[_enc->state.frame_type][1][_pli+1>>1];
+  eob_run=_enc->eob_run[_pli];
+  memset(tokens[0],0,sizeof(tokens[0]));
+  best_flags=nzflags=0;
+  zflags=1;
+  d2_accum[0]=0;
+  zzj=64;
+  for(zzi=OC_MINI(_zzi,63);zzi>0;zzi--){
+    ogg_int32_t  lambda;
+    ogg_uint32_t best_cost;
+    int          best_bits;
+    int          best_next;
+    int          best_token;
+    int          best_eb;
+    int          best_qc;
+    int          flush_bits;
+    ogg_uint32_t d2;
+    int          dq;
+    int          e;
+    int          c;
+    int          s;
+    int          tj;
+    lambda=_enc->lambda;
+    qc=_qdct[zzi];
+    s=-(qc<0);
+    qc=qc+s^s;
+    c=_dct[OC_FZIG_ZAG[zzi]];
+    if(qc<=1){
+      ogg_uint32_t sum_d2;
+      int          nzeros;
+      int          dc_reserve;
+      /*The hard case: try a zero run.*/
+      if(!qc){
+        /*Skip runs that are already quantized to zeros.
+          If we considered each zero coefficient in turn, we might
+           theoretically find a better way to partition long zero runs (e.g.,
+           a run of > 17 zeros followed by a 1 might be better coded as a short
+           zero run followed by a combo token, rather than the longer zero
+           token followed by a 1 value token), but zeros are so common that
+           this becomes very computationally expensive (quadratic instead of
+           linear in the number of coefficients), for a marginal gain.*/
+        while(zzi>1&&!_qdct[zzi-1])zzi--;
+        /*The distortion of coefficients originally quantized to zero is
+           treated as zero (since we'll never quantize them to anything else).*/
+        d2=0;
       }
       else{
-        best_bits=oc_enc_tokenize_dctval_bits(_enc,_pli,zzi,zzk,_qdct[zzk]);
-        bits2=oc_enc_tokenize_dctval_bits(_enc,_pli,zzj+1,zzk,_qdct[zzk]);
+        c=c+s^s;
+        d2=c*(ogg_int32_t)c;
       }
-      best_cost=v*v+best_bits*lambda;
-      best_d=0;
-      mask=OC_SIGNMASK(d);
-      for(k=abs(d);k>0;k--){
-        int dk;
-        int dd;
-        int bits;
-        int cost;
-        dk=k+mask^mask;
-        dd=dk*_dequant[zzj]-v;
-        bits=oc_enc_tokenize_dctval_bits(_enc,_pli,zzi,zzj,dk);
-        cost=dd*dd+(bits+bits2)*lambda;
-        if(cost<=best_cost){
-          best_cost=cost;
-          best_bits=bits;
-          best_d=dk;
+      eob=eob_run[zzi];
+      nzeros=zzj-zzi;
+      zzj&=63;
+      sum_d2=d2+d2_accum[zzj];
+      d2_accum[zzi]=sum_d2;
+      flush_bits=eob>0?oc_token_bits(_enc,huffi,zzi,oc_make_eob_token(eob)):0;
+      /*We reserve 1 spot for combo run tokens that start in the 1st AC stack
+         to ensure they can be extended to include the DC coefficient if
+         necessary; this greatly simplifies stack-rewriting later on.*/
+      dc_reserve=zzi+62>>6;
+      best_cost=0xFFFFFFFF;
+      for(;;){
+        if(nzflags>>zzj&1){
+          int cat;
+          int val;
+          int val_s;
+          int zzk;
+          int tk;
+          next=tokens[zzj][1].next;
+          tk=next&1;
+          zzk=next>>1;
+          /*Try a pure zero run to this point.*/
+          cat=nzeros+55>>6;
+          token=OC_DCT_SHORT_ZRL_TOKEN+cat;
+          bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+          d2=sum_d2-d2_accum[zzj];
+          cost=d2+lambda*bits+tokens[zzj][1].cost;
+          if(cost<best_cost){
+            best_next=(zzj<<1)+1;
+            best_token=token;
+            best_eb=nzeros-1;
+            best_cost=cost;
+            best_bits=bits+tokens[zzj][1].bits;
+            best_qc=0;
+          }
+          if(nzeros<16+dc_reserve){
+            val=_qdct[zzj];
+            val_s=-(val<0);
+            val=val+val_s^val_s;
+            if(nzeros<2+dc_reserve&&2<=val&&val<=4){
+              /*Try a +/- 2/3 combo token.*/
+              cat=nzeros>>1;
+              token=OC_DCT_RUN_CAT2A+cat;
+              bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+              val=2+((val+val_s^val_s)>2);
+              e=(_dct[OC_FZIG_ZAG[zzj]]+val_s^val_s)-_dequant[zzj]*val;
+              d2=e*(ogg_int32_t)e+sum_d2-d2_accum[zzj];
+              cost=d2+lambda*bits+tokens[zzk][tk].cost;
+              if(cost<=best_cost){
+                best_cost=cost;
+                best_bits=bits+tokens[zzk][tk].bits;
+                best_next=next;
+                best_token=token;
+                best_eb=(-val_s<<1+cat)+(val-2<<cat)+(nzeros-1>>1);
+                best_qc=val+val_s^val_s;
+              }
+            }
+            if(val<=2){
+              /*Try a +/- 1 combo token.*/
+              if(nzeros<6){
+                token=OC_DCT_RUN_CAT1A+nzeros-1;
+                eb=-val_s;
+              }
+              else{
+                cat=nzeros+54>>6;
+                token=OC_DCT_RUN_CAT1B+cat;
+                eb=(-val_s<<cat+2)+nzeros-6-(cat<<2);
+              }
+              e=(_dct[OC_FZIG_ZAG[zzj]]+val_s^val_s)-_dequant[zzj];
+              d2=e*(ogg_int32_t)e+sum_d2-d2_accum[zzj];
+              bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+              cost=d2+lambda*bits+tokens[zzk][tk].cost;
+              if(cost<=best_cost){
+                best_next=next;
+                best_token=token;
+                best_eb=eb;
+                best_cost=cost;
+                best_bits=bits+tokens[zzk][tk].bits;
+                best_qc=1+val_s^val_s;
+              }
+            }
+          }
+          /*zzj can't be coded as a zero, so stop trying to extend the run.*/
+          if(!(zflags>>zzj&1))break;
         }
+        /*We could try to consider _all_ potentially non-zero coefficients, but
+           if we already found a bunch of them not worth coding, it's fairly
+           unlikely they would now be worth coding from this position; skipping
+           them saves a lot of work.*/
+        zzj=(tokens[zzj][0].next>>1)-(tokens[zzj][0].qc!=0)&63;
+        if(zzj==0){
+          /*We made it all the way to the end of the block; try an EOB token.*/
+          if(eob<4095){
+            bits=oc_token_bits(_enc,huffi,zzi,oc_make_eob_token(eob+1))
+             -flush_bits;
+          }
+          else bits=oc_token_bits(_enc,huffi,zzi,OC_DCT_EOB1_TOKEN);
+          cost=sum_d2+bits*lambda;
+          /*If the best route so far is still a pure zero run to the end of the
+             block, force coding it as an EOB.
+            Even if it's not optimal for this block, it has a good chance of
+             getting combined with an EOB token from subsequent blocks, saving
+             bits overall.*/
+          if(cost<=best_cost||best_token<=OC_DCT_ZRL_TOKEN&&zzi+best_eb==63){
+            best_next=0;
+            /*This token is just a marker; in reality we may not emit any
+               tokens, but update eob_run[] instead.*/
+            best_token=OC_DCT_EOB1_TOKEN;
+            best_eb=0;
+            best_cost=cost;
+            best_bits=bits;
+            best_qc=0;
+          }
+          break;
+        }
+        nzeros=zzj-zzi;
       }
-      _qdct[zzj]=best_d;
-      if(best_d==0){
-        zzj=zzk;
-        continue;
+      tokens[zzi][0].next=(unsigned char)best_next;
+      tokens[zzi][0].token=(signed char)best_token;
+      tokens[zzi][0].eb=(ogg_int16_t)best_eb;
+      tokens[zzi][0].cost=best_cost;
+      tokens[zzi][0].bits=best_bits;
+      tokens[zzi][0].qc=best_qc;
+      zflags|=(ogg_int64_t)1<<zzi;
+      if(qc){
+        dq=_dequant[zzi];
+        if(zzi<_acmin)lambda=0;
+        e=dq-c;
+        d2=e*(ogg_int32_t)e;
+        token=OC_ONE_TOKEN-s;
+        bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+        zzj=zzi+1&63;
+        tj=best_flags>>zzj&1;
+        next=(zzj<<1)+tj;
+        tokens[zzi][1].next=(unsigned char)next;
+        tokens[zzi][1].token=(signed char)token;
+        tokens[zzi][1].eb=0;
+        tokens[zzi][1].cost=d2+lambda*bits+tokens[zzj][tj].cost;
+        tokens[zzi][1].bits=bits+tokens[zzj][tj].bits;
+        tokens[zzi][1].qc=1+s^s;
+        nzflags|=(ogg_int64_t)1<<zzi;
+        best_flags|=
+         (ogg_int64_t)(tokens[zzi][1].cost<tokens[zzi][0].cost)<<zzi;
       }
     }
     else{
-      best_d=d;
-      best_bits=oc_enc_tokenize_dctval_bits(_enc,_pli,zzi,zzj,best_d);
+      eob=eob_run[zzi];
+      if(zzi<_acmin)lambda=0;
+      c=c+s^s;
+      dq=_dequant[zzi];
+      /*No zero run can extend past this point.*/
+      d2_accum[zzi]=0;
+      flush_bits=eob>0?oc_token_bits(_enc,huffi,zzi,oc_make_eob_token(eob)):0;
+      if(qc<=2){
+        e=2*dq-c;
+        d2=e*(ogg_int32_t)e;
+        best_token=OC_TWO_TOKEN-s;
+        best_bits=flush_bits+oc_token_bits(_enc,huffi,zzi,best_token);
+        best_cost=d2+lambda*best_bits;
+        e-=dq;
+        d2=e*(ogg_int32_t)e;
+        token=OC_ONE_TOKEN-s;
+        bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+        cost=d2+lambda*bits;
+        if(cost<=best_cost){
+          best_token=token;
+          best_bits=bits;
+          best_cost=cost;
+          qc--;
+        }
+        best_eb=0;
+      }
+      else if(qc<=3){
+        e=3*dq-c;
+        d2=e*(ogg_int32_t)e;
+        best_token=OC_DCT_VAL_CAT2;
+        best_eb=-s;
+        best_bits=flush_bits+oc_token_bits(_enc,huffi,zzi,best_token);
+        best_cost=d2+lambda*best_bits;
+        e-=dq;
+        d2=e*(ogg_int32_t)e;
+        token=OC_TWO_TOKEN-s;
+        bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+        cost=d2+lambda*bits;
+        if(cost<=best_cost){
+          best_token=token;
+          best_eb=0;
+          best_bits=bits;
+          best_cost=cost;
+          qc--;
+        }
+      }
+      else if(qc<=6){
+        e=qc*dq-c;
+        d2=e*(ogg_int32_t)e;
+        best_token=OC_DCT_VAL_CAT2+qc-3;
+        best_eb=-s;
+        best_bits=flush_bits+oc_token_bits(_enc,huffi,zzi,best_token);
+        best_cost=d2+lambda*best_bits;
+        e-=dq;
+        d2=e*(ogg_int32_t)e;
+        token=best_token-1;
+        bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+        cost=d2+lambda*bits;
+        if(cost<=best_cost){
+          best_token=token;
+          best_bits=bits;
+          best_cost=cost;
+          qc--;
+        }
+      }
+      else if(qc<=8){
+        e=qc*dq-c;
+        d2=e*(ogg_int32_t)e;
+        best_token=OC_DCT_VAL_CAT3;
+        best_eb=(-s<<1)+qc-7;
+        best_bits=flush_bits+oc_token_bits(_enc,huffi,zzi,best_token);
+        best_cost=d2+lambda*best_bits;
+        e=6*dq-c;
+        d2=e*(ogg_int32_t)e;
+        token=OC_DCT_VAL_CAT2+3;
+        bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+        cost=d2+lambda*bits;
+        if(cost<=best_cost){
+          best_token=token;
+          best_eb=-s;
+          best_bits=bits;
+          best_cost=cost;
+          qc=6;
+        }
+      }
+      else if(qc<=12){
+        e=qc*dq-c;
+        d2=e*(ogg_int32_t)e;
+        best_token=OC_DCT_VAL_CAT4;
+        best_eb=(-s<<2)+qc-9;
+        best_bits=flush_bits+oc_token_bits(_enc,huffi,zzi,best_token);
+        best_cost=d2+lambda*best_bits;
+        e=8*dq-c;
+        d2=e*(ogg_int32_t)e;
+        token=best_token-1;
+        bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+        cost=d2+lambda*bits;
+        if(cost<=best_cost){
+          best_token=token;
+          best_eb=(-s<<1)+1;
+          best_bits=bits;
+          best_cost=cost;
+          qc=8;
+        }
+      }
+      else if(qc<=20){
+        e=qc*dq-c;
+        d2=e*(ogg_int32_t)e;
+        best_token=OC_DCT_VAL_CAT5;
+        best_eb=(-s<<3)+qc-13;
+        best_bits=flush_bits+oc_token_bits(_enc,huffi,zzi,best_token);
+        best_cost=d2+lambda*best_bits;
+        e=12*dq-c;
+        d2=e*(ogg_int32_t)e;
+        token=best_token-1;
+        bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+        cost=d2+lambda*bits;
+        if(cost<=best_cost){
+          best_token=token;
+          best_eb=(-s<<2)+3;
+          best_bits=bits;
+          best_cost=cost;
+          qc=12;
+        }
+      }
+      else if(qc<=36){
+        e=qc*dq-c;
+        d2=e*(ogg_int32_t)e;
+        best_token=OC_DCT_VAL_CAT6;
+        best_eb=(-s<<4)+qc-21;
+        best_bits=flush_bits+oc_token_bits(_enc,huffi,zzi,best_token);
+        best_cost=d2+lambda*best_bits;
+        e=20*dq-c;
+        d2=e*(ogg_int32_t)e;
+        token=best_token-1;
+        bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+        cost=d2+lambda*bits;
+        if(cost<=best_cost){
+          best_token=token;
+          best_eb=(-s<<3)+7;
+          best_bits=bits;
+          best_cost=cost;
+          qc=20;
+        }
+      }
+      else if(qc<=68){
+        e=qc*dq-c;
+        d2=e*(ogg_int32_t)e;
+        best_token=OC_DCT_VAL_CAT7;
+        best_eb=(-s<<5)+qc-37;
+        best_bits=flush_bits+oc_token_bits(_enc,huffi,zzi,best_token);
+        best_cost=d2+lambda*best_bits;
+        e=36*dq-c;
+        d2=e*(ogg_int32_t)e;
+        token=best_token-1;
+        bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+        cost=d2+lambda*bits;
+        if(cost<best_cost){
+          best_token=token;
+          best_eb=(-s<<4)+15;
+          best_bits=bits;
+          best_cost=cost;
+          qc=36;
+        }
+      }
+      else{
+        e=qc*dq-c;
+        d2=e*(ogg_int32_t)e;
+        best_token=OC_DCT_VAL_CAT8;
+        best_eb=(-s<<9)+qc-69;
+        best_bits=flush_bits+oc_token_bits(_enc,huffi,zzi,best_token);
+        best_cost=d2+lambda*best_bits;
+        e=68*dq-c;
+        d2=e*(ogg_int32_t)e;
+        token=best_token-1;
+        bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+        cost=d2+lambda*bits;
+        if(cost<best_cost){
+          best_token=token;
+          best_eb=(-s<<5)+31;
+          best_bits=bits;
+          best_cost=cost;
+          qc=68;
+        }
+      }
+      zzj=zzi+1&63;
+      tj=best_flags>>zzj&1;
+      next=(zzj<<1)+tj;
+      tokens[zzi][1].next=(unsigned char)next;
+      tokens[zzi][1].token=(signed char)best_token;
+      tokens[zzi][1].eb=best_eb;
+      tokens[zzi][1].cost=best_cost+tokens[zzj][tj].cost;
+      tokens[zzi][1].bits=best_bits+tokens[zzj][tj].bits;
+      tokens[zzi][1].qc=qc+s^s;
+      nzflags|=(ogg_int64_t)1<<zzi;
+      best_flags|=(ogg_int64_t)1<<zzi;
     }
-    total_bits+=best_bits;
+    zzj=zzi;
+  }
+  /*Emit the tokens from the best path through the trellis.*/
+  stack=*_stack;
+  zzi=1;
+  ti=best_flags>>1&1;
+  bits=tokens[zzi][ti].bits;
+  do{
     oc_enc_tokenlog_checkpoint(_enc,stack++,_pli,zzi);
-    if(!oc_enc_tokenize_dctval(_enc,_pli,zzi,zzj,best_d)){
-      oc_enc_tokenlog_checkpoint(_enc,stack++,_pli,zzj);
-      oc_enc_tokenize_dctval(_enc,_pli,zzj,zzj,best_d);
+    eob=eob_run[zzi];
+    if(tokens[zzi][ti].token<OC_NDCT_EOB_TOKEN_MAX){
+      if(++eob>=4095){
+        token=oc_make_eob_token_full(eob,&eb);
+        oc_enc_token_log(_enc,_pli,zzi,token,eb);
+        eob=0;
+      }
+      eob_run[zzi]=eob;
+      /*We don't include the actual EOB cost for this block in the return value.
+        It will be paid for by the fragment that terminates the EOB run.*/
+      bits-=tokens[zzi][ti].bits;
+      for(;zzi<_zzi;zzi++)_qdct[zzi]=0;
+      break;
     }
-    zzi=zzj+1;
-    zzj=zzk;
+    /*Emit pending EOB run if any.*/
+    if(eob>0){
+      oc_enc_eob_log(_enc,_pli,zzi,eob);
+      eob_run[zzi]=0;
+    }
+    oc_enc_token_log(_enc,_pli,zzi,tokens[zzi][ti].token,tokens[zzi][ti].eb);
+    next=tokens[zzi][ti].next;
+    qc=tokens[zzi][ti].qc;
+    zzj=(next>>1)-1&63;
+    for(;zzi<zzj;zzi++)_qdct[zzi]=0;
+    _qdct[zzj]=qc;
+    zzi=next>>1;
+    ti=next&1;
   }
-  if(zzi<64){
-    /*We don't include the actual EOB cost for this block.
-      It will be paid for by the fragment that terminates the EOB run.
-    total_bits+=oc_enc_tokenize_eobrun_bits(_enc,_pli,zzi);*/
-    oc_enc_tokenlog_checkpoint(_enc,stack++,_pli,zzi);
-    oc_enc_tokenize_eobrun(_enc,_pli,zzi);
-  }
+  while(zzi);
   *_stack=stack;
-  return total_bits;
+  return bits;
 }
 
-void oc_enc_pred_dc_frag_rows(oc_enc_ctx *_enc,int _pli,int _y0,int _yend){
+#if 0
+/*This version of the above finds the globally optimal solution, but is very
+   computationally expensive, since it considers all possible partitions of a
+   zero run (and thus is quadratic in the number of coefficients).*/
+int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
+ ogg_int16_t *_qdct,const ogg_uint16_t *_dequant,const ogg_int16_t *_dct,
+ int _zzi,oc_token_checkpoint **_stack,int _acmin){
+  oc_token_checkpoint *stack;
+  ogg_uint32_t         d2_accum[64];
+  oc_quant_token       tokens[64][4];
+  unsigned char        ntokens[64];
+  unsigned char        best_ti[64];
+  ogg_uint16_t        *eob_run;
+  ogg_int32_t          lambda;
+  ogg_uint32_t         cost;
+  ogg_uint32_t         sum_d2;
+  int                  bits;
+  int                  eob;
+  int                  token;
+  int                  eb;
+  int                  next;
+  int                  huffi;
+  int                  zzi_max;
+  int                  zzi;
+  int                  ti;
+  int                  zzj;
+  int                  qc;
+  lambda=_enc->lambda;
+  huffi=_enc->huff_idxs[_enc->state.frame_type][1][_pli+1>>1];
+  eob_run=_enc->eob_run[_pli];
+  memset(tokens[0],0,sizeof(tokens[0]));
+  ntokens[0]=1;
+  best_ti[0]=0;
+  sum_d2=0;
+  zzi_max=_zzi;
+  for(zzi=OC_MINI(_zzi,63);zzi>0;zzi--){
+    ogg_uint32_t best_cost;
+    int          best_bits;
+    int          best_next;
+    int          best_token;
+    int          best_eb;
+    int          best_qc;
+    int          flush_bits;
+    ogg_uint32_t d2;
+    int          c;
+    int          s;
+    int          tj;
+    eob=eob_run[zzi];
+    /*TODO: Move this into the tokenization state.*/
+    flush_bits=eob>0?oc_token_bits(_enc,huffi,zzi,oc_make_eob_token(eob)):0;
+    qc=_qdct[zzi];
+    c=_dct[OC_FZIG_ZAG[zzi]];
+    s=-(c<0);
+    c=c+s^s;
+    qc=qc+s^s;
+    d2=c*(ogg_int32_t)c;
+    sum_d2+=d2;
+    d2_accum[zzi]=sum_d2;
+    /*The hard case: attempt to code a zero here.*/
+    if(qc<64&&(zzi>=_acmin||qc==0)){
+      int zzk;
+      int tk;
+      /*Our base case is to code an EOB token.*/
+      /*if(zzi_max<_zzi){
+        best_bits=0;
+        best_cost=0x7FFFFFFF;
+      }
+      else*/{
+        eob=eob_run[zzi];
+        if(eob<4095){
+          best_bits=oc_token_bits(_enc,huffi,zzi,oc_make_eob_token(eob+1))
+           -flush_bits;
+        }
+        else best_bits=oc_token_bits(_enc,huffi,zzi,OC_DCT_EOB1_TOKEN);
+        best_cost=sum_d2+best_bits*lambda;
+      }
+      best_next=0;
+      /*This token is just a marker.*/
+      best_token=OC_DCT_EOB1_TOKEN;
+      best_eb=0;
+      best_qc=0;
+      zzj=zzi+1;
+      if(zzj<zzi_max){
+        int zzj_max;
+        /*Try a raw zero run.*/
+        tj=best_ti[zzj];
+        bits=flush_bits+oc_token_bits(_enc,huffi,zzi,OC_DCT_SHORT_ZRL_TOKEN);
+        cost=d2+lambda*bits+tokens[zzj][tj].cost;
+        if(cost<best_cost){
+          best_next=(zzj<<2)+tj;
+          best_token=OC_DCT_SHORT_ZRL_TOKEN;
+          best_eb=0;
+          best_cost=cost;
+          best_bits=bits+tokens[zzj][tj].bits;
+          best_qc=0;
+        }
+        /*Try a +/- 1 combo token.*/
+        if(ntokens[zzj]>1){
+          next=tokens[zzj][1].next;
+          tk=next&3;
+          zzk=next>>2;
+          bits=flush_bits+oc_token_bits(_enc,huffi,zzi,OC_DCT_RUN_CAT1A)
+           -(tokens[zzj][1].bits-tokens[zzk][tk].bits);
+          cost=d2+lambda*bits+tokens[zzj][1].cost;
+          if(cost<best_cost){
+            best_next=next;
+            best_token=OC_DCT_RUN_CAT1A;
+            best_eb=tokens[zzj][1].token-OC_ONE_TOKEN;
+            best_cost=cost;
+            best_bits=bits+tokens[zzj][1].bits;
+            best_qc=tokens[zzj][1].qc;
+          }
+          /*Try a +/- 2/3 combo token.*/
+          if(ntokens[zzj]>2){
+            next=tokens[zzj][2].next;
+            tk=next&3;
+            zzk=next>>2;
+            bits=flush_bits+oc_token_bits(_enc,huffi,zzi,OC_DCT_RUN_CAT2A)
+             -(tokens[zzj][2].bits-tokens[zzk][tk].bits);
+            cost=d2+lambda*bits+tokens[zzj][2].cost;
+            if(cost<best_cost){
+              int cat;
+              best_next=next;
+              best_token=OC_DCT_RUN_CAT2A;
+              cat=tokens[zzj][2].token-OC_TWO_TOKEN;
+              best_eb=(((cat&1)|tokens[zzj][2].eb)<<1)+(cat>>1);
+              best_cost=cost;
+              best_bits=bits+tokens[zzj][2].bits;
+              best_qc=tokens[zzj][2].qc;
+            }
+          }
+        }
+        /*Ensure a +/- 2/3 run can extend to the DC coefficient.*/
+        zzj_max=zzi+3+(zzi+62>>6);
+        for(zzj++;zzj<zzj_max&&zzj<zzi_max;zzj++){
+          d2=d2_accum[zzi]-d2_accum[zzj];
+          /*Try a raw zero run.*/
+          tj=best_ti[zzj];
+          bits=flush_bits+oc_token_bits(_enc,huffi,zzi,OC_DCT_SHORT_ZRL_TOKEN);
+          cost=d2+lambda*bits+tokens[zzj][tj].cost;
+          if(cost<best_cost){
+            best_next=(zzj<<2)+tj;
+            best_token=OC_DCT_SHORT_ZRL_TOKEN;
+            best_eb=zzj-zzi-1;
+            best_cost=cost;
+            best_bits=bits+tokens[zzj][tj].bits;
+            best_qc=0;
+          }
+          /*Try a +/- 1 combo token.*/
+          if(ntokens[zzj]>1){
+            next=tokens[zzj][1].next;
+            tk=next&3;
+            zzk=next>>2;
+            token=OC_DCT_RUN_CAT1A+zzj-zzi-1;
+            bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token)
+             -(tokens[zzj][1].bits-tokens[zzk][tk].bits);
+            cost=d2+lambda*bits+tokens[zzj][1].cost;
+            if(cost<best_cost){
+              best_next=next;
+              best_token=token;
+              best_eb=tokens[zzj][1].token-OC_ONE_TOKEN;
+              best_cost=cost;
+              best_bits=bits+tokens[zzj][1].bits;
+              best_qc=tokens[zzj][1].qc;
+            }
+            /*Try a +/- 2/3 combo token.*/
+            if(ntokens[zzj]>2){
+              next=tokens[zzj][2].next;
+              tk=next&3;
+              zzk=next>>2;
+              bits=flush_bits+oc_token_bits(_enc,huffi,zzi,OC_DCT_RUN_CAT2B)
+               -(tokens[zzj][2].bits-tokens[zzk][tk].bits);
+              cost=d2+lambda*bits+tokens[zzj][2].cost;
+              if(cost<best_cost){
+                int cat;
+                best_next=next;
+                best_token=OC_DCT_RUN_CAT2B;
+                cat=tokens[zzj][2].token-OC_TWO_TOKEN;
+                best_eb=(((cat&1)|tokens[zzj][2].eb)<<2)+(cat&2)+zzj-zzi-2;
+                best_cost=cost;
+                best_bits=bits+tokens[zzj][2].bits;
+                best_qc=tokens[zzj][2].qc;
+              }
+            }
+          }
+        }
+        if(zzj<zzi_max){
+          zzj_max=zzi+6;
+          for(;zzj<zzj_max&&zzj<zzi_max;zzj++){
+            d2=d2_accum[zzi]-d2_accum[zzj];
+            /*Try a raw zero run.*/
+            tj=best_ti[zzj];
+            bits=flush_bits
+             +oc_token_bits(_enc,huffi,zzi,OC_DCT_SHORT_ZRL_TOKEN);
+            cost=d2+lambda*bits+tokens[zzj][tj].cost;
+            if(cost<best_cost){
+              best_next=(zzj<<2)+tj;
+              best_token=OC_DCT_SHORT_ZRL_TOKEN;
+              best_eb=zzj-zzi-1;
+              best_cost=cost;
+              best_bits=bits+tokens[zzj][tj].bits;
+              best_qc=0;
+            }
+            /*Try a +/- 1 combo token.*/
+            if(ntokens[zzj]>1){
+              next=tokens[zzj][1].next;
+              tk=next&3;
+              zzk=next>>2;
+              token=OC_DCT_RUN_CAT1A+zzj-zzi-1;
+              bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token)
+               -(tokens[zzj][1].bits-tokens[zzk][tk].bits);
+              cost=d2+lambda*bits+tokens[zzj][1].cost;
+              if(cost<best_cost){
+                best_next=next;
+                best_token=token;
+                best_eb=tokens[zzj][1].token-OC_ONE_TOKEN;
+                best_cost=cost;
+                best_bits=bits+tokens[zzj][1].bits;
+                best_qc=tokens[zzj][1].qc;
+              }
+            }
+          }
+          if(zzj<zzi_max){
+            zzj_max=zzi+17+(zzi+62>>6);
+            for(;zzj<zzj_max&&zzj<zzi_max;zzj++){
+              int cat;
+              d2=d2_accum[zzi]-d2_accum[zzj];
+              /*Try a raw zero run.*/
+              cat=zzj-zzi>8;
+              tj=best_ti[zzj];
+              /*Don't use a long zero run to another zero coefficient.
+                That's dumb.*/
+              if(!cat||tj>0){
+                token=OC_DCT_SHORT_ZRL_TOKEN+cat;
+                bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+                cost=d2+lambda*bits+tokens[zzj][tj].cost;
+                if(cost<best_cost){
+                  best_next=(zzj<<2)+tj;
+                  best_token=token;
+                  best_eb=zzj-zzi-1;
+                  best_cost=cost;
+                  best_bits=bits+tokens[zzj][tj].bits;
+                  best_qc=0;
+                }
+              }
+              /*Try a +/- 1 combo token.*/
+              if(ntokens[zzj]>1){
+                next=tokens[zzj][1].next;
+                tk=next&3;
+                zzk=next>>2;
+                cat=zzj-zzi>9;
+                token=OC_DCT_RUN_CAT1B+cat;
+                bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token)
+                 -(tokens[zzj][1].bits-tokens[zzk][tk].bits);
+                cost=d2+lambda*bits+tokens[zzj][1].cost;
+                if(cost<best_cost){
+                  best_next=next;
+                  best_token=token;
+                  best_eb=(tokens[zzj][1].token-OC_ONE_TOKEN<<cat+2)
+                   +zzj-zzi-6-(cat<<2);
+                  best_cost=cost;
+                  best_bits=bits+tokens[zzj][1].bits;
+                  best_qc=tokens[zzj][1].qc;
+                }
+              }
+            }
+            if(zzj<zzi_max){
+              for(;zzj<zzi_max;zzj++){
+                /*Try a raw zero run.*/
+                tj=best_ti[zzj];
+                /*But not to another zero coefficient; that's dumb.*/
+                if(tj>0){
+                  d2=d2_accum[zzi]-d2_accum[zzj];
+                  bits=flush_bits
+                   +oc_token_bits(_enc,huffi,zzi,OC_DCT_ZRL_TOKEN);
+                  cost=d2+lambda*bits+tokens[zzj][tj].cost;
+                  if(cost<best_cost){
+                    best_next=(zzj<<2)+tj;
+                    best_token=OC_DCT_ZRL_TOKEN;
+                    best_eb=zzj-zzi-1;
+                    best_cost=cost;
+                    best_bits=bits+tokens[zzj][tj].bits;
+                    best_qc=0;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      tokens[zzi][0].next=(unsigned char)best_next;
+      tokens[zzi][0].token=(signed char)best_token;
+      tokens[zzi][0].eb=(ogg_int16_t)best_eb;
+      tokens[zzi][0].cost=best_cost;
+      tokens[zzi][0].bits=best_bits;
+      tokens[zzi][0].qc=best_qc;
+    }
+    else{
+      tokens[zzi][0].next=0;
+      tokens[zzi][0].token=-1;
+      tokens[zzi][0].eb=-1;
+      tokens[zzi][0].cost=0x7FFFFFFF;
+      tokens[zzi][0].bits=0;
+      tokens[zzi][0].qc=0;
+      /*zzi_max=zzi+1;*/
+    }
+    if(qc>0){
+      int dq;
+      int e;
+      dq=_dequant[zzi];
+      e=dq-c;
+      d2=e*(ogg_int32_t)e;
+      token=OC_ONE_TOKEN-s;
+      bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+      zzj=zzi+1&63;
+      tj=best_ti[zzj];
+      next=(zzj<<2)+tj;
+      tokens[zzi][1].next=(unsigned char)next;
+      tokens[zzi][1].token=(signed char)token;
+      tokens[zzi][1].eb=0;
+      tokens[zzi][1].bits=bits+tokens[zzj][tj].bits;
+      tokens[zzi][1].cost=d2+lambda*bits+tokens[zzj][tj].cost;
+      tokens[zzi][1].qc=1+s^s;
+      if(qc>1){
+        e+=dq;
+        d2=e*(ogg_int32_t)e;
+        best_token=OC_TWO_TOKEN-s;
+        best_eb=0;
+        best_bits=flush_bits+oc_token_bits(_enc,huffi,zzi,best_token);
+        best_cost=d2+lambda*best_bits;
+        best_qc=2+s^s;
+        if(qc>2){
+          e+=dq;
+          d2=e*(ogg_int32_t)e;
+          bits=flush_bits+oc_token_bits(_enc,huffi,zzi,OC_DCT_VAL_CAT2);
+          cost=d2+lambda*bits;
+          if(cost<best_cost){
+            best_token=OC_DCT_VAL_CAT2;
+            best_eb=-s;
+            best_bits=bits;
+            best_cost=cost;
+            best_qc=3+s^s;
+          }
+        }
+        tokens[zzi][2].next=(unsigned char)next;
+        tokens[zzi][2].token=(signed char)best_token;
+        tokens[zzi][2].eb=(ogg_int16_t)best_eb;
+        tokens[zzi][2].bits=best_bits+tokens[zzj][tj].bits;
+        tokens[zzi][2].cost=best_cost+tokens[zzj][tj].cost;
+        tokens[zzi][2].qc=best_qc;
+        best_cost=0xFFFFFFFFU;
+        if(qc>3){
+          if(qc>4){
+            if(qc>5){
+              if(qc>6){
+                if(qc>8){
+                  if(qc>12){
+                    if(qc>20){
+                      if(qc>36){
+                        if(qc>68){
+                          e=qc*dq-c;
+                          d2=e*(ogg_int32_t)e;
+                          best_token=OC_DCT_VAL_CAT8;
+                          best_eb=(-s<<9)+qc-69;
+                          best_bits=flush_bits
+                           +oc_token_bits(_enc,huffi,zzi,OC_DCT_VAL_CAT8);
+                          best_cost=d2+lambda*best_bits;
+                          best_qc=qc+s^s;
+                          qc=68;
+                        }
+                        e=qc*dq-c;
+                        d2=e*(ogg_int32_t)e;
+                        bits=flush_bits
+                         +oc_token_bits(_enc,huffi,zzi,OC_DCT_VAL_CAT7);
+                        cost=d2+lambda*bits;
+                        if(cost<=best_cost){
+                          best_token=OC_DCT_VAL_CAT7;
+                          best_eb=(-s<<5)+qc-37;
+                          best_bits=bits;
+                          best_cost=cost;
+                          best_qc=qc+s^s;
+                        }
+                        qc=36;
+                      }
+                      e=qc*dq-c;
+                      d2=e*(ogg_int32_t)e;
+                      bits=flush_bits
+                       +oc_token_bits(_enc,huffi,zzi,OC_DCT_VAL_CAT6);
+                      cost=d2+lambda*bits;
+                      if(cost<=best_cost){
+                        best_token=OC_DCT_VAL_CAT6;
+                        best_eb=(-s<<4)+qc-21;
+                        best_bits=bits;
+                        best_cost=cost;
+                        best_qc=qc+s^s;
+                      }
+                      qc=20;
+                    }
+                    e=qc*dq-c;
+                    d2=e*(ogg_int32_t)e;
+                    bits=flush_bits
+                     +oc_token_bits(_enc,huffi,zzi,OC_DCT_VAL_CAT5);
+                    cost=d2+lambda*bits;
+                    if(cost<=best_cost){
+                      best_token=OC_DCT_VAL_CAT5;
+                      best_eb=(-s<<3)+qc-13;
+                      best_bits=bits;
+                      best_cost=cost;
+                      best_qc=qc+s^s;
+                    }
+                    qc=12;
+                  }
+                  e=qc*dq-c;
+                  d2=e*(ogg_int32_t)e;
+                  bits=flush_bits
+                   +oc_token_bits(_enc,huffi,zzi,OC_DCT_VAL_CAT4);
+                  cost=d2+lambda*bits;
+                  if(cost<=best_cost){
+                    best_token=OC_DCT_VAL_CAT4;
+                    best_eb=(-s<<2)+qc-9;
+                    best_bits=bits;
+                    best_cost=cost;
+                    best_qc=qc+s^s;
+                  }
+                  qc=8;
+                }
+                e=qc*dq-c;
+                d2=e*(ogg_int32_t)e;
+                bits=flush_bits+oc_token_bits(_enc,huffi,zzi,OC_DCT_VAL_CAT3);
+                cost=d2+lambda*bits;
+                if(cost<=best_cost){
+                  best_token=OC_DCT_VAL_CAT3;
+                  best_eb=(-s<<1)+qc-7;
+                  best_bits=bits;
+                  best_cost=cost;
+                  best_qc=qc+s^s;
+                }
+              }
+              e=6*dq-c;
+              d2=e*(ogg_int32_t)e;
+              bits=flush_bits+oc_token_bits(_enc,huffi,zzi,OC_DCT_VAL_CAT2+3);
+              cost=d2+lambda*bits;
+              if(cost<=best_cost){
+                best_token=OC_DCT_VAL_CAT2+3;
+                best_eb=-s;
+                best_bits=bits;
+                best_cost=cost;
+                best_qc=6+s^s;
+              }
+            }
+            e=5*dq-c;
+            d2=e*(ogg_int32_t)e;
+            bits=flush_bits+oc_token_bits(_enc,huffi,zzi,OC_DCT_VAL_CAT2+2);
+            cost=d2+lambda*bits;
+            if(cost<=best_cost){
+              best_token=OC_DCT_VAL_CAT2+2;
+              best_eb=-s;
+              best_bits=bits;
+              best_cost=cost;
+              best_qc=5+s^s;
+            }
+          }
+          e=4*dq-c;
+          d2=e*(ogg_int32_t)e;
+          bits=flush_bits+oc_token_bits(_enc,huffi,zzi,OC_DCT_VAL_CAT2+1);
+          cost=d2+lambda*bits;
+          if(cost<=best_cost){
+            best_token=OC_DCT_VAL_CAT2+1;
+            best_eb=-s;
+            best_bits=bits;
+            best_cost=cost;
+            best_qc=4+s^s;
+          }
+          tokens[zzi][3].next=(unsigned char)next;
+          tokens[zzi][3].token=(signed char)best_token;
+          tokens[zzi][3].eb=(ogg_int16_t)best_eb;
+          tokens[zzi][3].bits=best_bits+flush_bits+tokens[zzj][tj].bits;
+          tokens[zzi][3].cost=best_cost+tokens[zzj][tj].cost;
+          tokens[zzi][3].qc=best_qc;
+          ntokens[zzi]=4;
+          /*zzi_max=zzi+1;*/
+        }
+        else ntokens[zzi]=3;
+      }
+      else ntokens[zzi]=2;
+    }
+    else ntokens[zzi]=1;
+    tj=ntokens[zzi]-1;
+    for(ti=tj;ti-->0;)if(tokens[zzi][ti].cost<tokens[zzi][tj].cost)tj=ti;
+    best_ti[zzi]=tj;
+  }
+  /*Emit the tokens from the best path through the trellis.*/
+  stack=*_stack;
+  zzi=1;
+  ti=best_ti[1];
+  bits=tokens[zzi][ti].bits;
+ {
+  int real_bits;
+  int real_ssd;
+  real_bits=0;
+  real_ssd=0;
+  do{
+    oc_enc_tokenlog_checkpoint(_enc,stack++,_pli,zzi);
+    eob=eob_run[zzi];
+    if(tokens[zzi][ti].token<OC_NDCT_EOB_TOKEN_MAX){
+      if(++eob>=4095){
+        token=oc_make_eob_token_full(eob,&eb);
+        real_bits+=oc_token_bits(_enc,huffi,zzi,token);
+        oc_enc_token_log(_enc,_pli,zzi,token,eb);
+        eob=0;
+      }
+      else if(eob>1){
+        real_bits-=oc_token_bits(_enc,huffi,zzi,oc_make_eob_token(eob-1));
+      }
+      real_bits+=oc_token_bits(_enc,huffi,zzi,oc_make_eob_token(eob));
+      eob_run[zzi]=eob;
+      /*We don't include the actual EOB cost for this block in the return value.
+        It will be paid for by the fragment that terminates the EOB run.*/
+      bits-=tokens[zzi][ti].bits;
+      for(;zzi<_zzi;zzi++){
+        _qdct[zzi]=0;
+        real_ssd+=_dct[OC_FZIG_ZAG[zzi]]*_dct[OC_FZIG_ZAG[zzi]];
+      }
+      if(_zzi<64)real_ssd+=_dct[OC_FZIG_ZAG[zzi]]*_dct[OC_FZIG_ZAG[zzi]];
+      break;
+    }
+    /*Emit pending EOB run if any.*/
+    if(eob>0){
+      real_bits+=oc_token_bits(_enc,huffi,zzi,oc_make_eob_token(eob));
+      oc_enc_eob_log(_enc,_pli,zzi,eob);
+      eob_run[zzi]=0;
+    }
+    real_bits+=oc_token_bits(_enc,huffi,zzi,tokens[zzi][ti].token);
+    oc_enc_token_log(_enc,_pli,zzi,tokens[zzi][ti].token,tokens[zzi][ti].eb);
+    next=tokens[zzi][ti].next;
+    qc=tokens[zzi][ti].qc;
+    zzj=(next>>2)-1&63;
+    for(;zzi<zzj;zzi++){
+      _qdct[zzi]=0;
+      real_ssd+=_dct[OC_FZIG_ZAG[zzi]]*_dct[OC_FZIG_ZAG[zzi]];
+    }
+    _qdct[zzj]=qc;
+    real_ssd+=(qc*_dequant[zzj]-_dct[OC_FZIG_ZAG[zzi]])*
+     (qc*_dequant[zzj]-_dct[OC_FZIG_ZAG[zzi]]);
+    zzi=next>>2;
+    ti=next&3;
+  }
+  while(zzi);
+  *_stack=stack;
+ }
+  return bits;
+}
+#endif
+
+void oc_enc_pred_dc_frag_rows(oc_enc_ctx *_enc,
+ int _pli,int _fragy0,int _frag_yend){
   const oc_fragment_plane *fplane;
   const oc_fragment       *frags;
   ogg_int16_t             *frag_dc;
@@ -408,8 +1235,8 @@ void oc_enc_pred_dc_frag_rows(oc_enc_ctx *_enc,int _pli,int _y0,int _yend){
   pred_last=_enc->dc_pred_last[_pli];
   nhfrags=fplane->nhfrags;
   nvfrags=fplane->nvfrags;
-  fragi=fplane->froffset+_y0*nhfrags;
-  for(fragy=_y0;fragy<_yend;fragy++){
+  fragi=fplane->froffset+_fragy0*nhfrags;
+  for(fragy=_fragy0;fragy<_frag_yend;fragy++){
     for(fragx=0;fragx<nhfrags;fragx++,fragi++){
       if(frags[fragi].coded){
         frag_dc[fragi]=frags[fragi].dc
@@ -658,8 +1485,7 @@ void oc_enc_tokenize_dc_frag_list(oc_enc_ctx *_enc,int _pli,
   _enc->eob_run[_pli][1]=eob_run1;
 }
 
-/*DC prediction, post-facto DC tokenization (has to be completed after DC
-   predict), AC coefficient fix-ups and EOB run welding.*/
+/*Final EOB run welding.*/
 void oc_enc_tokenize_finish(oc_enc_ctx *_enc){
   int pli;
   int zzi;

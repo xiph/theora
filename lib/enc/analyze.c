@@ -659,7 +659,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
       /*The bias added here rounds ties away from zero, since token
          optimization can only decrease the magnitude of the quantized
          value.*/
-      val+=(d+s)^s;
+      val+=d+s^s;
       /*Note the arithmetic right shift is not guaranteed by ANSI C.
         Hopefully no one still uses ones-complement architectures.*/
       val=((enquant[zzi].m*(ogg_int32_t)val>>16)+val>>enquant[zzi].l)-s;
@@ -670,8 +670,8 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   }
   /*Tokenize.*/
   checkpoint=*_stack;
-  ac_bits=oc_enc_tokenize_ac(_enc,_fragi,data,dequant,buffer,
-   _pli,_stack,mb_mode==OC_MODE_INTRA?3:0);
+  ac_bits=oc_enc_tokenize_ac(_enc,_pli,_fragi,data,dequant,buffer,nonzero+1,
+   _stack,mb_mode==OC_MODE_INTRA?3:0);
   /*Reconstruct.
     TODO: nonzero may need to be adjusted after tokenization.*/
   oc_dequant_idct8x8(&_enc->state,buffer,data,
@@ -680,7 +680,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   else{
     oc_enc_frag_recon_inter(_enc,dst,
      nmv_offs==1?ref+mv_offs[0]:dst,ystride,buffer);
- }
+  }
 #if !defined(OC_COLLECT_METRICS)
   if(frame_type!=OC_INTRA_FRAME)
 #endif
