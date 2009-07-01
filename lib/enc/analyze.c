@@ -1230,13 +1230,16 @@ int oc_enc_analyze(oc_enc_ctx *_enc,int _frame_type,int _recode){
     const oc_fragment_plane *fplane;
     int                      sby_end;
     fplane=_enc->state.fplanes+0;
+    pipe.fragy0[0]=stripe_sby<<2;
     sby_end=fplane->nvsbs;
     notdone=stripe_sby+pipe.mcu_nvsbs<sby_end;
-    if(notdone)sby_end=stripe_sby+pipe.mcu_nvsbs;
+    if(notdone){
+      sby_end=stripe_sby+pipe.mcu_nvsbs;
+      pipe.fragy_end[0]=sby_end<<2;
+    }
+    else pipe.fragy_end[0]=fplane->nvfrags;
     sbi=stripe_sby*fplane->nhsbs;
     sbi_end=sby_end*fplane->nhsbs;
-    pipe.fragy0[0]=stripe_sby<<2;
-    pipe.fragy_end[0]=sby_end<<2;
     for(;sbi<sbi_end;sbi++){
       int quadi;
       /*Mode addressing is through Y plane, always 4 MB per SB.*/
