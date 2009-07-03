@@ -21,28 +21,26 @@
 
 
 void oc_enc_calc_lambda(oc_enc_ctx *_enc,int _frame_type){
-  ogg_int64_t l;
+  ogg_int64_t lq;
   int         qi;
-  qi=_enc->state.qis[0];
   /*For now, lambda is fixed depending on the qi value and frame type:
-      lambda=scale[qti]*(qavg[qti][qi]**1.5),
-     where scale={2.25,1.125}.
-    A more adaptive scheme might perform better, but Theora's behavior does not
-     seem to conform to existing models in the literature.*/
+      lambda=qscale*(qavg[qti][qi]**2),
+     where qscale=0.31.
+    This was derived by exhaustively searching for the optimal quantizer for
+     the AC coefficients in each block from a number of test sequences for a
+     number of fixed lambda values and fitting the peaks of the resulting
+     histograms (on the log(qavg) scale).
+    The same model applies to both inter and intra frames.
+    A more adaptive scheme might perform better.*/
+  qi=_enc->state.qis[0];
   /*If rate control is active, use the lambda for the _target_ quantizer.
     This allows us to scale to rates slightly lower than we'd normally be able
      to reach, and give the rate control a semblance of "fractional qi"
      precision.*/
-  if(_enc->state.info.target_bitrate>0)l=_enc->rc.log_qtarget;
-  else l=_enc->log_qavg[_frame_type][qi];
-  /*Raise to the 1.5 power.*/
-  l+=l>>1;
-  /*Multiply by 1.125.*/
-  l+=0x00570068E7EF5A1ELL;
-  /*And multiply by an extra factor of 2 for INTRA frames.*/
-  if(!_frame_type)l+=OC_Q57(1);
-  /*The upper bound here is 0x48000.*/
-  _enc->lambda=(int)oc_bexp64(l);
+  if(_enc->state.info.target_bitrate>0)lq=_enc->rc.log_qtarget;
+  else lq=_enc->log_qavg[_frame_type][qi];
+  /*The resulting lambda value is less than 0x500000.*/
+  _enc->lambda=(int)oc_bexp64(2*lq-0x3611B1986AB1180LL);
 }
 
 
@@ -61,8 +59,8 @@ void oc_rc_state_init(oc_rc_state *_rc,const oc_enc_ctx *_enc){
   }
   else if(_rc->bits_per_frame<32)_rc->bits_per_frame=32;
   /*The buffer size is set equal to the keyframe interval, clamped to the range
-     [8,256] frames.
-    The 8 frame minimum gives us some chance to distribute bit estimation
+     [12,256] frames.
+    The 12 frame minimum gives us some chance to distribute bit estimation
      errors.
     The 256 frame maximum means we'll require 8-10 seconds of pre-buffering at
      24-30 fps, which is not unreasonable.*/
