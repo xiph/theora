@@ -44,15 +44,18 @@
 /*Some assembly constructs require aligned operands.*/
 # if defined(OC_X86_ASM)
 #  if defined(__GNUC__)
-#   define OC_ALIGN8 __attribute__((aligned(8)))
-#   define OC_ALIGN16 __attribute__((aligned(16)))
+#   define OC_ALIGN8(expr) expr __attribute__((aligned(8)))
+#   define OC_ALIGN16(expr) expr __attribute__((aligned(16)))
+#  elif defined(_MSC_VER)
+#   define OC_ALIGN8(expr) __declspec (align(8)) expr
+#   define OC_ALIGN16(expr) __declspec (align(16)) expr
 #  endif
 # endif
 # if !defined(OC_ALIGN8)
-#  define OC_ALIGN8
+#  define OC_ALIGN8(expr) expr
 # endif
 # if !defined(OC_ALIGN16)
-#  define OC_ALIGN16
+#  define OC_ALIGN16(expr) expr
 # endif
 
 
@@ -376,7 +379,7 @@ struct oc_theora_state{
   /*The dequantization tables, stored in zig-zag order, and indexed by
      qi, pli, qti, and zzi.*/
   ogg_uint16_t       *dequant_tables[64][3][2];
-  oc_quant_table      dequant_table_data[64][3][2]OC_ALIGN16;
+  OC_ALIGN16(oc_quant_table      dequant_table_data[64][3][2]);
   /*Loop filter strength parameters.*/
   unsigned char       loop_filter_limits[64];
 };

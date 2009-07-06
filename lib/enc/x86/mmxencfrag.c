@@ -450,7 +450,7 @@ unsigned oc_enc_frag_sad2_thresh_mmxext(const unsigned char *_src,
 static unsigned oc_int_frag_satd_thresh_mmxext(const unsigned char *_src,
  int _src_ystride,const unsigned char *_ref,int _ref_ystride,
  unsigned _thresh){
-  ogg_int16_t  buf[64]OC_ALIGN8;
+  OC_ALIGN8(ogg_int16_t  buf[64]);
   ogg_int16_t *bufp;
   unsigned     ret;
   unsigned     ret2;
@@ -660,14 +660,14 @@ static void oc_int_frag_copy2_mmxext(unsigned char *_dst,int _dst_ystride,
 unsigned oc_enc_frag_satd2_thresh_mmxext(const unsigned char *_src,
  const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
  unsigned _thresh){
-  unsigned char ref[64]OC_ALIGN8;
+  OC_ALIGN8(unsigned char ref[64]);
   oc_int_frag_copy2_mmxext(ref,8,_ref1,_ref2,_ystride);
   return oc_int_frag_satd_thresh_mmxext(_src,_ystride,ref,8,_thresh);
 }
 
 unsigned oc_enc_frag_intra_satd_mmxext(const unsigned char *_src,
  int _ystride){
-  ogg_int16_t  buf[64]OC_ALIGN8;
+  OC_ALIGN8(ogg_int16_t  buf[64]);
   ogg_int16_t *bufp;
   unsigned     ret;
   unsigned     ret2;

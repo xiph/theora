@@ -684,6 +684,7 @@
 	<References>
 		<ProjectReference
 			ReferencedProjectIdentifier="{653F3841-3F26-49B9-AFCF-091DB4B67031}"
+			RelativePathToProject=".\libtheora\libtheora_static.vcproj"
 		/>
 	</References>
 	<Files>

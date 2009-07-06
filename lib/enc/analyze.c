@@ -515,8 +515,8 @@ struct oc_rd_metric{
 static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
  oc_enc_pipeline_state *_pipe,int _pli,ptrdiff_t _fragi,int _overhead_bits,
  oc_rd_metric *_mo,oc_token_checkpoint **_stack){
-  ogg_int16_t          buffer[64]OC_ALIGN16;
-  ogg_int16_t          data[64]OC_ALIGN16;
+  OC_ALIGN16(ogg_int16_t buffer[64]);
+  OC_ALIGN16(ogg_int16_t data[64]);
   const ogg_uint16_t  *dequant;
   const oc_iquant     *enquant;
   ptrdiff_t            frag_offs;

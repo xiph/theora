@@ -27,7 +27,7 @@
 void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
  int _pli,ogg_int16_t _dct_coeffs[64],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]){
-  ogg_int16_t  OC_ALIGN8  res_buf[64];
+  OC_ALIGN8(ogg_int16_t    res_buf[64]);
   unsigned char          *dst;
   ptrdiff_t               frag_buf_off;
   int                     ystride;
@@ -96,7 +96,7 @@ void oc_state_frag_copy_list_mmx(const oc_theora_state *_state,
   _fragy_end: The Y coordinate of the fragment row to stop filtering at.*/
 void oc_state_loop_filter_frag_rows_mmx(const oc_theora_state *_state,
  int _bv[256],int _refi,int _pli,int _fragy0,int _fragy_end){
-  unsigned char OC_ALIGN8  ll[8];
+  OC_ALIGN8(unsigned char   ll[8]);
   const oc_fragment_plane *fplane;
   const oc_fragment       *frags;
   const ptrdiff_t         *frag_buf_offs;
