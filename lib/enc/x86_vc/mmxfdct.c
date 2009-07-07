@@ -178,12 +178,14 @@ __asm  paddw mm2,mm1 \
 __asm  packssdw mm4,mm5 \
 __asm  movq mm1,[Y+_r5] \
 __asm  paddw mm4,mm2 \
- /*mm2=t6'', mm0=_y[0]=u=r+s>>1*/ \
+ /*mm2=t6'', mm0=_y[0]=u=r+s>>1 \
+   The naive implementation could cause overflow, so we use u=s+(r-s>>1).*/ \
 __asm  mov A,0x7FFF54DC \
-__asm  paddw mm0,mm4 \
+__asm  psubw mm0,mm4 \
 __asm  movq mm2,[Y+_r3] \
-__asm  movd mm7,A \
 __asm  psraw mm0,1 \
+__asm  movd mm7,A \
+__asm  paddw mm0,mm4 \
  /*mm7={54491-0x7FFF,0x7FFF}x2 \
    mm4=_y[4]=v=r-u*/ \
 __asm  psubw mm4,mm0 \

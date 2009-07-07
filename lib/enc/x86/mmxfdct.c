@@ -177,12 +177,14 @@
  "packssdw %%mm5,%%mm4\n\t" \
  "movq "_r5"(%[y]),%%mm1\n\t" \
  "paddw %%mm2,%%mm4\n\t" \
- /*mm2=t6'', mm0=_y[0]=u=r+s>>1*/ \
+ /*mm2=t6'', mm0=_y[0]=u=r+s>>1 \
+   The naive implementation could cause overflow, so we use u=s+(r-s>>1).*/ \
  "mov $0x7FFF54DC,%[a]\n\t" \
- "paddw %%mm4,%%mm0\n\t" \
+ "psubw %%mm4,%%mm0\n\t" \
  "movq "_r3"(%[y]),%%mm2\n\t" \
- "movd %[a],%%mm7\n\t" \
  "psraw $1,%%mm0\n\t" \
+ "movd %[a],%%mm7\n\t" \
+ "paddw %%mm4,%%mm0\n\t" \
  /*mm7={54491-0x7FFF,0x7FFF}x2 \
    mm4=_y[4]=v=r-u*/ \
  "psubw %%mm0,%%mm4\n\t" \
