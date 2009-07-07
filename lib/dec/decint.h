@@ -56,21 +56,22 @@ struct th_dec_ctx{
   oggpack_buffer       opb;
   /*Huffman decode trees.*/
   oc_huff_node        *huff_tables[TH_NHUFFMAN_TABLES];
-  /*The index of one past the last token in each plane for each coefficient.
-    The final entries are the total number of tokens for each coefficient.*/
+  /*The index of the first token in each plane for each coefficient.*/
   ptrdiff_t            ti0[3][64];
-  /*The index of one past the last extra bits entry in each plane for each
-     coefficient.
-    The final entries are the total number of extra bits entries for each
+  /*The index of the first extra bits entry in each plane for each
      coefficient.*/
   ptrdiff_t            ebi0[3][64];
   /*The number of outstanding EOB runs at the start of each coefficient in each
      plane.*/
   ptrdiff_t            eob_runs[3][64];
   /*The DCT token lists.*/
-  unsigned char      **dct_tokens;
+  unsigned char       *dct_tokens;
   /*The extra bits associated with DCT tokens.*/
-  ogg_uint16_t       **extra_bits;
+  ogg_uint16_t        *extra_bits;
+  /*The number of dct tokens unpacked so far.*/
+  int                  dct_tokens_count;
+  /*The number of extra bits entries unpacked so far.*/
+  int                  extra_bits_count;
   /*The out-of-loop post-processing level.*/
   int                  pp_level;
   /*The DC scale used for out-of-loop deblocking.*/

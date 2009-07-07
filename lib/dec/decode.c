@@ -186,10 +186,10 @@ static int oc_dec_init(oc_dec_ctx *_dec,const th_info *_info,
     }
     _dec->pp_sharp_mod[qi]=-(qsum>>11);
   }
-  _dec->dct_tokens=(unsigned char **)oc_calloc_2d(64,
-   _dec->state.nfrags,sizeof(_dec->dct_tokens[0][0]));
-  _dec->extra_bits=(ogg_uint16_t **)oc_calloc_2d(64,
-   _dec->state.nfrags,sizeof(_dec->extra_bits[0][0]));
+  _dec->dct_tokens=(unsigned char *)_ogg_malloc(64*
+   _dec->state.nfrags*sizeof(_dec->dct_tokens[0]));
+  _dec->extra_bits=(ogg_uint16_t *)_ogg_malloc(64*
+   _dec->state.nfrags*sizeof(_dec->extra_bits[0]));
   memcpy(_dec->state.loop_filter_limits,_setup->qinfo.loop_filter_limits,
    sizeof(_dec->state.loop_filter_limits));
   _dec->pp_level=OC_PP_LEVEL_DISABLED;
@@ -865,8 +865,8 @@ static ptrdiff_t oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[2],
   ptrdiff_t        ti;
   ptrdiff_t        ebi;
   int              pli;
-  dct_tokens=_dec->dct_tokens[0];
-  extra_bits=_dec->extra_bits[0];
+  dct_tokens=_dec->dct_tokens;
+  extra_bits=_dec->extra_bits;
   frags=_dec->state.frags;
   coded_fragis=_dec->state.coded_fragis;
   ncoded_fragis=fragii=eobs=ti=ebi=0;
@@ -878,6 +878,8 @@ static ptrdiff_t oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[2],
     ncoded_fragis+=_dec->state.ncoded_fragis[pli];
     memset(run_counts,0,sizeof(run_counts));
     _dec->eob_runs[pli][0]=eobs;
+    _dec->ti0[pli][0]=ti;
+    _dec->ebi0[pli][0]=ebi;
     /*Continue any previous EOB run, if there was one.*/
     eobi=eobs;
     if(ncoded_fragis-fragii<eobi)eobi=ncoded_fragis-fragii;
@@ -914,8 +916,6 @@ static ptrdiff_t oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[2],
         frags[coded_fragis[fragii++]].dc=oc_dct_token_dec1val(token,eb);
       }
     }
-    _dec->ti0[pli][0]=ti;
-    _dec->ebi0[pli][0]=ebi;
     /*Add the total EOB count to the longest run length.*/
     run_counts[63]+=eob_count;
     /*And convert the run_counts array to a moment table.*/
@@ -924,6 +924,8 @@ static ptrdiff_t oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[2],
        accounted for by runs started in this coefficient.*/
     for(rli=64;rli-->0;)_ntoks_left[pli][rli]-=run_counts[rli];
   }
+  _dec->dct_tokens_count=ti;
+  _dec->extra_bits_count=ebi;
   return eobs;
 }
 
@@ -944,9 +946,10 @@ static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[2],
   ptrdiff_t      ti;
   ptrdiff_t      ebi;
   int            pli;
-  dct_tokens=_dec->dct_tokens[_zzi];
-  extra_bits=_dec->extra_bits[_zzi];
-  ti=ebi=0;
+  dct_tokens=_dec->dct_tokens;
+  extra_bits=_dec->extra_bits;
+  ti=_dec->dct_tokens_count;
+  ebi=_dec->extra_bits_count;
   for(pli=0;pli<3;pli++){
     ptrdiff_t run_counts[64];
     ptrdiff_t ntoks_left;
@@ -954,6 +957,8 @@ static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[2],
     ptrdiff_t ntoks;
     int       rli;
     _dec->eob_runs[pli][_zzi]=_eobs;
+    _dec->ti0[pli][_zzi]=ti;
+    _dec->ebi0[pli][_zzi]=ebi;
     ntoks_left=_ntoks_left[pli][_zzi];
     memset(run_counts,0,sizeof(run_counts));
     eob_count=0;
@@ -984,8 +989,6 @@ static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[2],
         _eobs=0;
       }
     }
-    _dec->ti0[pli][_zzi]=ti;
-    _dec->ebi0[pli][_zzi]=ebi;
     /*Add the portion of the last EOB run actually used by this coefficient.*/
     eob_count+=ntoks_left-ntoks;
     /*And remove it from the remaining EOB count.*/
@@ -998,6 +1001,8 @@ static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[2],
        accounted for by runs started in this coefficient.*/
     for(rli=64-_zzi;rli-->0;)_ntoks_left[pli][_zzi+rli]-=run_counts[rli];
   }
+  _dec->dct_tokens_count=ti;
+  _dec->extra_bits_count=ebi;
   return _eobs;
 }
 
@@ -1332,12 +1337,8 @@ static void oc_dec_pipeline_init(oc_dec_ctx *_dec,
   _pipe->mcu_nvfrags=4<<!(_dec->state.info.pixel_fmt&2);
   /*Initialize the token and extra bits indices for each plane and
      coefficient.*/
-  memset(_pipe->ti[0],0,sizeof(_pipe->ti[0]));
-  memset(_pipe->ebi[0],0,sizeof(_pipe->ebi[0]));
-  for(pli=1;pli<3;pli++){
-    memcpy(_pipe->ti[pli],_dec->ti0[pli-1],sizeof(_pipe->ti[0]));
-    memcpy(_pipe->ebi[pli],_dec->ebi0[pli-1],sizeof(_pipe->ebi[0]));
-  }
+  memcpy(_pipe->ti,_dec->ti0,sizeof(_pipe->ti));
+  memcpy(_pipe->ebi,_dec->ebi0,sizeof(_pipe->ebi));
   /*Also copy over the initial the EOB run counts.*/
   memcpy(_pipe->eob_runs,_dec->eob_runs,sizeof(_pipe->eob_runs));
   /*Set up per-plane pointers to the coded and uncoded fragments lists.*/
@@ -1430,6 +1431,8 @@ static void oc_dec_dc_unpredict_mcu_plane(oc_dec_ctx *_dec,
    counts.*/
 static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
  oc_dec_pipeline_state *_pipe,int _pli){
+  unsigned char     *dct_tokens;
+  ogg_uint16_t      *extra_bits;
   ogg_uint16_t       dc_quant[2];
   const oc_fragment *frags;
   const ptrdiff_t   *coded_fragis;
@@ -1439,6 +1442,8 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
   ptrdiff_t         *ebi;
   ptrdiff_t         *eob_runs;
   int                qti;
+  dct_tokens=_dec->dct_tokens;
+  extra_bits=_dec->extra_bits;
   frags=_dec->state.frags;
   coded_fragis=_pipe->coded_fragis[_pli];
   ncoded_fragis=_pipe->ncoded_fragis[_pli];
@@ -1465,9 +1470,9 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
       }
       else{
         int ebflag;
-        token=_dec->dct_tokens[zzi][ti[zzi]++];
+        token=dct_tokens[ti[zzi]++];
         ebflag=OC_DCT_TOKEN_EXTRA_BITS[token]!=0;
-        eb=_dec->extra_bits[zzi][ebi[zzi]]&-ebflag;
+        eb=extra_bits[ebi[zzi]]&-ebflag;
         ebi[zzi]+=ebflag;
         if(token<OC_NDCT_EOB_TOKEN_MAX){
           eob_runs[zzi]=-oc_dct_token_skip(token,eb);
