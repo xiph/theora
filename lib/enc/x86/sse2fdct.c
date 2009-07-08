@@ -153,11 +153,14 @@
  "mov $0x7FFF6C84,%[a]\n\t" \
  "paddw %%xmm1,%%xmm4\n\t" \
  /*xmm0=_y[0]=u=r+s>>1 \
-   The naive implementation could cause overflow, so we use u=s+(r-s>>1).*/ \
- "psubw %%xmm4,%%xmm0\n\t" \
- "movd %[a],%%xmm13\n\t" \
+   The naive implementation could cause overflow, so we use \
+    u=(r&s)+((r^s)>>1).*/ \
+ "movdqa %%xmm0,%%xmm6\n\t" \
+ "pxor %%xmm4,%%xmm0\n\t" \
+ "pand %%xmm4,%%xmm6\n\t" \
  "psraw $1,%%xmm0\n\t" \
- "paddw %%xmm4,%%xmm0\n\t" \
+ "movd %[a],%%xmm13\n\t" \
+ "paddw %%xmm6,%%xmm0\n\t" \
  /*xmm4=_y[4]=v=r-u*/ \
  "pshufd $00,%%xmm13,%%xmm13\n\t" \
  "psubw %%xmm0,%%xmm4\n\t" \
