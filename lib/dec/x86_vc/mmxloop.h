@@ -122,12 +122,10 @@
   do{ \
     unsigned char *ll__; \
     unsigned char *pix__; \
-    ptrdiff_t      ystride3__; \
     ll__=(_ll); \
     pix__=(_pix)-2; \
     __asm mov PIX,pix__ \
     __asm mov YSTRIDE,_ystride \
-    __asm mov YSTRIDE3,ystride3__ \
     __asm mov LL,ll__ \
     /*x x x x d0 c0 b0 a0*/ \
     __asm movd mm0,[PIX] \
