@@ -30,137 +30,137 @@
    between rows.*/
 void oc_frag_copy_mmx(unsigned char *_dst,
  const unsigned char *_src,int _ystride){
-  #define SRC edx
-  #define DST eax
-  #define YSTRIDE ecx
-  #define YSTRIDE3 ebx
+#define SRC edx
+#define DST eax
+#define YSTRIDE ecx
+#define YSTRIDE3 ebx
   OC_FRAG_COPY_MMX(_dst,_src,_ystride);
-  #undef SRC
-  #undef DST
-  #undef YSTRIDE
-  #undef YSTRIDE3
+#undef SRC
+#undef DST
+#undef YSTRIDE
+#undef YSTRIDE3
 }
 
 void oc_frag_recon_intra_mmx(unsigned char *_dst,int _ystride,
  const ogg_int16_t *_residue){
-  __asm {
-      #define DST edx
-      #define DST4 esi
-      #define YSTRIDE eax
-      #define YSTRIDE3 ebx
-      #define RESIDUE ecx
-      mov DST, _dst
-      mov YSTRIDE, _ystride
-      mov RESIDUE, _residue
-      lea DST4, [DST+YSTRIDE*4]
-      lea YSTRIDE3, [YSTRIDE+YSTRIDE*2]
-      /*Set mm0 to 0xFFFFFFFFFFFFFFFF.*/
-      pcmpeqw mm0,mm0
-      /*#0 Load low residue.*/
-      movq mm1,[0*8+RESIDUE]
-      /*#0 Load high residue.*/
-      movq mm2,[1*8+RESIDUE]
-      /*Set mm0 to 0x8000800080008000.*/
-      psllw mm0,15
-      /*#1 Load low residue.*/
-      movq mm3,[2*8+RESIDUE]
-      /*#1 Load high residue.*/
-      movq mm4,[3*8+RESIDUE]
-      /*Set mm0 to 0x0080008000800080.*/
-      psrlw mm0,8
-      /*#2 Load low residue.*/
-      movq mm5,[4*8+RESIDUE]
-      /*#2 Load high residue.*/
-      movq mm6,[5*8+RESIDUE]
-      /*#0 Bias low  residue.*/
-      paddsw mm1,mm0
-      /*#0 Bias high residue.*/
-      paddsw mm2,mm0
-      /*#0 Pack to byte.*/
-      packuswb mm1,mm2
-      /*#1 Bias low  residue.*/
-      paddsw mm3,mm0
-      /*#1 Bias high residue.*/
-      paddsw mm4,mm0
-      /*#1 Pack to byte.*/
-      packuswb mm3,mm4
-      /*#2 Bias low  residue.*/
-      paddsw mm5,mm0
-      /*#2 Bias high residue.*/
-      paddsw mm6,mm0
-      /*#2 Pack to byte.*/
-      packuswb mm5,mm6
-      /*#0 Write row.*/
-      movq [DST],mm1
-      /*#1 Write row.*/
-      movq [DST+YSTRIDE],mm3
-      /*#2 Write row.*/
-      movq [DST+YSTRIDE*2],mm5
-      /*#3 Load low residue.*/
-      movq mm1,[6*8+RESIDUE]
-      /*#3 Load high residue.*/
-      movq mm2,[7*8+RESIDUE]
-      /*#4 Load high residue.*/
-      movq mm3,[8*8+RESIDUE]
-      /*#4 Load high residue.*/
-      movq mm4,[9*8+RESIDUE]
-      /*#5 Load high residue.*/
-      movq mm5,[10*8+RESIDUE]
-      /*#5 Load high residue.*/
-      movq mm6,[11*8+RESIDUE]
-      /*#3 Bias low  residue.*/
-      paddsw mm1,mm0
-      /*#3 Bias high residue.*/
-      paddsw mm2,mm0
-      /*#3 Pack to byte.*/
-      packuswb mm1,mm2
-      /*#4 Bias low  residue.*/
-      paddsw mm3,mm0
-      /*#4 Bias high residue.*/
-      paddsw mm4,mm0
-      /*#4 Pack to byte.*/
-      packuswb mm3,mm4
-      /*#5 Bias low  residue.*/
-      paddsw mm5,mm0
-      /*#5 Bias high residue.*/
-      paddsw mm6,mm0
-      /*#5 Pack to byte.*/
-      packuswb mm5,mm6
-      /*#3 Write row.*/
-      movq [DST+YSTRIDE3],mm1
-      /*#4 Write row.*/
-      movq [DST4],mm3
-      /*#5 Write row.*/
-      movq [DST4+YSTRIDE],mm5
-      /*#6 Load low residue.*/
-      movq mm1,[12*8+RESIDUE]
-      /*#6 Load high residue.*/
-      movq mm2,[13*8+RESIDUE]
-      /*#7 Load low residue.*/
-      movq mm3,[14*8+RESIDUE]
-      /*#7 Load high residue.*/
-      movq mm4,[15*8+RESIDUE]
-      /*#6 Bias low  residue.*/
-      paddsw mm1,mm0
-      /*#6 Bias high residue.*/
-      paddsw mm2,mm0
-      /*#6 Pack to byte.*/
-      packuswb mm1,mm2
-      /*#7 Bias low  residue.*/
-      paddsw mm3,mm0
-      /*#7 Bias high residue.*/
-      paddsw mm4,mm0
-      /*#7 Pack to byte.*/
-      packuswb mm3,mm4
-      /*#6 Write row.*/
-      movq [DST4+YSTRIDE*2],mm1
-      /*#7 Write row.*/
-      movq [DST4+YSTRIDE3],mm3
-      #undef DST
-      #undef DST4
-      #undef YSTRIDE
-      #undef YSTRIDE3
-      #undef RESIDUE         
+  __asm{
+#define DST edx
+#define DST4 esi
+#define YSTRIDE eax
+#define YSTRIDE3 ebx
+#define RESIDUE ecx
+    mov DST,_dst
+    mov YSTRIDE,_ystride
+    mov RESIDUE,_residue
+    lea DST4,[DST+YSTRIDE*4]
+    lea YSTRIDE3,[YSTRIDE+YSTRIDE*2]
+    /*Set mm0 to 0xFFFFFFFFFFFFFFFF.*/
+    pcmpeqw mm0,mm0
+    /*#0 Load low residue.*/
+    movq mm1,[0*8+RESIDUE]
+    /*#0 Load high residue.*/
+    movq mm2,[1*8+RESIDUE]
+    /*Set mm0 to 0x8000800080008000.*/
+    psllw mm0,15
+    /*#1 Load low residue.*/
+    movq mm3,[2*8+RESIDUE]
+    /*#1 Load high residue.*/
+    movq mm4,[3*8+RESIDUE]
+    /*Set mm0 to 0x0080008000800080.*/
+    psrlw mm0,8
+    /*#2 Load low residue.*/
+    movq mm5,[4*8+RESIDUE]
+    /*#2 Load high residue.*/
+    movq mm6,[5*8+RESIDUE]
+    /*#0 Bias low  residue.*/
+    paddsw mm1,mm0
+    /*#0 Bias high residue.*/
+    paddsw mm2,mm0
+    /*#0 Pack to byte.*/
+    packuswb mm1,mm2
+    /*#1 Bias low  residue.*/
+    paddsw mm3,mm0
+    /*#1 Bias high residue.*/
+    paddsw mm4,mm0
+    /*#1 Pack to byte.*/
+    packuswb mm3,mm4
+    /*#2 Bias low  residue.*/
+    paddsw mm5,mm0
+    /*#2 Bias high residue.*/
+    paddsw mm6,mm0
+    /*#2 Pack to byte.*/
+    packuswb mm5,mm6
+    /*#0 Write row.*/
+    movq [DST],mm1
+    /*#1 Write row.*/
+    movq [DST+YSTRIDE],mm3
+    /*#2 Write row.*/
+    movq [DST+YSTRIDE*2],mm5
+    /*#3 Load low residue.*/
+    movq mm1,[6*8+RESIDUE]
+    /*#3 Load high residue.*/
+    movq mm2,[7*8+RESIDUE]
+    /*#4 Load high residue.*/
+    movq mm3,[8*8+RESIDUE]
+    /*#4 Load high residue.*/
+    movq mm4,[9*8+RESIDUE]
+    /*#5 Load high residue.*/
+    movq mm5,[10*8+RESIDUE]
+    /*#5 Load high residue.*/
+    movq mm6,[11*8+RESIDUE]
+    /*#3 Bias low  residue.*/
+    paddsw mm1,mm0
+    /*#3 Bias high residue.*/
+    paddsw mm2,mm0
+    /*#3 Pack to byte.*/
+    packuswb mm1,mm2
+    /*#4 Bias low  residue.*/
+    paddsw mm3,mm0
+    /*#4 Bias high residue.*/
+    paddsw mm4,mm0
+    /*#4 Pack to byte.*/
+    packuswb mm3,mm4
+    /*#5 Bias low  residue.*/
+    paddsw mm5,mm0
+    /*#5 Bias high residue.*/
+    paddsw mm6,mm0
+    /*#5 Pack to byte.*/
+    packuswb mm5,mm6
+    /*#3 Write row.*/
+    movq [DST+YSTRIDE3],mm1
+    /*#4 Write row.*/
+    movq [DST4],mm3
+    /*#5 Write row.*/
+    movq [DST4+YSTRIDE],mm5
+    /*#6 Load low residue.*/
+    movq mm1,[12*8+RESIDUE]
+    /*#6 Load high residue.*/
+    movq mm2,[13*8+RESIDUE]
+    /*#7 Load low residue.*/
+    movq mm3,[14*8+RESIDUE]
+    /*#7 Load high residue.*/
+    movq mm4,[15*8+RESIDUE]
+    /*#6 Bias low  residue.*/
+    paddsw mm1,mm0
+    /*#6 Bias high residue.*/
+    paddsw mm2,mm0
+    /*#6 Pack to byte.*/
+    packuswb mm1,mm2
+    /*#7 Bias low  residue.*/
+    paddsw mm3,mm0
+    /*#7 Bias high residue.*/
+    paddsw mm4,mm0
+    /*#7 Pack to byte.*/
+    packuswb mm3,mm4
+    /*#6 Write row.*/
+    movq [DST4+YSTRIDE*2],mm1
+    /*#7 Write row.*/
+    movq [DST4+YSTRIDE3],mm3
+#undef DST
+#undef DST4
+#undef YSTRIDE
+#undef YSTRIDE3
+#undef RESIDUE
   }
 }
 
@@ -170,15 +170,15 @@ void oc_frag_recon_inter_mmx(unsigned char *_dst,const unsigned char *_src,
   /*Zero mm0.*/
   __asm pxor mm0,mm0;
   for(i=4;i-->0;){
-    __asm {
-      #define DST edx
-      #define SRC ecx
-      #define YSTRIDE ebx
-      #define RESIDUE eax
-      mov DST, _dst
-      mov SRC, _src
-      mov YSTRIDE, _ystride
-      mov RESIDUE, _residue
+    __asm{
+#define DST edx
+#define SRC ecx
+#define YSTRIDE ebx
+#define RESIDUE eax
+      mov DST,_dst
+      mov SRC,_src
+      mov YSTRIDE,_ystride
+      mov RESIDUE,_residue
       /*#0 Load source.*/
       movq mm3,[SRC]
       /*#1 Load source.*/
@@ -217,13 +217,13 @@ void oc_frag_recon_inter_mmx(unsigned char *_dst,const unsigned char *_src,
       movq [DST+YSTRIDE],mm7
       /*Advance dst.*/
       lea DST,[DST+YSTRIDE*2]
-      mov _residue, RESIDUE
-      mov _dst, DST
-      mov _src, SRC
-      #undef DST
-      #undef SRC
-      #undef YSTRIDE
-      #undef RESIDUE
+      mov _residue,RESIDUE
+      mov _dst,DST
+      mov _src,SRC
+#undef DST
+#undef SRC
+#undef YSTRIDE
+#undef RESIDUE
     }
   }
 }
@@ -234,17 +234,17 @@ void oc_frag_recon_inter2_mmx(unsigned char *_dst,const unsigned char *_src1,
   /*Zero mm7.*/
   __asm pxor mm7,mm7;
   for(i=4;i-->0;){
-    __asm {
-      #define SRC1 ecx
-      #define SRC2 ebx
-      #define YSTRIDE esi
-      #define RESIDUE edx
-      #define DST eax
-      mov YSTRIDE, _ystride
-      mov DST, _dst
-      mov RESIDUE, _residue
-      mov SRC1, _src1
-      mov SRC2, _src2
+    __asm{
+#define SRC1 ecx
+#define SRC2 ebx
+#define YSTRIDE esi
+#define RESIDUE edx
+#define DST eax
+      mov YSTRIDE,_ystride
+      mov DST,_dst
+      mov RESIDUE,_residue
+      mov SRC1,_src1
+      mov SRC2,_src2
       /*#0 Load src1.*/
       movq mm0,[SRC1]
       /*#0 Load src2.*/
@@ -317,15 +317,15 @@ void oc_frag_recon_inter2_mmx(unsigned char *_dst,const unsigned char *_src1,
       add RESIDUE,32
       /*Advance dest ptr.*/
       lea DST,[DST+YSTRIDE*2]
-      mov _dst, DST
-      mov _residue, RESIDUE
-      mov _src1, SRC1
-      mov _src2, SRC2
-      #undef SRC1
-      #undef SRC2
-      #undef YSTRIDE
-      #undef RESIDUE
-      #undef DST
+      mov _dst,DST
+      mov _residue,RESIDUE
+      mov _src1,SRC1
+      mov _src2,SRC2
+#undef SRC1
+#undef SRC2
+#undef YSTRIDE
+#undef RESIDUE
+#undef DST
     }
   }
 }

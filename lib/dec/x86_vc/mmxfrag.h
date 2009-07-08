@@ -1,5 +1,5 @@
-#if !defined(_x86_mmxfrag_H)
-# define _x86_mmxfrag_H (1)
+#if !defined(_x86_vc_mmxfrag_H)
+# define _x86_vc_mmxfrag_H (1)
 # include <stddef.h>
 # include "x86int.h"
 
@@ -11,13 +11,11 @@
   do{ \
     const unsigned char *src; \
     unsigned char       *dst; \
-    ptrdiff_t            ystride3; \
     src=(_src); \
     dst=(_dst); \
-    __asm  mov SRC, src \
-    __asm  mov DST, dst \
-    __asm  mov YSTRIDE, _ystride \
-    __asm  mov YSTRIDE3, ystride3 \
+    __asm  mov SRC,src \
+    __asm  mov DST,dst \
+    __asm  mov YSTRIDE,_ystride \
     /*src+0*ystride*/ \
     __asm  movq mm0,[SRC] \
     /*src+1*ystride*/ \

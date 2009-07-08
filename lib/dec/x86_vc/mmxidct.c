@@ -51,7 +51,7 @@ static const __declspec(align(16))ogg_uint16_t
 };
 
 /*38 cycles*/
-#define OC_IDCT_BEGIN __asm { \
+#define OC_IDCT_BEGIN __asm{ \
   __asm movq mm2,OC_I(3) \
   __asm movq mm6,OC_C(3) \
   __asm movq mm4,mm2 \
@@ -129,7 +129,7 @@ static const __declspec(align(16))ogg_uint16_t
 }
 
 /*38+8=46 cycles.*/
-#define OC_ROW_IDCT __asm {\
+#define OC_ROW_IDCT __asm{ \
   OC_IDCT_BEGIN \
   /*r3=D'*/ \
   __asm  movq mm3,OC_I(2) \
@@ -190,7 +190,7 @@ static const __declspec(align(16))ogg_uint16_t
 
   Since r1 is free at entry, we calculate the Js first.*/
 /*19 cycles.*/
-#define OC_TRANSPOSE __asm { \
+#define OC_TRANSPOSE __asm{ \
   __asm movq mm1,mm4 \
   __asm punpcklwd mm4,mm5 \
   __asm movq OC_I(0),mm0 \
@@ -229,7 +229,7 @@ static const __declspec(align(16))ogg_uint16_t
 }
 
 /*38+19=57 cycles.*/
-#define OC_COLUMN_IDCT __asm {\
+#define OC_COLUMN_IDCT __asm{ \
   OC_IDCT_BEGIN \
   __asm paddw mm2,OC_8 \
   /*r1=H'+H'*/ \
@@ -306,11 +306,11 @@ static const __declspec(align(16))ogg_uint16_t
 static void oc_idct8x8_slow(ogg_int16_t _y[64]){
   /*This routine accepts an 8x8 matrix, but in partially transposed form.
     Every 4x4 block is transposed.*/
-  __asm {
+  __asm{
 #define CONSTS eax
 #define Y edx
-    mov CONSTS, offset OC_IDCT_CONSTS
-    mov Y, _y
+    mov CONSTS,offset OC_IDCT_CONSTS
+    mov Y,_y
 #define OC_I(_k)      [Y+_k*16]
 #define OC_J(_k)      [Y+(_k-4)*16+8]
     OC_ROW_IDCT
@@ -339,7 +339,7 @@ static void oc_idct8x8_slow(ogg_int16_t _y[64]){
 }
 
 /*25 cycles.*/
-#define OC_IDCT_BEGIN_10 __asm {\
+#define OC_IDCT_BEGIN_10 __asm{ \
   __asm movq mm2,OC_I(3) \
   __asm nop \
   __asm movq mm6,OC_C(3) \
@@ -390,119 +390,119 @@ static void oc_idct8x8_slow(ogg_int16_t _y[64]){
   __asm paddw mm2,mm6 \
   __asm psubw mm2,mm1 \
   __asm nop \
- }
+}
 
 /*25+8=33 cycles.*/
-#define OC_ROW_IDCT_10 __asm {\
- OC_IDCT_BEGIN_10 \
- /*r3=D'*/ \
-  __asm movq mm3,OC_I(2) \
- /*r4=E'=E-G*/ \
-  __asm psubw mm4,mm7 \
- /*r1=H'+H'*/ \
-  __asm paddw mm1,mm1 \
- /*r7=G+G*/ \
-  __asm paddw mm7,mm7 \
- /*r1=R1=A''+H'*/ \
-  __asm paddw mm1,mm2 \
- /*r7=G'=E+G*/ \
-  __asm paddw mm7,mm4 \
- /*r4=R4=E'-D'*/ \
-  __asm psubw mm4,mm3 \
-  __asm paddw mm3,mm3 \
- /*r6=R6=F'-B''*/ \
-  __asm psubw mm6,mm5 \
-  __asm paddw mm5,mm5 \
- /*r3=R3=E'+D'*/ \
-  __asm paddw mm3,mm4 \
- /*r5=R5=F'+B''*/ \
-  __asm paddw mm5,mm6 \
- /*r7=R7=G'-C'*/ \
-  __asm psubw mm7,mm0 \
-  __asm paddw mm0,mm0 \
- /*Save R1.*/ \
-  __asm movq OC_I(1),mm1 \
- /*r0=R0=G'+C'*/ \
-  __asm paddw mm0,mm7 \
+#define OC_ROW_IDCT_10 __asm{ \
+  OC_IDCT_BEGIN_10 \
+  /*r3=D'*/ \
+   __asm movq mm3,OC_I(2) \
+  /*r4=E'=E-G*/ \
+   __asm psubw mm4,mm7 \
+  /*r1=H'+H'*/ \
+   __asm paddw mm1,mm1 \
+  /*r7=G+G*/ \
+   __asm paddw mm7,mm7 \
+  /*r1=R1=A''+H'*/ \
+   __asm paddw mm1,mm2 \
+  /*r7=G'=E+G*/ \
+   __asm paddw mm7,mm4 \
+  /*r4=R4=E'-D'*/ \
+   __asm psubw mm4,mm3 \
+   __asm paddw mm3,mm3 \
+  /*r6=R6=F'-B''*/ \
+   __asm psubw mm6,mm5 \
+   __asm paddw mm5,mm5 \
+  /*r3=R3=E'+D'*/ \
+   __asm paddw mm3,mm4 \
+  /*r5=R5=F'+B''*/ \
+   __asm paddw mm5,mm6 \
+  /*r7=R7=G'-C'*/ \
+   __asm psubw mm7,mm0 \
+   __asm paddw mm0,mm0 \
+  /*Save R1.*/ \
+   __asm movq OC_I(1),mm1 \
+  /*r0=R0=G'+C'*/ \
+   __asm paddw mm0,mm7 \
 }
 
 /*25+19=44 cycles'*/
-#define OC_COLUMN_IDCT_10 __asm {\
- OC_IDCT_BEGIN_10 \
+#define OC_COLUMN_IDCT_10 __asm{ \
+  OC_IDCT_BEGIN_10 \
   __asm paddw mm2,OC_8 \
- /*r1=H'+H'*/ \
+  /*r1=H'+H'*/ \
   __asm paddw mm1,mm1 \
- /*r1=R1=A''+H'*/ \
+  /*r1=R1=A''+H'*/ \
   __asm paddw mm1,mm2 \
- /*r2=NR2*/ \
+  /*r2=NR2*/ \
   __asm psraw mm2,4 \
- /*r4=E'=E-G*/ \
+  /*r4=E'=E-G*/ \
   __asm psubw mm4,mm7 \
- /*r1=NR1*/ \
+  /*r1=NR1*/ \
   __asm psraw mm1,4 \
- /*r3=D'*/ \
+  /*r3=D'*/ \
   __asm movq mm3,OC_I(2) \
- /*r7=G+G*/ \
+  /*r7=G+G*/ \
   __asm paddw mm7,mm7 \
- /*Store NR2 at I(2).*/ \
+  /*Store NR2 at I(2).*/ \
   __asm movq OC_I(2),mm2 \
- /*r7=G'=E+G*/ \
+  /*r7=G'=E+G*/ \
   __asm paddw mm7,mm4 \
- /*Store NR1 at I(1).*/ \
+  /*Store NR1 at I(1).*/ \
   __asm movq OC_I(1),mm1 \
- /*r4=R4=E'-D'*/ \
+  /*r4=R4=E'-D'*/ \
   __asm psubw mm4,mm3 \
   __asm paddw mm4,OC_8 \
- /*r3=D'+D'*/ \
+  /*r3=D'+D'*/ \
   __asm paddw mm3,mm3 \
- /*r3=R3=E'+D'*/ \
+  /*r3=R3=E'+D'*/ \
   __asm paddw mm3,mm4 \
- /*r4=NR4*/ \
+  /*r4=NR4*/ \
   __asm psraw mm4,4 \
- /*r6=R6=F'-B''*/ \
+  /*r6=R6=F'-B''*/ \
   __asm psubw mm6,mm5 \
- /*r3=NR3*/ \
+  /*r3=NR3*/ \
   __asm psraw mm3,4 \
   __asm paddw mm6,OC_8 \
- /*r5=B''+B''*/ \
+  /*r5=B''+B''*/ \
   __asm paddw mm5,mm5 \
- /*r5=R5=F'+B''*/ \
+  /*r5=R5=F'+B''*/ \
   __asm paddw mm5,mm6 \
- /*r6=NR6*/ \
+  /*r6=NR6*/ \
   __asm psraw mm6,4 \
- /*Store NR4 at J(4).*/ \
+  /*Store NR4 at J(4).*/ \
   __asm movq OC_J(4),mm4 \
- /*r5=NR5*/ \
+  /*r5=NR5*/ \
   __asm psraw mm5,4 \
- /*Store NR3 at I(3).*/ \
+  /*Store NR3 at I(3).*/ \
   __asm movq OC_I(3),mm3 \
- /*r7=R7=G'-C'*/ \
+  /*r7=R7=G'-C'*/ \
   __asm psubw mm7,mm0 \
   __asm paddw mm7,OC_8 \
- /*r0=C'+C'*/ \
+  /*r0=C'+C'*/ \
   __asm paddw mm0,mm0 \
- /*r0=R0=G'+C'*/ \
+  /*r0=R0=G'+C'*/ \
   __asm paddw mm0,mm7 \
- /*r7=NR7*/ \
+  /*r7=NR7*/ \
   __asm psraw mm7,4 \
- /*Store NR6 at J(6).*/ \
+  /*Store NR6 at J(6).*/ \
   __asm movq OC_J(6),mm6 \
- /*r0=NR0*/ \
+  /*r0=NR0*/ \
   __asm psraw mm0,4 \
- /*Store NR5 at J(5).*/ \
+  /*Store NR5 at J(5).*/ \
   __asm movq OC_J(5),mm5 \
- /*Store NR7 at J(7).*/ \
+  /*Store NR7 at J(7).*/ \
   __asm movq OC_J(7),mm7 \
- /*Store NR0 at I(0).*/ \
+  /*Store NR0 at I(0).*/ \
   __asm movq OC_I(0),mm0 \
-} 
+}
 
 static void oc_idct8x8_10(ogg_int16_t _y[64]){
-  __asm {
+  __asm{
 #define CONSTS eax
 #define Y edx
-    mov CONSTS, offset OC_IDCT_CONSTS
-    mov Y, _y
+    mov CONSTS,offset OC_IDCT_CONSTS
+    mov Y,_y
 #define OC_I(_k) [Y+_k*16]
 #define OC_J(_k) [Y+(_k-4)*16+8]
     /*Done with dequant, descramble, and partial transpose.
@@ -581,11 +581,11 @@ void oc_dequant_idct8x8_mmx(ogg_int16_t _y[64],const ogg_int16_t _x[64],
        no iDCT rounding.*/
     p=(ogg_int16_t)(_x[0]*(ogg_int32_t)_dc_quant+15>>5);
     /*Fill _y with p.*/
-    __asm {
-      #define Y eax
-      #define P ecx
-      mov Y, _y
-      movd P, p
+    __asm{
+#define Y eax
+#define P ecx
+      mov Y,_y
+      movd P,p
       /*mm0=0000 0000 0000 AAAA*/
       movd mm0,P
       /*mm0=0000 0000 AAAA AAAA*/
@@ -608,17 +608,17 @@ void oc_dequant_idct8x8_mmx(ogg_int16_t _y[64],const ogg_int16_t _x[64],
       movq [104+Y],mm0
       movq [112+Y],mm0
       movq [120+Y],mm0
-      #undef Y
-      #undef P
+#undef Y
+#undef P
     }
   }
   else{
     int zzi;
     /*First zero the buffer.*/
     /*On K7, etc., this could be replaced with movntq and sfence.*/
-    __asm {
-      #define Y eax
-      mov Y, _y
+    __asm{
+#define Y eax
+      mov Y,_y
       pxor mm0,mm0
       movq [Y],mm0
       movq [8+Y],mm0
@@ -636,7 +636,7 @@ void oc_dequant_idct8x8_mmx(ogg_int16_t _y[64],const ogg_int16_t _x[64],
       movq [104+Y],mm0
       movq [112+Y],mm0
       movq [120+Y],mm0
-      #undef Y
+#undef Y
     }
     /*Dequantize the coefficients.*/
     _y[0]=(ogg_int16_t)(_x[0]*(int)_dc_quant);
@@ -648,6 +648,5 @@ void oc_dequant_idct8x8_mmx(ogg_int16_t _y[64],const ogg_int16_t _x[64],
     else oc_idct8x8_slow(_y);
   }
 }
-
 
 #endif

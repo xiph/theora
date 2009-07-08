@@ -92,7 +92,7 @@
 
 #define OC_LOOP_FILTER_V_MMX(_pix,_ystride,_ll) \
   do{ \
-    ptrdiff_t ystride3; \
+    ptrdiff_t ystride3__; \
     __asm__ __volatile__( \
       /*mm0={a0,...,a7}*/ \
       "movq (%[pix]),%%mm0\n\t" \
@@ -108,7 +108,7 @@
       /*Write it back out.*/ \
       "movq %%mm1,(%[pix],%[ystride])\n\t" \
       "movq %%mm2,(%[pix],%[ystride],2)\n\t" \
-      :[ystride3]"=&r"(ystride3) \
+      :[ystride3]"=&r"(ystride3__) \
       :[pix]"r"(_pix-_ystride*2),[ystride]"r"((ptrdiff_t)(_ystride)), \
        [ll]"r"(_ll) \
       :"memory" \
@@ -118,10 +118,10 @@
 
 #define OC_LOOP_FILTER_H_MMX(_pix,_ystride,_ll) \
   do{ \
-    unsigned char *pix; \
-    ptrdiff_t      ystride3; \
-    ptrdiff_t      d; \
-    pix=(_pix)-2; \
+    unsigned char *pix__; \
+    ptrdiff_t      ystride3__; \
+    ptrdiff_t      d__; \
+    pix__=(_pix)-2; \
     __asm__ __volatile__( \
       /*x x x x d0 c0 b0 a0*/ \
       "movd (%[pix]),%%mm0\n\t" \
@@ -204,7 +204,7 @@
       "movw %w[d],1(%[pix],%[ystride],2)\n\t" \
       "shr $16,%[d]\n\t" \
       "movw %w[d],1(%[pix],%[ystride3])\n\t" \
-      :[pix]"+r"(pix),[ystride3]"=&r"(ystride3),[d]"=&r"(d) \
+      :[pix]"+r"(pix__),[ystride3]"=&r"(ystride3__),[d]"=&r"(d__) \
       :[ystride]"r"((ptrdiff_t)(_ystride)),[ll]"r"(_ll) \
       :"memory" \
     ); \

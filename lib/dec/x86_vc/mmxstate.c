@@ -81,16 +81,16 @@ void oc_state_frag_copy_list_mmx(const oc_theora_state *_state,
   for(fragii=0;fragii<_nfragis;fragii++){
     ptrdiff_t frag_buf_off;
     frag_buf_off=frag_buf_offs[_fragis[fragii]];
-    #define SRC edx
-    #define DST eax
-    #define YSTRIDE ecx
-    #define YSTRIDE3 ebx
+#define SRC edx
+#define DST eax
+#define YSTRIDE ecx
+#define YSTRIDE3 ebx
     OC_FRAG_COPY_MMX(dst_frame_data+frag_buf_off,
      src_frame_data+frag_buf_off,ystride);
-    #undef SRC
-    #undef DST
-    #undef YSTRIDE
-    #undef YSTRIDE3
+#undef SRC
+#undef DST
+#undef YSTRIDE
+#undef YSTRIDE3
   }
 }
 
@@ -140,14 +140,12 @@ void oc_state_loop_filter_frag_rows_mmx(const oc_theora_state *_state,
       if(frags[fragi].coded){
         unsigned char *ref;
         ref=ref_frame_data+frag_buf_offs[fragi];
-
-        #define PIX eax
-        #define YSTRIDE3 edi
-        #define YSTRIDE ecx
-        #define LL edx
-        #define D esi
-        #define D_WORD si
-
+#define PIX eax
+#define YSTRIDE3 edi
+#define YSTRIDE ecx
+#define LL edx
+#define D esi
+#define D_WORD si
         if(fragi>fragi0)OC_LOOP_FILTER_H_MMX(ref,ystride,ll);
         if(fragi0>fragi_top)OC_LOOP_FILTER_V_MMX(ref,ystride,ll);
         if(fragi+1<fragi_end&&!frags[fragi+1].coded){
@@ -156,13 +154,12 @@ void oc_state_loop_filter_frag_rows_mmx(const oc_theora_state *_state,
         if(fragi+nhfrags<fragi_bot&&!frags[fragi+nhfrags].coded){
           OC_LOOP_FILTER_V_MMX(ref+(ystride<<3),ystride,ll);
         }
-
-        #undef PIX
-        #undef YSTRIDE3
-        #undef YSTRIDE
-        #undef LL
-        #undef D
-        #undef D_WORD
+#undef PIX
+#undef YSTRIDE3
+#undef YSTRIDE
+#undef LL
+#undef D
+#undef D_WORD
       }
       fragi++;
     }

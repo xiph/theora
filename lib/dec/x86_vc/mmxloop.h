@@ -1,5 +1,5 @@
-#if !defined(_x86_mmxloop_H)
-# define _x86_mmxloop_H (1)
+#if !defined(_x86_vc_mmxloop_H)
+# define _x86_vc_mmxloop_H (1)
 # include <stddef.h>
 # include "x86int.h"
 
@@ -8,100 +8,99 @@
 /*On entry, mm0={a0,...,a7}, mm1={b0,...,b7}, mm2={c0,...,c7}, mm3={d0,...d7}.
   On exit, mm1={b0+lflim(R_0,L),...,b7+lflim(R_7,L)} and
    mm2={c0-lflim(R_0,L),...,c7-lflim(R_7,L)}; mm0 and mm3 are clobbered.*/
-#define OC_LOOP_FILTER8_MMX __asm { \
- /*mm7=0*/ \
-__asm pxor mm7,mm7 \
- /*mm6:mm0={a0,...,a7}*/ \
-__asm movq mm6,mm0 \
-__asm punpcklbw mm0,mm7 \
-__asm punpckhbw mm6,mm7 \
- /*mm3:mm5={d0,...,d7}*/ \
-__asm movq mm5,mm3 \
-__asm punpcklbw mm3,mm7 \
-__asm punpckhbw mm5,mm7 \
- /*mm6:mm0={a0-d0,...,a7-d7}*/ \
-__asm psubw mm0,mm3 \
-__asm psubw mm6,mm5 \
- /*mm3:mm1={b0,...,b7}*/ \
-__asm movq mm3,mm1 \
-__asm punpcklbw mm1,mm7 \
-__asm movq mm4,mm2 \
-__asm punpckhbw mm3,mm7 \
- /*mm5:mm4={c0,...,c7}*/ \
-__asm movq mm5,mm2 \
-__asm punpcklbw mm4,mm7 \
-__asm punpckhbw mm5,mm7 \
- /*mm7={3}x4 \
-   mm5:mm4={c0-b0,...,c7-b7}*/ \
-__asm pcmpeqw mm7,mm7 \
-__asm psubw mm4,mm1 \
-__asm psrlw mm7,14 \
-__asm psubw mm5,mm3 \
- /*Scale by 3.*/ \
-__asm pmullw mm4,mm7 \
-__asm pmullw mm5,mm7 \
- /*mm7={4}x4 \
-   mm5:mm4=f={a0-d0+3*(c0-b0),...,a7-d7+3*(c7-b7)}*/ \
-__asm psrlw mm7,1 \
-__asm paddw mm4,mm0 \
-__asm psllw mm7,2 \
-__asm movq mm0,[LL] \
-__asm paddw mm5,mm6 \
- /*R_i has the range [-127,128], so we compute -R_i instead. \
-   mm4=-R_i=-(f+4>>3)=0xFF^(f-4>>3)*/ \
-__asm psubw mm4,mm7 \
-__asm psubw mm5,mm7 \
-__asm psraw mm4,3 \
-__asm psraw mm5,3 \
-__asm pcmpeqb mm7,mm7 \
-__asm packsswb mm4,mm5 \
-__asm pxor mm6,mm6 \
-__asm pxor mm4,mm7 \
-__asm packuswb mm1,mm3 \
- /*Now compute lflim of -mm4 cf. Section 7.10 of the sepc.*/ \
- /*There's no unsigned byte+signed byte with unsigned saturation op code, so \
-    we have to split things by sign (the other option is to work in 16 bits, \
-    but working in 8 bits gives much better parallelism). \
-   We compute abs(R_i), but save a mask of which terms were negative in mm6. \
-   Then we compute mm4=abs(lflim(R_i,L))=min(abs(R_i),max(2*L-abs(R_i),0)). \
-   Finally, we split mm4 into positive and negative pieces using the mask in \
-    mm6, and add and subtract them as appropriate.*/ \
- /*mm4=abs(-R_i)*/ \
- /*mm7=255-2*L*/ \
-__asm pcmpgtb mm6,mm4 \
-__asm psubb mm7,mm0 \
-__asm pxor mm4,mm6 \
-__asm psubb mm7,mm0 \
-__asm psubb mm4,mm6 \
- /*mm7=255-max(2*L-abs(R_i),0)*/ \
-__asm paddusb mm7,mm4 \
- /*mm4=min(abs(R_i),max(2*L-abs(R_i),0))*/ \
-__asm paddusb mm4,mm7 \
-__asm psubusb mm4,mm7 \
- /*Now split mm4 by the original sign of -R_i.*/ \
-__asm movq mm5,mm4 \
-__asm pand mm4,mm6 \
-__asm pandn mm6,mm5 \
- /*mm1={b0+lflim(R_0,L),...,b7+lflim(R_7,L)}*/ \
- /*mm2={c0-lflim(R_0,L),...,c7-lflim(R_7,L)}*/ \
-__asm paddusb mm1,mm4 \
-__asm psubusb mm2,mm4 \
-__asm psubusb mm1,mm6 \
-__asm paddusb mm2,mm6 \
+#define OC_LOOP_FILTER8_MMX __asm{ \
+  /*mm7=0*/ \
+  __asm pxor mm7,mm7 \
+  /*mm6:mm0={a0,...,a7}*/ \
+  __asm movq mm6,mm0 \
+  __asm punpcklbw mm0,mm7 \
+  __asm punpckhbw mm6,mm7 \
+  /*mm3:mm5={d0,...,d7}*/ \
+  __asm movq mm5,mm3 \
+  __asm punpcklbw mm3,mm7 \
+  __asm punpckhbw mm5,mm7 \
+  /*mm6:mm0={a0-d0,...,a7-d7}*/ \
+  __asm psubw mm0,mm3 \
+  __asm psubw mm6,mm5 \
+  /*mm3:mm1={b0,...,b7}*/ \
+  __asm movq mm3,mm1 \
+  __asm punpcklbw mm1,mm7 \
+  __asm movq mm4,mm2 \
+  __asm punpckhbw mm3,mm7 \
+  /*mm5:mm4={c0,...,c7}*/ \
+  __asm movq mm5,mm2 \
+  __asm punpcklbw mm4,mm7 \
+  __asm punpckhbw mm5,mm7 \
+  /*mm7={3}x4 \
+    mm5:mm4={c0-b0,...,c7-b7}*/ \
+  __asm pcmpeqw mm7,mm7 \
+  __asm psubw mm4,mm1 \
+  __asm psrlw mm7,14 \
+  __asm psubw mm5,mm3 \
+  /*Scale by 3.*/ \
+  __asm pmullw mm4,mm7 \
+  __asm pmullw mm5,mm7 \
+  /*mm7={4}x4 \
+    mm5:mm4=f={a0-d0+3*(c0-b0),...,a7-d7+3*(c7-b7)}*/ \
+  __asm psrlw mm7,1 \
+  __asm paddw mm4,mm0 \
+  __asm psllw mm7,2 \
+  __asm movq mm0,[LL] \
+  __asm paddw mm5,mm6 \
+  /*R_i has the range [-127,128], so we compute -R_i instead. \
+    mm4=-R_i=-(f+4>>3)=0xFF^(f-4>>3)*/ \
+  __asm psubw mm4,mm7 \
+  __asm psubw mm5,mm7 \
+  __asm psraw mm4,3 \
+  __asm psraw mm5,3 \
+  __asm pcmpeqb mm7,mm7 \
+  __asm packsswb mm4,mm5 \
+  __asm pxor mm6,mm6 \
+  __asm pxor mm4,mm7 \
+  __asm packuswb mm1,mm3 \
+  /*Now compute lflim of -mm4 cf. Section 7.10 of the sepc.*/ \
+  /*There's no unsigned byte+signed byte with unsigned saturation op code, so \
+     we have to split things by sign (the other option is to work in 16 bits, \
+     but working in 8 bits gives much better parallelism). \
+    We compute abs(R_i), but save a mask of which terms were negative in mm6. \
+    Then we compute mm4=abs(lflim(R_i,L))=min(abs(R_i),max(2*L-abs(R_i),0)). \
+    Finally, we split mm4 into positive and negative pieces using the mask in \
+     mm6, and add and subtract them as appropriate.*/ \
+  /*mm4=abs(-R_i)*/ \
+  /*mm7=255-2*L*/ \
+  __asm pcmpgtb mm6,mm4 \
+  __asm psubb mm7,mm0 \
+  __asm pxor mm4,mm6 \
+  __asm psubb mm7,mm0 \
+  __asm psubb mm4,mm6 \
+  /*mm7=255-max(2*L-abs(R_i),0)*/ \
+  __asm paddusb mm7,mm4 \
+  /*mm4=min(abs(R_i),max(2*L-abs(R_i),0))*/ \
+  __asm paddusb mm4,mm7 \
+  __asm psubusb mm4,mm7 \
+  /*Now split mm4 by the original sign of -R_i.*/ \
+  __asm movq mm5,mm4 \
+  __asm pand mm4,mm6 \
+  __asm pandn mm6,mm5 \
+  /*mm1={b0+lflim(R_0,L),...,b7+lflim(R_7,L)}*/ \
+  /*mm2={c0-lflim(R_0,L),...,c7-lflim(R_7,L)}*/ \
+  __asm paddusb mm1,mm4 \
+  __asm psubusb mm2,mm4 \
+  __asm psubusb mm1,mm6 \
+  __asm paddusb mm2,mm6 \
 }
 
 #define OC_LOOP_FILTER_V_MMX(_pix,_ystride,_ll) \
   do{ \
-    ptrdiff_t ystride3; \
-    unsigned char* pix_ = _pix; \
-    OC_ALIGN8(unsigned char* ll_); \
-    ll_ = _ll; \
-    __asm mov YSTRIDE, _ystride \
-    __asm mov YSTRIDE3, ystride3 \
-    __asm mov LL, ll_ \
-    __asm mov PIX, pix_ \
-    __asm sub PIX, YSTRIDE \
-    __asm sub PIX, YSTRIDE \
+    unsigned char *pix__; \
+    unsigned char *ll__; \
+    ll__=(_ll); \
+    pix__=(_pix); \
+    __asm mov YSTRIDE,_ystride \
+    __asm mov LL,ll__ \
+    __asm mov PIX,pix__ \
+    __asm sub PIX,YSTRIDE \
+    __asm sub PIX,YSTRIDE \
     /*mm0={a0,...,a7}*/ \
     __asm movq mm0,[PIX] \
     /*ystride3=_ystride*3*/ \
@@ -121,17 +120,14 @@ __asm paddusb mm2,mm6 \
 
 #define OC_LOOP_FILTER_H_MMX(_pix,_ystride,_ll) \
   do{ \
-    unsigned char *pix; \
-    ptrdiff_t      ystride3; \
-    ptrdiff_t      d; \
-    OC_ALIGN8(unsigned char* ll_); \
-    ll_ = _ll; \
+    unsigned char *ll__; \
+    unsigned char *pix__; \
+    ll__=(_ll); \
     pix=(_pix)-2; \
-    __asm mov PIX, pix \
-    __asm mov YSTRIDE, _ystride \
-    __asm mov YSTRIDE3, ystride3 \
-    __asm mov LL, ll_ \
-    __asm mov D, d \
+    __asm mov PIX,pix__ \
+    __asm mov YSTRIDE,_ystride \
+    __asm mov YSTRIDE3,ystride3__ \
+    __asm mov LL,ll__ \
     /*x x x x d0 c0 b0 a0*/ \
     __asm movd mm0,[PIX] \
     /*x x x x d1 c1 b1 a1*/ \
@@ -216,6 +212,5 @@ __asm paddusb mm2,mm6 \
   } \
   while(0)
 
-  
 # endif
 #endif

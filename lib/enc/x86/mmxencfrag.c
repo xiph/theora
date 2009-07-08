@@ -448,8 +448,7 @@ unsigned oc_enc_frag_sad2_thresh_mmxext(const unsigned char *_src,
    mm7 = d3 c3 b3 a3*/ \
 
 static unsigned oc_int_frag_satd_thresh_mmxext(const unsigned char *_src,
- int _src_ystride,const unsigned char *_ref,int _ref_ystride,
- unsigned _thresh){
+ int _src_ystride,const unsigned char *_ref,int _ref_ystride,unsigned _thresh){
   OC_ALIGN8(ogg_int16_t  buf[64]);
   ogg_int16_t *bufp;
   unsigned     ret;
