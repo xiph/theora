@@ -163,8 +163,8 @@ static void usage(void){
           "                                  The frame rate nominator divided by this\n"
           "                                  determinates the frame rate in units per tick\n"
           "   -k --keyframe-freq <n>         Keyframe frequency\n"
-          "   -b --begin-time <h:m:s.f>     Begin encoding at offset into input\n"
-          "   -e --end-time <h:m:s.f>       End encoding at offset into input\n"
+          "   -b --begin-time <h:m:s.d>      Begin encoding at offset into input\n"
+          "   -e --end-time <h:m:s.d>        End encoding at offset into input\n"
           "encoder_example accepts only uncompressed RIFF WAV format audio and\n"
           "YUV4MPEG2 uncompressed video.\n\n");
   exit(1);
@@ -887,8 +887,8 @@ int fetch_and_process_audio(FILE *audio,ogg_page *audiopage,
   static ogg_int64_t samples_sofar=0;
   ogg_packet op;
   int i,j;
-  ogg_int64_t beginsample = audio_hz*begin_sec + audio_hz*begin_usec/1000000;
-  ogg_int64_t endsample = audio_hz*end_sec + audio_hz*end_usec/1000000;
+  ogg_int64_t beginsample = audio_hz*begin_sec + audio_hz*begin_usec*.000001;
+  ogg_int64_t endsample = audio_hz*end_sec + audio_hz*end_usec*.000001;
 
   while(audio && !audioflag){
     /* process any audio already buffered */
@@ -980,9 +980,9 @@ int fetch_and_process_video(FILE *video,ogg_page *videopage,
   int                        c_h;
   int                        c_sz;
   ogg_int64_t                beginframe = (video_fps_n*begin_sec +
-                                           video_fps_n*begin_usec/1000000)/video_fps_d;
+                                           video_fps_n*begin_usec*.000001)/video_fps_d;
   ogg_int64_t                endframe = (video_fps_n*end_sec +
-                                         video_fps_n*end_usec/1000000)/video_fps_d;
+                                         video_fps_n*end_usec*.000001)/video_fps_d;
 
   pic_sz=pic_w*pic_h;
   frame_c_w=frame_w/dst_c_dec_h;
@@ -1239,14 +1239,16 @@ int main(int argc,char *argv[]){
             pos2++;
             begin_sec*=60;
             begin_sec+=atol(pos2);
-          }else{
-            pos2=pos;
+            pos=pos2;
           }
-          pos2=strchr(pos2,'.');
-          if(pos2){
-            pos2++;
-            begin_usec=atol(pos2);
-          }
+        }else
+          pos=optarg;
+        pos=strchr(pos,'.');
+        if(pos){
+          int digits = strlen(++pos);
+          begin_usec=atol(pos);
+          while(digits++ < 6)
+            begin_usec*=10;
         }
       }
       break;
@@ -1262,14 +1264,16 @@ int main(int argc,char *argv[]){
             pos2++;
             end_sec*=60;
             end_sec+=atol(pos2);
-          }else{
-            pos2=pos;
+            pos=pos2;
           }
-          pos2=strchr(pos2,'.');
-          if(pos2){
-            pos2++;
-            end_usec=atol(pos2);
-          }
+        }else
+          pos=optarg;
+        pos=strchr(pos,'.');
+        if(pos){
+          int digits = strlen(++pos);
+          end_usec=atol(pos);
+          while(digits++ < 6)
+            end_usec*=10;
         }
       }
       break;
