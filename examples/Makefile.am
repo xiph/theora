@@ -14,7 +14,7 @@ LDADDENC = ../lib/libtheoraenc.la ../lib/libtheoradec.la $(OGG_LIBS)
 
 dump_video_SOURCES = dump_video.c
 EXTRA_dump_video_SOURCES = getopt.c getopt1.c getopt.h
-dump_video_LDADD = $(GETOPT_OBJS) $(LDADD)
+dump_video_LDADD = $(GETOPT_OBJS) $(LDADDDEC)
 dump_video_DEPENDENCIES = $(GETOPT_OBJS)
 
 dump_psnr_SOURCES = dump_psnr.c
