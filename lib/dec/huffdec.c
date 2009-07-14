@@ -75,7 +75,7 @@ static void oc_pack_adv(oc_pack_buf *_b,int _bits){
     OC_HUFF_SLUSH (defined below) would have to be at least 27 to actually read
      32 bits in a single go, and would require a 32 GB lookup table (assuming
      8 byte pointers, since 4 byte pointers couldn't fit such a table).*/
-  _b->window=window<<=_bits;
+  _b->window<<=_bits;
   _b->bits-=_bits;
 }
 
