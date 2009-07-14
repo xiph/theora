@@ -76,7 +76,7 @@ void oc_state_frag_copy_list_mmx(const oc_theora_state *_state,
   int                  ystride;
   dst_frame_data=_state->ref_frame_data[_state->ref_frame_idx[_dst_frame]];
   src_frame_data=_state->ref_frame_data[_state->ref_frame_idx[_src_frame]];
-  ystride=_state->ref_frame_bufs[0][_pli].stride;
+  ystride=_state->ref_ystride[_pli];
   frag_buf_offs=_state->frag_buf_offs;
   for(fragii=0;fragii<_nfragis;fragii++){
     ptrdiff_t frag_buf_off;

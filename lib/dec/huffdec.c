@@ -30,7 +30,7 @@
   Declaring local static versions so they can be inlined saves considerable
    function call overhead.*/
 
-static oc_pb_window inline oc_pack_refill(oc_pack_buf *_b,int _bits){
+static oc_pb_window oc_pack_refill(oc_pack_buf *_b,int _bits){
   const unsigned char *ptr;
   const unsigned char *stop;
   oc_pb_window         window;
@@ -70,15 +70,12 @@ static long oc_pack_look(oc_pack_buf *_b,int _bits){
 
 /*Advance the bit pointer.*/
 static void oc_pack_adv(oc_pack_buf *_b,int _bits){
-  oc_pb_window window;
-  window=_b->window;
   /*We ignore the special cases for _bits==0 and _bits==32 here, since they are
      never used actually used.
     OC_HUFF_SLUSH (defined below) would have to be at least 27 to actually read
      32 bits in a single go, and would require a 32 GB lookup table (assuming
      8 byte pointers, since 4 byte pointers couldn't fit such a table).*/
-  window<<=_bits;
-  _b->window=window;
+  _b->window=window<<=_bits;
   _b->bits-=_bits;
 }
 

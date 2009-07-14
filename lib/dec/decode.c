@@ -298,6 +298,7 @@ static void oc_dec_mark_all_intra(oc_dec_ctx *_dec){
     _dec->state.ncoded_fragis[pli]=ncoded_fragis-prev_ncoded_fragis;
     prev_ncoded_fragis=ncoded_fragis;
   }
+  _dec->state.ntotal_coded_fragis=ncoded_fragis;
 }
 
 /*Decodes the bit flags indicating whether each super block is partially coded
@@ -315,7 +316,7 @@ static unsigned oc_dec_partial_sb_flags_unpack(oc_dec_ctx *_dec){
   flag=(int)val;
   sb_flags=_dec->state.sb_flags;
   nsbs=_dec->state.nsbs;
-  sbi=run_count=npartial=0;
+  sbi=npartial=0;
   while(sbi<nsbs){
     int full_run;
     run_count=oc_sb_run_unpack(&_dec->opb);
@@ -437,6 +438,7 @@ static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
     _dec->state.ncoded_fragis[pli]=ncoded_fragis-prev_ncoded_fragis;
     prev_ncoded_fragis=ncoded_fragis;
   }
+  _dec->state.ntotal_coded_fragis=ncoded_fragis;
   /*TODO: run_count should be 0 here.
     If it's not, we should issue a warning of some kind.*/
 }
@@ -693,7 +695,7 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
       with the corresponding qi's for this frame.*/
     val=oc_pack_read1(&_dec->opb);
     flag=(int)val;
-    run_count=nqi1=0;
+    nqi1=0;
     fragii=0;
     while(fragii<ncoded_fragis){
       int full_run;
@@ -2148,6 +2150,7 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
 }
 
 int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
+  if(_dec==NULL||_ycbcr==NULL)return TH_EFAULT;
   oc_ycbcr_buffer_flip(_ycbcr,_dec->pp_frame_buf);
 #if defined(HAVE_CAIRO)
   /*If telemetry ioctls are active, we need to draw to the output buffer.

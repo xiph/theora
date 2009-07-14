@@ -74,7 +74,7 @@ long oc_pack_read(oc_pack_buf *_b,int _bits){
   window=_b->window;
   available=_b->bits;
   if(_bits==0)return 0;
-  if(_bits>available){
+  if(available<_bits){
     window=oc_pack_refill(_b,_bits);
     available=_b->bits;
   }
