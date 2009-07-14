@@ -25,49 +25,61 @@
 #define _ogg_offsetof(_type,_field)\
  ((size_t)((char *)&((_type *)0)->_field-(char *)0))
 
-/*These two functions are really part of the bitpack.c module, but
-  they are only used here. Declaring local static versions so they
-  can be inlined saves considerable function call overhead.*/
+/*These three functions are really part of the bitpack.c module, but
+   they are only used here.
+  Declaring local static versions so they can be inlined saves considerable
+   function call overhead.*/
 
-/*Read in bits without advancing the bitptr.
-  Here we assume 0<=_bits&&_bits<=32.*/
-static int theorapackB_look(oggpack_buffer *_b,int _bits,long *_ret){
-  long ret;
-  long m;
-  long d;
-  m=32-_bits;
-  _bits+=_b->endbit;
-  d=_b->storage-_b->endbyte;
-  if(d<=4){
-    /*Not the main path.*/
-    if(d<=0){
-      *_ret=0L;
-      return -(_bits>d*8);
-    }
-    /*If we have some bits left, but not enough, return the ones we have.*/
-    if(d*8<_bits)_bits=d*8;
+static oc_pb_window inline oc_pack_refill(oc_pack_buf *_b,int _bits){
+  const unsigned char *ptr;
+  const unsigned char *stop;
+  oc_pb_window         window;
+  int                  available;
+  window=_b->window;
+  available=_b->bits;
+  ptr=_b->ptr;
+  stop=_b->stop;
+  /*This version of _refill() doesn't bother setting eof because we won't
+     check for it after we've started decoding DCT tokens.*/
+  if(ptr>=stop)available=OC_LOTS_OF_BITS;
+  while(available<=OC_PB_WINDOW_SIZE-8){
+    available+=8;
+    window|=(oc_pb_window)*ptr++<<OC_PB_WINDOW_SIZE-available;
+    if(ptr>=stop)available=OC_LOTS_OF_BITS;
   }
-  ret=_b->ptr[0]<<24+_b->endbit;
-  if(_bits>8){
-    ret|=_b->ptr[1]<<16+_b->endbit;
-    if(_bits>16){
-      ret|=_b->ptr[2]<<8+_b->endbit;
-      if(_bits>24){
-        ret|=_b->ptr[3]<<_b->endbit;
-        if(_bits>32)ret|=_b->ptr[4]>>8-_b->endbit;
-      }
-    }
-  }
-  *_ret=((ret&0xFFFFFFFF)>>(m>>1))>>(m+1>>1);
-  return 0;
+  _b->ptr=ptr;
+  if(_bits>available)window|=*ptr>>(available&7);
+  _b->bits=available;
+  return window;
 }
 
-/*advance the bitptr*/
-static void theorapackB_adv(oggpack_buffer *_b,int _bits){
-  _bits+=_b->endbit;
-  _b->ptr+=_bits>>3;
-  _b->endbyte+=_bits>>3;
-  _b->endbit=_bits&7;
+
+/*Read in bits without advancing the bit pointer.
+  Here we assume 0<=_bits&&_bits<=32.*/
+static long oc_pack_look(oc_pack_buf *_b,int _bits){
+  oc_pb_window window;
+  int          available;
+  long         result;
+  window=_b->window;
+  available=_b->bits;
+  if(_bits==0)return 0;
+  if(_bits>available)_b->window=window=oc_pack_refill(_b,_bits);
+  result=window>>OC_PB_WINDOW_SIZE-_bits;
+  return result;
+}
+
+/*Advance the bit pointer.*/
+static void oc_pack_adv(oc_pack_buf *_b,int _bits){
+  oc_pb_window window;
+  window=_b->window;
+  /*We ignore the special cases for _bits==0 and _bits==32 here, since they are
+     never used actually used.
+    OC_HUFF_SLUSH (defined below) would have to be at least 27 to actually read
+     32 bits in a single go, and would require a 32 GB lookup table (assuming
+     8 byte pointers, since 4 byte pointers couldn't fit such a table).*/
+  window<<=_bits;
+  _b->window=window;
+  _b->bits-=_bits;
 }
 
 
@@ -135,7 +147,7 @@ static void oc_huff_tree_free(oc_huff_node *_node){
   _binodes:  The nodes to store the sub-tree in.
   _nbinodes: The number of nodes available for the sub-tree.
   Return: 0 on success, or a negative value on error.*/
-static int oc_huff_tree_unpack(oggpack_buffer *_opb,
+static int oc_huff_tree_unpack(oc_pack_buf *_opb,
  oc_huff_node *_binodes,int _nbinodes){
   oc_huff_node *binode;
   long          bits;
@@ -143,7 +155,8 @@ static int oc_huff_tree_unpack(oggpack_buffer *_opb,
   if(_nbinodes<1)return TH_EBADHEADER;
   binode=_binodes;
   nused=1;
-  if(theorapackB_read1(_opb,&bits)<0)return TH_EBADHEADER;
+  bits=oc_pack_read1(_opb);
+  if(oc_pack_bytes_left(_opb)<0)return TH_EBADHEADER;
   /*Read an internal node:*/
   if(!bits){
     int ret;
@@ -161,7 +174,8 @@ static int oc_huff_tree_unpack(oggpack_buffer *_opb,
   }
   /*Read a leaf node:*/
   else{
-    if(theorapackB_read(_opb,OC_NDCT_TOKEN_BITS,&bits)<0)return TH_EBADHEADER;
+    bits=oc_pack_read(_opb,OC_NDCT_TOKEN_BITS);
+    if(oc_pack_bytes_left(_opb)<0)return TH_EBADHEADER;
     binode->nbits=0;
     binode->depth=1;
     binode->token=(unsigned char)bits;
@@ -283,7 +297,7 @@ static oc_huff_node *oc_huff_tree_collapse(oc_huff_node *_binode){
   _opb:   The buffer to unpack the trees from.
   _nodes: The table to fill with the Huffman trees.
   Return: 0 on success, or a negative value on error.*/
-int oc_huff_trees_unpack(oggpack_buffer *_opb,
+int oc_huff_trees_unpack(oc_pack_buf *_opb,
  oc_huff_node *_nodes[TH_NHUFFMAN_TABLES]){
   int i;
   for(i=0;i<TH_NHUFFMAN_TABLES;i++){
@@ -317,12 +331,12 @@ void oc_huff_trees_clear(oc_huff_node *_nodes[TH_NHUFFMAN_TABLES]){
   _opb:  The buffer to unpack the token from.
   _node: The tree to unpack the token with.
   Return: The token value.*/
-int oc_huff_token_decode(oggpack_buffer *_opb,const oc_huff_node *_node){
+int oc_huff_token_decode(oc_pack_buf *_opb,const oc_huff_node *_node){
   long bits;
   while(_node->nbits!=0){
-    theorapackB_look(_opb,_node->nbits,&bits);
+    bits=oc_pack_look(_opb,_node->nbits);
     _node=_node->nodes[bits];
-    theorapackB_adv(_opb,_node->depth);
+    oc_pack_adv(_opb,_node->depth);
   }
   return _node->token;
 }

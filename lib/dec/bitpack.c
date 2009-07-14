@@ -14,108 +14,98 @@
   last mod: $Id$
 
  ********************************************************************/
-
-/*We're 'MSb' endian; if we write a word but read individual bits,
-   then we'll read the MSb first.*/
-
 #include <string.h>
 #include <stdlib.h>
 #include "bitpack.h"
 
-void theorapackB_readinit(oggpack_buffer *_b,unsigned char *_buf,int _bytes){
+/*We're 'MSb' endian; if we write a word but read individual bits,
+   then we'll read the MSb first.*/
+
+void oc_pack_readinit(oc_pack_buf *_b,unsigned char *_buf,long _bytes){
   memset(_b,0,sizeof(*_b));
-  _b->buffer=_b->ptr=_buf;
-  _b->storage=_bytes;
+  _b->ptr=_buf;
+  _b->stop=_buf+_bytes;
 }
 
-int theorapackB_look1(oggpack_buffer *_b,long *_ret){
-  if(_b->endbyte>=_b->storage){
-    *_ret=0L;
-    return -1;
+static oc_pb_window oc_pack_refill(oc_pack_buf *_b,int _bits){
+  const unsigned char *ptr;
+  const unsigned char *stop;
+  oc_pb_window         window;
+  int                  available;
+  window=_b->window;
+  available=_b->bits;
+  ptr=_b->ptr;
+  stop=_b->stop;
+  while(available<=OC_PB_WINDOW_SIZE-8&&ptr<stop){
+    available+=8;
+    window|=(oc_pb_window)*ptr++<<OC_PB_WINDOW_SIZE-available;
   }
-  *_ret=(_b->ptr[0]>>7-_b->endbit)&1;
-  return 0;
+  _b->ptr=ptr;
+  if(_bits>available){
+    if(ptr>=stop){
+      _b->eof=1;
+      available=OC_LOTS_OF_BITS;
+    }
+    else window|=*ptr>>(available&7);
+  }
+  _b->bits=available;
+  return window;
 }
 
-void theorapackB_adv1(oggpack_buffer *_b){
-  if(++(_b->endbit)>7){
-    _b->endbit=0;
-    _b->ptr++;
-    _b->endbyte++;
-  }
+int oc_pack_look1(oc_pack_buf *_b){
+  oc_pb_window window;
+  int          available;
+  window=_b->window;
+  available=_b->bits;
+  if(available<1)_b->window=window=oc_pack_refill(_b,1);
+  return window>>OC_PB_WINDOW_SIZE-1;
+}
+
+void oc_pack_adv1(oc_pack_buf *_b){
+  _b->window<<=1;
+  _b->bits--;
 }
 
 /*Here we assume that 0<=_bits&&_bits<=32.*/
-int theorapackB_read(oggpack_buffer *_b,int _bits,long *_ret){
-  long ret;
-  long m;
-  long d;
-  int fail;
-  m=32-_bits;
-  _bits+=_b->endbit;
-  d=_b->storage-_b->endbyte;
-  if(d<=4){
-    /*Not the main path.*/
-    if(d*8<_bits){
-      *_ret=0L;
-      fail=-1;
-      goto overflow;
-    }
-    /*Special case to avoid reading _b->ptr[0], which might be past the end of
-       the buffer; also skips some useless accounting.*/
-    else if(!_bits){
-      *_ret=0L;
-      return 0;
-    }
+long oc_pack_read(oc_pack_buf *_b,int _bits){
+  oc_pb_window window;
+  int          available;
+  long         result;
+  window=_b->window;
+  available=_b->bits;
+  if(_bits==0)return 0;
+  if(_bits>available){
+    window=oc_pack_refill(_b,_bits);
+    available=_b->bits;
   }
-  ret=_b->ptr[0]<<24+_b->endbit;
-  if(_bits>8){
-    ret|=_b->ptr[1]<<16+_b->endbit;
-    if(_bits>16){
-      ret|=_b->ptr[2]<<8+_b->endbit;
-      if(_bits>24){
-        ret|=_b->ptr[3]<<_b->endbit;
-        if(_bits>32)ret|=_b->ptr[4]>>8-_b->endbit;
-      }
-    }
-  }
-  *_ret=((ret&0xFFFFFFFFUL)>>(m>>1))>>(m+1>>1);
-  fail=0;
-overflow:
-  _b->ptr+=_bits>>3;
-  _b->endbyte+=_bits>>3;
-  _b->endbit=_bits&7;
-  return fail;
+  result=window>>OC_PB_WINDOW_SIZE-_bits;
+  available-=_bits;
+  window<<=1;
+  window<<=_bits-1;
+  _b->bits=available;
+  _b->window=window;
+  return result;
 }
 
-int theorapackB_read1(oggpack_buffer *_b,long *_ret){
-  int fail;
-  if(_b->endbyte>=_b->storage){
-    /*Not the main path.*/
-    *_ret=0L;
-    fail=-1;
+int oc_pack_read1(oc_pack_buf *_b){
+  oc_pb_window window;
+  int          available;
+  int          result;
+  window=_b->window;
+  available=_b->bits;
+  if(available<1){
+    window=oc_pack_refill(_b,1);
+    available=_b->bits;
   }
-  else{
-    *_ret=(_b->ptr[0]>>7-_b->endbit)&1;
-    fail=0;
-  }
-  _b->endbit++;
-  if(_b->endbit>7){
-    _b->endbit=0;
-    _b->ptr++;
-    _b->endbyte++;
-  }
-  return fail;
+  result=window>>OC_PB_WINDOW_SIZE-1;
+  available--;
+  window<<=1;
+  _b->bits=available;
+  _b->window=window;
+  return result;
 }
 
-long theorapackB_bytes(oggpack_buffer *_b){
-  return _b->endbyte+(_b->endbit+7>>3);
-}
-
-long theorapackB_bits(oggpack_buffer *_b){
-  return _b->endbyte*8+_b->endbit;
-}
-
-unsigned char *theorapackB_get_buffer(oggpack_buffer *_b){
-  return _b->buffer;
+long oc_pack_bytes_left(oc_pack_buf *_b){
+  if(_b->eof)return -1;
+  return _b->stop-_b->ptr+(_b->bits>>3);
 }

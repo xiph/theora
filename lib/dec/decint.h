@@ -53,7 +53,7 @@ struct th_dec_ctx{
      when a frame has been processed and a data packet is ready.*/
   int                  packet_state;
   /*Buffer in which to assemble packets.*/
-  oggpack_buffer       opb;
+  oc_pack_buf          opb;
   /*Huffman decode trees.*/
   oc_huff_node        *huff_tables[TH_NHUFFMAN_TABLES];
   /*The index of the first token in each plane for each coefficient.*/

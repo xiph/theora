@@ -27,30 +27,30 @@
   _opb: The pack buffer to read the octets from.
   _buf: The byte array to store the unpacked bytes in.
   _len: The number of octets to unpack.*/
-static void oc_unpack_octets(oggpack_buffer *_opb,char *_buf,size_t _len){
+static void oc_unpack_octets(oc_pack_buf *_opb,char *_buf,size_t _len){
   while(_len-->0){
     long val;
-    theorapackB_read(_opb,8,&val);
+    val=oc_pack_read(_opb,8);
     *_buf++=(char)val;
   }
 }
 
 /*Unpacks a 32-bit integer encoded by octets in little-endian form.*/
-static long oc_unpack_length(oggpack_buffer *_opb){
+static long oc_unpack_length(oc_pack_buf *_opb){
   long ret[4];
   int  i;
-  for(i=0;i<4;i++)theorapackB_read(_opb,8,ret+i);
+  for(i=0;i<4;i++)ret[i]=oc_pack_read(_opb,8);
   return ret[0]|ret[1]<<8|ret[2]<<16|ret[3]<<24;
 }
 
-static int oc_info_unpack(oggpack_buffer *_opb,th_info *_info){
+static int oc_info_unpack(oc_pack_buf *_opb,th_info *_info){
   long val;
   /*Check the codec bitstream version.*/
-  theorapackB_read(_opb,8,&val);
+  val=oc_pack_read(_opb,8);
   _info->version_major=(unsigned char)val;
-  theorapackB_read(_opb,8,&val);
+  val=oc_pack_read(_opb,8);
   _info->version_minor=(unsigned char)val;
-  theorapackB_read(_opb,8,&val);
+  val=oc_pack_read(_opb,8);
   _info->version_subminor=(unsigned char)val;
   /*verify we can parse this bitstream version.
      We accept earlier minors and all subminors, by spec*/
@@ -60,21 +60,21 @@ static int oc_info_unpack(oggpack_buffer *_opb,th_info *_info){
     return TH_EVERSION;
   }
   /*Read the encoded frame description.*/
-  theorapackB_read(_opb,16,&val);
+  val=oc_pack_read(_opb,16);
   _info->frame_width=(ogg_uint32_t)val<<4;
-  theorapackB_read(_opb,16,&val);
+  val=oc_pack_read(_opb,16);
   _info->frame_height=(ogg_uint32_t)val<<4;
-  theorapackB_read(_opb,24,&val);
+  val=oc_pack_read(_opb,24);
   _info->pic_width=(ogg_uint32_t)val;
-  theorapackB_read(_opb,24,&val);
+  val=oc_pack_read(_opb,24);
   _info->pic_height=(ogg_uint32_t)val;
-  theorapackB_read(_opb,8,&val);
+  val=oc_pack_read(_opb,8);
   _info->pic_x=(ogg_uint32_t)val;
-  theorapackB_read(_opb,8,&val);
+  val=oc_pack_read(_opb,8);
   _info->pic_y=(ogg_uint32_t)val;
-  theorapackB_read(_opb,32,&val);
+  val=oc_pack_read(_opb,32);
   _info->fps_numerator=(ogg_uint32_t)val;
-  theorapackB_read(_opb,32,&val);
+  val=oc_pack_read(_opb,32);
   _info->fps_denominator=(ogg_uint32_t)val;
   if(_info->frame_width==0||_info->frame_height==0||
    _info->pic_width+_info->pic_x>_info->frame_width||
@@ -87,38 +87,39 @@ static int oc_info_unpack(oggpack_buffer *_opb,th_info *_info){
     This is because the bitstream uses a right-handed coordinate system, while
      applications expect a left-handed one.*/
   _info->pic_y=_info->frame_height-_info->pic_height-_info->pic_y;
-  theorapackB_read(_opb,24,&val);
+  val=oc_pack_read(_opb,24);
   _info->aspect_numerator=(ogg_uint32_t)val;
-  theorapackB_read(_opb,24,&val);
+  val=oc_pack_read(_opb,24);
   _info->aspect_denominator=(ogg_uint32_t)val;
-  theorapackB_read(_opb,8,&val);
+  val=oc_pack_read(_opb,8);
   _info->colorspace=(th_colorspace)val;
-  theorapackB_read(_opb,24,&val);
+  val=oc_pack_read(_opb,24);
   _info->target_bitrate=(int)val;
-  theorapackB_read(_opb,6,&val);
+  val=oc_pack_read(_opb,6);
   _info->quality=(int)val;
-  theorapackB_read(_opb,5,&val);
+  val=oc_pack_read(_opb,5);
   _info->keyframe_granule_shift=(int)val;
-  theorapackB_read(_opb,2,&val);
+  val=oc_pack_read(_opb,2);
   _info->pixel_fmt=(th_pixel_fmt)val;
   if(_info->pixel_fmt==TH_PF_RSVD)return TH_EBADHEADER;
-  if(theorapackB_read(_opb,3,&val)<0||val!=0)return TH_EBADHEADER;
+  val=oc_pack_read(_opb,3);
+  if(val!=0||oc_pack_bytes_left(_opb)<0)return TH_EBADHEADER;
   return 0;
 }
 
-static int oc_comment_unpack(oggpack_buffer *_opb,th_comment *_tc){
+static int oc_comment_unpack(oc_pack_buf *_opb,th_comment *_tc){
   long len;
   int  i;
   /*Read the vendor string.*/
   len=oc_unpack_length(_opb);
-  if(len<0||len>_opb->storage-theorapackB_bytes(_opb))return TH_EBADHEADER;
+  if(len<0||len>oc_pack_bytes_left(_opb))return TH_EBADHEADER;
   _tc->vendor=_ogg_malloc((size_t)len+1);
   oc_unpack_octets(_opb,_tc->vendor,len);
   _tc->vendor[len]='\0';
   /*Read the user comments.*/
   _tc->comments=(int)oc_unpack_length(_opb);
   len=_tc->comments;
-  if(len<0||len>(LONG_MAX>>2)||len<<2>_opb->storage-theorapackB_bytes(_opb)){
+  if(len<0||len>(LONG_MAX>>2)||len<<2>oc_pack_bytes_left(_opb)){
     _tc->comments=0;
     return TH_EBADHEADER;
   }
@@ -128,7 +129,7 @@ static int oc_comment_unpack(oggpack_buffer *_opb,th_comment *_tc){
    _tc->comments*sizeof(_tc->user_comments[0]));
   for(i=0;i<_tc->comments;i++){
     len=oc_unpack_length(_opb);
-    if(len<0||len>_opb->storage-theorapackB_bytes(_opb)){
+    if(len<0||len>oc_pack_bytes_left(_opb)){
       _tc->comments=i;
       return TH_EBADHEADER;
     }
@@ -137,10 +138,10 @@ static int oc_comment_unpack(oggpack_buffer *_opb,th_comment *_tc){
     oc_unpack_octets(_opb,_tc->user_comments[i],len);
     _tc->user_comments[i][len]='\0';
   }
-  return theorapackB_read(_opb,0,&len)<0?TH_EBADHEADER:0;
+  return oc_pack_bytes_left(_opb)<0?TH_EBADHEADER:0;
 }
 
-static int oc_setup_unpack(oggpack_buffer *_opb,th_setup_info *_setup){
+static int oc_setup_unpack(oc_pack_buf *_opb,th_setup_info *_setup){
   int ret;
   /*Read the quantizer tables.*/
   ret=oc_quant_params_unpack(_opb,&_setup->qinfo);
@@ -154,13 +155,13 @@ static void oc_setup_clear(th_setup_info *_setup){
   oc_huff_trees_clear(_setup->huff_tables);
 }
 
-static int oc_dec_headerin(oggpack_buffer *_opb,th_info *_info,
+static int oc_dec_headerin(oc_pack_buf *_opb,th_info *_info,
  th_comment *_tc,th_setup_info **_setup,ogg_packet *_op){
   char buffer[6];
   long val;
   int  packtype;
   int  ret;
-  theorapackB_read(_opb,8,&val);
+  val=oc_pack_read(_opb,8);
   packtype=(int)val;
   /*If we're at a data packet and we have received all three headers, we're
      done.*/
@@ -224,10 +225,10 @@ static int oc_dec_headerin(oggpack_buffer *_opb,th_info *_info,
    stream until it returns 0.*/
 int th_decode_headerin(th_info *_info,th_comment *_tc,
  th_setup_info **_setup,ogg_packet *_op){
-  oggpack_buffer opb;
+  oc_pack_buf opb;
   if(_op==NULL)return TH_EBADHEADER;
   if(_info==NULL)return TH_EFAULT;
-  theorapackB_readinit(&opb,_op->packet,_op->bytes);
+  oc_pack_readinit(&opb,_op->packet,_op->bytes);
   return oc_dec_headerin(&opb,_info,_tc,_setup,_op);
 }
 
