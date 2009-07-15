@@ -200,6 +200,7 @@ static int oc_dec_init(oc_dec_ctx *_dec,const th_info *_info,
   _dec->stripe_cb.stripe_decoded=NULL;
 #if defined(HAVE_CAIRO)
   _dec->telemetry=0;
+  _dec->telemetry_qi=0;
   _dec->telemetry_mbmode=0;
   _dec->telemetry_mv=0;
   _dec->telemetry_frame_data=NULL;
@@ -1936,6 +1937,13 @@ int th_decode_ctl(th_dec_ctx *_dec,int _req,void *_buf,
     _dec->telemetry_mv=*(int *)_buf;
     return 0;
   }break;
+  case TH_DECCTL_SET_TELEMETRY_QI:{
+    if(_dec==NULL||_buf==NULL)return TH_EFAULT;
+    if(_buf_sz!=sizeof(int))return TH_EINVAL;
+    _dec->telemetry=1;
+    _dec->telemetry_qi=*(int *)_buf;
+    return 0;
+  }break;
 #endif
   default:return TH_EIMPL;
   }
@@ -2208,6 +2216,7 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
       v_row+=_ycbcr[2].stride&-((y&1)|!vdec);
       rgb_row+=cstride;
     }
+
     /*Draw coded identifier for each macroblock (stored in Hilbert order).*/
     {
       cairo_t           *c;
@@ -2219,6 +2228,48 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
       size_t             mbi;
       int                row2;
       int                col2;
+      int                qim[3]={0,0,0};
+
+      if(_dec->state.nqis==2){
+        int bqi = _dec->state.qis[0];
+        if(_dec->state.qis[1]>bqi)
+          qim[1]=1;
+        if(_dec->state.qis[1]<bqi)
+          qim[1]=-1;
+      }
+      if(_dec->state.nqis==3){
+        int bqi = _dec->state.qis[0];
+        int cqi = _dec->state.qis[1];
+        int dqi = _dec->state.qis[2];
+        if(cqi>bqi && dqi>bqi){
+          if(dqi>cqi){
+            qim[1]=1;
+            qim[2]=2;
+          }else{
+            qim[1]=2;
+            qim[2]=1;
+          }
+        }else if (cqi<bqi && dqi<bqi){
+          if(dqi<cqi){
+            qim[1]=-1;
+            qim[2]=-2;
+          }else{
+            qim[1]=-2;
+            qim[2]=-1;
+          }
+        }else{
+          if(cqi<bqi)
+            qim[1]=-1;
+          else
+            qim[1]=1;
+
+          if(dqi<bqi)
+            qim[2]=-1;
+          else
+            qim[2]=1;
+        }
+      }
+
       c=cairo_create(cs);
       frags=_dec->state.frags;
       frag_mvs=_dec->state.frag_mvs;
@@ -2234,6 +2285,8 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
         y=h-(row2+((col2+1>>1)&1))*16-16;
         x=(col2>>1)*16;
         cairo_set_line_width(c,1.);
+
+        /* keyframe (all intra) red box */
         if(_dec->state.frame_type==OC_INTRA_FRAME){
           if(_dec->telemetry_mbmode&0x02){
             cairo_set_source_rgba(c,1.,0,0,.5);
@@ -2445,12 +2498,116 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
             }
           }
         }
+
+        /* qii illustration */
+        if(_dec->telemetry_qi&0x2){
+          for(bi=0;bi<4;bi++){
+            int qiv,xp=x+(bi&1)*8,yp=y+8-(bi&2)*4;
+            int fragi=mb_maps[mbi][0][bi];
+            if(fragi>=0&&frags[fragi].coded){
+              qiv=qim[frags[fragi].qii];
+
+              switch(qiv){
+              case 2:
+              /* double plus */
+                if((bi&1)^((bi&2)>>1)){
+                  cairo_move_to(c,xp+2.5,yp+1.5);
+                  cairo_line_to(c,xp+2.5,yp+3.5);
+                  cairo_move_to(c,xp+1.5,yp+2.5);
+                  cairo_line_to(c,xp+3.5,yp+2.5);
+                  cairo_move_to(c,xp+5.5,yp+4.5);
+                  cairo_line_to(c,xp+5.5,yp+6.5);
+                  cairo_move_to(c,xp+4.5,yp+5.5);
+                  cairo_line_to(c,xp+6.5,yp+5.5);
+                }else{
+                  cairo_move_to(c,xp+5.5,yp+1.5);
+                  cairo_line_to(c,xp+5.5,yp+3.5);
+                  cairo_move_to(c,xp+4.5,yp+2.5);
+                  cairo_line_to(c,xp+6.5,yp+2.5);
+                  cairo_move_to(c,xp+2.5,yp+4.5);
+                  cairo_line_to(c,xp+2.5,yp+6.5);
+                  cairo_move_to(c,xp+1.5,yp+5.5);
+                  cairo_line_to(c,xp+3.5,yp+5.5);
+                }
+                break;
+
+              case -2:
+                /* double minus */
+                cairo_move_to(c,xp+2.5,yp+2.5);
+                cairo_line_to(c,xp+5.5,yp+2.5);
+                cairo_move_to(c,xp+2.5,yp+5.5);
+                cairo_line_to(c,xp+5.5,yp+5.5);
+                break;
+
+              case 1:
+                /* plus */
+                if(bi&2==0)yp-=2;
+                if(bi&1==0)xp-=2;
+                cairo_move_to(c,xp+4.5,yp+2.5);
+                cairo_line_to(c,xp+4.5,yp+6.5);
+              case -1:
+                cairo_move_to(c,xp+2.5,yp+4.5);
+                cairo_line_to(c,xp+6.5,yp+4.5);
+                break;
+              default:
+                continue;
+              }
+
+              cairo_stroke_preserve(c);
+              cairo_set_source_rgba(c,1.,1.,1.,1.);
+              cairo_set_line_width(c,1.);
+              cairo_stroke(c);
+              cairo_set_line_width(c,3.);
+              cairo_set_source_rgba(c,0.,0.,0.,.5);
+            }
+          }
+        }
+
         col2++;
         if((col2>>1)>=_dec->state.nhmbs){
           col2=0;
           row2+=2;
         }
       }
+
+      /* master qi indicator[s] */
+      if(_dec->telemetry_qi&0x1){
+        cairo_text_extents_t extents;
+        char buffer[10];
+        int p=0;
+        if(_dec->state.qis[0]>10)
+          buffer[p++]=48+_dec->state.qis[0]/10;
+        buffer[p++]=48+_dec->state.qis[0]%10;
+        if(_dec->state.nqis>=2){
+          buffer[p++]=' ';
+          if(_dec->state.qis[1]>10)
+            buffer[p++]=48+_dec->state.qis[1]/10;
+          buffer[p++]=48+_dec->state.qis[1]%10;
+        }
+        if(_dec->state.nqis==3){
+          buffer[p++]=' ';
+          if(_dec->state.qis[2]>10)
+            buffer[p++]=48+_dec->state.qis[2]/10;
+          buffer[p++]=48+_dec->state.qis[2]%10;
+        }
+        buffer[p++]='\0';
+
+        cairo_select_font_face (c, "sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+        cairo_set_font_size(c, 18);
+        cairo_text_extents(c, buffer, &extents);
+
+        cairo_set_source_rgb (c, 1,1,1);
+        cairo_move_to(c, w-extents.x_advance-10, h-10);
+        cairo_show_text(c, buffer);
+
+        cairo_set_source_rgb (c, 0,0,0);
+        cairo_move_to(c, w-extents.x_advance-10, h-10);
+        cairo_text_path (c, buffer);
+        cairo_set_line_width(c,.8);
+        cairo_set_line_join(c,CAIRO_LINE_JOIN_ROUND);
+        cairo_stroke(c);
+      }
+
       cairo_destroy(c);
     }
     /*Out of the Cairo plane into the telemetry YUV buffer.*/

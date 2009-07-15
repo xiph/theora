@@ -87,6 +87,7 @@ extern "C" {
 
 #define TH_DECCTL_SET_TELEMETRY_MBMODE (9)
 #define TH_DECCTL_SET_TELEMETRY_MV (11)
+#define TH_DECCTL_SET_TELEMETRY_QI (13)
 
 
 
