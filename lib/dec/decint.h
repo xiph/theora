@@ -98,6 +98,15 @@ struct th_dec_ctx{
   int                  telemetry_mbmode;
   int                  telemetry_mv;
   int                  telemetry_qi;
+  int                  telemetry_bits;
+
+  int                  telemetry_frame_bytes;
+  int                  telemetry_coding_bytes;
+  int                  telemetry_mode_bytes;
+  int                  telemetry_mv_bytes;
+  int                  telemetry_qi_bytes;
+  int                  telemetry_dc_bytes;
+
   unsigned char       *telemetry_frame_data;
 # endif
 };
