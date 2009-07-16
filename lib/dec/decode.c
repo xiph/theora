@@ -1051,7 +1051,9 @@ static void oc_dec_residual_tokens_unpack(oc_dec_ctx *_dec){
   huff_idxs[1]=(int)val;
   _dec->eob_runs[0][0]=0;
   eobs=oc_dec_dc_coeff_unpack(_dec,huff_idxs,ntoks_left);
+#if defined(HAVE_CAIRO)
   _dec->telemetry_dc_bytes = oc_pack_bytes_left(&_dec->opb);
+#endif
 
   val=oc_pack_read(&_dec->opb,4);
   huff_idxs[0]=(int)val;
@@ -1976,7 +1978,9 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
     int                   notstart;
     int                   notdone;
     oc_pack_readinit(&_dec->opb,_op->packet,_op->bytes);
+#if defined(HAVE_CAIRO)
     _dec->telemetry_frame_bytes = _op->bytes;
+#endif
 
     ret=oc_dec_frame_header_unpack(_dec);
 
@@ -2016,19 +2020,29 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
     if(_dec->state.frame_type==OC_INTRA_FRAME){
       oc_dec_mark_all_intra(_dec);
       _dec->state.keyframe_num=_dec->state.curframe_num;
+#if defined(HAVE_CAIRO)
       _dec->telemetry_coding_bytes =
         _dec->telemetry_mode_bytes =
         _dec->telemetry_mv_bytes = oc_pack_bytes_left(&_dec->opb);
+#endif
     }else{
       oc_dec_coded_flags_unpack(_dec);
+#if defined(HAVE_CAIRO)
       _dec->telemetry_coding_bytes = oc_pack_bytes_left(&_dec->opb);
+#endif
       oc_dec_mb_modes_unpack(_dec);
+#if defined(HAVE_CAIRO)
       _dec->telemetry_mode_bytes = oc_pack_bytes_left(&_dec->opb);
+#endif
       oc_dec_mv_unpack_and_frag_modes_fill(_dec);
+#if defined(HAVE_CAIRO)
       _dec->telemetry_mv_bytes = oc_pack_bytes_left(&_dec->opb);
+#endif
     }
     oc_dec_block_qis_unpack(_dec);
+#if defined(HAVE_CAIRO)
     _dec->telemetry_qi_bytes = oc_pack_bytes_left(&_dec->opb);
+#endif
     oc_dec_residual_tokens_unpack(_dec);
     /*Update granule position.
       This must be done before the striped decode callbacks so that the
