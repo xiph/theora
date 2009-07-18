@@ -19,6 +19,29 @@
 #include "encint.h"
 
 
+/*Search for the quantizer that matches the target most closely.
+  We don't assume a linear ordering, but when there are ties we pick the
+   quantizer closest to the old one.*/
+int oc_enc_find_qi_for_target(oc_enc_ctx *_enc,int _qti,int _qi_old,
+ int _qi_min,ogg_int64_t _log_qtarget){
+  ogg_int64_t best_qdiff;
+  int         best_qi;
+  int         qi;
+  best_qi=_qi_min;
+  best_qdiff=_enc->log_qavg[_qti][best_qi]-_log_qtarget;
+  best_qdiff=best_qdiff+OC_SIGNMASK(best_qdiff)^OC_SIGNMASK(best_qdiff);
+  for(qi=_qi_min+1;qi<64;qi++){
+    ogg_int64_t qdiff;
+    qdiff=_enc->log_qavg[_qti][qi]-_log_qtarget;
+    qdiff=qdiff+OC_SIGNMASK(qdiff)^OC_SIGNMASK(qdiff);
+    if(qdiff<best_qdiff||
+     qdiff==best_qdiff&&abs(qi-_qi_old)<abs(best_qi-_qi_old)){
+      best_qi=qi;
+      best_qdiff=qdiff;
+    }
+  }
+  return best_qi;
+}
 
 void oc_enc_calc_lambda(oc_enc_ctx *_enc,int _frame_type){
   ogg_int64_t lq;
@@ -158,8 +181,7 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
   int          nframes[2];
   int          buf_delay;
   ogg_int64_t  log_qtarget;
-  int          best_qi;
-  ogg_int64_t  best_qdiff;
+  ogg_int64_t  log_scale0;
   int          old_qi;
   int          qi;
   /*Figure out how to re-distribute bits so that we hit our fullness target
@@ -190,18 +212,17 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
     }
     else nframes[1]=!!nframes[1];
   }
+  log_scale0=_enc->rc.log_scale[_qti]+_enc->rc.log_npixels;
   /*If there aren't enough bits to achieve our desired fullness level, use the
      minimum quality permitted.*/
   if(rate_total<=buf_delay)log_qtarget=OC_QUANT_MAX_LOG;
   else{
     static const unsigned char KEY_RATIO[2]={32,17};
-    ogg_int64_t   log_scale0;
     ogg_int64_t   log_scale1;
     ogg_int64_t   prevr;
     ogg_int64_t   curr;
     ogg_int64_t   realr;
     int           i;
-    log_scale0=_enc->rc.log_scale[_qti]+_enc->rc.log_npixels;
     log_scale1=_enc->rc.log_scale[1-_qti]+_enc->rc.log_npixels;
     curr=(rate_total+(buf_delay>>1))/buf_delay;
     realr=curr*KEY_RATIO[_qti]+16>>5;
@@ -245,23 +266,28 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
     log_qmax=_enc->log_qavg[_qti][old_qi]+0x00A4D3C25E68DC58LL;
     log_qtarget=OC_CLAMPI(log_qmin,log_qtarget,log_qmax);
   }
-  /*Search for the quantizer that matches the target most closely.
-    We don't assume a linear ordering, but when there are ties we do pick the
-     quantizer closest to the current one.*/
-  best_qi=_enc->state.info.quality;
-  best_qdiff=_enc->log_qavg[_qti][best_qi]-log_qtarget;
-  best_qdiff=best_qdiff+OC_SIGNMASK(best_qdiff)^OC_SIGNMASK(best_qdiff);
-  for(qi=_enc->state.info.quality+1;qi<64;qi++){
-    ogg_int64_t qdiff;
-    qdiff=_enc->log_qavg[_qti][qi]-log_qtarget;
-    qdiff=qdiff+OC_SIGNMASK(qdiff)^OC_SIGNMASK(qdiff);
-    if(qdiff<best_qdiff||
-     qdiff==best_qdiff&&abs(qi-old_qi)<abs(best_qi-old_qi)){
-      best_qi=qi;
-      best_qdiff=qdiff;
+  /*The above allocation looks only at the total rate we'll accumulate in the
+     next buf_delay frames.
+    However, we could bust the budget on the very next frame, so check for that
+     here.*/
+  {
+    ogg_int64_t log_hard_limit;
+    ogg_int64_t log_qexp;
+    int         exp0;
+    /*Allow 50% of the rate for a single frame for prediction error.
+      This may not be enough for keyframes.*/
+    log_hard_limit=oc_blog64(_enc->rc.fullness+(_enc->rc.bits_per_frame>>1));
+    exp0=_enc->rc.exp[_qti];
+    log_qexp=log_qtarget-OC_Q57(2);
+    log_qexp=(log_qtarget-OC_Q57(2)>>6)*exp0;
+    if(log_scale0-log_qexp>log_hard_limit){
+      log_qexp=log_scale0-log_hard_limit;
+      log_qtarget=((log_qexp+(exp0>>1))/exp0<<6)+OC_Q57(2);
     }
   }
+  qi=oc_enc_find_qi_for_target(_enc,_qti,old_qi,
+   _enc->state.info.quality,log_qtarget);
   /*Save the quantizer target for lambda calculations.*/
   _enc->rc.log_qtarget=log_qtarget;
-  return best_qi;
+  return qi;
 }
