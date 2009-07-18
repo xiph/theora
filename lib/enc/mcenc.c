@@ -69,25 +69,9 @@ static const int OC_SQUARE_SITES[11][8]={
   {0,1,3}
 };
 
-
-void oc_mcenc_start(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc){
-  ogg_int64_t nframes;
-  /*Set up the accelerated MV weights for previous frame prediction.*/
-  _mcenc->mvapw1[OC_FRAME_PREV]=(ogg_int32_t)1<<17;
-  _mcenc->mvapw2[OC_FRAME_PREV]=(ogg_int32_t)1<<16;
-  /*Set up the accelerated MV weights for golden frame prediction.*/
-  nframes=_enc->state.curframe_num-_enc->state.keyframe_num;
-  _mcenc->mvapw1[OC_FRAME_GOLD]=(ogg_int32_t)(
-   nframes!=1?(nframes<<17)/(nframes-1):0);
-  _mcenc->mvapw2[OC_FRAME_GOLD]=(ogg_int32_t)(
-   nframes!=2?(nframes<<16)/(nframes-2):0);
-}
-
 static void oc_mcenc_find_candidates(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
- int _mbi,int _frame){
+                                     int _accum[2], int _mbi,int _frame){
   oc_mb_enc_info *embs;
-  ogg_int32_t     mvapw1;
-  ogg_int32_t     mvapw2;
   int             a[3][2];
   int             ncandidates;
   unsigned        nmbi;
@@ -106,11 +90,11 @@ static void oc_mcenc_find_candidates(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
     }
     /*Add a few additional vectors to set A: the vector used in the
        previous frame and the (0,0) vector.*/
-    _mcenc->candidates[ncandidates][0]=embs[_mbi].analysis_mv[1][_frame][0];
-    _mcenc->candidates[ncandidates][1]=embs[_mbi].analysis_mv[1][_frame][1];
+    _mcenc->candidates[ncandidates][0]=OC_CLAMPI(-31,embs[_mbi].analysis_mv[1][_frame][0]+_accum[0],31);
+    _mcenc->candidates[ncandidates][1]=OC_CLAMPI(-31,embs[_mbi].analysis_mv[1][_frame][1]+_accum[1],31);
     ncandidates++;
-    _mcenc->candidates[ncandidates][0]=0;
-    _mcenc->candidates[ncandidates][1]=0;
+    _mcenc->candidates[ncandidates][0]=OC_CLAMPI(-31,_accum[0],31);
+    _mcenc->candidates[ncandidates][1]=OC_CLAMPI(-31,_accum[1],31);
     ncandidates++;
     /*Use the first three vectors of set A to find our best predictor: their
        median.*/
@@ -128,30 +112,30 @@ static void oc_mcenc_find_candidates(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
     /*The upper-left most macro block has no neighbors at all
       We just use 0,0 as the median predictor and its previous motion vector
        for set A.*/
-    _mcenc->candidates[0][0]=0;
-    _mcenc->candidates[0][1]=1;
-    _mcenc->candidates[1][0]=embs[_mbi].analysis_mv[1][_frame][0];
-    _mcenc->candidates[1][1]=embs[_mbi].analysis_mv[1][_frame][1];
+    _mcenc->candidates[0][0]=OC_CLAMPI(-31,_accum[0],31);
+    _mcenc->candidates[0][1]=OC_CLAMPI(-31,_accum[1],31);
+    _mcenc->candidates[1][0]=OC_CLAMPI(-31,embs[_mbi].analysis_mv[1][_frame][0]+_accum[0],31);
+    _mcenc->candidates[1][1]=OC_CLAMPI(-31,embs[_mbi].analysis_mv[1][_frame][1]+_accum[1],31);
     ncandidates=2;
   }
+
   /*Fill in set B: accelerated predictors for this and adjacent macro
-     blocks.*/
+    blocks.*/
   _mcenc->setb0=ncandidates;
-  mvapw1=_mcenc->mvapw1[_frame];
-  mvapw2=_mcenc->mvapw2[_frame];
   /*The first time through the loop use the current macro block.*/
   nmbi=_mbi;
   for(i=0;;i++){
-    _mcenc->candidates[ncandidates][0]=OC_CLAMPI(-31,
-     OC_DIV_POW2_RE(embs[nmbi].analysis_mv[1][_frame][0]*mvapw1
-     -embs[nmbi].analysis_mv[2][_frame][0]*mvapw2,16),31);
-    _mcenc->candidates[ncandidates][1]=OC_CLAMPI(-31,
-     OC_DIV_POW2_RE(embs[nmbi].analysis_mv[1][_frame][1]*mvapw1
-     -embs[nmbi].analysis_mv[2][_frame][1]*mvapw2,16),31);
+    _mcenc->candidates[ncandidates][0]=
+      OC_CLAMPI(-31, 2*embs[_mbi].analysis_mv[1][_frame][0]-
+                embs[_mbi].analysis_mv[2][_frame][0]+_accum[0], 31);
+    _mcenc->candidates[ncandidates][1]=
+      OC_CLAMPI(-31, 2*embs[_mbi].analysis_mv[1][_frame][1]-
+                embs[_mbi].analysis_mv[2][_frame][1]+_accum[1], 31);
     ncandidates++;
     if(i>=embs[_mbi].npneighbors)break;
     nmbi=embs[_mbi].pneighbors[i];
   }
+
   /*Truncate to full-pel positions.*/
   for(i=0;i<ncandidates;i++){
     _mcenc->candidates[i][0]=OC_DIV2(_mcenc->candidates[i][0]);
@@ -246,9 +230,10 @@ static unsigned oc_mcenc_ysatd_check_bcandidate_fullpel(const oc_enc_ctx *_enc,
   The actual motion vector is stored in the appropriate place in the
    oc_mb_enc_info structure.
   _mcenc:    The motion compensation context.
+  _accum:    drop frame/golden mv accumulators
   _mbi:      The macro block index.
   _frame:    The frame to search, either OC_FRAME_PREV or OC_FRAME_GOLD.*/
-void oc_mcenc_search(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,int _mbi,int _frame){
+void oc_mcenc_search(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,int _accum[2],int _mbi,int _frame){
   /*Note: Traditionally this search is done using a rate-distortion objective
      function of the form D+lambda*R.
     However, xiphmont tested this and found it produced a small degredation,
@@ -282,7 +267,7 @@ void oc_mcenc_search(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,int _mbi,int _frame){
   int                  bi;
   embs=_enc->mb_info;
   /*Find some candidate motion vectors.*/
-  oc_mcenc_find_candidates(_enc,_mcenc,_mbi,_frame);
+  oc_mcenc_find_candidates(_enc,_mcenc,_accum,_mbi,_frame);
   /*Clear the cache of locations we've examined.*/
   memset(hit_cache,0,sizeof(hit_cache));
   /*Start with the median predictor.*/

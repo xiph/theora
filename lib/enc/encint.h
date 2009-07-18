@@ -193,8 +193,8 @@ struct oc_rc_state{
 
 void oc_enc_calc_lambda(oc_enc_ctx *_enc,int _frame_type);
 void oc_rc_state_init(oc_rc_state *_rc,const oc_enc_ctx *_enc);
-void oc_enc_update_rc_state(oc_enc_ctx *_enc,
- long _bits,int _qti,int _qi,int _trial);
+int oc_enc_update_rc_state(oc_enc_ctx *_enc,
+  long _bits,int _qti,int _qi,int _trial,int _droppable);
 int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp);
 
 
@@ -230,6 +230,8 @@ struct th_enc_ctx{
   unsigned char            vp3_compatible;
   /*Whether or not any INTER frames have been coded.*/
   unsigned char            coded_inter_frame;
+  /*Whether or not previous frame was dropped.*/
+  unsigned char            prevframe_dropped;
   /*Stores most recently chosen Huffman tables for each frame type, DC and AC
      coefficients, and luma and chroma tokens.
     The actual Huffman table used for a given coefficient depends not only on
@@ -295,17 +297,10 @@ struct oc_mcenc_ctx{
   int                setb0;
   /*The total number of candidates.*/
   int                ncandidates;
-  /*Accelerated predictor weights for each frame type.*/
-  ogg_int32_t        mvapw1[2];
-  ogg_int32_t        mvapw2[2];
 };
 
-
-/*Prep the motion search for the next frame.*/
-void oc_mcenc_start(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc);
-
 /*Search for a single MB MV (and with OC_FRAME_PREV, block MVs) in one frame.*/
-void oc_mcenc_search(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,int _mbi,int _frame);
+void oc_mcenc_search(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,int acc[2],int _mbi,int _frame);
 /*Refine a MB MV for one frame.*/
 void oc_mcenc_refine1mv(oc_enc_ctx *_enc,int _mbi,int _frame);
 /*Refine the block MVs.*/

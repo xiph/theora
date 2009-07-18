@@ -1197,7 +1197,6 @@ int oc_enc_analyze(oc_enc_ctx *_enc,int _frame_type,int _recode){
   int                     pli;
   set_chroma_mvs=OC_SET_CHROMA_MVS_TABLE[_enc->state.info.pixel_fmt];
   _enc->state.frame_type=_frame_type;
-  if(!_recode&&_enc->state.curframe_num>0)oc_mcenc_start(_enc,&mcenc);
   oc_mode_scheme_chooser_reset(&_enc->chooser);
   oc_enc_tokenize_start(_enc);
   oc_enc_pipeline_init(_enc,&pipe);
@@ -1257,13 +1256,44 @@ int oc_enc_analyze(oc_enc_ctx *_enc,int _frame_type,int _recode){
           /*Motion estimation:
             We always do a basic 1MV search for all macroblocks, coded or not,
              keyframe or not.*/
+          int accumP[2]={0,0};
+          int accumG[2]={0,0};
+          if(_enc->prevframe_dropped){
+            accumP[0] = embs[mbi].analysis_mv[0][OC_FRAME_PREV][0];
+            accumP[1] = embs[mbi].analysis_mv[0][OC_FRAME_PREV][1];
+          }
+          accumG[0]=embs[mbi].analysis_mv[2][OC_FRAME_GOLD][0];
+          accumG[1]=embs[mbi].analysis_mv[2][OC_FRAME_GOLD][1];
+
+          embs[mbi].analysis_mv[0][OC_FRAME_PREV][0] -= embs[mbi].analysis_mv[2][OC_FRAME_PREV][0];
+          embs[mbi].analysis_mv[0][OC_FRAME_PREV][1] -= embs[mbi].analysis_mv[2][OC_FRAME_PREV][1];
+
           /*Move the motion vector predictors back a frame.*/
           memmove(embs[mbi].analysis_mv+1,
-           embs[mbi].analysis_mv,2*sizeof(embs[mbi].analysis_mv[0]));
+                  embs[mbi].analysis_mv,2*sizeof(embs[mbi].analysis_mv[0]));
+
           /*Search the last frame.*/
-          oc_mcenc_search(_enc,&mcenc,mbi,OC_FRAME_PREV);
+          oc_mcenc_search(_enc,&mcenc,accumP,mbi,OC_FRAME_PREV);
+          embs[mbi].analysis_mv[2][OC_FRAME_PREV][0]=accumP[0];
+          embs[mbi].analysis_mv[2][OC_FRAME_PREV][1]=accumP[1];
+
+          /* GOLDEN mvs are different from PREV mvs in that they're
+             each absolute offsets from some frame in the past rather
+             than relative offsets from the frame before.  For
+             predictor calculation to make sense, we need them to be
+             in the same form as PREV mvs */
+          embs[mbi].analysis_mv[1][OC_FRAME_GOLD][0]-=embs[mbi].analysis_mv[2][OC_FRAME_GOLD][0];
+          embs[mbi].analysis_mv[1][OC_FRAME_GOLD][1]-=embs[mbi].analysis_mv[2][OC_FRAME_GOLD][1];
+          embs[mbi].analysis_mv[2][OC_FRAME_GOLD][0]-=accumG[0];
+          embs[mbi].analysis_mv[2][OC_FRAME_GOLD][1]-=accumG[1];
           /*Search the golden frame.*/
-          oc_mcenc_search(_enc,&mcenc,mbi,OC_FRAME_GOLD);
+          oc_mcenc_search(_enc,&mcenc,accumG,mbi,OC_FRAME_GOLD);
+          /*Put GOLDEN mvs back into absolute offset form.  Newest MV is already an absolute offset*/
+          embs[mbi].analysis_mv[2][OC_FRAME_GOLD][0]+=accumG[0];
+          embs[mbi].analysis_mv[2][OC_FRAME_GOLD][1]+=accumG[1];
+          embs[mbi].analysis_mv[1][OC_FRAME_GOLD][0]+=embs[mbi].analysis_mv[2][OC_FRAME_GOLD][0];
+          embs[mbi].analysis_mv[1][OC_FRAME_GOLD][1]+=embs[mbi].analysis_mv[2][OC_FRAME_GOLD][1];
+
         }
         dx=dy=0;
         if(_enc->state.frame_type==OC_INTRA_FRAME){

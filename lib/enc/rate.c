@@ -129,15 +129,26 @@ void oc_rc_state_init(oc_rc_state *_rc,const oc_enc_ctx *_enc){
   _rc->log_drop_scale=OC_Q57(0);
 }
 
-void oc_enc_update_rc_state(oc_enc_ctx *_enc,
- long _bits,int _qti,int _qi,int _trial){
+int oc_enc_update_rc_state(oc_enc_ctx *_enc,
+                           long _bits,int _qti,int _qi,int _trial,int _droppable){
+
   /*Note, setting OC_SCALE_SMOOTHING[1] to 0x80 (0.5), which one might expect
-     to be a reasonable value, actually causes a feedback loop with, e.g., 12
-     fps content encoded at 24 fps; use values near 0 or near 1 for now.
+    to be a reasonable value, actually causes a feedback loop with, e.g., 12
+    fps content encoded at 24 fps; use values near 0 or near 1 for now.
     TODO: Should probably revisit using an exponential moving average in the
-     first place at some point; dup tracking should help as well.*/
+    first place at some point; dup tracking should help as well.*/
   static const unsigned OC_SCALE_SMOOTHING[2]={0x13,0x00};
-  if(_bits>0){
+  int dropped=0;
+
+  if(_bits<=0){
+     /*  Update the buffering stats as if this dropped frame was a dup
+         of the previous frame. */
+    _enc->rc.prev_drop_count+=1+_enc->dup_count;
+    /*If this was the first frame of this type, lower the expected scale, but
+       don't set it to zero outright.*/
+    if(_trial)_enc->rc.log_scale[_qti]>>=1;
+    _bits=0;
+  }else{
     ogg_int64_t log_scale;
     ogg_int64_t log_bits;
     ogg_int64_t log_qexp;
@@ -150,22 +161,25 @@ void oc_enc_update_rc_state(oc_enc_ctx *_enc,
     if(_trial)_enc->rc.log_scale[_qti]=log_scale;
     else{
       /*Otherwise update an exponential moving average.*/
+      /*log scale is updated regardless of dropping*/
       _enc->rc.log_scale[_qti]=log_scale
-       +(_enc->rc.log_scale[_qti]-log_scale+128>>8)*OC_SCALE_SMOOTHING[_qti];
-      /*And update a simple exponential moving average to estimate the "real"
-         frame rate taking drops and duplicates into account.*/
-      _enc->rc.log_drop_scale=_enc->rc.log_drop_scale
-       +oc_blog64(_enc->rc.prev_drop_count+1)>>1;
-      _enc->rc.prev_drop_count=_enc->dup_count;
+        +(_enc->rc.log_scale[_qti]-log_scale+128>>8)*OC_SCALE_SMOOTHING[_qti];
+      /* If this frame busts our budget, it must be dropped.*/
+      if(_droppable && _enc->rc.fullness+_enc->rc.bits_per_frame*
+         (1+_enc->dup_count)<_bits){
+        _enc->rc.prev_drop_count+=1+_enc->dup_count;
+        _bits=0;
+        dropped=1;
+      }else{
+        /*log_drop_scale is only updated if the frame is coded as it
+          needs final previous counts*/
+        /*update a simple exponential moving average to estimate the "real"
+          frame rate taking drops and duplicates into account.*/
+        _enc->rc.log_drop_scale=_enc->rc.log_drop_scale
+          +oc_blog64(_enc->rc.prev_drop_count+1)>>1;
+        _enc->rc.prev_drop_count=_enc->dup_count;
+      }
     }
-  }
-  else{
-    /*We dropped this frame.*/
-    /*Add it to the previous frame's dup count.*/
-    _enc->rc.prev_drop_count+=1+_enc->dup_count;
-    /*If this was the first frame of this type, lower the expected scale, but
-       don't set it to zero outright.*/
-    if(_trial)_enc->rc.log_scale[_qti]>>=1;
   }
   if(!_trial){
     /*And update the buffer fullness level.*/
@@ -173,6 +187,7 @@ void oc_enc_update_rc_state(oc_enc_ctx *_enc,
     /*If we're too quick filling the buffer, that rate is lost forever.*/
     if(_enc->rc.fullness>_enc->rc.max)_enc->rc.fullness=_enc->rc.max;
   }
+  return dropped;
 }
 
 int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
@@ -283,6 +298,7 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
     if(log_scale0-log_qexp>log_hard_limit){
       log_qexp=log_scale0-log_hard_limit;
       log_qtarget=((log_qexp+(exp0>>1))/exp0<<6)+OC_Q57(2);
+      log_qtarget=OC_MINI(log_qtarget,OC_QUANT_MAX_LOG);
     }
   }
   qi=oc_enc_find_qi_for_target(_enc,_qti,old_qi,

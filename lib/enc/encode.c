@@ -936,6 +936,15 @@ static void oc_enc_clear(th_enc_ctx *_enc){
   oc_state_clear(&_enc->state);
 }
 
+static void oc_enc_drop_frame(th_enc_ctx *_enc){
+  /* use the previous frame's reconstruction */
+  _enc->state.ref_frame_idx[OC_FRAME_SELF]=
+    _enc->state.ref_frame_idx[OC_FRAME_PREV];
+  /* flag motion vector analysis about the frame drop */
+  _enc->prevframe_dropped=1;
+  /* zero the packet */
+  oggpackB_reset(&_enc->opb);
+}
 
 static void oc_enc_compress_keyframe(oc_enc_ctx *_enc,int _recode){
   if(_enc->state.info.target_bitrate>0){
@@ -951,7 +960,7 @@ static void oc_enc_compress_keyframe(oc_enc_ctx *_enc,int _recode){
   if(!_recode&&_enc->state.curframe_num==0){
     if(_enc->state.info.target_bitrate>0){
       oc_enc_update_rc_state(_enc,oggpackB_bytes(&_enc->opb)<<3,
-       OC_INTRA_FRAME,_enc->state.qis[0],1);
+                             OC_INTRA_FRAME,_enc->state.qis[0],1,0);
     }
     oc_enc_compress_keyframe(_enc,1);
   }
@@ -974,8 +983,9 @@ static void oc_enc_compress_frame(oc_enc_ctx *_enc,int _recode){
          prime feed-forward statistics.*/
       _enc->coded_inter_frame=1;
       if(_enc->state.info.target_bitrate>0){
+        /* rate control also needs to prime */
         oc_enc_update_rc_state(_enc,oggpackB_bytes(&_enc->opb)<<3,
-         OC_INTER_FRAME,_enc->state.qis[0],1);
+                               OC_INTER_FRAME,_enc->state.qis[0],1,0);
       }
       oc_enc_compress_frame(_enc,1);
     }
@@ -1206,6 +1216,7 @@ static void oc_img_plane_copy_pad(th_img_plane *_dst,th_img_plane *_src,
   }
 }
 
+#include<stdio.h>
 int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
   th_ycbcr_buffer img;
   int             cframe_width;
@@ -1218,6 +1229,7 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
   int             vdec;
   int             pli;
   int             refi;
+  int             drop=0;
   /*Step 1: validate parameters.*/
   if(_enc==NULL||_img==NULL)return TH_EFAULT;
   if(_enc->packet_state==OC_PACKET_DONE)return TH_EINVAL;
@@ -1276,16 +1288,28 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
    _enc->state.curframe_num-_enc->state.keyframe_num+_enc->dup_count>=
    _enc->keyframe_frequency_force){
     oc_enc_compress_keyframe(_enc,0);
+  }else{
+    oc_enc_compress_frame(_enc,0);
+    drop=1;
   }
-  /*Compress the frame.*/
-  else oc_enc_compress_frame(_enc,0);
   oc_restore_fpu(&_enc->state);
-  /*Update state variables.*/
-  _enc->packet_state=OC_PACKET_READY;
-  if(_enc->state.info.target_bitrate>0){
-    oc_enc_update_rc_state(_enc,oggpackB_bytes(&_enc->opb)<<3,
-     _enc->state.frame_type,_enc->state.qis[0],0);
+
+  /* drop is currently indicating if the frame is droppable.*/
+  if(_enc->state.info.target_bitrate>0)
+    drop=oc_enc_update_rc_state(_enc,oggpackB_bytes(&_enc->opb)<<3,
+                                _enc->state.frame_type,_enc->state.qis[0],0,drop);
+  else
+    drop=0;
+  /* drop now indicates if the frame was dropped */
+
+  if(drop){
+    oc_enc_drop_frame(_enc);
+    _enc->prevframe_dropped=1;
+  }else{
+    _enc->prevframe_dropped=0;
   }
+
+  _enc->packet_state=OC_PACKET_READY;
   _enc->prev_dup_count=_enc->nqueued_dups=_enc->dup_count;
   _enc->dup_count=0;
 #if defined(OC_DUMP_IMAGES)
