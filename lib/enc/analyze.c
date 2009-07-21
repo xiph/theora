@@ -943,7 +943,8 @@ static void oc_mode_dct_cost_accum(oc_mode_choice *_modec,
 }
 
 static void oc_mode_set_cost(oc_mode_choice *_modec,int _lambda){
-  _modec->cost=_modec->ssd+(_modec->rate+_modec->overhead)*_lambda;
+  _modec->cost=(_modec->ssd>>OC_BIT_SCALE)+
+    ((_modec->rate+_modec->overhead)>>OC_BIT_SCALE)*_lambda;
 }
 
 static void oc_cost_intra(oc_enc_ctx *_enc,oc_mode_choice *_modec,
