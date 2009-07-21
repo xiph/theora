@@ -341,7 +341,7 @@ AC_SUBST(PNG_LIBS)
 dnl check for libcairo
 HAVE_CAIRO=no
 AC_ARG_ENABLE(telemetry,
-    [  --disable-telemetry     disable debugging output controls ],
+    [  --enable-telemetry      enable debugging output controls ],
     [ ac_enable_telemetry=$enableval ], [ ac_enable_telemetry=no] )
 
 if test "x${ac_enable_telemetry}" = xyes; then
