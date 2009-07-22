@@ -42,6 +42,7 @@ static const oc_state_dispatch_vtable OC_ENC_DISPATCH_VTBL={
 int theora_encode_init(theora_state *_te,theora_info *_ci){
   th_api_info *apiinfo;
   th_info      info;
+  ogg_uint32_t keyframe_frequency_force;
   /*Allocate our own combined API wrapper/theora_info struct.
     We put them both in one malloc'd block so that when the API wrapper is
      freed, the info struct goes with it.
@@ -64,6 +65,12 @@ int theora_encode_init(theora_state *_te,theora_info *_ci){
   _te->granulepos=0;
   _te->i=&apiinfo->info;
   _te->i->codec_setup=&apiinfo->api;
+  /*Set the precise requested keyframe frequency.*/
+  keyframe_frequency_force=_ci->keyframe_auto_p?
+   _ci->keyframe_frequency_force:_ci->keyframe_frequency;
+  th_encode_ctl(apiinfo->api.encode,
+   TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE,
+   &keyframe_frequency_force,sizeof(keyframe_frequency_force));
   /*TODO: Additional codec setup using the extra fields in theora_info.*/
   return 0;
 }
