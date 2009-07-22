@@ -2552,6 +2552,8 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
                     cairo_line_to(c,xp+5.5,yp+6.5);
                     cairo_move_to(c,xp+4.5,yp+5.5);
                     cairo_line_to(c,xp+6.5,yp+5.5);
+                    cairo_stroke_preserve(c);
+                    cairo_set_source_rgba(c,0.,1.,1.,1.);
                   }
                   else{
                     cairo_move_to(c,xp+5.5,yp+1.5);
@@ -2562,6 +2564,8 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
                     cairo_line_to(c,xp+2.5,yp+6.5);
                     cairo_move_to(c,xp+1.5,yp+5.5);
                     cairo_line_to(c,xp+3.5,yp+5.5);
+                    cairo_stroke_preserve(c);
+                    cairo_set_source_rgba(c,0.,1.,1.,1.);
                   }
                 }break;
                 /*Double minus:*/
@@ -2570,6 +2574,8 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
                   cairo_line_to(c,xp+5.5,yp+2.5);
                   cairo_move_to(c,xp+2.5,yp+5.5);
                   cairo_line_to(c,xp+5.5,yp+5.5);
+                  cairo_stroke_preserve(c);
+                  cairo_set_source_rgba(c,1.,1.,1.,1.);
                 }break;
                 /*Plus:*/
                 case 1:{
@@ -2577,17 +2583,22 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
                   if(bi&1==0)xp-=2;
                   cairo_move_to(c,xp+4.5,yp+2.5);
                   cairo_line_to(c,xp+4.5,yp+6.5);
+                  cairo_move_to(c,xp+2.5,yp+4.5);
+                  cairo_line_to(c,xp+6.5,yp+4.5);
+                  cairo_stroke_preserve(c);
+                  cairo_set_source_rgba(c,.1,1.,.3,1.);
+                  break;
                 }
                 /*Fall through.*/
                 /*Minus:*/
                 case -1:{
                   cairo_move_to(c,xp+2.5,yp+4.5);
                   cairo_line_to(c,xp+6.5,yp+4.5);
+                  cairo_stroke_preserve(c);
+                  cairo_set_source_rgba(c,1.,.3,.1,1.);
                 }break;
                 default:continue;
               }
-              cairo_stroke_preserve(c);
-              cairo_set_source_rgba(c,1.,1.,1.,1.);
               cairo_set_line_width(c,1.);
               cairo_stroke(c);
               cairo_set_line_width(c,3.);
