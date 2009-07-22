@@ -28,7 +28,7 @@ typedef struct oc_mcenc_ctx           oc_mcenc_ctx;
 /*Temporary state used for motion estimation.*/
 struct oc_mcenc_ctx{
   /*The candidate motion vectors.*/
-  int                candidates[12][2];
+  int                candidates[13][2];
   /*The start of the Set B candidates.*/
   int                setb0;
   /*The total number of candidates.*/
@@ -96,53 +96,42 @@ static void oc_mcenc_find_candidates(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
   unsigned        nmbi;
   int             i;
   embs=_enc->mb_info;
+  /*Skip a position to store the median predictor in.*/
+  ncandidates=1;
   if(embs[_mbi].ncneighbors>0){
-    /*Fill in the first part of set A: the last motion vectors used and the
-       vectors from adjacent blocks.*/
-    /*Skip a position to store the median predictor in.*/
-    ncandidates=1;
+    /*Fill in the first part of set A: the vectors from adjacent blocks.*/
     for(i=0;i<embs[_mbi].ncneighbors;i++){
       nmbi=embs[_mbi].cneighbors[i];
       _mcenc->candidates[ncandidates][0]=embs[nmbi].analysis_mv[0][_frame][0];
       _mcenc->candidates[ncandidates][1]=embs[nmbi].analysis_mv[0][_frame][1];
       ncandidates++;
     }
-    /*Add a few additional vectors to set A: the vector used in the
-       previous frame and the (0,0) vector.*/
-    _mcenc->candidates[ncandidates][0]=OC_CLAMPI(-31,
-     embs[_mbi].analysis_mv[1][_frame][0]+_accum[0],31);
-    _mcenc->candidates[ncandidates][1]=OC_CLAMPI(-31,
-     embs[_mbi].analysis_mv[1][_frame][1]+_accum[1],31);
-    ncandidates++;
-    _mcenc->candidates[ncandidates][0]=0;
-    _mcenc->candidates[ncandidates][1]=0;
-    ncandidates++;
-    /*Use the first three vectors of set A to find our best predictor: their
-       median.*/
-    memcpy(a,_mcenc->candidates+1,sizeof(a));
-    OC_SORT2I(a[0][0],a[1][0]);
-    OC_SORT2I(a[0][1],a[1][1]);
-    OC_SORT2I(a[1][0],a[2][0]);
-    OC_SORT2I(a[1][1],a[2][1]);
-    OC_SORT2I(a[0][0],a[1][0]);
-    OC_SORT2I(a[0][1],a[1][1]);
-    _mcenc->candidates[0][0]=a[1][0];
-    _mcenc->candidates[0][1]=a[1][1];
   }
-  else{
-    /*The upper-left most macro block has no neighbors at all
-      We just use 0,0 as the median predictor and its previous motion vector
-       for set A.*/
-    _mcenc->candidates[0][0]=OC_CLAMPI(-31,_accum[0],31);
-    _mcenc->candidates[0][1]=OC_CLAMPI(-31,_accum[1],31);
-    _mcenc->candidates[1][0]=OC_CLAMPI(-31,
-     embs[_mbi].analysis_mv[1][_frame][0]+_accum[0],31);
-    _mcenc->candidates[1][1]=OC_CLAMPI(-31,
-     embs[_mbi].analysis_mv[1][_frame][1]+_accum[1],31);
-    ncandidates=2;
-  }
-  /*Fill in set B: accelerated predictors for this and adjacent macro
-     blocks.*/
+  /*Add a few additional vectors to set A: the vectors used in the previous
+     frames and the (0,0) vector.*/
+  _mcenc->candidates[ncandidates][0]=OC_CLAMPI(-31,_accum[0],31);
+  _mcenc->candidates[ncandidates][1]=OC_CLAMPI(-31,_accum[1],31);
+  ncandidates++;
+  _mcenc->candidates[ncandidates][0]=OC_CLAMPI(-31,
+   embs[_mbi].analysis_mv[1][_frame][0]+_accum[0],31);
+  _mcenc->candidates[ncandidates][1]=OC_CLAMPI(-31,
+   embs[_mbi].analysis_mv[1][_frame][1]+_accum[1],31);
+  ncandidates++;
+  _mcenc->candidates[ncandidates][0]=0;
+  _mcenc->candidates[ncandidates][1]=0;
+  ncandidates++;
+  /*Use the first three vectors of set A to find our best predictor: their
+     median.*/
+  memcpy(a,_mcenc->candidates+1,sizeof(a));
+  OC_SORT2I(a[0][0],a[1][0]);
+  OC_SORT2I(a[0][1],a[1][1]);
+  OC_SORT2I(a[1][0],a[2][0]);
+  OC_SORT2I(a[1][1],a[2][1]);
+  OC_SORT2I(a[0][0],a[1][0]);
+  OC_SORT2I(a[0][1],a[1][1]);
+  _mcenc->candidates[0][0]=a[1][0];
+  _mcenc->candidates[0][1]=a[1][1];
+  /*Fill in set B: accelerated predictors for this and adjacent macro blocks.*/
   _mcenc->setb0=ncandidates;
   /*The first time through the loop use the current macro block.*/
   nmbi=_mbi;
