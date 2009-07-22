@@ -1342,7 +1342,7 @@ int oc_enc_analyze(oc_enc_ctx *_enc,int _frame_type,int _recode){
              and refine only that one.
             We have to be careful to remember which ones we've refined so that
              we don't refine it again if we re-encode this frame.*/
-          inter_mv_pref=_enc->lambda*3<<OC_BIT_SCALE;
+          inter_mv_pref=_enc->lambda*3;
           if(modes[OC_MODE_INTER_MV_FOUR].cost<modes[OC_MODE_INTER_MV].cost&&
            modes[OC_MODE_INTER_MV_FOUR].cost<modes[OC_MODE_GOLDEN_MV].cost){
             if(!(embs[mbi].refined&0x80)){
