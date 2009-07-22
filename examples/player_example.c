@@ -627,6 +627,9 @@ int main(int argc,char *const *argv){
       int arg = 0xffff;
       theora_control(&td,TH_DECCTL_SET_TELEMETRY_MBMODE,&arg,sizeof(arg));
       theora_control(&td,TH_DECCTL_SET_TELEMETRY_MV,&arg,sizeof(arg));
+      theora_control(&td,TH_DECCTL_SET_TELEMETRY_QI,&arg,sizeof(arg));
+      arg=10;
+      theora_control(&td,TH_DECCTL_SET_TELEMETRY_BITS,&arg,sizeof(arg));
     }*/
   }else{
     /* tear down the partial theora setup */
