@@ -2530,6 +2530,7 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
         }
         /*qii illustration.*/
         if(_dec->telemetry_qi&0x2){
+          cairo_set_line_cap(c,CAIRO_LINE_CAP_SQUARE);
           for(bi=0;bi<4;bi++){
             ptrdiff_t fragi;
             int       qiv;
@@ -2540,6 +2541,8 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
             fragi=mb_maps[mbi][0][bi];
             if(fragi>=0&&frags[fragi].coded){
               qiv=qim[frags[fragi].qii];
+              cairo_set_line_width(c,3.);
+              cairo_set_source_rgba(c,0.,0.,0.,.5);
               switch(qiv){
                 /*Double plus:*/
                 case 2:{
@@ -2601,8 +2604,6 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
               }
               cairo_set_line_width(c,1.);
               cairo_stroke(c);
-              cairo_set_line_width(c,3.);
-              cairo_set_source_rgba(c,0.,0.,0.,.5);
             }
           }
         }
