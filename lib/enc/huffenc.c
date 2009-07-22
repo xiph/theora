@@ -862,7 +862,7 @@ int oc_huff_codes_pack(oggpack_buffer *_opb,
     for(j=1;j<TH_NDCT_TOKENS;j++){
       maxlen=OC_MAXI(_codes[i][j].nbits,maxlen);
     }
-    mask=(1<<maxlen)-1;
+    mask=(1<<(maxlen>>1)<<(maxlen+1>>1))-1;
     /*Copy over the codes into our temporary workspace.
       The bit patterns are aligned, and the original entry each code is from
        is stored as well.*/

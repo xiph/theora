@@ -29,8 +29,9 @@
 
 
 
+typedef oc_mv                         oc_mv2[2];
+
 typedef struct oc_enc_opt_vtable      oc_enc_opt_vtable;
-typedef struct oc_mcenc_ctx           oc_mcenc_ctx;
 typedef struct oc_mb_enc_info         oc_mb_enc_info;
 typedef struct oc_mode_scheme_chooser oc_mode_scheme_chooser;
 typedef struct oc_rc_state            oc_rc_state;
@@ -116,7 +117,7 @@ struct oc_mb_enc_info{
      can be used to estimate constant velocity and constant acceleration
      predictors.
     Uninitialized MVs are (0,0).*/
-  oc_mv         analysis_mv[3][2]; /* [cur,prev,prev2][frame,golden] */
+  oc_mv2        analysis_mv[3];
   /*Current unrefined analysis MVs.*/
   oc_mv         unref_mv[2];
   /*Unrefined block MVs.*/
@@ -151,7 +152,7 @@ struct oc_mode_scheme_chooser{
   /*The list of mode coding schemes, sorted in ascending order of bit cost.*/
   unsigned char        scheme_list[8];
   /*The number of bits used by each mode coding scheme.*/
-  int                  scheme_bits[8];
+  ptrdiff_t            scheme_bits[8];
 };
 
 
@@ -194,7 +195,7 @@ struct oc_rc_state{
 void oc_enc_calc_lambda(oc_enc_ctx *_enc,int _frame_type);
 void oc_rc_state_init(oc_rc_state *_rc,const oc_enc_ctx *_enc);
 int oc_enc_update_rc_state(oc_enc_ctx *_enc,
-  long _bits,int _qti,int _qi,int _trial,int _droppable);
+ long _bits,int _qti,int _qi,int _trial,int _droppable);
 int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp);
 
 
@@ -241,6 +242,10 @@ struct th_enc_ctx{
   size_t                   mv_bits[2];
   /*The mode scheme chooser for estimating mode coding costs.*/
   oc_mode_scheme_chooser   chooser;
+  /*The number of vertical super blocks in an MCU.*/
+  int                      mcu_nvsbs;
+  /*The SSD error for skipping each fragment in the current MCU.*/
+  unsigned                *mcu_skip_ssd;
   /*The DCT token lists for each coefficient and each plane.*/
   unsigned char          **dct_tokens[3];
   /*The extra bits associated with each DCT token.*/
@@ -289,18 +294,8 @@ void oc_enc_mode_metrics_dump(oc_enc_ctx *_enc);
 
 
 
-/*Temporary state used for motion estimation.*/
-struct oc_mcenc_ctx{
-  /*The candidate motion vectors.*/
-  int                candidates[12][2];
-  /*The start of the Set B candidates.*/
-  int                setb0;
-  /*The total number of candidates.*/
-  int                ncandidates;
-};
-
-/*Search for a single MB MV (and with OC_FRAME_PREV, block MVs) in one frame.*/
-void oc_mcenc_search(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,int acc[2],int _mbi,int _frame);
+/*Perform fullpel motion search for a single MB against both reference frames.*/
+void oc_mcenc_search(oc_enc_ctx *_enc,int _mbi);
 /*Refine a MB MV for one frame.*/
 void oc_mcenc_refine1mv(oc_enc_ctx *_enc,int _mbi,int _frame);
 /*Refine the block MVs.*/

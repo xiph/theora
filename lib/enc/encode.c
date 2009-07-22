@@ -1035,9 +1035,13 @@ static int oc_enc_set_quant_params(oc_enc_ctx *_enc,
 }
 
 static int oc_enc_init(oc_enc_ctx *_enc,const th_info *_info){
-  th_info info;
-  int     ret;
-  int     pli;
+  th_info   info;
+  size_t    mcu_nmbs;
+  ptrdiff_t mcu_nfrags;
+  int       hdec;
+  int       vdec;
+  int       ret;
+  int       pli;
   /*Clean up the requested settings.*/
   memcpy(&info,_info,sizeof(info));
   info.version_major=TH_VERSION_MAJOR;
@@ -1053,6 +1057,15 @@ static int oc_enc_init(oc_enc_ctx *_enc,const th_info *_info){
   _enc->frag_dc=_ogg_calloc(_enc->state.nfrags,sizeof(*_enc->frag_dc));
   _enc->coded_mbis=
    (unsigned *)_ogg_malloc(_enc->state.nmbs*sizeof(*_enc->coded_mbis));
+  hdec=!(_enc->state.info.pixel_fmt&1);
+  vdec=!(_enc->state.info.pixel_fmt&1);
+  /*If chroma is sub-sampled in the vertical direction, we have to encode two
+     super block rows of Y' for each super block row of Cb and Cr.*/
+  _enc->mcu_nvsbs=1<<vdec;
+  mcu_nmbs=_enc->mcu_nvsbs*_enc->state.fplanes[0].nhsbs*(size_t)4;
+  mcu_nfrags=4*mcu_nmbs+(8*mcu_nmbs>>hdec+vdec);
+  _enc->mcu_skip_ssd=(unsigned *)_ogg_malloc(
+   mcu_nfrags*sizeof(*_enc->mcu_skip_ssd));
   for(pli=0;pli<3;pli++){
     _enc->dct_tokens[pli]=(unsigned char **)oc_malloc_2d(64,
      _enc->state.fplanes[pli].nfrags,sizeof(**_enc->dct_tokens));
@@ -1104,6 +1117,7 @@ static void oc_enc_clear(th_enc_ctx *_enc){
     oc_free_2d(_enc->extra_bits[pli]);
     oc_free_2d(_enc->dct_tokens[pli]);
   }
+  _ogg_free(_enc->mcu_skip_ssd);
   _ogg_free(_enc->coded_mbis);
   _ogg_free(_enc->frag_dc);
   _ogg_free(_enc->mb_info);
@@ -1111,12 +1125,12 @@ static void oc_enc_clear(th_enc_ctx *_enc){
 }
 
 static void oc_enc_drop_frame(th_enc_ctx *_enc){
-  /* use the previous frame's reconstruction */
+  /*Use the previous frame's reconstruction.*/
   _enc->state.ref_frame_idx[OC_FRAME_SELF]=
-    _enc->state.ref_frame_idx[OC_FRAME_PREV];
-  /* flag motion vector analysis about the frame drop */
+   _enc->state.ref_frame_idx[OC_FRAME_PREV];
+  /*Flag motion vector analysis about the frame drop.*/
   _enc->prevframe_dropped=1;
-  /* zero the packet */
+  /*Zero the packet.*/
   oggpackB_reset(&_enc->opb);
 }
 
@@ -1157,9 +1171,9 @@ static void oc_enc_compress_frame(oc_enc_ctx *_enc,int _recode){
          prime feed-forward statistics.*/
       _enc->coded_inter_frame=1;
       if(_enc->state.info.target_bitrate>0){
-        /* rate control also needs to prime */
+        /*Rate control also needs to prime.*/
         oc_enc_update_rc_state(_enc,oggpackB_bytes(&_enc->opb)<<3,
-                               OC_INTER_FRAME,_enc->state.qis[0],1,0);
+         OC_INTER_FRAME,_enc->state.qis[0],1,0);
       }
       oc_enc_compress_frame(_enc,1);
     }
@@ -1403,7 +1417,7 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
   int             vdec;
   int             pli;
   int             refi;
-  int             drop=0;
+  int             drop;
   /*Step 1: validate parameters.*/
   if(_enc==NULL||_img==NULL)return TH_EFAULT;
   if(_enc->packet_state==OC_PACKET_DONE)return TH_EINVAL;
@@ -1462,27 +1476,22 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
    _enc->state.curframe_num-_enc->state.keyframe_num+_enc->dup_count>=
    _enc->keyframe_frequency_force){
     oc_enc_compress_keyframe(_enc,0);
-  }else{
+    drop=0;
+  }
+  else{
     oc_enc_compress_frame(_enc,0);
     drop=1;
   }
   oc_restore_fpu(&_enc->state);
-
-  /* drop is currently indicating if the frame is droppable.*/
-  if(_enc->state.info.target_bitrate>0)
+  /*drop currently indicates if the frame is droppable.*/
+  if(_enc->state.info.target_bitrate>0){
     drop=oc_enc_update_rc_state(_enc,oggpackB_bytes(&_enc->opb)<<3,
-                                _enc->state.frame_type,_enc->state.qis[0],0,drop);
-  else
-    drop=0;
-  /* drop now indicates if the frame was dropped */
-
-  if(drop){
-    oc_enc_drop_frame(_enc);
-    _enc->prevframe_dropped=1;
-  }else{
-    _enc->prevframe_dropped=0;
+     _enc->state.frame_type,_enc->state.qis[0],0,drop);
   }
-
+  else drop=0;
+  /*drop now indicates if the frame was dropped.*/
+  if(drop)oc_enc_drop_frame(_enc);
+  else _enc->prevframe_dropped=0;
   _enc->packet_state=OC_PACKET_READY;
   _enc->prev_dup_count=_enc->nqueued_dups=_enc->dup_count;
   _enc->dup_count=0;
@@ -1513,8 +1522,9 @@ int th_encode_packetout(th_enc_ctx *_enc,int _last_p,ogg_packet *_op){
     }
   }
   else return 0;
+  _last_p=_last_p&&_enc->nqueued_dups<=0;
   _op->b_o_s=0;
-  _op->e_o_s=_last_p=_last_p&&_enc->nqueued_dups<=0;
+  _op->e_o_s=_last_p;
   oc_enc_set_granpos(_enc);
   _op->packetno=th_granule_frame(_enc,_enc->state.granpos)+3;
   _op->granulepos=_enc->state.granpos;

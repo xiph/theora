@@ -43,9 +43,11 @@ int oc_enc_find_qi_for_target(oc_enc_ctx *_enc,int _qti,int _qi_old,
   return best_qi;
 }
 
-void oc_enc_calc_lambda(oc_enc_ctx *_enc,int _frame_type){
+void oc_enc_calc_lambda(oc_enc_ctx *_enc,int _qti){
   ogg_int64_t lq;
   int         qi;
+  int         qi1;
+  int         nqis;
   /*For now, lambda is fixed depending on the qi value and frame type:
       lambda=qscale*(qavg[qti][qi]**2),
      where qscale=0.2125.
@@ -61,9 +63,38 @@ void oc_enc_calc_lambda(oc_enc_ctx *_enc,int _frame_type){
      to reach, and give the rate control a semblance of "fractional qi"
      precision.*/
   if(_enc->state.info.target_bitrate>0)lq=_enc->rc.log_qtarget;
-  else lq=_enc->log_qavg[_frame_type][qi];
+  else lq=_enc->log_qavg[_qti][qi];
   /*The resulting lambda value is less than 0x500000.*/
   _enc->lambda=(int)oc_bexp64(2*lq-0x4780BD468D6B62BLL);
+  /*Select additional quantizers.
+    The R-D optimal block AC quantizer statistics suggest that the distribution
+     is roughly Gaussian-like with a slight positive skew.
+    K-means clustering on log_qavg to select 3 quantizers produces cluster
+     centers of {log_qavg-0.6,log_qavg,log_qavg+0.7}.
+    Experiments confirm these are relatively good choices.
+
+    Although we do greedy R-D optimization of the qii flags to avoid switching
+     too frequently, this becomes ineffective at low rates, either because we
+     do a poor job of predicting the actual R-D cost, or the greedy
+     optimization is not sufficient.
+    Therefore adaptive quantization is disabled above an (experimentally
+     suggested) threshold of log_qavg=7.00 (e.g., below INTRA qi=12 or
+     INTER qi=20 with current matrices).
+    This may need to be revised if the R-D cost estimation or qii flag
+     optimization strategies change.*/
+  nqis=1;
+  if(lq<(OC_Q57(56)>>3)&&!_enc->vp3_compatible){
+    qi1=oc_enc_find_qi_for_target(_enc,_qti,OC_MAXI(qi-1,0),0,
+     lq+(OC_Q57(7)+5)/10);
+    if(qi1!=qi)_enc->state.qis[nqis++]=qi1;
+    qi1=oc_enc_find_qi_for_target(_enc,_qti,OC_MINI(qi+1,63),0,
+     lq-(OC_Q57(6)+5)/10);
+    if(qi1!=qi&&qi1!=_enc->state.qis[nqis-1])_enc->state.qis[nqis++]=qi1;
+  }
+  /*printf("%i %.3f:",_qti,oc_bexp64(lq+OC_Q57(3))*0.125);
+  for(qi=0;qi<nqis;qi++)printf(" %2i",_enc->state.qis[qi]);
+  printf("\n");*/
+  _enc->state.nqis=nqis;
 }
 
 
@@ -130,25 +161,27 @@ void oc_rc_state_init(oc_rc_state *_rc,const oc_enc_ctx *_enc){
 }
 
 int oc_enc_update_rc_state(oc_enc_ctx *_enc,
-                           long _bits,int _qti,int _qi,int _trial,int _droppable){
-
+ long _bits,int _qti,int _qi,int _trial,int _droppable){
   /*Note, setting OC_SCALE_SMOOTHING[1] to 0x80 (0.5), which one might expect
-    to be a reasonable value, actually causes a feedback loop with, e.g., 12
-    fps content encoded at 24 fps; use values near 0 or near 1 for now.
+     to be a reasonable value, actually causes a feedback loop with, e.g., 12
+     fps content encoded at 24 fps; use values near 0 or near 1 for now.
     TODO: Should probably revisit using an exponential moving average in the
-    first place at some point; dup tracking should help as well.*/
+     first place at some point; dup tracking should help as well.*/
   static const unsigned OC_SCALE_SMOOTHING[2]={0x13,0x00};
-  int dropped=0;
-
+  ogg_int64_t buf_delta;
+  int         dropped;
+  dropped=0;
+  buf_delta=_enc->rc.bits_per_frame*(1+_enc->dup_count);
   if(_bits<=0){
-     /*  Update the buffering stats as if this dropped frame was a dup
-         of the previous frame. */
+    /*We didn't code any blocks in this frame.
+      Add it to the previous frame's dup count.*/
     _enc->rc.prev_drop_count+=1+_enc->dup_count;
     /*If this was the first frame of this type, lower the expected scale, but
        don't set it to zero outright.*/
     if(_trial)_enc->rc.log_scale[_qti]>>=1;
     _bits=0;
-  }else{
+  }
+  else{
     ogg_int64_t log_scale;
     ogg_int64_t log_bits;
     ogg_int64_t log_qexp;
@@ -160,30 +193,30 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
     /*Use it to set that factor directly if this was a trial.*/
     if(_trial)_enc->rc.log_scale[_qti]=log_scale;
     else{
-      /*Otherwise update an exponential moving average.*/
-      /*log scale is updated regardless of dropping*/
+      /*Otherwise update an exponential moving average for log_scale,
+         regardless of whether or not we dropped this frame.*/
       _enc->rc.log_scale[_qti]=log_scale
-        +(_enc->rc.log_scale[_qti]-log_scale+128>>8)*OC_SCALE_SMOOTHING[_qti];
-      /* If this frame busts our budget, it must be dropped.*/
-      if(_droppable && _enc->rc.fullness+_enc->rc.bits_per_frame*
-         (1+_enc->dup_count)<_bits){
+       +(_enc->rc.log_scale[_qti]-log_scale+128>>8)*OC_SCALE_SMOOTHING[_qti];
+      /*If this frame busts our budget, it must be dropped.*/
+      if(_droppable&&_enc->rc.fullness+buf_delta<_bits){
         _enc->rc.prev_drop_count+=1+_enc->dup_count;
         _bits=0;
         dropped=1;
-      }else{
-        /*log_drop_scale is only updated if the frame is coded as it
-          needs final previous counts*/
-        /*update a simple exponential moving average to estimate the "real"
-          frame rate taking drops and duplicates into account.*/
+      }
+      else{
+        /*Update a simple exponential moving average to estimate the "real"
+           frame rate taking drops and duplicates into account.
+          This is only done if the frame is coded, as it needs the final count
+           of dropped frames.*/
         _enc->rc.log_drop_scale=_enc->rc.log_drop_scale
-          +oc_blog64(_enc->rc.prev_drop_count+1)>>1;
+         +oc_blog64(_enc->rc.prev_drop_count+1)>>1;
         _enc->rc.prev_drop_count=_enc->dup_count;
       }
     }
   }
   if(!_trial){
     /*And update the buffer fullness level.*/
-    _enc->rc.fullness+=_enc->rc.bits_per_frame*(1+_enc->dup_count)-_bits;
+    _enc->rc.fullness+=buf_delta-_bits;
     /*If we're too quick filling the buffer, that rate is lost forever.*/
     if(_enc->rc.fullness>_enc->rc.max)_enc->rc.fullness=_enc->rc.max;
   }
@@ -207,8 +240,8 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
   nframes[0]=(_enc->rc.buf_delay-OC_MINI(next_key_frame,_enc->rc.buf_delay)
    +_enc->keyframe_frequency_force-1)/_enc->keyframe_frequency_force;
   if(nframes[0]+_qti>1){
-    buf_delay=next_key_frame+(nframes[0]-1)*_enc->keyframe_frequency_force;
     nframes[0]--;
+    buf_delay=next_key_frame+nframes[0]*_enc->keyframe_frequency_force;
   }
   else buf_delay=_enc->rc.buf_delay;
   nframes[1]=buf_delay-nframes[0];
@@ -290,7 +323,7 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
     ogg_int64_t log_qexp;
     int         exp0;
     /*Allow 50% of the rate for a single frame for prediction error.
-      This may not be enough for keyframes.*/
+      This may not be enough for keyframes or sudden changes in complexity.*/
     log_hard_limit=oc_blog64(_enc->rc.fullness+(_enc->rc.bits_per_frame>>1));
     exp0=_enc->rc.exp[_qti];
     log_qexp=log_qtarget-OC_Q57(2);

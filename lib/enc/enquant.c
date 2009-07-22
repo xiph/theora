@@ -170,17 +170,6 @@ void oc_enquant_tables_init(ogg_uint16_t *_dequant[64][3][2],
       oc_iquant_init(_enquant[qi][pli][qti]+zzi,
        _dequant[qi][pli][qti][zzi]);
     }
-    /*Now compute an "average" quantizer for each qi level.
-      We do one for INTER and one for INTRA, since their behavior is very
-       different, but average across chroma channels.
-      The basic approach is to compute a harmonic average of the squared
-       quantizer, weighted by the expected squared magnitude of the DCT
-       coefficients.
-      Under the (not quite true) assumption that DCT coefficients are
-       Laplacian-distributed, this preserves the product Q*lambda, where
-       lambda=sqrt(2/sigma**2) is the Laplacian distribution parameter.
-      The value Q*lambda completely determines the entropy of the
-       coefficients.*/
   }
 }
 
@@ -210,7 +199,7 @@ void oc_enquant_tables_init(ogg_uint16_t *_dequant[64][3][2],
    mode is significantly flatter) and b) the DPCM prediction of the DC
    coefficient gives a very minor improvement in the INTRA case and a quite
    significant one in the INTER case (over the expected variance).*/
-static ogg_uint16_t OC_RPSD[2][64]={
+static const ogg_uint16_t OC_RPSD[2][64]={
   {
     52725,17370,10399, 6867, 5115, 3798, 2942, 2076,
     17370, 9900, 6948, 4994, 3836, 2869, 2229, 1619,
@@ -239,7 +228,7 @@ static ogg_uint16_t OC_RPSD[2][64]={
    quantization, over a large set of test video encoded at all possible rates.
   TODO: These values are only from INTER frames; it should be re-measured for
    INTRA frames.*/
-static ogg_uint16_t OC_PCD[4][3]={
+static const ogg_uint16_t OC_PCD[4][3]={
   {59926, 3038, 2572},
   {55201, 5597, 4738},
   {55201, 5597, 4738},
@@ -247,6 +236,17 @@ static ogg_uint16_t OC_PCD[4][3]={
 };
 
 
+/*Compute an "average" quantizer for each qi level.
+  We do one for INTER and one for INTRA, since their behavior is very
+   different, but average across chroma channels.
+  The basic approach is to compute a harmonic average of the squared quantizer,
+   weighted by the expected squared magnitude of the DCT coefficients.
+  Under the (not quite true) assumption that DCT coefficients are
+   Laplacian-distributed, this preserves the product Q*lambda, where
+   lambda=sqrt(2/sigma**2) is the Laplacian distribution parameter (not to be
+   confused with the lambda used in R-D optimization throughout most of the
+   rest of the code).
+  The value Q*lambda completely determines the entropy of the coefficients.*/
 void oc_enquant_qavg_init(ogg_int64_t _log_qavg[2][64],
  ogg_uint16_t *_dequant[64][3][2],int _pixel_fmt){
   int qi;

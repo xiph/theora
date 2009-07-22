@@ -239,11 +239,11 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
   for(zzi=OC_MINI(_zzi,63);zzi>0;zzi--){
     ogg_int32_t  lambda;
     ogg_uint32_t best_cost;
-    int          best_bits;
-    int          best_next;
-    int          best_token;
-    int          best_eb;
-    int          best_qc;
+    int          best_bits=best_bits;
+    int          best_next=best_next;
+    int          best_token=best_token;
+    int          best_eb=best_eb;
+    int          best_qc=best_qc;
     int          flush_bits;
     ogg_uint32_t d2;
     int          dq;
@@ -306,7 +306,7 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
           bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
           d2=sum_d2-d2_accum[zzj];
           cost=d2+lambda*bits+tokens[zzj][1].cost;
-          if(cost<best_cost){
+          if(cost<=best_cost){
             best_next=(zzj<<1)+1;
             best_token=token;
             best_eb=nzeros-1;
@@ -318,24 +318,6 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
             val=_qdct[zzj];
             val_s=-(val<0);
             val=val+val_s^val_s;
-            if(nzeros<2+dc_reserve&&2<=val&&val<=4){
-              /*Try a +/- 2/3 combo token.*/
-              cat=nzeros>>1;
-              token=OC_DCT_RUN_CAT2A+cat;
-              bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
-              val=2+((val+val_s^val_s)>2);
-              e=(_dct[OC_FZIG_ZAG[zzj]]+val_s^val_s)-_dequant[zzj]*val;
-              d2=e*(ogg_int32_t)e+sum_d2-d2_accum[zzj];
-              cost=d2+lambda*bits+tokens[zzk][tk].cost;
-              if(cost<=best_cost){
-                best_cost=cost;
-                best_bits=bits+tokens[zzk][tk].bits;
-                best_next=next;
-                best_token=token;
-                best_eb=(-val_s<<1+cat)+(val-2<<cat)+(nzeros-1>>1);
-                best_qc=val+val_s^val_s;
-              }
-            }
             if(val<=2){
               /*Try a +/- 1 combo token.*/
               if(nzeros<6){
@@ -358,6 +340,24 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
                 best_cost=cost;
                 best_bits=bits+tokens[zzk][tk].bits;
                 best_qc=1+val_s^val_s;
+              }
+            }
+            if(nzeros<2+dc_reserve&&2<=val&&val<=4){
+              /*Try a +/- 2/3 combo token.*/
+              cat=nzeros>>1;
+              token=OC_DCT_RUN_CAT2A+cat;
+              bits=flush_bits+oc_token_bits(_enc,huffi,zzi,token);
+              val=2+((val+val_s^val_s)>2);
+              e=(_dct[OC_FZIG_ZAG[zzj]]+val_s^val_s)-_dequant[zzj]*val;
+              d2=e*(ogg_int32_t)e+sum_d2-d2_accum[zzj];
+              cost=d2+lambda*bits+tokens[zzk][tk].cost;
+              if(cost<=best_cost){
+                best_cost=cost;
+                best_bits=bits+tokens[zzk][tk].bits;
+                best_next=next;
+                best_token=token;
+                best_eb=(-val_s<<1+cat)+(val-2<<cat)+(nzeros-1>>1);
+                best_qc=val+val_s^val_s;
               }
             }
           }
@@ -634,8 +634,7 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
     eob=eob_run[zzi];
     if(tokens[zzi][ti].token<OC_NDCT_EOB_TOKEN_MAX){
       if(++eob>=4095){
-        token=oc_make_eob_token_full(eob,&eb);
-        oc_enc_token_log(_enc,_pli,zzi,token,eb);
+        oc_enc_eob_log(_enc,_pli,zzi,eob);
         eob=0;
       }
       eob_run[zzi]=eob;
@@ -672,7 +671,6 @@ void oc_enc_pred_dc_frag_rows(oc_enc_ctx *_enc,
   ptrdiff_t                fragi;
   int                     *pred_last;
   int                      nhfrags;
-  int                      nvfrags;
   int                      fragx;
   int                      fragy;
   fplane=_enc->state.fplanes+_pli;
@@ -680,7 +678,6 @@ void oc_enc_pred_dc_frag_rows(oc_enc_ctx *_enc,
   frag_dc=_enc->frag_dc;
   pred_last=_enc->dc_pred_last[_pli];
   nhfrags=fplane->nhfrags;
-  nvfrags=fplane->nvfrags;
   fragi=fplane->froffset+_fragy0*nhfrags;
   for(fragy=_fragy0;fragy<_frag_yend;fragy++){
     for(fragx=0;fragx<nhfrags;fragx++,fragi++){
@@ -710,10 +707,8 @@ void oc_enc_tokenize_dc_frag_list(oc_enc_ctx *_enc,int _pli,
   int                neobs1;
   int                token;
   int                eb;
-  /*eb1 and token1 are always initialized before use; if your compiler thinks
-     otherwise, it is dumb.*/
-  int                token1;
-  int                eb1;
+  int                token1=token1;
+  int                eb1=eb1;
   /*Return immediately if there are no coded fragments; otherwise we'd flush
      any trailing EOB run into the AC 1 list and never read it back out.*/
   if(_ncoded_fragis<=0)return;
@@ -952,9 +947,7 @@ void oc_enc_tokenize_finish(oc_enc_ctx *_enc){
     int       new_eb;
     int       zzj;
     int       plj;
-    /*ti is always initialized before use; if your compiler thinks otherwise,
-       it is dumb.*/
-    ptrdiff_t ti;
+    ptrdiff_t ti=ti;
     int       run_count;
     /*Make sure this coefficient has tokens at all.*/
     if(_enc->ndct_tokens[pli][zzi]<=0)continue;

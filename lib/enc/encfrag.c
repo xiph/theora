@@ -356,7 +356,7 @@ unsigned oc_enc_frag_intra_satd(const oc_enc_ctx *_enc,
 unsigned oc_enc_frag_intra_satd_c(const unsigned char *_src,int _ystride){
   ogg_int16_t buf[64];
   oc_intra_hadamard(buf,_src,_ystride);
-  return oc_hadamard_sad_thresh(buf,0xFF000)
+  return oc_hadamard_sad_thresh(buf,UINT_MAX)
    -abs(buf[0]+buf[1]+buf[2]+buf[3]+buf[4]+buf[5]+buf[6]+buf[7]);
 }
 

@@ -19,6 +19,24 @@
 #include <string.h>
 #include "encint.h"
 
+
+
+typedef struct oc_mcenc_ctx           oc_mcenc_ctx;
+
+
+
+/*Temporary state used for motion estimation.*/
+struct oc_mcenc_ctx{
+  /*The candidate motion vectors.*/
+  int                candidates[12][2];
+  /*The start of the Set B candidates.*/
+  int                setb0;
+  /*The total number of candidates.*/
+  int                ncandidates;
+};
+
+
+
 /*The maximum Y plane SAD value for accepting the median predictor.*/
 #define OC_YSAD_THRESH1            (256)
 /*The amount to right shift the minimum error by when inflating it for
@@ -69,8 +87,9 @@ static const int OC_SQUARE_SITES[11][8]={
   {0,1,3}
 };
 
+
 static void oc_mcenc_find_candidates(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
-                                     int _accum[2], int _mbi,int _frame){
+ int _accum[2],int _mbi,int _frame){
   oc_mb_enc_info *embs;
   int             a[3][2];
   int             ncandidates;
@@ -90,11 +109,13 @@ static void oc_mcenc_find_candidates(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
     }
     /*Add a few additional vectors to set A: the vector used in the
        previous frame and the (0,0) vector.*/
-    _mcenc->candidates[ncandidates][0]=OC_CLAMPI(-31,embs[_mbi].analysis_mv[1][_frame][0]+_accum[0],31);
-    _mcenc->candidates[ncandidates][1]=OC_CLAMPI(-31,embs[_mbi].analysis_mv[1][_frame][1]+_accum[1],31);
+    _mcenc->candidates[ncandidates][0]=OC_CLAMPI(-31,
+     embs[_mbi].analysis_mv[1][_frame][0]+_accum[0],31);
+    _mcenc->candidates[ncandidates][1]=OC_CLAMPI(-31,
+     embs[_mbi].analysis_mv[1][_frame][1]+_accum[1],31);
     ncandidates++;
-    _mcenc->candidates[ncandidates][0]=OC_CLAMPI(-31,_accum[0],31);
-    _mcenc->candidates[ncandidates][1]=OC_CLAMPI(-31,_accum[1],31);
+    _mcenc->candidates[ncandidates][0]=0;
+    _mcenc->candidates[ncandidates][1]=0;
     ncandidates++;
     /*Use the first three vectors of set A to find our best predictor: their
        median.*/
@@ -114,28 +135,28 @@ static void oc_mcenc_find_candidates(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
        for set A.*/
     _mcenc->candidates[0][0]=OC_CLAMPI(-31,_accum[0],31);
     _mcenc->candidates[0][1]=OC_CLAMPI(-31,_accum[1],31);
-    _mcenc->candidates[1][0]=OC_CLAMPI(-31,embs[_mbi].analysis_mv[1][_frame][0]+_accum[0],31);
-    _mcenc->candidates[1][1]=OC_CLAMPI(-31,embs[_mbi].analysis_mv[1][_frame][1]+_accum[1],31);
+    _mcenc->candidates[1][0]=OC_CLAMPI(-31,
+     embs[_mbi].analysis_mv[1][_frame][0]+_accum[0],31);
+    _mcenc->candidates[1][1]=OC_CLAMPI(-31,
+     embs[_mbi].analysis_mv[1][_frame][1]+_accum[1],31);
     ncandidates=2;
   }
-
   /*Fill in set B: accelerated predictors for this and adjacent macro
-    blocks.*/
+     blocks.*/
   _mcenc->setb0=ncandidates;
   /*The first time through the loop use the current macro block.*/
   nmbi=_mbi;
   for(i=0;;i++){
-    _mcenc->candidates[ncandidates][0]=
-      OC_CLAMPI(-31, 2*embs[_mbi].analysis_mv[1][_frame][0]-
-                embs[_mbi].analysis_mv[2][_frame][0]+_accum[0], 31);
-    _mcenc->candidates[ncandidates][1]=
-      OC_CLAMPI(-31, 2*embs[_mbi].analysis_mv[1][_frame][1]-
-                embs[_mbi].analysis_mv[2][_frame][1]+_accum[1], 31);
+    _mcenc->candidates[ncandidates][0]=OC_CLAMPI(-31,
+     2*embs[_mbi].analysis_mv[1][_frame][0]
+     -embs[_mbi].analysis_mv[2][_frame][0]+_accum[0],31);
+    _mcenc->candidates[ncandidates][1]=OC_CLAMPI(-31,
+     2*embs[_mbi].analysis_mv[1][_frame][1]
+     -embs[_mbi].analysis_mv[2][_frame][1]+_accum[1],31);
     ncandidates++;
     if(i>=embs[_mbi].npneighbors)break;
     nmbi=embs[_mbi].pneighbors[i];
   }
-
   /*Truncate to full-pel positions.*/
   for(i=0;i<ncandidates;i++){
     _mcenc->candidates[i][0]=OC_DIV2(_mcenc->candidates[i][0]);
@@ -230,10 +251,10 @@ static unsigned oc_mcenc_ysatd_check_bcandidate_fullpel(const oc_enc_ctx *_enc,
   The actual motion vector is stored in the appropriate place in the
    oc_mb_enc_info structure.
   _mcenc:    The motion compensation context.
-  _accum:    drop frame/golden mv accumulators
+  _accum:    Drop frame/golden MV accumulators.
   _mbi:      The macro block index.
   _frame:    The frame to search, either OC_FRAME_PREV or OC_FRAME_GOLD.*/
-void oc_mcenc_search(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,int _accum[2],int _mbi,int _frame){
+void oc_mcenc_search_frame(oc_enc_ctx *_enc,int _accum[2],int _mbi,int _frame){
   /*Note: Traditionally this search is done using a rate-distortion objective
      function of the form D+lambda*R.
     However, xiphmont tested this and found it produced a small degredation,
@@ -249,6 +270,7 @@ void oc_mcenc_search(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,int _accum[2],int _mb
      may cause increased degredation in many blocks to come.
     We could artificially reduce lambda to compensate, but it's faster to just
      disable it entirely, and use D (the distortion) as the sole criterion.*/
+  oc_mcenc_ctx         mcenc;
   const ptrdiff_t     *frag_buf_offs;
   const ptrdiff_t     *fragis;
   const unsigned char *src;
@@ -267,12 +289,12 @@ void oc_mcenc_search(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,int _accum[2],int _mb
   int                  bi;
   embs=_enc->mb_info;
   /*Find some candidate motion vectors.*/
-  oc_mcenc_find_candidates(_enc,_mcenc,_accum,_mbi,_frame);
+  oc_mcenc_find_candidates(_enc,&mcenc,_accum,_mbi,_frame);
   /*Clear the cache of locations we've examined.*/
   memset(hit_cache,0,sizeof(hit_cache));
   /*Start with the median predictor.*/
-  candx=_mcenc->candidates[0][0];
-  candy=_mcenc->candidates[0][1];
+  candx=mcenc.candidates[0][0];
+  candy=mcenc.candidates[0][1];
   hit_cache[candy+15]|=(ogg_int32_t)1<<candx+15;
   frag_buf_offs=_enc->state.frag_buf_offs;
   fragis=_enc->state.mb_maps[_mbi][0];
@@ -305,9 +327,9 @@ void oc_mcenc_search(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,int _accum[2],int _mb
     }
     t2+=(t2>>OC_YSAD_THRESH2_SCALE_BITS)+OC_YSAD_THRESH2_OFFSET;
     /*Examine the candidates in set A.*/
-    for(ci=1;ci<_mcenc->setb0;ci++){
-      candx=_mcenc->candidates[ci][0];
-      candy=_mcenc->candidates[ci][1];
+    for(ci=1;ci<mcenc.setb0;ci++){
+      candx=mcenc.candidates[ci][0];
+      candy=mcenc.candidates[ci][1];
       /*If we've already examined this vector, then we would be using it if it
          was better than what we are using.*/
       hitbit=(ogg_int32_t)1<<candx+15;
@@ -330,9 +352,9 @@ void oc_mcenc_search(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,int _accum[2],int _mb
     }
     if(best_err>t2){
       /*Examine the candidates in set B.*/
-      for(;ci<_mcenc->ncandidates;ci++){
-        candx=_mcenc->candidates[ci][0];
-        candy=_mcenc->candidates[ci][1];
+      for(;ci<mcenc.ncandidates;ci++){
+        candx=mcenc.candidates[ci][0];
+        candy=mcenc.candidates[ci][1];
         hitbit=(ogg_int32_t)1<<candx+15;
         if(hit_cache[candy+15]&hitbit)continue;
         hit_cache[candy+15]|=hitbit;
@@ -477,6 +499,45 @@ void oc_mcenc_search(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,int _accum[2],int _mb
       embs[_mbi].block_mv[bi][1]=(signed char)(candy<<1);
     }
   }
+}
+
+void oc_mcenc_search(oc_enc_ctx *_enc,int _mbi){
+  oc_mv2         *mvs;
+  int             accum_p[2];
+  int             accum_g[2];
+  mvs=_enc->mb_info[_mbi].analysis_mv;
+  if(_enc->prevframe_dropped){
+    accum_p[0]=mvs[0][OC_FRAME_PREV][0];
+    accum_p[1]=mvs[0][OC_FRAME_PREV][1];
+  }
+  else accum_p[1]=accum_p[0]=0;
+  accum_g[0]=mvs[2][OC_FRAME_GOLD][0];
+  accum_g[1]=mvs[2][OC_FRAME_GOLD][1];
+  mvs[0][OC_FRAME_PREV][0]-=mvs[2][OC_FRAME_PREV][0];
+  mvs[0][OC_FRAME_PREV][1]-=mvs[2][OC_FRAME_PREV][1];
+  /*Move the motion vector predictors back a frame.*/
+  memmove(mvs+1,mvs,2*sizeof(*mvs));
+  /*Search the last frame.*/
+  oc_mcenc_search_frame(_enc,accum_p,_mbi,OC_FRAME_PREV);
+  mvs[2][OC_FRAME_PREV][0]=accum_p[0];
+  mvs[2][OC_FRAME_PREV][1]=accum_p[1];
+  /*GOLDEN MVs are different from PREV MVs in that they're each absolute
+     offsets from some frame in the past rather than relative offsets from the
+     frame before.
+    For predictor calculation to make sense, we need them to be in the same
+     form as PREV MVs.*/
+  mvs[1][OC_FRAME_GOLD][0]-=mvs[2][OC_FRAME_GOLD][0];
+  mvs[1][OC_FRAME_GOLD][1]-=mvs[2][OC_FRAME_GOLD][1];
+  mvs[2][OC_FRAME_GOLD][0]-=accum_g[0];
+  mvs[2][OC_FRAME_GOLD][1]-=accum_g[1];
+  /*Search the golden frame.*/
+  oc_mcenc_search_frame(_enc,accum_g,_mbi,OC_FRAME_GOLD);
+  /*Put GOLDEN MVs back into absolute offset form.
+    The newest MV is already an absolute offset.*/
+  mvs[2][OC_FRAME_GOLD][0]+=accum_g[0];
+  mvs[2][OC_FRAME_GOLD][1]+=accum_g[1];
+  mvs[1][OC_FRAME_GOLD][0]+=mvs[2][OC_FRAME_GOLD][0];
+  mvs[1][OC_FRAME_GOLD][1]+=mvs[2][OC_FRAME_GOLD][1];
 }
 
 #if 0
