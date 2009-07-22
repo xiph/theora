@@ -2616,6 +2616,25 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
         fullw=250*h*fpsd*mult/fpsn;
         padw=w-24;
         /* header and coded block bits */
+        if(_dec->telemetry_frame_bytes<0 ||
+           _dec->telemetry_frame_bytes==OC_LOTS_OF_BITS)
+          _dec->telemetry_frame_bytes=0;
+        if(_dec->telemetry_coding_bytes<0 ||
+           _dec->telemetry_coding_bytes>_dec->telemetry_frame_bytes)
+          _dec->telemetry_coding_bytes=0;
+        if(_dec->telemetry_mode_bytes<0 ||
+           _dec->telemetry_mode_bytes>_dec->telemetry_frame_bytes)
+          _dec->telemetry_mode_bytes=0;
+        if(_dec->telemetry_mv_bytes<0 ||
+           _dec->telemetry_mv_bytes>_dec->telemetry_frame_bytes)
+          _dec->telemetry_mv_bytes=0;
+        if(_dec->telemetry_qi_bytes<0 ||
+           _dec->telemetry_qi_bytes>_dec->telemetry_frame_bytes)
+          _dec->telemetry_qi_bytes=0;
+        if(_dec->telemetry_dc_bytes<0 ||
+           _dec->telemetry_dc_bytes>_dec->telemetry_frame_bytes)
+          _dec->telemetry_dc_bytes=0;
+
         widths[0]=padw*(_dec->telemetry_frame_bytes-_dec->telemetry_coding_bytes)/fullw;
         widths[1]=padw*(_dec->telemetry_coding_bytes-_dec->telemetry_mode_bytes)/fullw;
         widths[2]=padw*(_dec->telemetry_mode_bytes-_dec->telemetry_mv_bytes)/fullw;
