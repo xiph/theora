@@ -48,7 +48,7 @@ void oc_enc_calc_lambda(oc_enc_ctx *_enc,int _frame_type){
   int         qi;
   /*For now, lambda is fixed depending on the qi value and frame type:
       lambda=qscale*(qavg[qti][qi]**2),
-     where qscale=0.31.
+     where qscale=0.2125.
     This was derived by exhaustively searching for the optimal quantizer for
      the AC coefficients in each block from a number of test sequences for a
      number of fixed lambda values and fitting the peaks of the resulting
@@ -63,7 +63,7 @@ void oc_enc_calc_lambda(oc_enc_ctx *_enc,int _frame_type){
   if(_enc->state.info.target_bitrate>0)lq=_enc->rc.log_qtarget;
   else lq=_enc->log_qavg[_frame_type][qi];
   /*The resulting lambda value is less than 0x500000.*/
-  _enc->lambda=(int)oc_bexp64(2*lq-0x3611B1986AB1180LL);
+  _enc->lambda=(int)oc_bexp64(2*lq-0x4780BD468D6B62BLL);
 }
 
 
