@@ -294,6 +294,7 @@ extern int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
  *               It may be freed or overwritten without notification when
  *                subsequent frames are decoded.
  * \retval 0 Success
+ * \retval TH_EFAULT     \a _dec or \a _ycbcr was <tt>NULL</tt>.
  */
 extern int th_decode_ycbcr_out(th_dec_ctx *_dec,
  th_ycbcr_buffer _ycbcr);
