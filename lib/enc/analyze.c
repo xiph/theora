@@ -673,15 +673,16 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   borderi=frags[_fragi].borderi;
   qii=frags[_fragi].qii;
   if(qii&~3){
-#if 1
-    /*Enable early skip detection.*/
-    frags[_fragi].coded=0;
-    return 0;
-#else
-    /*Try and code the fragment anyway.*/
-    qii&=3;
-    frags[_fragi].qii=qii;
-#endif
+    if(!_pli){
+      /*Enable early skip detection only for luma blocks.*/
+      frags[_fragi].coded=0;
+      return 0;
+    }
+    else{
+      /*Try and code chroma blocks anyway.*/
+      qii&=3;
+      frags[_fragi].qii=qii;
+    }
   }
   mb_mode=frags[_fragi].mb_mode;
   ref=_enc->state.ref_frame_data[
