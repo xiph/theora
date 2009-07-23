@@ -1058,7 +1058,7 @@ static int oc_enc_init(oc_enc_ctx *_enc,const th_info *_info){
   _enc->coded_mbis=
    (unsigned *)_ogg_malloc(_enc->state.nmbs*sizeof(*_enc->coded_mbis));
   hdec=!(_enc->state.info.pixel_fmt&1);
-  vdec=!(_enc->state.info.pixel_fmt&1);
+  vdec=!(_enc->state.info.pixel_fmt&2);
   /*If chroma is sub-sampled in the vertical direction, we have to encode two
      super block rows of Y' for each super block row of Cb and Cr.*/
   _enc->mcu_nvsbs=1<<vdec;
