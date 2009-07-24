@@ -134,18 +134,10 @@ typedef struct oc_theora_state          oc_theora_state;
 /*The number of (coded) modes.*/
 #define OC_NMODES              (8)
 
-/*Macro block is not coded.*/
-#define OC_MODE_NOT_CODED      (8)
-
-/*Predictor bit flags.*/
-/*Left.*/
-#define OC_PL  (1)
-/*Upper-left.*/
-#define OC_PUL (2)
-/*Up.*/
-#define OC_PU  (4)
-/*Upper-right.*/
-#define OC_PUR (8)
+/*Determines the reference frame used for a given MB mode.*/
+#define OC_FRAME_FOR_MODE(_x) \
+ OC_UNIBBLE_TABLE32(OC_FRAME_PREV,OC_FRAME_SELF,OC_FRAME_PREV,OC_FRAME_PREV, \
+  OC_FRAME_PREV,OC_FRAME_GOLD,OC_FRAME_GOLD,OC_FRAME_PREV,(_x))
 
 /*Constants for the packet state machine common between encoder and decoder.*/
 
@@ -403,8 +395,6 @@ extern const unsigned char OC_FZIG_ZAG[64];
 /*A map from the coefficient number in a block to its index in the zig zag
    scan.*/
 extern const unsigned char OC_IZIG_ZAG[64];
-/*The predictor frame to use for each macro block mode.*/
-extern const unsigned char OC_FRAME_FOR_MODE[OC_NMODES];
 /*A map from physical macro block ordering to bitstream macro block
    ordering within a super block.*/
 extern const unsigned char OC_MB_MAP[2][2];
@@ -430,9 +420,6 @@ void oc_ycbcr_buffer_flip(th_ycbcr_buffer _dst,
  const th_ycbcr_buffer _src);
 
 ptrdiff_t oc_dct_token_skip(int _token,int _extra_bits);
-
-int oc_frag_pred_dc(const oc_fragment *_frag,
- const oc_fragment_plane *_fplane,int _x,int _y,int _pred_last[3]);
 
 int oc_state_init(oc_theora_state *_state,const th_info *_info,int _nrefs);
 void oc_state_clear(oc_theora_state *_state);

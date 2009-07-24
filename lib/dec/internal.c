@@ -50,26 +50,6 @@ const unsigned char OC_IZIG_ZAG[64]={
   35,36,48,49,57,58,62,63
 };
 
-/*The predictor frame to use for each macro block mode.*/
-const unsigned char OC_FRAME_FOR_MODE[8]={
-  /*OC_MODE_INTER_NOMV*/
-  OC_FRAME_PREV,
-  /*OC_MODE_INTRA*/
-  OC_FRAME_SELF,
-  /*OC_MODE_INTER_MV*/
-  OC_FRAME_PREV,
-  /*OC_MODE_INTER_MV_LAST*/
-  OC_FRAME_PREV,
-  /*OC_MODE_INTER_MV_LAST2*/
-  OC_FRAME_PREV,
-  /*OC_MODE_GOLDEN*/
-  OC_FRAME_GOLD,
-  /*OC_MODE_GOLDEN_MV*/
-  OC_FRAME_GOLD,
-  /*OC_MODE_INTER_MV_FOUR*/
-  OC_FRAME_PREV,
-};
-
 /*A map from physical macro block ordering to bitstream macro block
    ordering within a super block.*/
 const unsigned char OC_MB_MAP[2][2]={{0,3},{1,2}};

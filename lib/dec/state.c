@@ -881,7 +881,7 @@ void oc_state_frag_recon_c(const oc_theora_state *_state,ptrdiff_t _fragi,
     const unsigned char *ref;
     int                  mvoffsets[2];
     ref=
-     _state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_FOR_MODE[mb_mode]]]
+     _state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_FOR_MODE(mb_mode)]]
      +frag_buf_off;
     if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,
      _state->frag_mvs[_fragi][0],_state->frag_mvs[_fragi][1])>1){

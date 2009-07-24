@@ -686,7 +686,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   }
   mb_mode=frags[_fragi].mb_mode;
   ref=_enc->state.ref_frame_data[
-   _enc->state.ref_frame_idx[OC_FRAME_FOR_MODE[mb_mode]]]+frag_offs;
+   _enc->state.ref_frame_idx[OC_FRAME_FOR_MODE(mb_mode)]]+frag_offs;
   dst=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_SELF]]
    +frag_offs;
   /*Motion compensation:*/
@@ -1655,7 +1655,7 @@ static void oc_cost_inter(oc_enc_ctx *_enc,oc_mode_choice *_modec,
   ptrdiff_t              frag_offs;
   src=_enc->state.ref_frame_data[OC_FRAME_IO];
   ref=_enc->state.ref_frame_data[
-   _enc->state.ref_frame_idx[OC_FRAME_FOR_MODE[_mb_mode]]];
+   _enc->state.ref_frame_idx[OC_FRAME_FOR_MODE(_mb_mode)]];
   ystride=_enc->state.ref_ystride[0];
   frag_buf_offs=_enc->state.frag_buf_offs;
   sb_map=_enc->state.sb_maps[_mbi>>2][_mbi&3];

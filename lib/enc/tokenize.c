@@ -680,11 +680,86 @@ void oc_enc_pred_dc_frag_rows(oc_enc_ctx *_enc,
   nhfrags=fplane->nhfrags;
   fragi=fplane->froffset+_fragy0*nhfrags;
   for(fragy=_fragy0;fragy<_frag_yend;fragy++){
-    for(fragx=0;fragx<nhfrags;fragx++,fragi++){
-      if(frags[fragi].coded){
-        frag_dc[fragi]=frags[fragi].dc
-         -oc_frag_pred_dc(frags+fragi,fplane,fragx,fragy,pred_last);
-        pred_last[OC_FRAME_FOR_MODE[frags[fragi].mb_mode]]=frags[fragi].dc;
+    if(fragy==0){
+      /*For the first row, all of the cases reduce to just using the previous
+         predictor for the same reference frame.*/
+      for(fragx=0;fragx<nhfrags;fragx++,fragi++){
+        if(frags[fragi].coded){
+          int ref;
+          ref=OC_FRAME_FOR_MODE(frags[fragi].mb_mode);
+          frag_dc[fragi]=(ogg_int16_t)(frags[fragi].dc-pred_last[ref]);
+          pred_last[ref]=frags[fragi].dc;
+        }
+      }
+    }
+    else{
+      const oc_fragment *u_frags;
+      int                l_ref;
+      int                ul_ref;
+      int                u_ref;
+      u_frags=frags-nhfrags;
+      l_ref=-1;
+      ul_ref=-1;
+      u_ref=u_frags[fragi].coded?OC_FRAME_FOR_MODE(u_frags[fragi].mb_mode):-1;
+      for(fragx=0;fragx<nhfrags;fragx++,fragi++){
+        int ur_ref;
+        if(fragx+1>=nhfrags)ur_ref=-1;
+        else{
+          ur_ref=u_frags[fragi+1].coded?
+           OC_FRAME_FOR_MODE(u_frags[fragi+1].mb_mode):-1;
+        }
+        if(frags[fragi].coded){
+          int pred;
+          int ref;
+          ref=OC_FRAME_FOR_MODE(frags[fragi].mb_mode);
+          /*We break out a separate case based on which of our neighbors use
+             the same reference frames.
+            This is somewhat faster than trying to make a generic case which
+             handles all of them, since it reduces lots of poorly predicted
+             jumps to one switch statement, and also lets a number of the
+             multiplications be optimized out by strength reduction.*/
+          switch((l_ref==ref)|(ul_ref==ref)<<1|
+           (u_ref==ref)<<2|(ur_ref==ref)<<3){
+            default:pred=pred_last[ref];break;
+            case  1:
+            case  3:pred=frags[fragi-1].dc;break;
+            case  2:pred=u_frags[fragi-1].dc;break;
+            case  4:
+            case  6:
+            case 12:pred=u_frags[fragi].dc;break;
+            case  5:pred=(frags[fragi-1].dc+u_frags[fragi].dc)/2;break;
+            case  8:pred=u_frags[fragi+1].dc;break;
+            case  9:
+            case 11:
+            case 13:{
+              pred=(75*frags[fragi-1].dc+53*u_frags[fragi+1].dc)/128;
+            }break;
+            case 10:pred=(u_frags[fragi-1].dc+u_frags[fragi+1].dc)/2;break;
+            case 14:{
+              pred=(3*(u_frags[fragi-1].dc+u_frags[fragi+1].dc)
+               +10*u_frags[fragi].dc)/16;
+            }break;
+            case  7:
+            case 15:{
+              int p0;
+              int p1;
+              int p2;
+              p0=frags[fragi-1].dc;
+              p1=u_frags[fragi-1].dc;
+              p2=u_frags[fragi].dc;
+              pred=(29*(p0+p2)-26*p1)/32;
+              if(abs(pred-p2)>128)pred=p2;
+              else if(abs(pred-p0)>128)pred=p0;
+              else if(abs(pred-p1)>128)pred=p1;
+            }break;
+          }
+          frag_dc[fragi]=(ogg_int16_t)(frags[fragi].dc-pred);
+          pred_last[ref]=frags[fragi].dc;
+          l_ref=ref;
+        }
+        else l_ref=-1;
+        ul_ref=u_ref;
+        u_ref=ur_ref;
       }
     }
   }
