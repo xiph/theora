@@ -259,9 +259,6 @@ typedef struct{
   /**The target bit-rate in bits per second.
      If initializing an encoder with this struct, set this field to a non-zero
       value to activate CBR encoding by default.*/
-  /*TODO: Current encoder does not support CBR mode, or anything like it.
-    We also don't really know what nominal rate each quality level
-     corresponds to yet.*/
   int           target_bitrate;
   /**The target quality level.
      Valid values range from 0 to 63, inclusive, with higher values giving

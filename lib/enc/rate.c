@@ -18,11 +18,104 @@
 #include <string.h>
 #include "encint.h"
 
+/*A rough lookup table for tan(x), 0<=x<pi/2.
+  The values are Q12 fixed-point and spaced at 5 degree intervals.
+  These decisions are somewhat arbitrary, but sufficient for the 2nd order
+   Bessel follower below.
+  Values of x larger than 85 degrees are extrapolated from the last inteval,
+   which is way off, but "good enough".*/
+static unsigned short OC_ROUGH_TAN_LOOKUP[18]={
+      0,  358,  722, 1098, 1491, 1910,
+   2365, 2868, 3437, 4096, 4881, 5850,
+   7094, 8784,11254,15286,23230,46817
+};
+
+/*_alpha is Q24 in the range [0,0.5).
+  The return values is 5.12.*/
+static int oc_warp_alpha(int _alpha){
+  int i;
+  int d;
+  int t0;
+  int t1;
+  i=_alpha*36>>24;
+  if(i>=17)i=16;
+  t0=OC_ROUGH_TAN_LOOKUP[i];
+  t1=OC_ROUGH_TAN_LOOKUP[i+1];
+  d=_alpha*36-(i<<24);
+  return (int)(((ogg_int64_t)t0<<32)+(t1-t0<<8)*(ogg_int64_t)d>>32);
+}
+
+/*Initialize a 2nd order low-pass Bessel filter with the corresponding delay
+   and initial value.
+  _value is Q24.*/
+void oc_iir_filter_init(oc_iir_filter *_f,int _delay,ogg_int32_t _value){
+  int         alpha;
+  ogg_int64_t one48;
+  ogg_int64_t warp;
+  ogg_int64_t k1;
+  ogg_int64_t k2;
+  ogg_int64_t d;
+  ogg_int64_t a;
+  ogg_int64_t ik2;
+  ogg_int64_t b1;
+  ogg_int64_t b2;
+  /*This borrows some code from an unreleased version of Postfish.*/
+  /*alpha is Q24*/
+  alpha=(1<<24)/_delay;
+  one48=(ogg_int64_t)1<<48;
+  /*warp is 5.12*/
+  warp=oc_warp_alpha(alpha);
+  /*k1 is 6.12*/
+  k1=3*warp;
+  /*k2 is 10.24.*/
+  k2=k1*warp;
+  /*d is 11.24.*/
+  d=((1<<12)+k1<<12)+k2;
+  /*a is 34.24.*/
+  a=(k2<<24)/d;
+  /*ik2 is 25.24.*/
+  ik2=one48/k2;
+  /*b1 is Q48; in practice, the integer part is limited.*/
+  b1=2*a*(ik2-(1<<24));
+  /*b2 is Q48; in practice, the integer part is limited.*/
+  b2=one48-(4*a<<24)-b1;
+  /*All of the filter parameters are Q24.*/
+  _f->c[0]=(ogg_int32_t)(b1+(1<<23)>>24);
+  _f->c[1]=(ogg_int32_t)(b2+(1<<23)>>24);
+  _f->g=(ogg_int32_t)a;
+  _f->y[1]=_f->y[0]=_f->x[1]=_f->x[0]=_value;
+}
+
+static ogg_int64_t oc_iir_filter_update(oc_iir_filter *_f,int _x){
+  ogg_int64_t c0;
+  ogg_int64_t c1;
+  ogg_int64_t g;
+  ogg_int64_t x0;
+  ogg_int64_t x1;
+  ogg_int64_t y0;
+  ogg_int64_t y1;
+  ogg_int64_t ya;
+  c0=_f->c[0];
+  c1=_f->c[1];
+  g=_f->g;
+  x0=_f->x[0];
+  x1=_f->x[1];
+  y0=_f->y[0];
+  y1=_f->y[1];
+  ya=(_x+x0*2+x1)*g+y0*c0+y1*c1+(1<<23)>>24;
+  _f->x[1]=(ogg_int32_t)x0;
+  _f->x[0]=_x;
+  _f->y[1]=(ogg_int32_t)y0;
+  _f->y[0]=(ogg_int32_t)ya;
+  return ya;
+}
+
+
 
 /*Search for the quantizer that matches the target most closely.
   We don't assume a linear ordering, but when there are ties we pick the
    quantizer closest to the old one.*/
-int oc_enc_find_qi_for_target(oc_enc_ctx *_enc,int _qti,int _qi_old,
+static int oc_enc_find_qi_for_target(oc_enc_ctx *_enc,int _qti,int _qi_old,
  int _qi_min,ogg_int64_t _log_qtarget){
   ogg_int64_t best_qdiff;
   int         best_qi;
@@ -91,15 +184,25 @@ void oc_enc_calc_lambda(oc_enc_ctx *_enc,int _qti){
      lq-(OC_Q57(6)+5)/10);
     if(qi1!=qi&&qi1!=_enc->state.qis[nqis-1])_enc->state.qis[nqis++]=qi1;
   }
-  /*printf("%i %.3f:",_qti,oc_bexp64(lq+OC_Q57(3))*0.125);
-  for(qi=0;qi<nqis;qi++)printf(" %2i",_enc->state.qis[qi]);
-  printf("\n");*/
   _enc->state.nqis=nqis;
 }
 
+/*Binary exponential of _log_scale with 24-bit fractional precision and
+   saturation.
+  _log_scale: A binary logarithm in Q57 format.
+  Return: The binary exponential in Q24 format, saturated to 2**31-1 if
+   _log_scale was too large.*/
+static ogg_int32_t oc_bexp_q24(ogg_int64_t _log_scale){
+  if(_log_scale<OC_Q57(8)){
+    ogg_int64_t ret;
+    ret=oc_bexp64(_log_scale+OC_Q57(24));
+    return ret<0x7FFFFFFF?(ogg_int32_t)ret:0x7FFFFFFF;
+  }
+  return 0x7FFFFFFF;
+}
 
 
-void oc_rc_state_init(oc_rc_state *_rc,const oc_enc_ctx *_enc){
+void oc_rc_state_reset(oc_rc_state *_rc,const oc_enc_ctx *_enc){
   ogg_int64_t npixels;
   ogg_int64_t ibpp;
   /*TODO: These parameters should be exposed in a th_encode_ctl() API.*/
@@ -112,14 +215,6 @@ void oc_rc_state_init(oc_rc_state *_rc,const oc_enc_ctx *_enc){
     _rc->bits_per_frame=(ogg_int64_t)0x400000000000LL;
   }
   else if(_rc->bits_per_frame<32)_rc->bits_per_frame=32;
-  /*The buffer size is set equal to the keyframe interval, clamped to the range
-     [12,256] frames.
-    The 12 frame minimum gives us some chance to distribute bit estimation
-     errors.
-    The 256 frame maximum means we'll require 8-10 seconds of pre-buffering at
-     24-30 fps, which is not unreasonable.*/
-  _rc->buf_delay=_enc->keyframe_frequency_force>256?
-   256:_enc->keyframe_frequency_force;
   _rc->buf_delay=OC_MAXI(_rc->buf_delay,12);
   _rc->max=_rc->bits_per_frame*_rc->buf_delay;
   /*Start with a buffer fullness of 75%.
@@ -158,19 +253,37 @@ void oc_rc_state_init(oc_rc_state *_rc,const oc_enc_ctx *_enc){
   }
   _rc->prev_drop_count=0;
   _rc->log_drop_scale=OC_Q57(0);
+  /*Set up second order followers, initialized according to corresponding
+     time constants.*/
+  oc_iir_filter_init(&_rc->scalefilter[0],2,oc_bexp_q24(_rc->log_scale[0]));
+  oc_iir_filter_init(&_rc->scalefilter[1],_rc->buf_delay>>1,
+   oc_bexp_q24(_rc->log_scale[1]));
+  oc_iir_filter_init(&_rc->vfrfilter,2,oc_bexp_q24(_rc->log_drop_scale));
+}
+
+
+void oc_rc_state_init(oc_rc_state *_rc,const oc_enc_ctx *_enc){
+  /*The buffer size is set equal to the keyframe interval, clamped to the range
+     [12,256] frames.
+    The 12 frame minimum gives us some chance to distribute bit estimation
+     errors.
+    The 256 frame maximum means we'll require 8-10 seconds of pre-buffering at
+     24-30 fps, which is not unreasonable.*/
+  _rc->buf_delay=_enc->keyframe_frequency_force>256?
+   256:_enc->keyframe_frequency_force;
+  /*By default, enforce all buffer constraints.*/
+  _rc->drop_frames=1;
+  _rc->cap_overflow=1;
+  _rc->cap_underflow=0;
+  oc_rc_state_reset(_rc,_enc);
 }
 
 int oc_enc_update_rc_state(oc_enc_ctx *_enc,
  long _bits,int _qti,int _qi,int _trial,int _droppable){
-  /*Note, setting OC_SCALE_SMOOTHING[1] to 0x80 (0.5), which one might expect
-     to be a reasonable value, actually causes a feedback loop with, e.g., 12
-     fps content encoded at 24 fps; use values near 0 or near 1 for now.
-    TODO: Should probably revisit using an exponential moving average in the
-     first place at some point; dup tracking should help as well.*/
-  static const unsigned OC_SCALE_SMOOTHING[2]={0x13,0x00};
   ogg_int64_t buf_delta;
   int         dropped;
   dropped=0;
+  if(!_enc->rc.drop_frames)_droppable=0;
   buf_delta=_enc->rc.bits_per_frame*(1+_enc->dup_count);
   if(_bits<=0){
     /*We didn't code any blocks in this frame.
@@ -193,10 +306,10 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
     /*Use it to set that factor directly if this was a trial.*/
     if(_trial)_enc->rc.log_scale[_qti]=log_scale;
     else{
-      /*Otherwise update an exponential moving average for log_scale,
+      /*Otherwise update the low-pass scale filter for this frame type,
          regardless of whether or not we dropped this frame.*/
-      _enc->rc.log_scale[_qti]=log_scale
-       +(_enc->rc.log_scale[_qti]-log_scale+128>>8)*OC_SCALE_SMOOTHING[_qti];
+      _enc->rc.log_scale[_qti]=oc_blog64(oc_iir_filter_update(
+       _enc->rc.scalefilter+_qti,oc_bexp_q24(log_scale)))-OC_Q57(24);
       /*If this frame busts our budget, it must be dropped.*/
       if(_droppable&&_enc->rc.fullness+buf_delta<_bits){
         _enc->rc.prev_drop_count+=1+_enc->dup_count;
@@ -204,12 +317,19 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
         dropped=1;
       }
       else{
+        ogg_uint32_t drop_count;
         /*Update a simple exponential moving average to estimate the "real"
            frame rate taking drops and duplicates into account.
           This is only done if the frame is coded, as it needs the final count
            of dropped frames.*/
-        _enc->rc.log_drop_scale=_enc->rc.log_drop_scale
-         +oc_blog64(_enc->rc.prev_drop_count+1)>>1;
+        drop_count=_enc->rc.prev_drop_count+1;
+        if(drop_count>0x7F)drop_count=0x7FFFFFFF;
+        else drop_count<<=24;
+        _enc->rc.log_drop_scale=oc_blog64(oc_iir_filter_update(
+         &_enc->rc.vfrfilter,drop_count))-OC_Q57(24);
+        /*Initialize the drop count for this frame to the user-requested dup
+           count.
+          It will be increased if we drop more frames.*/
         _enc->rc.prev_drop_count=_enc->dup_count;
       }
     }
@@ -217,8 +337,16 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
   if(!_trial){
     /*And update the buffer fullness level.*/
     _enc->rc.fullness+=buf_delta-_bits;
-    /*If we're too quick filling the buffer, that rate is lost forever.*/
-    if(_enc->rc.fullness>_enc->rc.max)_enc->rc.fullness=_enc->rc.max;
+    /*If we're too quick filling the buffer and overflow is capped,
+      that rate is lost forever.*/
+    if(_enc->rc.cap_overflow&&_enc->rc.fullness>_enc->rc.max){
+      _enc->rc.fullness=_enc->rc.max;
+    }
+    /*If we're too quick draining the buffer and underflow is capped,
+      don't try to make up that rate later.*/
+    if(_enc->rc.cap_underflow&&_enc->rc.fullness<0){
+      _enc->rc.fullness=0;
+    }
   }
   return dropped;
 }
@@ -317,8 +445,8 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
   /*The above allocation looks only at the total rate we'll accumulate in the
      next buf_delay frames.
     However, we could bust the budget on the very next frame, so check for that
-     here.*/
-  {
+     here, if we're not using a soft target.*/
+  if(!_enc->rc.cap_underflow||_enc->rc.drop_frames){
     ogg_int64_t log_hard_limit;
     ogg_int64_t log_qexp;
     int         exp0;

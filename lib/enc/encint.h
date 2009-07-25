@@ -34,6 +34,7 @@ typedef oc_mv                         oc_mv2[2];
 typedef struct oc_enc_opt_vtable      oc_enc_opt_vtable;
 typedef struct oc_mb_enc_info         oc_mb_enc_info;
 typedef struct oc_mode_scheme_chooser oc_mode_scheme_chooser;
+typedef struct oc_iir_filter          oc_iir_filter;
 typedef struct oc_rc_state            oc_rc_state;
 typedef struct th_enc_ctx             oc_enc_ctx;
 typedef struct oc_token_checkpoint    oc_token_checkpoint;
@@ -160,40 +161,60 @@ void oc_mode_scheme_chooser_init(oc_mode_scheme_chooser *_chooser);
 
 
 
+/*A 2nd order low-pass Bessel follower.
+  We use this for rate control because it has fast reaction time, but is
+   critically damped.*/
+struct oc_iir_filter{
+  ogg_int32_t c[2];
+  ogg_int64_t g;
+  ogg_int32_t x[2];
+  ogg_int32_t y[2];
+};
+
 /*Rate control state information.*/
 struct oc_rc_state{
   /*The target average bits per frame.*/
-  ogg_int64_t  bits_per_frame;
+  ogg_int64_t     bits_per_frame;
   /*The current buffer fullness (bits available to be used).*/
-  ogg_int64_t  fullness;
+  ogg_int64_t     fullness;
   /*The target buffer fullness.
     This is where we'd like to be by the last keyframe the appears in the next
      buf_delay frames.*/
-  ogg_int64_t  target;
+  ogg_int64_t     target;
   /*The maximum buffer fullness (total size of the buffer).*/
-  ogg_int64_t  max;
+  ogg_int64_t     max;
   /*The log of the number of pixels in a frame in Q57 format.*/
-  ogg_int64_t  log_npixels;
+  ogg_int64_t     log_npixels;
   /*The exponent used in the rate model in Q8 format.*/
-  unsigned     exp[2];
+  unsigned        exp[2];
   /*The number of frames to distribute the buffer usage over.*/
-  int          buf_delay;
+  int             buf_delay;
   /*The total drop count from the previous frame.
     This includes duplicates explicitly requested via the
      TH_ENCCTL_SET_DUP_COUNT API as well as frames we chose to drop ourselves.*/
-  ogg_uint32_t prev_drop_count;
+  ogg_uint32_t    prev_drop_count;
   /*The log of an estimated scale factor used to obtain the real framerate, for
      VFR sources or, e.g., 12 fps content doubled to 24 fps, etc.*/
-  ogg_int64_t  log_drop_scale;
+  ogg_int64_t     log_drop_scale;
   /*The log of estimated scale factor for the rate model in Q57 format.*/
-  ogg_int64_t  log_scale[2];
+  ogg_int64_t     log_scale[2];
   /*The log of the target quantizer level in Q57 format.*/
-  ogg_int64_t  log_qtarget;
+  ogg_int64_t     log_qtarget;
+  /*Will we drop frames to meet bitrate target?*/
+  unsigned char   drop_frames;
+  /*Do we respect the maximum buffer fullness?*/
+  unsigned char   cap_overflow;
+  /*Can the reservoir go negative?*/
+  unsigned char   cap_underflow;
+  /*Second-order lowpass filters to track scale and VFR.*/
+  oc_iir_filter   scalefilter[2];
+  oc_iir_filter   vfrfilter;
 };
 
 
 void oc_enc_calc_lambda(oc_enc_ctx *_enc,int _frame_type);
 void oc_rc_state_init(oc_rc_state *_rc,const oc_enc_ctx *_enc);
+void oc_rc_state_reinit(oc_rc_state *_rc,const oc_enc_ctx *_enc);
 int oc_enc_update_rc_state(oc_enc_ctx *_enc,
  long _bits,int _qti,int _qi,int _trial,int _droppable);
 int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp);

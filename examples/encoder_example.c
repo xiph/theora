@@ -61,7 +61,7 @@ static double rint(double x)
 }
 #endif
 
-const char *optstring = "b:e:o:a:A:v:V:s:S:f:F:ck:";
+const char *optstring = "b:e:o:a:A:v:V:s:S:f:F:ck:\1";
 struct option options [] = {
   {"begin-time",required_argument,NULL,'b'},
   {"end-time",required_argument,NULL,'e'},
@@ -75,6 +75,7 @@ struct option options [] = {
   {"framerate-numerator",required_argument,NULL,'f'},
   {"framerate-denominator",required_argument,NULL,'F'},
   {"vp3-compatible",no_argument,NULL,'c'},
+  {"soft-target",no_argument,NULL,'\1'},
   {"keyframe-freq",required_argument,NULL,'k'},
   {NULL,0,NULL,0}
 };
@@ -123,7 +124,7 @@ typedef void (*y4m_convert_func)(unsigned char *_dst,unsigned char *_aux);
 y4m_convert_func y4m_convert=NULL;
 
 int video_r=-1;
-int video_q=48;
+int video_q=-1;
 ogg_uint32_t keyframe_frequency=64;
 
 long begin_sec=-1;
@@ -143,6 +144,12 @@ static void usage(void){
           "                                  as -a gives higher quality for a given\n"
           "                                  bitrate.\n\n"
           "  -V --video-rate-target <n>      bitrate target for Theora video\n\n"
+          "     --soft-target                Use a large reservoir and treat the rate\n"
+          "                                  as a soft target; rate control is less\n"
+          "                                  strict but resulting quality is usually\n"
+          "                                  higher/smoother overall. Soft target also\n"
+          "                                  allows an optional -v setting to specify\n"
+          "                                  a minimum allowed quality.\n\n"
           "  -a --audio-quality <n>          Vorbis quality selector from -1 to 10\n"
           "                                  (-1 yields smallest files but lowest\n"
           "                                  fidelity; 10 yields highest fidelity\n"
@@ -1137,6 +1144,7 @@ int main(int argc,char *argv[]){
   int videoflag=0;
   int akbps=0;
   int vkbps=0;
+  int soft_target=0;
 
   ogg_int64_t audio_bytesout=0;
   ogg_int64_t video_bytesout=0;
@@ -1178,7 +1186,6 @@ int main(int argc,char *argv[]){
         fprintf(stderr,"Illegal video quality (choose 0 through 10)\n");
         exit(1);
       }
-      video_r=0;
       break;
 
     case 'A':
@@ -1196,8 +1203,11 @@ int main(int argc,char *argv[]){
         fprintf(stderr,"Illegal video bitrate (choose > 0 please)\n");
         exit(1);
       }
-      video_q=0;
      break;
+
+    case '\1':
+      soft_target=1;
+      break;
 
     case 's':
       video_par_n=(int)rint(atof(optarg));
@@ -1283,6 +1293,20 @@ int main(int argc,char *argv[]){
     }
   }
 
+  if(soft_target){
+    if(video_r<=0){
+      fprintf(stderr,"Soft rate target (--soft-tagret) requested without a bitrate (-V).\n");
+      exit(1);
+    }
+    if(video_q==-1)
+      video_q=0;
+  }else{
+    if(video_r>0)
+      video_q=0;
+    if(video_q==-1)
+      video_q=48;
+  }
+
   while(optind<argc){
     /* assume that anything following the options must be a filename */
     id_file(argv[optind]);
@@ -1356,6 +1380,22 @@ int main(int argc,char *argv[]){
          "(4:2:0 pixel format, width and height multiples of 16).\n");
       }
     }
+  }
+
+  if(soft_target){
+    /* reverse the rate control flags to favor a 'long time' strategy */
+    int arg = TH_RATECTL_CAP_UNDERFLOW;
+    ret=th_encode_ctl(td,TH_ENCCTL_SET_RATE_FLAGS,&arg,sizeof(arg));
+    if(ret<0)
+      fprintf(stderr,"Could not set encoder flags for --soft-target\n");
+
+    if((keyframe_frequency*7>>1) > 5*video_fps_n/video_fps_d)
+      arg=keyframe_frequency*7>>1;
+    else
+      arg=30*video_fps_n/video_fps_d;
+    ret=th_encode_ctl(td,TH_ENCCTL_SET_RATE_BUFFER,&arg,sizeof(arg));
+    if(ret<0)
+      fprintf(stderr,"Could not set rate control buffer for --soft-target\n");
   }
 
   /* initialize Vorbis too, assuming we have audio to compress. */

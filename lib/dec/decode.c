@@ -1555,7 +1555,10 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
       else{
         int ebflag;
         token=dct_tokens[ti[zzi]++];
-        ebflag=OC_DCT_TOKEN_EXTRA_BITS[token]!=0;
+        /*This is equivalent to
+            ebflag=OC_DCT_TOKEN_EXTRA_BITS[token]!=0;
+           but should be simpler on platforms that can use 16-bit immediates.*/
+        ebflag=-0x1E08>>token&1;
         eb=extra_bits[ebi[zzi]]&-ebflag;
         ebi[zzi]+=ebflag;
         if(token<OC_NDCT_EOB_TOKEN_MAX){

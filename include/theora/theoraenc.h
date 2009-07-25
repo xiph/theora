@@ -85,8 +85,8 @@ extern "C" {
 #define TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE (4)
 /**Disables any encoder features that would prevent lossless transcoding back
  *  to VP3.
- * This primarily means disabling block-level QI values and not using 4MV mode
- *  when any of the luma blocks in a macro block are not coded.
+ * This primarily means disabling block-adaptive quantization and always coding
+ *  all four luma blocks in a macro block when 4MV is used.
  * It also includes using the VP3 quantization tables and Huffman codes; if you
  *  set them explicitly after calling this function, the resulting stream will
  *  not be VP3-compatible.
@@ -117,9 +117,9 @@ extern "C" {
  *  may actually improve, but in this case bitrate will also likely increase.
  * In any case, overall rate/distortion performance will probably decrease.
  * The maximum value, and the meaning of each value, may change depending on
- *  the current encoding mode (VBR vs. CQI, etc.).
+ *  the current encoding mode (VBR vs. constant quality, etc.).
  *
- * \param[out] _buf int: The maximum encoding speed level.
+ * \param[out] _buf <tt>int</tt>: The maximum encoding speed level.
  * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
  * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(int)</tt>.
  * \retval TH_IMPL   Not supported by this implementation in the current
@@ -128,8 +128,8 @@ extern "C" {
 /**Sets the speed level.
  * By default, the slowest speed (0) is used.
  *
- * \param[in] _buf int: The new encoding speed level.
- *                      0 is slowest, larger values use less CPU.
+ * \param[in] _buf <tt>int</tt>: The new encoding speed level.
+ *                 0 is slowest, larger values use less CPU.
  * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
  * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(int)</tt>, or the
  *                    encoding speed level is out of bounds.
@@ -146,14 +146,14 @@ extern "C" {
  * This control code tells the encoder to produce the specified number of extra
  *  duplicates of the next frame.
  * This allows the encoder to make smarter keyframe placement decisions and
- *  rate control decisions, as well as reduces CPU usage, when compared to just
- *  submitting the same frame for encoding multiple times.
+ *  rate control decisions, and reduces CPU usage as well, when compared to
+ *  just submitting the same frame for encoding multiple times.
  * This setting only applies to the next frame submitted for encoding.
  * You MUST call th_encode_packetout() repeatedly until it returns 0, or the
  *  extra duplicate frames will be lost.
  *
- * \param[in] _buf int: The number of duplicates to produce.
- *                      Unless this is positive, no duplicates will be produced.
+ * \param[in] _buf <tt>int</tt>: The number of duplicates to produce.
+ *                 If this is negative or zero, no duplicates will be produced.
  * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
  * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(int)</tt>, or the
  *                    number of duplicates is greater than or equal to the
@@ -165,8 +165,79 @@ extern "C" {
  * \retval TH_IMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_SET_DUP_COUNT (18)
+/**Modifies the default bitrate management behavior.
+ * Use to allow or disallow frame dropping, and to enable or disable capping
+ *  bit reservoir overflows and underflows.
+ * See \ref encctlcodes "the list of available flags".
+ * The flags are set by default to
+ *  <tt>#TH_RATECTL_DROP_FRAMES|#TH_RATECTL_CAP_OVERFLOW</tt>.
+ *
+ * \param[in] _buf <tt>int</tt>: Any combination of
+ *                  \ref ratectlflags "the available flags":
+ *                 - #TH_RATECTL_DROP_FRAMES: Enable frame dropping.
+ *                 - #TH_RATECTL_CAP_OVERFLOW: Don't bank excess bits for later
+ *                    use.
+ *                 - #TH_RATECTL_CAP_UNDERFLOW: Don't try to make up shortfalls
+ *                    later.
+ * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
+ * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(int)</tt> or rate control
+ *                    is not enabled.
+ * \retval TH_IMPL   Not supported by this implementation in the current
+ *                    encoding mode.*/
+#define TH_ENCCTL_SET_RATE_FLAGS (20)
+/**Sets the size of the bitrate management bit reservoir as a function
+ *  of number of frames.
+ * The reservoir size affects how quickly bitrate management reacts to
+ *  instantaneous changes in the video complexity.
+ * Larger reservoirs react more slowly, and provide better overall quality, but
+ *  require more buffering by a client, adding more latency to live streams.
+ * By default, libtheora sets the reservoir to the maximum distance between
+ *  keyframes, subject to a minimum and maximum limit.
+ * This call may be used to increase or decrease the reservoir, increasing or
+ *  decreasing the allowed temporary variance in bitrate.
+ * An implementation may impose some limits on the size of a reservoir it can
+ *  handle, in which case the actual reservoir size may not be exactly what was
+ *  requested.
+ * The actual value set will be returned.
+ *
+ * \param[in] _buf  <tt>int</tt>: Requested size of the reservoir measured in
+ *                   frames.
+ * \param[out] _buf <tt>int</tt>: The actual size of the reservoir set.
+ * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
+ * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(int)</tt>, or rate control
+ *                    is not enabled.  The buffer has an implementation
+ *                    defined minimum and maximum size and the value in _buf
+ *                    will be adjusted to match the actual value set.
+ * \retval TH_IMPL   Not supported by this implementation in the current
+ *                    encoding mode.*/
+#define TH_ENCCTL_SET_RATE_BUFFER (22)
 /*@}*/
 
+
+/**\name TH_ENCCTL_SET_RATE_FLAGS flags
+ * \anchor ratectlflags
+ * These are the flags available for use with #TH_ENCCTL_SET_RATE_FLAGS.*/
+/*@{*/
+/**Drop frames to keep within bitrate buffer constraints.
+ * This can have a severe impact on quality, but is the only way to ensure that
+ *  bitrate targets are met at low rates during sudden bursts of activity.*/
+#define TH_RATECTL_DROP_FRAMES   (0x1)
+/**Ignore bitrate buffer overflows.
+ * If the encoder uses so few bits that the reservoir of available bits
+ *  overflows, ignore the excess.
+ * The encoder will not try to use these extra bits in future frames.
+ * At high rates this may cause the result to be undersized, but allows a
+ *  client to play the stream using a finite buffer; it should normally be
+ *  enabled.*/
+#define TH_RATECTL_CAP_OVERFLOW  (0x2)
+/**Ignore bitrate buffer underflows.
+ * If the encoder uses so many bits that the reservoir of available bits
+ *  underflows, ignore the deficit.
+ * The encoder will not try to make up these extra bits in future frames.
+ * At low rates this may cause the result to be oversized; it should normally
+ *  be disabled.*/
+#define TH_RATECTL_CAP_UNDERFLOW (0x4)
+/*@}*/
 
 
 /**The quantization parameters used by VP3.*/

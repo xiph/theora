@@ -1315,6 +1315,28 @@ int th_encode_ctl(th_enc_ctx *_enc,int _req,void *_buf,size_t _buf_sz){
       _enc->dup_count=OC_MAXI(dup_count,0);
       return 0;
     }break;
+    case TH_ENCCTL_SET_RATE_FLAGS:{
+      int set;
+      if(_enc==NULL||_buf==NULL)return TH_EFAULT;
+      if(_buf_sz!=sizeof(set))return TH_EINVAL;
+      if(_enc->state.info.target_bitrate<=0)return TH_EINVAL;
+      set=*(int *)_buf;
+      _enc->rc.drop_frames=set&TH_RATECTL_DROP_FRAMES;
+      _enc->rc.cap_overflow=set&TH_RATECTL_CAP_OVERFLOW;
+      _enc->rc.cap_underflow=set&TH_RATECTL_CAP_UNDERFLOW;
+      return 0;
+    }break;
+    case TH_ENCCTL_SET_RATE_BUFFER:{
+      int set;
+      if(_enc==NULL||_buf==NULL)return TH_EFAULT;
+      if(_buf_sz!=sizeof(set))return TH_EINVAL;
+      if(_enc->state.info.target_bitrate<=0)return TH_EINVAL;
+      set=*(int *)_buf;
+      _enc->rc.buf_delay=set;
+      oc_rc_state_reset(&_enc->rc,_enc);
+      *(int *)_buf=_enc->rc.buf_delay;
+      return 0;
+    }break;
     default:return TH_EIMPL;
   }
 }
