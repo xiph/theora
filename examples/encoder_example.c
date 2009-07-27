@@ -1090,7 +1090,7 @@ int fetch_and_process_video_packet(FILE *video,FILE *twopass_file,int passno,
       /*Ask the encoder how many bytes it would like.*/
       bytes=th_encode_ctl(td,TH_ENCCTL_2PASS_IN,NULL,0);
       if(bytes<0){
-        fprintf(stderr,"Error submitting pass data in second pass.\n");
+        fprintf(stderr,"Error submitting pass data in second pass1.\n");
         exit(1);
       }
       /*If it's got enough, stop.*/
@@ -1104,7 +1104,7 @@ int fetch_and_process_video_packet(FILE *video,FILE *twopass_file,int passno,
       /*And pass them off.*/
       ret=th_encode_ctl(td,TH_ENCCTL_2PASS_IN,buffer,bytes);
       if(ret<0){
-        fprintf(stderr,"Error submitting pass data in second pass.\n");
+        fprintf(stderr,"Error submitting pass data in second pass2.\n");
         exit(1);
       }
       /*If the encoder consumed the whole buffer, reset it.*/
@@ -1512,8 +1512,8 @@ int main(int argc,char *argv[]){
     th_info_clear(&ti);
     /* setting just the granule shift only allows power-of-two keyframe
        spacing.  Set the actual requested spacing. */
-    ret=th_encode_ctl(td,TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE,&keyframe_frequency,
-                      sizeof(keyframe_frequency-1));
+    ret=th_encode_ctl(td,TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE,
+     &keyframe_frequency,sizeof(keyframe_frequency-1));
     if(ret<0){
       fprintf(stderr,"Could not set keyframe interval to %d.\n",(int)keyframe_frequency);
     }
@@ -1549,15 +1549,16 @@ int main(int argc,char *argv[]){
     /* set up two-pass if needed */
     if(passno==1){
       unsigned char *buffer;
-      int bytes = th_encode_ctl(td, TH_ENCCTL_2PASS_OUT, &buffer, sizeof(buffer));
+      int bytes;
+      bytes=th_encode_ctl(td,TH_ENCCTL_2PASS_OUT,&buffer,sizeof(buffer));
       if(bytes<0){
         fprintf(stderr,"Could not set up the first pass of two-pass mode.\n");
         fprintf(stderr,"Did you remember to specify an estimated bitrate?\n");
         exit(1);
       }
       /*Perform a seek test to ensure we can overwrite this placeholder data at
-         the end; this is better than letting the user sit through a whole encode
-         only to find out their pass 1 file is useless at the end.*/
+         the end; this is better than letting the user sit through a whole
+         encode only to find out their pass 1 file is useless at the end.*/
       if(fseek(twopass_file,0,SEEK_SET)<0){
         fprintf(stderr,"Unable to seek in two-pass data file.\n");
         exit(1);
@@ -1580,12 +1581,17 @@ int main(int argc,char *argv[]){
           fprintf(stderr,"Could not rewind video input file for second pass!\n");
           exit(1);
         }
+        if(fseek(twopass_file,0,SEEK_SET)<0){
+          fprintf(stderr,"Unable to seek in two-pass data file.\n");
+          exit(1);
+        }
         frame_state=0;
         frames=0;
       }
     }
     if(passno!=1&&buf_delay>=0){
-      ret=th_encode_ctl(td,TH_ENCCTL_SET_RATE_BUFFER,&buf_delay,sizeof(buf_delay));
+      ret=th_encode_ctl(td,TH_ENCCTL_SET_RATE_BUFFER,
+       &buf_delay,sizeof(buf_delay));
       if(ret<0){
         fprintf(stderr,"Warning: could not set desired buffer delay.\n");
       }
