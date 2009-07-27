@@ -1099,12 +1099,13 @@ static int oc_enc_init(oc_enc_ctx *_enc,const th_info *_info){
   oc_enc_set_quant_params(_enc,NULL);
   _enc->state.qis[0]=_enc->state.info.quality;
   _enc->state.nqis=1;
-  if(_enc->state.info.target_bitrate>0)oc_rc_state_init(&_enc->rc,_enc);
+  oc_rc_state_init(&_enc->rc,_enc);
   return 0;
 }
 
 static void oc_enc_clear(th_enc_ctx *_enc){
   int pli;
+  oc_rc_state_clear(&_enc->rc);
 #if defined(OC_COLLECT_METRICS)
   oc_enc_mode_metrics_dump(_enc);
 #endif
@@ -1141,7 +1142,7 @@ static void oc_enc_compress_keyframe(oc_enc_ctx *_enc,int _recode){
     _enc->state.nqis=1;
   }
   oc_enc_calc_lambda(_enc,OC_INTRA_FRAME);
-  oc_enc_analyze(_enc,OC_INTRA_FRAME,_recode);
+  oc_enc_analyze_intra(_enc,_recode);
   oc_enc_frame_pack(_enc);
   /*On the first frame, the previous call was an initial dry-run to prime
      feed-forward statistics.*/
@@ -1160,7 +1161,7 @@ static void oc_enc_compress_frame(oc_enc_ctx *_enc,int _recode){
     _enc->state.nqis=1;
   }
   oc_enc_calc_lambda(_enc,OC_INTER_FRAME);
-  if(oc_enc_analyze(_enc,OC_INTER_FRAME,_recode)){
+  if(oc_enc_analyze_inter(_enc,_enc->rc.twopass!=2,_recode)){
     /*Mode analysis thinks this should have been a keyframe; start over.*/
     oc_enc_compress_keyframe(_enc,1);
   }
@@ -1333,9 +1334,26 @@ int th_encode_ctl(th_enc_ctx *_enc,int _req,void *_buf,size_t _buf_sz){
       if(_enc->state.info.target_bitrate<=0)return TH_EINVAL;
       set=*(int *)_buf;
       _enc->rc.buf_delay=set;
-      oc_rc_state_reset(&_enc->rc,_enc);
+      oc_enc_rc_resize(_enc);
       *(int *)_buf=_enc->rc.buf_delay;
       return 0;
+    }break;
+    case TH_ENCCTL_2PASS_OUT:{
+      if(_enc==NULL||_buf==NULL)return TH_EFAULT;
+      if(_enc->state.info.target_bitrate<=0||
+       _enc->state.curframe_num>=0&&_enc->rc.twopass!=1||
+       _buf_sz!=sizeof(unsigned char *)){
+        return TH_EINVAL;
+      }
+      return oc_enc_rc_2pass_out(_enc,(unsigned char **)_buf);
+    }break;
+    case TH_ENCCTL_2PASS_IN:{
+      if(_enc==NULL)return TH_EFAULT;
+      if(_enc->state.info.target_bitrate<=0||
+       _enc->state.curframe_num>=0&&_enc->rc.twopass!=2){
+        return TH_EINVAL;
+      }
+      return oc_enc_rc_2pass_in(_enc,_buf,_buf_sz);
     }break;
     default:return TH_EIMPL;
   }
@@ -1426,7 +1444,6 @@ static void oc_img_plane_copy_pad(th_img_plane *_dst,th_img_plane *_src,
   }
 }
 
-#include<stdio.h>
 int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
   th_ycbcr_buffer img;
   int             cframe_width;
@@ -1443,6 +1460,8 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
   /*Step 1: validate parameters.*/
   if(_enc==NULL||_img==NULL)return TH_EFAULT;
   if(_enc->packet_state==OC_PACKET_DONE)return TH_EINVAL;
+  /*TODO: Fix this.*/
+  if(_enc->rc.twopass&&_enc->rc.twopass_buffer_bytes==0)return TH_EINVAL;
   if((ogg_uint32_t)_img[0].width!=_enc->state.info.frame_width||
    (ogg_uint32_t)_img[0].height!=_enc->state.info.frame_height){
     return TH_EINVAL;
@@ -1494,7 +1513,7 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
   /*Step 4: Compress the frame.*/
   /*Start with a keyframe, and don't allow the generation of invalid files that
      overflow the keyframe_granule_shift.*/
-  if(_enc->state.curframe_num==0||
+  if(_enc->rc.twopass_force_kf||_enc->state.curframe_num==0||
    _enc->state.curframe_num-_enc->state.keyframe_num+_enc->dup_count>=
    _enc->keyframe_frequency_force){
     oc_enc_compress_keyframe(_enc,0);
@@ -1517,6 +1536,7 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
   _enc->packet_state=OC_PACKET_READY;
   _enc->prev_dup_count=_enc->nqueued_dups=_enc->dup_count;
   _enc->dup_count=0;
+  _enc->rc.twopass_buffer_bytes=0;
 #if defined(OC_DUMP_IMAGES)
   oc_enc_set_granpos(_enc);
   oc_state_dump_frame(&_enc->state,OC_FRAME_IO,"src");
@@ -1529,8 +1549,15 @@ int th_encode_packetout(th_enc_ctx *_enc,int _last_p,ogg_packet *_op){
   if(_enc==NULL||_op==NULL)return TH_EFAULT;
   if(_enc->packet_state==OC_PACKET_READY){
     _enc->packet_state=OC_PACKET_EMPTY;
-    _op->packet=oggpackB_get_buffer(&_enc->opb);
-    _op->bytes=oggpackB_bytes(&_enc->opb);
+    /*For the first pass in 2-pass mode, don't emit any packet data.*/
+    if(_enc->rc.twopass==1){
+      _op->packet=NULL;
+      _op->bytes=0;
+    }
+    else{
+      _op->packet=oggpackB_get_buffer(&_enc->opb);
+      _op->bytes=oggpackB_bytes(&_enc->opb);
+    }
   }
   else if(_enc->packet_state==OC_PACKET_EMPTY){
     if(_enc->nqueued_dups>0){
@@ -1550,5 +1577,6 @@ int th_encode_packetout(th_enc_ctx *_enc,int _last_p,ogg_packet *_op){
   oc_enc_set_granpos(_enc);
   _op->packetno=th_granule_frame(_enc,_enc->state.granpos)+3;
   _op->granulepos=_enc->state.granpos;
+  if(_last_p)_enc->packet_state=OC_PACKET_DONE;
   return 1+_enc->nqueued_dups;
 }

@@ -200,7 +200,7 @@ extern "C" {
  *  requested.
  * The actual value set will be returned.
  *
- * \param[in] _buf  <tt>int</tt>: Requested size of the reservoir measured in
+ * \param[in]  _buf <tt>int</tt>: Requested size of the reservoir measured in
  *                   frames.
  * \param[out] _buf <tt>int</tt>: The actual size of the reservoir set.
  * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
@@ -211,6 +211,80 @@ extern "C" {
  * \retval TH_IMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_SET_RATE_BUFFER (22)
+/**Enable pass 1 of two-pass encoding mode and retrieve the first pass metrics.
+ * Pass 1 mode must be enabled before the first frame is encoded, and a target
+ *  bitrate must have already been specified to the encoder.
+ * Although this does not have to be the exact rate that will be used in the
+ *  second pass, closer values may produce better results.
+ * The first call returns the size of the two-pass header data, along with some
+ *  placeholder content, and sets the encoder into pass 1 mode implicitly.
+ * This call sets the encoder to pass 1 mode implicitly.
+ * Then, a subsequent call must be made after each call to
+ *  th_encode_ycbcr_in() to retrieve the metrics for that frame.
+ * An additional, final call must be made to retrieve the summary data,
+ *  containing such information as the total number of frames, etc.
+ * This must be stored in place of the placeholder data that was returned
+ *  in the first call, before the frame metrics data.
+ * All of this data must be presented back to the encoder during pass 2 using
+ *  #TH_ENCCTL_2PASS_IN.
+ *
+ * \param[out] <tt>char *</tt>_buf: Returns a pointer to internal storage
+ *              containing the two pass metrics data.
+ *             This storage is only valid until the next call, or until the
+ *              encoder context is freed, and must be copied by the
+ *              application.
+ * \retval >=0       The number of bytes of metric data available in the
+ *                    returned buffer.
+ * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
+ * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(char *)</tt>, no target
+ *                    bitrate has been set, or the first call was made after
+ *                    the first frame was submitted for encoding.
+ * \retval TH_IMPL   Not supported by this implementation.*/
+#define TH_ENCCTL_2PASS_OUT (24)
+/**Submits two-pass encoding metric data collected the first encoding pass to
+ *  the second pass.
+ * The first call must be made before the first frame is encoded, and sets the
+ *  encoder to pass 2 mode implicitly.
+ * The encoder may require reading data from some or all of the frames in
+ *  advance, depending on, e.g., the reservoir size used in the second pass.
+ * You must call this function repeatedly before each frame to provide data
+ *  until either a) it fails to consume all of the data presented or b) all of
+ *  the pass 1 data has been consumed.
+ * In the first case, you must save the remaining data to be presented after
+ *  the next frame.
+ * You can call this function with a NULL argument to get an upper bound on
+ *  the number of bytes that will be required before the next frame.
+ *
+ * When pass 2 is first enabled, the default bit reservoir is set to the entire
+ *  file; this gives maximum flexibility but can lead to very high peak rates.
+ * You can subsequently set it to another value with #TH_ENCCTL_SET_RATE_BUFFER
+ *  (e.g., to set it to the keyframe interval for non-live streaming), however,
+ *  you may then need to provide more data before the next frame.
+ *
+ * \param[in] _buf <tt>char[]</tt>: A buffer containing the data returned by
+ *                  #TH_ENCCTL_2PASS_OUT in pass 1.
+ *                 You may pass <tt>NULL</tt> for \a _buf to return an upper
+ *                  bound on the number of additional bytes needed before the
+ *                  next frame.
+ *                 The summary data returned at the end of pass 1 must be at
+ *                  the head of the buffer on the first call with a
+ *                  non-<tt>NULL</tt> \a _buf, and the placeholder data
+ *                  returned at the start of pass 1 should be omitted.
+ *                 After each call you should advance this buffer by the number
+ *                  of bytes consumed.
+ * \retval >0            The number of bytes of metric data required/consumed.
+ * \retval 0             No more data is required before the next frame.
+ * \retval TH_EFAULT     \a _enc_ctx is <tt>NULL</tt>.
+ * \retval TH_EINVAL     The first call was made after the first frame was
+ *                        submitted for encoding.
+ * \retval TH_ENOTFORMAT The data did not appear to be pass 1 from a compatible
+ *                        implementation of this library.
+ * \retval TH_EBADHEADER The data was invalid; this may be returned when
+ *                        attempting to read an aborted pass 1 file that still
+ *                        has the placeholder data in place of the summary
+ *                        data.
+ * \retval TH_IMPL       Not supported by this implementation.*/
+#define TH_ENCCTL_2PASS_IN (26)
 /*@}*/
 
 
@@ -238,6 +312,7 @@ extern "C" {
  *  be disabled.*/
 #define TH_RATECTL_CAP_UNDERFLOW (0x4)
 /*@}*/
+
 
 
 /**The quantization parameters used by VP3.*/

@@ -35,6 +35,8 @@ typedef struct oc_enc_opt_vtable      oc_enc_opt_vtable;
 typedef struct oc_mb_enc_info         oc_mb_enc_info;
 typedef struct oc_mode_scheme_chooser oc_mode_scheme_chooser;
 typedef struct oc_iir_filter          oc_iir_filter;
+typedef struct oc_log_linear_fit      oc_log_linear_fit;
+typedef struct oc_frame_metrics       oc_frame_metrics;
 typedef struct oc_rc_state            oc_rc_state;
 typedef struct th_enc_ctx             oc_enc_ctx;
 typedef struct oc_token_checkpoint    oc_token_checkpoint;
@@ -171,53 +173,119 @@ struct oc_iir_filter{
   ogg_int32_t y[2];
 };
 
-/*Rate control state information.*/
-struct oc_rc_state{
-  /*The target average bits per frame.*/
-  ogg_int64_t     bits_per_frame;
-  /*The current buffer fullness (bits available to be used).*/
-  ogg_int64_t     fullness;
-  /*The target buffer fullness.
-    This is where we'd like to be by the last keyframe the appears in the next
-     buf_delay frames.*/
-  ogg_int64_t     target;
-  /*The maximum buffer fullness (total size of the buffer).*/
-  ogg_int64_t     max;
-  /*The log of the number of pixels in a frame in Q57 format.*/
-  ogg_int64_t     log_npixels;
-  /*The exponent used in the rate model in Q8 format.*/
-  unsigned        exp[2];
-  /*The number of frames to distribute the buffer usage over.*/
-  int             buf_delay;
-  /*The total drop count from the previous frame.
-    This includes duplicates explicitly requested via the
-     TH_ENCCTL_SET_DUP_COUNT API as well as frames we chose to drop ourselves.*/
-  ogg_uint32_t    prev_drop_count;
-  /*The log of an estimated scale factor used to obtain the real framerate, for
-     VFR sources or, e.g., 12 fps content doubled to 24 fps, etc.*/
-  ogg_int64_t     log_drop_scale;
-  /*The log of estimated scale factor for the rate model in Q57 format.*/
-  ogg_int64_t     log_scale[2];
-  /*The log of the target quantizer level in Q57 format.*/
-  ogg_int64_t     log_qtarget;
-  /*Will we drop frames to meet bitrate target?*/
-  unsigned char   drop_frames;
-  /*Do we respect the maximum buffer fullness?*/
-  unsigned char   cap_overflow;
-  /*Can the reservoir go negative?*/
-  unsigned char   cap_underflow;
-  /*Second-order lowpass filters to track scale and VFR.*/
-  oc_iir_filter   scalefilter[2];
-  oc_iir_filter   vfrfilter;
+
+
+/*A linear fit for the log-domain scale factors used in 2-pass.*/
+struct oc_log_linear_fit{
+  ogg_int64_t  x;
+  ogg_int64_t  y;
+  ogg_int64_t  x2;
+  ogg_int64_t  xy;
+  ogg_uint32_t n;
 };
 
 
+
+/*The 2-pass metrics associated with a single frame.*/
+struct oc_frame_metrics{
+  ogg_int32_t   scale;
+  unsigned      dup_count:31;
+  unsigned      frame_type:1;
+};
+
+
+
+/*Rate control state information.*/
+struct oc_rc_state{
+  /*The target average bits per frame.*/
+  ogg_int64_t        bits_per_frame;
+  /*The current buffer fullness (bits available to be used).*/
+  ogg_int64_t        fullness;
+  /*The target buffer fullness.
+    This is where we'd like to be by the last keyframe the appears in the next
+     buf_delay frames.*/
+  ogg_int64_t        target;
+  /*The maximum buffer fullness (total size of the buffer).*/
+  ogg_int64_t        max;
+  /*The log of the number of pixels in a frame in Q57 format.*/
+  ogg_int64_t        log_npixels;
+  /*The exponent used in the rate model in Q8 format.*/
+  unsigned           exp[2];
+  /*The number of frames to distribute the buffer usage over.*/
+  int                buf_delay;
+  /*The total drop count from the previous frame.
+    This includes duplicates explicitly requested via the
+     TH_ENCCTL_SET_DUP_COUNT API as well as frames we chose to drop ourselves.*/
+  ogg_uint32_t       prev_drop_count;
+  /*The log of an estimated scale factor used to obtain the real framerate, for
+     VFR sources or, e.g., 12 fps content doubled to 24 fps, etc.*/
+  ogg_int64_t        log_drop_scale;
+  /*The log of estimated scale factor for the rate model in Q57 format.*/
+  ogg_int64_t        log_scale[2];
+  /*The log of the target quantizer level in Q57 format.*/
+  ogg_int64_t        log_qtarget;
+  /*Will we drop frames to meet bitrate target?*/
+  unsigned char      drop_frames;
+  /*Do we respect the maximum buffer fullness?*/
+  unsigned char      cap_overflow;
+  /*Can the reservoir go negative?*/
+  unsigned char      cap_underflow;
+  /*Second-order lowpass filters to track scale and VFR.*/
+  oc_iir_filter      scalefilter[2];
+  oc_iir_filter      vfrfilter;
+  /*Two-pass mode state.
+    0 => 1-pass encoding.
+    1 => 1st pass of 2-pass encoding.
+    2 => 2nd pass of 2-pass encoding.*/
+  int                twopass;
+  /*Buffer for current frame metrics.*/
+  unsigned char      twopass_buffer[48];
+  /*The number of bytes in the frame metrics buffer.
+    When 2-pass encoding is enabled, this is set to 0 after each frame is
+     submitted, and must be non-zero before the next frame will be accepted.*/
+  int                twopass_buffer_bytes;
+  int                twopass_buffer_fill;
+  /*Whether or not to force the next frame to be a keyframe.*/
+  unsigned char      twopass_force_kf;
+  /*The metrics for the previous frame.*/
+  oc_frame_metrics   prev_metrics;
+  /*The metrics for the current frame.*/
+  oc_frame_metrics   cur_metrics;
+  /*The buffered metrics for future frames.*/
+  oc_frame_metrics  *frame_metrics;
+  int                nframe_metrics;
+  int                cframe_metrics;
+  /*The index of the current frame in the circular metric buffer.*/
+  int                frame_metrics_head;
+  /*The frame count of each type (keyframes, delta frames, and dup frames);
+     32 bits limits us to 2.268 years at 60 fps.*/
+  ogg_uint32_t       frames_total[3];
+  /*The number of frames of each type yet to be processed.*/
+  ogg_uint32_t       frames_left[3];
+  /*The sum of the scale values for each frame type.*/
+  ogg_int64_t        scale_sum[2];
+  /*The start of the window over which the current scale sums are taken.*/
+  int                scale_window0;
+  /*The end of the window over which the current scale sums are taken.*/
+  int                scale_window_end;
+  /*The frame count of each type in the current 2-pass window; this does not
+     include dup frames.*/
+  int                nframes[3];
+  /*Bias correction fits for the 1st-pass scale factors.*/
+  oc_log_linear_fit  corr[2];
+};
+
+
+void oc_rc_state_init(oc_rc_state *_rc,oc_enc_ctx *_enc);
+void oc_rc_state_clear(oc_rc_state *_rc);
+
+void oc_enc_rc_resize(oc_enc_ctx *_enc);
+int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp);
 void oc_enc_calc_lambda(oc_enc_ctx *_enc,int _frame_type);
-void oc_rc_state_init(oc_rc_state *_rc,const oc_enc_ctx *_enc);
-void oc_rc_state_reinit(oc_rc_state *_rc,const oc_enc_ctx *_enc);
 int oc_enc_update_rc_state(oc_enc_ctx *_enc,
  long _bits,int _qti,int _qi,int _trial,int _droppable);
-int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp);
+int oc_enc_rc_2pass_out(oc_enc_ctx *_enc,unsigned char **_buf);
+int oc_enc_rc_2pass_in(oc_enc_ctx *_enc,unsigned char *_buf,size_t _bytes);
 
 
 
@@ -307,7 +375,8 @@ struct th_enc_ctx{
 };
 
 
-int oc_enc_analyze(oc_enc_ctx *_enc,int _frame_type,int _recode);
+void oc_enc_analyze_intra(oc_enc_ctx *_enc,int _recode);
+int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode);
 #if defined(OC_COLLECT_METRICS)
 void oc_enc_mode_metrics_collect(oc_enc_ctx *_enc);
 void oc_enc_mode_metrics_dump(oc_enc_ctx *_enc);

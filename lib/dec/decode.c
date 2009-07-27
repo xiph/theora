@@ -1066,7 +1066,6 @@ static void oc_dec_residual_tokens_unpack(oc_dec_ctx *_dec){
       eobs=oc_dec_ac_coeff_unpack(_dec,zzi,huff_idxs,ntoks_left,eobs);
     }
   }
-
   /*TODO: eobs should be exactly zero, or 4096 or greater.
     The second case occurs when an EOB run of size zero is encountered, which
      gets treated as an infinite EOB run (where infinity is PTRDIFF_MAX).
@@ -1555,10 +1554,7 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
       else{
         int ebflag;
         token=dct_tokens[ti[zzi]++];
-        /*This is equivalent to
-            ebflag=OC_DCT_TOKEN_EXTRA_BITS[token]!=0;
-           but should be simpler on platforms that can use 16-bit immediates.*/
-        ebflag=-0x1E08>>token&1;
+        ebflag=OC_DCT_TOKEN_EXTRA_BITS[token]!=0;
         eb=extra_bits[ebi[zzi]]&-ebflag;
         ebi[zzi]+=ebflag;
         if(token<OC_NDCT_EOB_TOKEN_MAX){
