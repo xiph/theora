@@ -1460,7 +1460,6 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
   /*Step 1: validate parameters.*/
   if(_enc==NULL||_img==NULL)return TH_EFAULT;
   if(_enc->packet_state==OC_PACKET_DONE)return TH_EINVAL;
-  /*TODO: Fix this.*/
   if(_enc->rc.twopass&&_enc->rc.twopass_buffer_bytes==0)return TH_EINVAL;
   if((ogg_uint32_t)_img[0].width!=_enc->state.info.frame_width||
    (ogg_uint32_t)_img[0].height!=_enc->state.info.frame_height){
@@ -1537,6 +1536,10 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
   _enc->prev_dup_count=_enc->nqueued_dups=_enc->dup_count;
   _enc->dup_count=0;
   _enc->rc.twopass_buffer_bytes=0;
+  /*In pass-2 mode, call TH_ENCCTL_2PASS_IN to update state, alleviating the
+     burden of clients being forced to keep calling it after they've fed in all
+     the data.*/
+  if(_enc->rc.twopass==2)th_encode_ctl(_enc,TH_ENCCTL_2PASS_IN,NULL,0);
 #if defined(OC_DUMP_IMAGES)
   oc_enc_set_granpos(_enc);
   oc_state_dump_frame(&_enc->state,OC_FRAME_IO,"src");
