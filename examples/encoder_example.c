@@ -1090,7 +1090,7 @@ int fetch_and_process_video_packet(FILE *video,FILE *twopass_file,int passno,
       /*Ask the encoder how many bytes it would like.*/
       bytes=th_encode_ctl(td,TH_ENCCTL_2PASS_IN,NULL,0);
       if(bytes<0){
-        fprintf(stderr,"Error submitting pass data in second pass1.\n");
+        fprintf(stderr,"Error submitting pass data in second pass.\n");
         exit(1);
       }
       /*If it's got enough, stop.*/
@@ -1104,7 +1104,7 @@ int fetch_and_process_video_packet(FILE *video,FILE *twopass_file,int passno,
       /*And pass them off.*/
       ret=th_encode_ctl(td,TH_ENCCTL_2PASS_IN,buffer,bytes);
       if(ret<0){
-        fprintf(stderr,"Error submitting pass data in second pass2.\n");
+        fprintf(stderr,"Error submitting pass data in second pass.\n");
         exit(1);
       }
       /*If the encoder consumed the whole buffer, reset it.*/
