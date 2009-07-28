@@ -129,7 +129,7 @@ y4m_convert_func y4m_convert=NULL;
 
 int video_r=-1;
 int video_q=-1;
-ogg_uint32_t keyframe_frequency=64;
+ogg_uint32_t keyframe_frequency=0;
 int buf_delay=-1;
 
 long begin_sec=-1;
@@ -165,7 +165,7 @@ static void usage(void){
           "     --second-pass <filename>     Perform second-pass of a two-pass rate\n"
           "                                  controlled encoding, reading first-pass\n"
           "                                  data from <filename>.  The first pass\n"
-          "                                  data must comre from a first encoding pass\n"
+          "                                  data must come from a first encoding pass\n"
           "                                  using identical input video to work\n"
           "                                  properly.\n\n"
           "  -a --audio-quality <n>          Vorbis quality selector from -1 to 10\n"
@@ -1421,6 +1421,12 @@ int main(int argc,char *argv[]){
       video_q=0;
     if(video_q==-1)
       video_q=48;
+  }
+
+  if(keyframe_frequency<=0){
+    /*Use a default keyframe frequency of 64 for 1-pass (streaming) mode, and
+       256 for two-pass mode.*/
+    keyframe_frequency=twopass?256:64;
   }
 
   while(optind<argc){
