@@ -286,6 +286,7 @@ void oc_rc_state_init(oc_rc_state *_rc,oc_enc_ctx *_enc){
   }
   _rc->twopass=0;
   _rc->twopass_buffer_bytes=0;
+  _rc->twopass_force_kf=0;
   _rc->frame_metrics=NULL;
 }
 
