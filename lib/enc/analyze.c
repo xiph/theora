@@ -636,7 +636,7 @@ struct oc_rd_metric{
 static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
  oc_enc_pipeline_state *_pipe,int _pli,ptrdiff_t _fragi,int _overhead_bits,
  oc_rd_metric *_mo,oc_token_checkpoint **_stack){
-  OC_ALIGN16(ogg_int16_t  buffer[64]);
+  OC_ALIGN16(ogg_int16_t  dct[64]);
   OC_ALIGN16(ogg_int16_t  data[64]);
   ogg_uint16_t            dc_dequant;
   const ogg_uint16_t     *dequant;
@@ -666,6 +666,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   int                     val;
   int                     d;
   int                     s;
+  int                     dc;
   frags=_enc->state.frags;
   frag_offs=_enc->state.frag_buf_offs[_fragi];
   ystride=_enc->state.ref_ystride[_pli];
@@ -730,23 +731,23 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   }
 #endif
   /*Transform:*/
-  oc_enc_fdct8x8(_enc,buffer,data);
+  oc_enc_fdct8x8(_enc,dct,data);
   /*Quantize the DC coefficient:*/
   qti=mb_mode!=OC_MODE_INTRA;
   enquant=_pipe->enquant[_pli][0][qti];
   dc_dequant=_pipe->dequant[_pli][0][qti][0];
-  v=buffer[0];
+  v=dct[0];
   val=v<<1;
   s=OC_SIGNMASK(val);
   val+=dc_dequant+s^s;
   val=((enquant[0].m*(ogg_int32_t)val>>16)+val>>enquant[0].l)-s;
-  data[0]=OC_CLAMPI(-580,val,580);
+  dc=OC_CLAMPI(-580,val,580);
   nonzero=0;
   /*Quantize the AC coefficients:*/
   dequant=_pipe->dequant[_pli][qii][qti];
   enquant=_pipe->enquant[_pli][qii][qti];
   for(zzi=1;zzi<64;zzi++){
-    v=buffer[OC_FZIG_ZAG[zzi]];
+    v=dct[OC_FZIG_ZAG[zzi]];
     d=dequant[zzi];
     val=v<<1;
     v=abs(val);
@@ -766,16 +767,27 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   }
   /*Tokenize.*/
   checkpoint=*_stack;
-  ac_bits=oc_enc_tokenize_ac(_enc,_pli,_fragi,data,dequant,buffer,nonzero+1,
+  ac_bits=oc_enc_tokenize_ac(_enc,_pli,_fragi,data,dequant,dct,nonzero+1,
    _stack,qti?0:3);
   /*Reconstruct.
     TODO: nonzero may need to be adjusted after tokenization.*/
-  oc_dequant_idct8x8(&_enc->state,buffer,data,
-   nonzero+1,nonzero+1,dc_dequant,(ogg_uint16_t *)dequant);
-  if(!qti)oc_enc_frag_recon_intra(_enc,dst,ystride,buffer);
+  if(nonzero==0){
+    ogg_int16_t p;
+    int         ci;
+    /*We round this dequant product (and not any of the others) because there's
+       no iDCT rounding.*/
+    p=(ogg_int16_t)(dc*(ogg_int32_t)dc_dequant+15>>5);
+    /*LOOP VECTORIZES.*/
+    for(ci=0;ci<64;ci++)data[ci]=p;
+  }
+  else{
+    data[0]=dc*dc_dequant;
+    oc_idct8x8(&_enc->state,data,nonzero+1,nonzero+1);
+  }
+  if(!qti)oc_enc_frag_recon_intra(_enc,dst,ystride,data);
   else{
     oc_enc_frag_recon_inter(_enc,dst,
-     nmv_offs==1?ref+mv_offs[0]:dst,ystride,buffer);
+     nmv_offs==1?ref+mv_offs[0]:dst,ystride,data);
   }
   frame_type=_enc->state.frame_type;
 #if !defined(OC_COLLECT_METRICS)
@@ -783,20 +795,20 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
 #endif
   {
     /*In retrospect, should we have skipped this block?*/
-    oc_enc_frag_sub(_enc,buffer,src,dst,ystride);
+    oc_enc_frag_sub(_enc,data,src,dst,ystride);
     coded_ssd=coded_dc=0;
     if(borderi<0){
       for(pi=0;pi<64;pi++){
-        coded_ssd+=buffer[pi]*buffer[pi];
-        coded_dc+=buffer[pi];
+        coded_ssd+=data[pi]*data[pi];
+        coded_dc+=data[pi];
       }
     }
     else{
       ogg_int64_t mask;
       mask=_enc->state.borders[borderi].mask;
       for(pi=0;pi<64;pi++,mask>>=1)if(mask&1){
-        coded_ssd+=buffer[pi]*buffer[pi];
-        coded_dc+=buffer[pi];
+        coded_ssd+=data[pi]*data[pi];
+        coded_dc+=data[pi];
       }
     }
     /*Scale to match DCT domain.*/
@@ -834,7 +846,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
     _mo->ac_bits+=ac_bits;
   }
   oc_qii_state_advance(_pipe->qs+_pli,_pipe->qs+_pli,qii);
-  frags[_fragi].dc=data[0];
+  frags[_fragi].dc=dc;
   frags[_fragi].coded=1;
   return 1;
 }

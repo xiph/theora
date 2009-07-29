@@ -585,12 +585,13 @@ void oc_state_vtable_init_c(oc_theora_state *_state){
   _state->opt_vtable.frag_recon_intra=oc_frag_recon_intra_c;
   _state->opt_vtable.frag_recon_inter=oc_frag_recon_inter_c;
   _state->opt_vtable.frag_recon_inter2=oc_frag_recon_inter2_c;
-  _state->opt_vtable.dequant_idct8x8=oc_dequant_idct8x8_c;
+  _state->opt_vtable.idct8x8=oc_idct8x8_c;
   _state->opt_vtable.state_frag_recon=oc_state_frag_recon_c;
   _state->opt_vtable.state_frag_copy_list=oc_state_frag_copy_list_c;
   _state->opt_vtable.state_loop_filter_frag_rows=
    oc_state_loop_filter_frag_rows_c;
   _state->opt_vtable.restore_fpu=oc_restore_fpu_c;
+  _state->opt_data.dct_fzig_zag=OC_FZIG_ZAG;
 }
 
 /*Initialize the accelerated function pointers.*/
@@ -869,8 +870,39 @@ void oc_state_frag_recon_c(const oc_theora_state *_state,ptrdiff_t _fragi,
   int            ystride;
   int            mb_mode;
   /*Dequantize and apply the inverse transform.*/
-  oc_dequant_idct8x8(_state,res_buf,_dct_coeffs,
-   _last_zzi,_ncoefs,_dc_quant,_ac_quant);
+  /*Special case only having a DC component.*/
+  if(_last_zzi<2){
+    ogg_int16_t p;
+    int ci;
+    /*We round this dequant product (and not any of the others) because there's
+       no iDCT rounding.*/
+    p=(ogg_int16_t)(_dct_coeffs[0]*(ogg_int32_t)_dc_quant+15>>5);
+    /*LOOP VECTORIZES.*/
+    for(ci=0;ci<64;ci++)res_buf[ci]=p;
+  }
+  else{
+    const unsigned char *dct_fzig_zag;
+    int                  zzi;
+    /*First, dequantize the coefficients.*/
+    dct_fzig_zag=_state->opt_data.dct_fzig_zag;
+    res_buf[0]=(ogg_int16_t)(_dct_coeffs[0]*(int)_dc_quant);
+    for(zzi=1;zzi<_ncoefs;zzi++){
+      res_buf[dct_fzig_zag[zzi]]=
+       (ogg_int16_t)(_dct_coeffs[zzi]*(int)_ac_quant[zzi]);
+    }
+    /*Then, fill in the remainder of the coefficients with 0's, and perform
+       the iDCT.*/
+    if(_last_zzi<3){
+      for(;zzi<3;zzi++)res_buf[dct_fzig_zag[zzi]]=0;
+    }
+    else if(_last_zzi<10){
+      for(;zzi<10;zzi++)res_buf[dct_fzig_zag[zzi]]=0;
+    }
+    else{
+      for(;zzi<64;zzi++)res_buf[dct_fzig_zag[zzi]]=0;
+    }
+    oc_idct8x8(_state,res_buf,_last_zzi,_ncoefs);
+  }
   /*Fill in the target buffer.*/
   frag_buf_off=_state->frag_buf_offs[_fragi];
   mb_mode=_state->frags[_fragi].mb_mode;

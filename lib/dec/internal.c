@@ -26,7 +26,7 @@
    block.
   All zig zag indices beyond 63 are sent to coefficient 64, so that zero runs
    past the end of a block in bogus streams get mapped to a known location.*/
-const unsigned char OC_FZIG_ZAG[64]={
+const unsigned char OC_FZIG_ZAG[128]={
    0, 1, 8,16, 9, 2, 3,10,
   17,24,32,25,18,11, 4, 5,
   12,19,26,33,40,48,41,34,
@@ -34,7 +34,15 @@ const unsigned char OC_FZIG_ZAG[64]={
   35,42,49,56,57,50,43,36,
   29,22,15,23,30,37,44,51,
   58,59,52,45,38,31,39,46,
-  53,60,61,54,47,55,62,63
+  53,60,61,54,47,55,62,63,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64
 };
 
 /*A map from the coefficient number in a block to its index in the zig zag

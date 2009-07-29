@@ -208,6 +208,9 @@ struct oc_quant_token{
   int           qc;
 };
 
+/*Tokenizes the AC coefficients, possibly adjusting the quantization, and then
+   dequantizes and de-zig-zags the result.
+  The DC coefficient is not preserved; it should be restored by the caller.*/
 int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
  ogg_int16_t *_qdct,const ogg_uint16_t *_dequant,const ogg_int16_t *_dct,
  int _zzi,oc_token_checkpoint **_stack,int _acmin){
@@ -218,6 +221,7 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
   ogg_uint32_t         d2_accum[64];
   oc_quant_token       tokens[64][2];
   ogg_uint16_t        *eob_run;
+  const unsigned char *dct_fzig_zag;
   ogg_uint32_t         cost;
   int                  bits;
   int                  eob;
@@ -626,6 +630,10 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
   }
   /*Emit the tokens from the best path through the trellis.*/
   stack=*_stack;
+  /*We blow away the first entry here so that things vectorize better.
+    The DC coefficient is not actually stored in the array yet.*/
+  for(zzi=0;zzi<64;zzi++)_qdct[zzi]=0;
+  dct_fzig_zag=_enc->state.opt_data.dct_fzig_zag;
   zzi=1;
   ti=best_flags>>1&1;
   bits=tokens[zzi][ti].bits;
@@ -641,7 +649,7 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
       /*We don't include the actual EOB cost for this block in the return value.
         It will be paid for by the fragment that terminates the EOB run.*/
       bits-=tokens[zzi][ti].bits;
-      for(;zzi<_zzi;zzi++)_qdct[zzi]=0;
+      zzi=_zzi;
       break;
     }
     /*Emit pending EOB run if any.*/
@@ -653,8 +661,9 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
     next=tokens[zzi][ti].next;
     qc=tokens[zzi][ti].qc;
     zzj=(next>>1)-1&63;
-    for(;zzi<zzj;zzi++)_qdct[zzi]=0;
-    _qdct[zzj]=qc;
+    /*TODO: It may be worth saving the dequantized coefficient in the trellis
+       above; we had to compute it to measure the error anyway.*/
+    _qdct[dct_fzig_zag[zzj]]=(ogg_int16_t)(qc*(int)_dequant[zzj]);
     zzi=next>>1;
     ti=next&1;
   }

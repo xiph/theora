@@ -24,6 +24,19 @@
 
 #if defined(OC_X86_ASM)
 
+/*This table has been modified from OC_FZIG_ZAG by baking a 4x4 transpose into
+   each quadrant of the destination.*/
+static const unsigned char OC_FZIG_ZAG_MMX[64]={
+   0, 8, 1, 2, 9,16,24,17,
+  10, 3,32,11,18,25, 4,12,
+   5,26,19,40,33,34,41,48,
+  27, 6,13,20,28,21,14, 7,
+  56,49,42,35,43,50,57,36,
+  15,22,29,30,23,44,37,58,
+  51,59,38,45,52,31,60,53,
+  46,39,47,54,61,62,55,63
+};
+
 void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
  int _pli,ogg_int16_t _dct_coeffs[64],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]){
@@ -33,8 +46,76 @@ void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
   int                     ystride;
   int                     mb_mode;
   /*Dequantize and apply the inverse transform.*/
-  oc_dequant_idct8x8_mmx(res_buf,_dct_coeffs,
-   _last_zzi,_ncoefs,_dc_quant,_ac_quant);
+  /*Special case only having a DC component.*/
+  if(_last_zzi<2){
+    /*Note that this value must be unsigned, to keep the __asm__ block from
+       sign-extending it when it puts it in a register.*/
+    ogg_uint16_t p;
+    /*We round this dequant product (and not any of the others) because there's
+       no iDCT rounding.*/
+    p=(ogg_int16_t)(_dct_coeffs[0]*(ogg_int32_t)_dc_quant+15>>5);
+    /*Fill _dct_coeffs with p.*/
+    __asm__ __volatile__(
+      /*mm0=0000 0000 0000 AAAA*/
+      "movd %[p],%%mm0\n\t"
+      /*mm0=0000 0000 AAAA AAAA*/
+      "punpcklwd %%mm0,%%mm0\n\t"
+      /*mm0=AAAA AAAA AAAA AAAA*/
+      "punpckldq %%mm0,%%mm0\n\t"
+      "movq %%mm0,(%[y])\n\t"
+      "movq %%mm0,8(%[y])\n\t"
+      "movq %%mm0,16(%[y])\n\t"
+      "movq %%mm0,24(%[y])\n\t"
+      "movq %%mm0,32(%[y])\n\t"
+      "movq %%mm0,40(%[y])\n\t"
+      "movq %%mm0,48(%[y])\n\t"
+      "movq %%mm0,56(%[y])\n\t"
+      "movq %%mm0,64(%[y])\n\t"
+      "movq %%mm0,72(%[y])\n\t"
+      "movq %%mm0,80(%[y])\n\t"
+      "movq %%mm0,88(%[y])\n\t"
+      "movq %%mm0,96(%[y])\n\t"
+      "movq %%mm0,104(%[y])\n\t"
+      "movq %%mm0,112(%[y])\n\t"
+      "movq %%mm0,120(%[y])\n\t"
+      :
+      :[y]"r"(res_buf),[p]"r"((unsigned)p)
+      :"memory"
+    );
+  }
+  else{
+    int zzi;
+    /*First zero the buffer.*/
+    /*On K7, etc., this could be replaced with movntq and sfence.*/
+    __asm__ __volatile__(
+      "pxor %%mm0,%%mm0\n\t"
+      "movq %%mm0,(%[y])\n\t"
+      "movq %%mm0,8(%[y])\n\t"
+      "movq %%mm0,16(%[y])\n\t"
+      "movq %%mm0,24(%[y])\n\t"
+      "movq %%mm0,32(%[y])\n\t"
+      "movq %%mm0,40(%[y])\n\t"
+      "movq %%mm0,48(%[y])\n\t"
+      "movq %%mm0,56(%[y])\n\t"
+      "movq %%mm0,64(%[y])\n\t"
+      "movq %%mm0,72(%[y])\n\t"
+      "movq %%mm0,80(%[y])\n\t"
+      "movq %%mm0,88(%[y])\n\t"
+      "movq %%mm0,96(%[y])\n\t"
+      "movq %%mm0,104(%[y])\n\t"
+      "movq %%mm0,112(%[y])\n\t"
+      "movq %%mm0,120(%[y])\n\t"
+      :
+      :[y]"r"(res_buf)
+      :"memory"
+    );
+    /*Dequantize the coefficients.*/
+    res_buf[0]=(ogg_int16_t)(_dct_coeffs[0]*(int)_dc_quant);
+    for(zzi=1;zzi<_ncoefs;zzi++){
+      res_buf[OC_FZIG_ZAG_MMX[zzi]]=(ogg_int16_t)(_dct_coeffs[zzi]*(int)_ac_quant[zzi]);
+    }
+    oc_idct8x8_mmx(res_buf,_last_zzi,_ncoefs);
+  }
   /*Fill in the target buffer.*/
   frag_buf_off=_state->frag_buf_offs[_fragi];
   mb_mode=_state->frags[_fragi].mb_mode;

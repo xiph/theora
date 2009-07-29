@@ -528,28 +528,10 @@ static void oc_idct8x8_10(ogg_int16_t _y[64]){
   );
 }
 
-/*This table has been modified from OC_FZIG_ZAG by baking a 4x4 transpose into
-   each quadrant of the destination.*/
-static const unsigned char OC_FZIG_ZAG_MMX[64]={
-   0, 8, 1, 2, 9,16,24,17,
-  10, 3,32,11,18,25, 4,12,
-   5,26,19,40,33,34,41,48,
-  27, 6,13,20,28,21,14, 7,
-  56,49,42,35,43,50,57,36,
-  15,22,29,30,23,44,37,58,
-  51,59,38,45,52,31,60,53,
-  46,39,47,54,61,62,55,63
-};
-
 /*Performs an inverse 8x8 Type-II DCT transform.
   The input is assumed to be scaled by a factor of 4 relative to orthonormal
-   version of the transform.
-  _y: The buffer to store the result in.
-      This must not be the same as _x.
-  _x: The input coefficients.*/
-void oc_dequant_idct8x8_mmx(ogg_int16_t _y[64],const ogg_int16_t _x[64],
- int _last_zzi,int _ncoefs,ogg_uint16_t _dc_quant,
- const ogg_uint16_t _ac_quant[64]){
+   version of the transform.*/
+void oc_idct8x8_mmx(ogg_int16_t _y[64],int _last_zzi,int _ncoefs){
   /*_last_zzi is subtly different from an actual count of the number of
      coefficients we decoded for this block.
     It contains the value of zzi BEFORE the final token in the block was
@@ -568,84 +550,15 @@ void oc_dequant_idct8x8_mmx(ogg_int16_t _y[64],const ogg_int16_t _x[64],
      but we still process the DC coefficient, which might have a non-zero value
      due to DC prediction.
     Although convoluted, this is arguably the correct behavior: it allows us to
-     dequantize fewer coefficients and use a smaller transform when the block
-     ends with a long zero run instead of a normal EOB token.
+     use a smaller transform when the block ends with a long zero run instead
+     of a normal EOB token.
     It could be smarter... multiple separate zero runs at the end of a block
      will fool it, but an encoder that generates these really deserves what it
      gets.
     Needless to say we inherited this approach from VP3.*/
-  /*Special case only having a DC component.*/
-  if(_last_zzi<2){
-    /*Note that this value must be unsigned, to keep the __asm__ block from
-       sign-extending it when it puts it in a register.*/
-    ogg_uint16_t p;
-    /*We round this dequant product (and not any of the others) because there's
-       no iDCT rounding.*/
-    p=(ogg_int16_t)(_x[0]*(ogg_int32_t)_dc_quant+15>>5);
-    /*Fill _y with p.*/
-    __asm__ __volatile__(
-      /*mm0=0000 0000 0000 AAAA*/
-      "movd %[p],%%mm0\n\t"
-      /*mm0=0000 0000 AAAA AAAA*/
-      "punpcklwd %%mm0,%%mm0\n\t"
-      /*mm0=AAAA AAAA AAAA AAAA*/
-      "punpckldq %%mm0,%%mm0\n\t"
-      "movq %%mm0,(%[y])\n\t"
-      "movq %%mm0,8(%[y])\n\t"
-      "movq %%mm0,16(%[y])\n\t"
-      "movq %%mm0,24(%[y])\n\t"
-      "movq %%mm0,32(%[y])\n\t"
-      "movq %%mm0,40(%[y])\n\t"
-      "movq %%mm0,48(%[y])\n\t"
-      "movq %%mm0,56(%[y])\n\t"
-      "movq %%mm0,64(%[y])\n\t"
-      "movq %%mm0,72(%[y])\n\t"
-      "movq %%mm0,80(%[y])\n\t"
-      "movq %%mm0,88(%[y])\n\t"
-      "movq %%mm0,96(%[y])\n\t"
-      "movq %%mm0,104(%[y])\n\t"
-      "movq %%mm0,112(%[y])\n\t"
-      "movq %%mm0,120(%[y])\n\t"
-      :
-      :[y]"r"(_y),[p]"r"((unsigned)p)
-      :"memory"
-    );
-  }
-  else{
-    int zzi;
-    /*First zero the buffer.*/
-    /*On K7, etc., this could be replaced with movntq and sfence.*/
-    __asm__ __volatile__(
-      "pxor %%mm0,%%mm0\n\t"
-      "movq %%mm0,(%[y])\n\t"
-      "movq %%mm0,8(%[y])\n\t"
-      "movq %%mm0,16(%[y])\n\t"
-      "movq %%mm0,24(%[y])\n\t"
-      "movq %%mm0,32(%[y])\n\t"
-      "movq %%mm0,40(%[y])\n\t"
-      "movq %%mm0,48(%[y])\n\t"
-      "movq %%mm0,56(%[y])\n\t"
-      "movq %%mm0,64(%[y])\n\t"
-      "movq %%mm0,72(%[y])\n\t"
-      "movq %%mm0,80(%[y])\n\t"
-      "movq %%mm0,88(%[y])\n\t"
-      "movq %%mm0,96(%[y])\n\t"
-      "movq %%mm0,104(%[y])\n\t"
-      "movq %%mm0,112(%[y])\n\t"
-      "movq %%mm0,120(%[y])\n\t"
-      :
-      :[y]"r"(_y)
-      :"memory"
-    );
-    /*Dequantize the coefficients.*/
-    _y[0]=(ogg_int16_t)(_x[0]*(int)_dc_quant);
-    for(zzi=1;zzi<_ncoefs;zzi++){
-      _y[OC_FZIG_ZAG_MMX[zzi]]=(ogg_int16_t)(_x[zzi]*(int)_ac_quant[zzi]);
-    }
-    /*Then perform the iDCT.*/
-    if(_last_zzi<10)oc_idct8x8_10(_y);
-    else oc_idct8x8_slow(_y);
-  }
+  /*Then perform the iDCT.*/
+  if(_last_zzi<10)oc_idct8x8_10(_y);
+  else oc_idct8x8_slow(_y);
 }
 
 #endif

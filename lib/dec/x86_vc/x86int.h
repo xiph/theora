@@ -29,9 +29,7 @@ void oc_frag_recon_inter_mmx(unsigned char *_dst,
  const unsigned char *_src,int _ystride,const ogg_int16_t *_residue);
 void oc_frag_recon_inter2_mmx(unsigned char *_dst,const unsigned char *_src1,
  const unsigned char *_src2,int _ystride,const ogg_int16_t *_residue);
-void oc_dequant_idct8x8_mmx(ogg_int16_t _y[64],const ogg_int16_t _x[64],
- int _last_zzi,int _ncoefs,ogg_uint16_t _dc_quant,
- const ogg_uint16_t _ac_quant[64]);
+void oc_idct8x8_mmx(ogg_int16_t _y[64],int _last_zzi,int _ncoefs);
 void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
  int _pli,ogg_int16_t _dct_coeffs[64],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]);

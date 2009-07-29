@@ -295,23 +295,15 @@ static void oc_idct8x8_slow(ogg_int16_t _y[64],const ogg_int16_t _x[64]){
   for(out=_y,end=out+64;out<end;out++)*out=(ogg_int16_t)(*out+8>>4);
 }
 
-void oc_dequant_idct8x8(const oc_theora_state *_state,ogg_int16_t _y[64],
- const ogg_int16_t _x[64],int _last_zzi,int _ncoefs,ogg_uint16_t _dc_quant,
- const ogg_uint16_t _ac_quant[64]){
-  (*_state->opt_vtable.dequant_idct8x8)(_y,_x,_last_zzi,_ncoefs,
-   _dc_quant,_ac_quant);
+void oc_idct8x8(const oc_theora_state *_state,ogg_int16_t _y[64],
+ int _last_zzi,int _ncoefs){
+  (*_state->opt_vtable.idct8x8)(_y,_last_zzi,_ncoefs);
 }
 
 /*Performs an inverse 8x8 Type-II DCT transform.
   The input is assumed to be scaled by a factor of 4 relative to orthonormal
-   version of the transform.
-  _y: The buffer to store the result in.
-      This must not be the same as _x.
-  _x: The input coefficients.*/
-void oc_dequant_idct8x8_c(ogg_int16_t _y[64],const ogg_int16_t _x[64],
- int _last_zzi,int _ncoefs,ogg_uint16_t _dc_quant,
- const ogg_uint16_t _ac_quant[64]){
-  int ci;
+   version of the transform.*/
+void oc_idct8x8_c(ogg_int16_t _y[64],int _last_zzi,int _ncoefs){
   /*_last_zzi is subtly different from an actual count of the number of
      coefficients we decoded for this block.
     It contains the value of zzi BEFORE the final token in the block was
@@ -330,41 +322,14 @@ void oc_dequant_idct8x8_c(ogg_int16_t _y[64],const ogg_int16_t _x[64],
      but we still process the DC coefficient, which might have a non-zero value
      due to DC prediction.
     Although convoluted, this is arguably the correct behavior: it allows us to
-     dequantize fewer coefficients and use a smaller transform when the block
-     ends with a long zero run instead of a normal EOB token.
+     use a smaller transform when the block ends with a long zero run instead
+     of a normal EOB token.
     It could be smarter... multiple separate zero runs at the end of a block
      will fool it, but an encoder that generates these really deserves what it
      gets.
     Needless to say we inherited this approach from VP3.*/
-  /*Special case only having a DC component.*/
-  if(_last_zzi<2){
-    ogg_int16_t p;
-    /*We round this dequant product (and not any of the others) because there's
-       no iDCT rounding.*/
-    p=(ogg_int16_t)(_x[0]*(ogg_int32_t)_dc_quant+15>>5);
-    /*LOOP VECTORIZES.*/
-    for(ci=0;ci<64;ci++)_y[ci]=p;
-  }
-  else{
-    int zzi;
-    /*First, dequantize the coefficients.*/
-    _y[0]=(ogg_int16_t)(_x[0]*(int)_dc_quant);
-    for(zzi=1;zzi<_ncoefs;zzi++){
-      _y[OC_FZIG_ZAG[zzi]]=(ogg_int16_t)(_x[zzi]*(int)_ac_quant[zzi]);
-    }
-    /*Then, fill in the remainder of the coefficients with 0's, and perform
-       the iDCT.*/
-    if(_last_zzi<3){
-      for(;zzi<3;zzi++)_y[OC_FZIG_ZAG[zzi]]=0;
-      oc_idct8x8_3(_y,_y);
-    }
-    else if(_last_zzi<10){
-      for(;zzi<10;zzi++)_y[OC_FZIG_ZAG[zzi]]=0;
-      oc_idct8x8_10(_y,_y);
-    }
-    else{
-      for(;zzi<64;zzi++)_y[OC_FZIG_ZAG[zzi]]=0;
-      oc_idct8x8_slow(_y,_y);
-    }
-  }
+  /*Then perform the iDCT.*/
+  if(_last_zzi<3)oc_idct8x8_3(_y,_y);
+  else if(_last_zzi<10)oc_idct8x8_10(_y,_y);
+  else oc_idct8x8_slow(_y,_y);
 }

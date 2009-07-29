@@ -65,6 +65,7 @@ typedef struct oc_border_info           oc_border_info;
 typedef struct oc_fragment              oc_fragment;
 typedef struct oc_fragment_plane        oc_fragment_plane;
 typedef struct oc_base_opt_vtable       oc_base_opt_vtable;
+typedef struct oc_base_opt_data         oc_base_opt_data;
 typedef struct oc_state_dispatch_vtable oc_state_dispatch_vtable;
 typedef struct oc_theora_state          oc_theora_state;
 
@@ -277,9 +278,7 @@ struct oc_base_opt_vtable{
    const unsigned char *_src,int _ystride,const ogg_int16_t _residue[64]);
   void (*frag_recon_inter2)(unsigned char *_dst,const unsigned char *_src1,
    const unsigned char *_src2,int _ystride,const ogg_int16_t _residue[64]);
-  void (*dequant_idct8x8)(ogg_int16_t _y[64],const ogg_int16_t _x[64],
-   int _last_zzi,int _ncoefs,ogg_uint16_t _dc_quant,
-   const ogg_uint16_t _ac_quant[64]);
+  void (*idct8x8)(ogg_int16_t _y[64],int _last_zzi,int _ncoefs);
   void (*state_frag_recon)(const oc_theora_state *_state,ptrdiff_t _fragi,
    int _pli,ogg_int16_t _dct_coeffs[64],int _last_zzi,int _ncoefs,
    ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]);
@@ -291,6 +290,11 @@ struct oc_base_opt_vtable{
   void (*restore_fpu)(void);
 };
 
+/*The shared (encoder and decoder) tables that vary according to which variants
+   of the above functions are used.*/
+struct oc_base_opt_data{
+  const unsigned char *dct_fzig_zag;
+};
 
 
 /*State information common to both the encoder and decoder.*/
@@ -299,6 +303,8 @@ struct oc_theora_state{
   th_info             info;
   /*Table for shared accelerated functions.*/
   oc_base_opt_vtable  opt_vtable;
+  /*Table for shared data used by accelerated functions.*/
+  oc_base_opt_data    opt_data;
   /*CPU flags to detect the presence of extended instruction sets.*/
   ogg_uint32_t        cpu_flags;
   /*The fragment plane descriptions.*/
@@ -391,7 +397,7 @@ typedef void (*oc_set_chroma_mvs_func)(oc_mv _cbmvs[4],const oc_mv _lbmvs[4]);
 
 /*A map from the index in the zig zag scan to the coefficient number in a
    block.*/
-extern const unsigned char OC_FZIG_ZAG[64];
+extern const unsigned char OC_FZIG_ZAG[128];
 /*A map from the coefficient number in a block to its index in the zig zag
    scan.*/
 extern const unsigned char OC_IZIG_ZAG[64];
@@ -451,9 +457,8 @@ void oc_frag_recon_inter(const oc_theora_state *_state,unsigned char *_dst,
 void oc_frag_recon_inter2(const oc_theora_state *_state,
  unsigned char *_dst,const unsigned char *_src1,const unsigned char *_src2,
  int _ystride,const ogg_int16_t _residue[64]);
-void oc_dequant_idct8x8(const oc_theora_state *_state,ogg_int16_t _y[64],
- const ogg_int16_t _x[64],int _last_zzi,int _ncoefs,
- ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]);
+void oc_idct8x8(const oc_theora_state *_state,ogg_int16_t _y[64],
+ int _last_zzi,int _ncoefs);
 void oc_state_frag_recon(const oc_theora_state *_state,ptrdiff_t _fragi,
  int _pli,ogg_int16_t _dct_coeffs[64],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]);
@@ -473,9 +478,7 @@ void oc_frag_recon_inter_c(unsigned char *_dst,
  const unsigned char *_src,int _ystride,const ogg_int16_t _residue[64]);
 void oc_frag_recon_inter2_c(unsigned char *_dst,const unsigned char *_src1,
  const unsigned char *_src2,int _ystride,const ogg_int16_t _residue[64]);
-void oc_dequant_idct8x8_c(ogg_int16_t _y[64],const ogg_int16_t _x[64],
- int _last_zzi,int _ncoefs,ogg_uint16_t _dc_quant,
- const ogg_uint16_t _ac_quant[64]);
+void oc_idct8x8_c(ogg_int16_t _y[64],int _last_zzi,int _ncoefs);
 void oc_state_frag_recon_c(const oc_theora_state *_state,ptrdiff_t _fragi,
  int _pli,ogg_int16_t _dct_coeffs[64],int _last_zzi,int _ncoefs,
  ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]);
