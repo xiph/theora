@@ -956,11 +956,11 @@ int oc_enc_rc_2pass_in(oc_enc_ctx *_enc,unsigned char *_buf,size_t _bytes){
     nframes_total=_enc->rc.frames_total[0]+_enc->rc.frames_total[1]
      +_enc->rc.frames_total[2];
     if(curframe_num>=nframes_total){
-      /*We don't want any more data after the last frame.*/
+      /*We don't want any more data after the last frame, and we don't want to
+         allow any more frames to be encoded.*/
       _enc->rc.twopass_buffer_bytes=0;
-      return 0;
     }
-    if(_enc->rc.twopass_buffer_bytes==0){
+    else if(_enc->rc.twopass_buffer_bytes==0){
       if(_enc->rc.frame_metrics==NULL){
         /*We're using a whole-file buffer:*/
         if(!_buf)return OC_RC_2PASS_PACKET_SZ-_enc->rc.twopass_buffer_fill;
@@ -1009,6 +1009,7 @@ int oc_enc_rc_2pass_in(oc_enc_ctx *_enc,unsigned char *_buf,size_t _bytes){
             /*Read the metrics for the next frame.*/
             dup_count=oc_rc_unbuffer_val(&_enc->rc,4);
             scale=oc_rc_unbuffer_val(&_enc->rc,4);
+            /*Add the to the circular buffer.*/
             fmi=_enc->rc.frame_metrics_head+_enc->rc.nframe_metrics++;
             if(fmi>=_enc->rc.cframe_metrics)fmi-=_enc->rc.cframe_metrics;
             m=_enc->rc.frame_metrics+fmi;
@@ -1016,10 +1017,13 @@ int oc_enc_rc_2pass_in(oc_enc_ctx *_enc,unsigned char *_buf,size_t _bytes){
             qti=(dup_count&0x80000000)>>31;
             m->dup_count=dup_count&0x7FFFFFFF;
             m->frame_type=qti;
+            /*And accumulate the statistics over the window.*/
             _enc->rc.nframes[qti]++;
             _enc->rc.nframes[2]+=m->dup_count;
             _enc->rc.scale_sum[qti]+=m->scale;
             _enc->rc.scale_window_end+=m->dup_count+1;
+            /*Compute an upper bound on the number of remaining packets needed
+               for the current window.*/
             frames_needed=OC_CLAMPI(0,_enc->rc.buf_delay
              -(_enc->rc.scale_window_end-_enc->rc.scale_window0),
              _enc->rc.frames_left[0]+_enc->rc.frames_left[1]
@@ -1047,8 +1051,6 @@ int oc_enc_rc_2pass_in(oc_enc_ctx *_enc,unsigned char *_buf,size_t _bytes){
         }
       }
     }
-    /*We don't want any more data for this frame.*/
-    else return 0;
   }
   return (int)consumed;
 }
