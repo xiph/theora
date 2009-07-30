@@ -674,16 +674,15 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   borderi=frags[_fragi].borderi;
   qii=frags[_fragi].qii;
   if(qii&~3){
-    if(!_pli){
-      /*Enable early skip detection only for luma blocks.*/
-      frags[_fragi].coded=0;
-      return 0;
-    }
-    else{
-      /*Try and code chroma blocks anyway.*/
-      qii&=3;
-      frags[_fragi].qii=qii;
-    }
+#if !defined(OC_COLLECT_METRICS)
+    /*Enable early skip detection.*/
+    frags[_fragi].coded=0;
+    return 0;
+#else
+    /*Try and code this block anyway.*/
+    qii&=3;
+    frags[_fragi].qii=qii;
+#endif
   }
   mb_mode=frags[_fragi].mb_mode;
   ref=_enc->state.ref_frame_data[
@@ -1039,7 +1038,7 @@ static unsigned oc_dct_cost2(unsigned *_ssd,
   int      z0;
   int      dy;
   int      dz;
-  /*STAD metrics for chroma planes vary much less than luma, so we scale them
+  /*SATD metrics for chroma planes vary much less than luma, so we scale them
      by 4 to distribute them into the mode decision bins more evenly.*/
   _satd<<=_pli+1&2;
   bin=OC_MINI(_satd>>OC_SAD_SHIFT,OC_SAD_BINS-2);
@@ -1471,10 +1470,11 @@ static void oc_analyze_mb_mode_chroma(oc_enc_ctx *_enc,
         }
       }
       if(_skip_ssd[bi]<UINT_MAX){
-        cur_cost=_skip_ssd[bi];
+        cur_ssd=_skip_ssd[bi]<<OC_BIT_SCALE;
+        cur_cost=OC_MODE_RD_COST(ssd+cur_ssd,rate,lambda);
         if(cur_cost<=best_cost){
           best_cost=cur_cost;
-          best_ssd=cur_cost<<OC_BIT_SCALE;
+          best_ssd=cur_ssd;
           best_rate=0;
           best_qii+=4;
         }
@@ -2208,7 +2208,6 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
    out the contributions from AC and DC into separate tables.*/
 
 # define OC_ZWEIGHT   (0.25)
-# define OC_BIN(_satd) (OC_MINI((_satd)>>OC_SAD_SHIFT,OC_SAD_BINS-1))
 
 static void oc_mode_metrics_add(oc_mode_metrics *_metrics,
  double _w,int _satd,int _rate,double _rmse){
@@ -2273,12 +2272,12 @@ static void oc_mode_metrics_merge(oc_mode_metrics *_dst,
   }
 }
 
+/*Compile collected SATD/rate/RMSE metrics into a form that's immediately
+   useful for mode decision.*/
 static void oc_enc_mode_metrics_update(oc_enc_ctx *_enc,int _qi){
   int pli;
   int qti;
   oc_restore_fpu(&_enc->state);
-  /*Compile collected SATD/rate/RMSE metrics into a form that's immediately
-     useful for mode decision.*/
   /*Convert raw collected data into cleaned up sample points.*/
   for(pli=0;pli<3;pli++){
     for(qti=0;qti<2;qti++){
@@ -2443,7 +2442,7 @@ void oc_enc_mode_metrics_collect(oc_enc_ctx *_enc){
       }
       mb_mode=frags[fragi].mb_mode;
       qi=_enc->state.qis[frags[fragi].qii];
-      satd=frag_satd[fragi];
+      satd=frag_satd[fragi]<<(pli+1&2);
       bin=OC_MINI(satd>>OC_SAD_SHIFT,OC_SAD_BINS-1);
       oc_mode_metrics_add(OC_MODE_METRICS[qi][pli][mb_mode!=OC_MODE_INTRA]+bin,
        fragw,satd,frag_bits<<OC_BIT_SCALE,sqrt(frag_ssd[fragi]));
