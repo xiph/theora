@@ -274,6 +274,10 @@ static void oc_enc_rc_reset(oc_enc_ctx *_enc){
 }
 
 void oc_rc_state_init(oc_rc_state *_rc,oc_enc_ctx *_enc){
+  _rc->twopass=0;
+  _rc->twopass_buffer_bytes=0;
+  _rc->twopass_force_kf=0;
+  _rc->frame_metrics=NULL;
   if(_enc->state.info.target_bitrate>0){
     /*The buffer size is set equal to the keyframe interval, clamped to the
        range [12,256] frames.
@@ -289,10 +293,6 @@ void oc_rc_state_init(oc_rc_state *_rc,oc_enc_ctx *_enc){
     _rc->cap_underflow=0;
     oc_enc_rc_reset(_enc);
   }
-  _rc->twopass=0;
-  _rc->twopass_buffer_bytes=0;
-  _rc->twopass_force_kf=0;
-  _rc->frame_metrics=NULL;
 }
 
 void oc_rc_state_clear(oc_rc_state *_rc){
