@@ -1576,7 +1576,12 @@ int main(int argc,char *argv[]){
       fflush(twopass_file);
     }
     if(passno==2){
-      /* enable second pass here, actual data feeding comes later */
+      /*Enable the second pass here.
+        We make this call just to set the encoder into 2-pass mode, because
+         by default enabling two-pass sets the buffer delay to the whole file
+         (because there's no way to explicitly request that behavior).
+        If we waited until we were actually encoding, it would overwite our
+         settings.*/
       if(th_encode_ctl(td,TH_ENCCTL_2PASS_IN,NULL,0)<0){
         fprintf(stderr,"Could not set up the second pass of two-pass mode.\n");
         exit(1);
@@ -1595,6 +1600,8 @@ int main(int argc,char *argv[]){
         frames=0;
       }
     }
+    /*Now we can set the buffer delay if the user requested a non-default one
+       (this has to be done after two-pass is enabled).*/
     if(passno!=1&&buf_delay>=0){
       ret=th_encode_ctl(td,TH_ENCCTL_SET_RATE_BUFFER,
        &buf_delay,sizeof(buf_delay));
