@@ -529,7 +529,7 @@ static void oc_idct8x8_10(ogg_int16_t _y[64]){
 /*Performs an inverse 8x8 Type-II DCT transform.
   The input is assumed to be scaled by a factor of 4 relative to orthonormal
    version of the transform.*/
-void oc_idct8x8_mmx(ogg_int16_t _y[64],int _last_zzi,int _ncoefs){
+void oc_idct8x8_mmx(ogg_int16_t _y[64],int _last_zzi){
   /*_last_zzi is subtly different from an actual count of the number of
      coefficients we decoded for this block.
     It contains the value of zzi BEFORE the final token in the block was

@@ -25,6 +25,77 @@
 #define _ogg_offsetof(_type,_field)\
  ((size_t)((char *)&((_type *)0)->_field-(char *)0))
 
+/*The number of internal tokens associated with each of the spec tokens.*/
+static const unsigned char OC_DCT_TOKEN_MAP_ENTRIES[TH_NDCT_TOKENS]={
+  1,1,1,4,8,1,1,8,1,1,1,1,1,2,2,2,2,4,8,2,2,2,4,2,2,2,2,2,8,2,4,8
+};
+
+/*The map from external spec-defined tokens to internal tokens.
+  This is constructed so that any extra bits read with the original token value
+   can be masked off the least significant bits of its internal token index.
+  In addition, all of the tokens which require additional extra bits are placed
+   at the start of the list, and grouped by type.
+  These requirements leave things slightly out of order, and leave a few gaps.*/
+static const unsigned char OC_DCT_TOKEN_MAP[TH_NDCT_TOKENS][8]={
+  /*OC_DCT_EOB1_TOKEN (0 extra bits)*/
+  {17},
+  /*OC_DCT_EOB2_TOKEN (0 extra bits)*/
+  {18},
+  /*OC_DCT_EOB3_TOKEN (0 extra bits)*/
+  {19},
+  /*OC_DCT_REPEAT_RUN0_TOKEN (2 extra bits)*/
+  {20,21,22,23},
+  /*OC_DCT_REPEAT_RUN1_TOKEN (3 extra bits)*/
+  {24,25,26,27,28,29,30,31},
+  /*OC_DCT_REPEAT_RUN2_TOKEN (4 extra bits)*/
+  {1},
+  /*OC_DCT_REPEAT_RUN3_TOKEN (12 extra bits)*/
+  {0},
+  /*OC_DCT_SHORT_ZRL_TOKEN (3 extra bits)*/
+  {32,33,34,35,36,37,38,39},
+  /*OC_DCT_ZRL_TOKEN (6 extra bits)*/
+  {4},
+  /*OC_ONE_TOKEN (0 extra bits)*/
+  {40},
+  /*OC_MINUS_ONE_TOKEN (0 extra bits)*/
+  {41},
+  /*OC_TWO_TOKEN (0 extra bits)*/
+  {42},
+  /*OC_MINUS_TWO_TOKEN (0 extra bits)*/
+  {43},
+  /*OC_DCT_VAL_CAT2 (1 extra bit)*/
+  {44,45},
+  {46,47},
+  {48,49},
+  {50,51},
+  /*OC_DCT_VAL_CAT3 (2 extra bits)*/
+  {52,53,54,55},
+  /*OC_DCT_VAL_CAT4 (3 extra bits)*/
+  {56,57,58,59,60,61,62,63},
+  /*OC_DCT_VAL_CAT5 (4 extra bits)*/
+  {6,7},
+  /*OC_DCT_VAL_CAT6 (5 extra bits)*/
+  {8,9},
+  /*OC_DCT_VAL_CAT7 (6 extra bits)*/
+  {10,11},
+  /*OC_DCT_VAL_CAT8 (10 extra bits)*/
+  {12,13,14,15},
+  /*OC_DCT_RUN_CAT1A (1 extra bit)*/
+  {84,85},
+  {86,87},
+  {88,89},
+  {90,91},
+  {92,93},
+  /*OC_DCT_RUN_CAT1B (3 extra bits)*/
+  {64,65,66,67,68,69,70,71},
+  /*OC_DCT_RUN_CAT1C (4 extra bits)*/
+  {2,3},
+  /*OC_DCT_RUN_CAT2A (2 extra bits)*/
+  {80,81,82,83},
+  /*OC_DCT_RUN_CAT2B (3 extra bits)*/
+  {72,73,74,75,76,77,78,79}
+};
+
 /*These three functions are really part of the bitpack.c module, but
    they are only used here.
   Declaring local static versions so they can be inlined saves considerable
@@ -151,12 +222,13 @@ static int oc_huff_tree_unpack(oc_pack_buf *_opb,
   int           nused;
   if(_nbinodes<1)return TH_EBADHEADER;
   binode=_binodes;
-  nused=1;
+  nused=0;
   bits=oc_pack_read1(_opb);
   if(oc_pack_bytes_left(_opb)<0)return TH_EBADHEADER;
   /*Read an internal node:*/
   if(!bits){
     int ret;
+    nused++;
     binode->nbits=1;
     binode->depth=1;
     binode->nodes[0]=_binodes+nused;
@@ -171,11 +243,32 @@ static int oc_huff_tree_unpack(oc_pack_buf *_opb,
   }
   /*Read a leaf node:*/
   else{
+    int ntokens;
+    int i;
     bits=oc_pack_read(_opb,OC_NDCT_TOKEN_BITS);
     if(oc_pack_bytes_left(_opb)<0)return TH_EBADHEADER;
-    binode->nbits=0;
-    binode->depth=1;
-    binode->token=(unsigned char)bits;
+    /*Find out how many internal tokens we translate this external token into.*/
+    ntokens=OC_DCT_TOKEN_MAP_ENTRIES[bits];
+    if(_nbinodes<2*ntokens-1)return TH_EBADHEADER;
+    /*Fill in a complete binary tree pointing to the internal tokens.*/
+    for(i=1;i<ntokens;i<<=1){
+      int j;
+      binode=_binodes+nused;
+      nused+=i;
+      for(j=0;j<i;j++){
+        binode[j].nbits=1;
+        binode[j].depth=1;
+        binode[j].nodes[0]=_binodes+nused+2*j;
+        binode[j].nodes[1]=_binodes+nused+2*j+1;
+      }
+    }
+    /*And now the leaf nodes with those tokens.*/
+    for(i=0;i<ntokens;i++){
+      binode=_binodes+nused++;
+      binode->nbits=0;
+      binode->depth=1;
+      binode->token=OC_DCT_TOKEN_MAP[bits][i];
+    }
   }
   return nused;
 }
@@ -298,10 +391,10 @@ int oc_huff_trees_unpack(oc_pack_buf *_opb,
  oc_huff_node *_nodes[TH_NHUFFMAN_TABLES]){
   int i;
   for(i=0;i<TH_NHUFFMAN_TABLES;i++){
-    oc_huff_node nodes[63];
+    oc_huff_node nodes[511];
     int          ret;
     /*Unpack the full tree into a temporary buffer.*/
-    ret=oc_huff_tree_unpack(_opb,nodes,63);
+    ret=oc_huff_tree_unpack(_opb,nodes,sizeof(nodes)/sizeof(*nodes));
     if(ret<0)return ret;
     _nodes[i]=oc_huff_tree_collapse(nodes);
   }

@@ -92,9 +92,8 @@
 
 #define OC_LOOP_FILTER_V_MMX(_pix,_ystride,_ll) \
   do{ \
-    /*Used local variable pix__ in order to fix compilation errors like:
-     "error C2425: 'SHL' : non-constant expression in 'second operand'"
-     */ \
+    /*Used local variable pix__ in order to fix compilation errors like: \
+     "error C2425: 'SHL' : non-constant expression in 'second operand'".*/ \
     unsigned char *pix__; \
     unsigned char *ll__; \
     ll__=(_ll); \
@@ -123,9 +122,8 @@
 
 #define OC_LOOP_FILTER_H_MMX(_pix,_ystride,_ll) \
   do{ \
-    /*Used local variable ll__ in order to fix compilation errors like: 
-     "error C2443: operand size conflict"
-     */ \
+    /*Used local variable ll__ in order to fix compilation errors like: \
+     "error C2443: operand size conflict".*/ \
     unsigned char *ll__; \
     unsigned char *pix__; \
     ll__=(_ll); \

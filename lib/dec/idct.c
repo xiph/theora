@@ -296,14 +296,14 @@ static void oc_idct8x8_slow(ogg_int16_t _y[64],const ogg_int16_t _x[64]){
 }
 
 void oc_idct8x8(const oc_theora_state *_state,ogg_int16_t _y[64],
- int _last_zzi,int _ncoefs){
-  (*_state->opt_vtable.idct8x8)(_y,_last_zzi,_ncoefs);
+ int _last_zzi){
+  (*_state->opt_vtable.idct8x8)(_y,_last_zzi);
 }
 
 /*Performs an inverse 8x8 Type-II DCT transform.
   The input is assumed to be scaled by a factor of 4 relative to orthonormal
    version of the transform.*/
-void oc_idct8x8_c(ogg_int16_t _y[64],int _last_zzi,int _ncoefs){
+void oc_idct8x8_c(ogg_int16_t _y[64],int _last_zzi){
   /*_last_zzi is subtly different from an actual count of the number of
      coefficients we decoded for this block.
     It contains the value of zzi BEFORE the final token in the block was

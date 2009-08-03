@@ -781,7 +781,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   }
   else{
     data[0]=dc*dc_dequant;
-    oc_idct8x8(&_enc->state,data,nonzero+1,nonzero+1);
+    oc_idct8x8(&_enc->state,data,nonzero+1);
   }
   if(!qti)oc_enc_frag_recon_intra(_enc,dst,ystride,data);
   else{
@@ -1332,7 +1332,8 @@ static const unsigned OC_NOSKIP[12]={
 /*The estimated number of bits used by a coded chroma block to specify the AC
    quantizer.
   TODO: Currently this is just 0.5*log2(3) (estimating about 50% compression);
-   we should measure it.*/
+   measurements suggest this is in the right ballpark, but it varies somewhat
+   with lambda.*/
 #define OC_CHROMA_QII_RATE ((0xCAE00D1DU>>31-OC_BIT_SCALE)+1>>1)
 
 static void oc_analyze_mb_mode_luma(oc_enc_ctx *_enc,
@@ -1344,7 +1345,6 @@ static void oc_analyze_mb_mode_luma(oc_enc_ctx *_enc,
   unsigned     rate;
   int          overhead;
   unsigned     satd;
-  unsigned     best_cost;
   unsigned     best_ssd;
   unsigned     best_rate;
   int          best_overhead;
@@ -1373,6 +1373,7 @@ static void oc_analyze_mb_mode_luma(oc_enc_ctx *_enc,
   for(bi=0;bi<4;bi++){
     oc_fr_state  ft[2];
     oc_qii_state qt[3];
+    unsigned     best_cost;
     satd=_frag_satd[bi];
     *(ft+0)=*&fr;
     oc_fr_code_block(ft+0);
@@ -1402,7 +1403,6 @@ static void oc_analyze_mb_mode_luma(oc_enc_ctx *_enc,
       cur_ssd=_skip_ssd[bi]<<OC_BIT_SCALE;
       cur_cost=OC_MODE_RD_COST(ssd+cur_ssd,rate+cur_overhead,lambda);
       if(cur_cost<=best_cost){
-        best_cost=cur_cost;
         best_ssd=cur_ssd;
         best_rate=0;
         best_overhead=cur_overhead;
@@ -1429,7 +1429,6 @@ static void oc_analyze_mb_mode_chroma(oc_enc_ctx *_enc,
   unsigned ssd;
   unsigned rate;
   unsigned satd;
-  unsigned best_cost;
   unsigned best_ssd;
   unsigned best_rate;
   int      best_qii;
@@ -1453,6 +1452,7 @@ static void oc_analyze_mb_mode_chroma(oc_enc_ctx *_enc,
   bi=4;
   for(pli=1;pli<3;pli++){
     for(;bi<nblocks;bi++){
+      unsigned best_cost;
       satd=_frag_satd[bi];
       best_rate=oc_dct_cost2(&best_ssd,_enc->state.qis[0],pli,_qti,satd)
        +OC_CHROMA_QII_RATE;
@@ -1473,7 +1473,6 @@ static void oc_analyze_mb_mode_chroma(oc_enc_ctx *_enc,
         cur_ssd=_skip_ssd[bi]<<OC_BIT_SCALE;
         cur_cost=OC_MODE_RD_COST(ssd+cur_ssd,rate,lambda);
         if(cur_cost<=best_cost){
-          best_cost=cur_cost;
           best_ssd=cur_ssd;
           best_rate=0;
           best_qii+=4;
@@ -2330,6 +2329,120 @@ static void oc_enc_mode_metrics_update(oc_enc_ctx *_enc,int _qi){
     }
   }
 }
+
+
+
+/*The following token skipping code used to also be used in the decoder (and
+   even at one point other places in the encoder).
+  However, it was obsoleted by other optimizations, and is now only used here.
+  It has been moved here to avoid generating the code when it's not needed.*/
+
+/*Determines the number of blocks or coefficients to be skipped for a given
+   token value.
+  _token:      The token value to skip.
+  _extra_bits: The extra bits attached to this token.
+  Return: A positive value indicates that number of coefficients are to be
+           skipped in the current block.
+          Otherwise, the negative of the return value indicates that number of
+           blocks are to be ended.*/
+typedef ptrdiff_t (*oc_token_skip_func)(int _token,int _extra_bits);
+
+/*Handles the simple end of block tokens.*/
+static ptrdiff_t oc_token_skip_eob(int _token,int _extra_bits){
+  int nblocks_adjust;
+  nblocks_adjust=OC_UNIBBLE_TABLE32(0,1,2,3,7,15,0,0,_token)+1;
+  return -_extra_bits-nblocks_adjust;
+}
+
+/*The last EOB token has a special case, where an EOB run of size zero ends all
+   the remaining blocks in the frame.*/
+static ptrdiff_t oc_token_skip_eob6(int _token,int _extra_bits){
+  /*Note: We want to return -PTRDIFF_MAX, but that requires C99, which is not
+     yet available everywhere; this should be equivalent.*/
+  if(!_extra_bits)return -(~(size_t)0>>1);
+  return -_extra_bits;
+}
+
+/*Handles the pure zero run tokens.*/
+static ptrdiff_t oc_token_skip_zrl(int _token,int _extra_bits){
+  return _extra_bits+1;
+}
+
+/*Handles a normal coefficient value token.*/
+static ptrdiff_t oc_token_skip_val(void){
+  return 1;
+}
+
+/*Handles a category 1A zero run/coefficient value combo token.*/
+static ptrdiff_t oc_token_skip_run_cat1a(int _token){
+  return _token-OC_DCT_RUN_CAT1A+2;
+}
+
+/*Handles category 1b, 1c, 2a, and 2b zero run/coefficient value combo tokens.*/
+static ptrdiff_t oc_token_skip_run(int _token,int _extra_bits){
+  int run_cati;
+  int ncoeffs_mask;
+  int ncoeffs_adjust;
+  run_cati=_token-OC_DCT_RUN_CAT1B;
+  ncoeffs_mask=OC_BYTE_TABLE32(3,7,0,1,run_cati);
+  ncoeffs_adjust=OC_BYTE_TABLE32(7,11,2,3,run_cati);
+  return (_extra_bits&ncoeffs_mask)+ncoeffs_adjust;
+}
+
+/*A jump table for computing the number of coefficients or blocks to skip for
+   a given token value.
+  This reduces all the conditional branches, etc., needed to parse these token
+   values down to one indirect jump.*/
+static const oc_token_skip_func OC_TOKEN_SKIP_TABLE[TH_NDCT_TOKENS]={
+  oc_token_skip_eob,
+  oc_token_skip_eob,
+  oc_token_skip_eob,
+  oc_token_skip_eob,
+  oc_token_skip_eob,
+  oc_token_skip_eob,
+  oc_token_skip_eob6,
+  oc_token_skip_zrl,
+  oc_token_skip_zrl,
+  (oc_token_skip_func)oc_token_skip_val,
+  (oc_token_skip_func)oc_token_skip_val,
+  (oc_token_skip_func)oc_token_skip_val,
+  (oc_token_skip_func)oc_token_skip_val,
+  (oc_token_skip_func)oc_token_skip_val,
+  (oc_token_skip_func)oc_token_skip_val,
+  (oc_token_skip_func)oc_token_skip_val,
+  (oc_token_skip_func)oc_token_skip_val,
+  (oc_token_skip_func)oc_token_skip_val,
+  (oc_token_skip_func)oc_token_skip_val,
+  (oc_token_skip_func)oc_token_skip_val,
+  (oc_token_skip_func)oc_token_skip_val,
+  (oc_token_skip_func)oc_token_skip_val,
+  (oc_token_skip_func)oc_token_skip_val,
+  (oc_token_skip_func)oc_token_skip_run_cat1a,
+  (oc_token_skip_func)oc_token_skip_run_cat1a,
+  (oc_token_skip_func)oc_token_skip_run_cat1a,
+  (oc_token_skip_func)oc_token_skip_run_cat1a,
+  (oc_token_skip_func)oc_token_skip_run_cat1a,
+  oc_token_skip_run,
+  oc_token_skip_run,
+  oc_token_skip_run,
+  oc_token_skip_run
+};
+
+/*Determines the number of blocks or coefficients to be skipped for a given
+   token value.
+  _token:      The token value to skip.
+  _extra_bits: The extra bits attached to this token.
+  Return: A positive value indicates that number of coefficients are to be
+           skipped in the current block.
+          Otherwise, the negative of the return value indicates that number of
+           blocks are to be ended.
+          0 will never be returned, so that at least one coefficient in one
+           block will always be decoded for every token.*/
+static ptrdiff_t oc_dct_token_skip(int _token,int _extra_bits){
+  return (*OC_TOKEN_SKIP_TABLE[_token])(_token,_extra_bits);
+}
+
+
 
 void oc_enc_mode_metrics_collect(oc_enc_ctx *_enc){
   static const unsigned char OC_ZZI_HUFF_OFFSET[64]={

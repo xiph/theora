@@ -24,28 +24,13 @@
 
 #if defined(OC_X86_ASM)
 
-/*This table has been modified from OC_FZIG_ZAG by baking a 4x4 transpose into
-   each quadrant of the destination.*/
-static const unsigned char OC_FZIG_ZAG_MMX[64]={
-   0, 8, 1, 2, 9,16,24,17,
-  10, 3,32,11,18,25, 4,12,
-   5,26,19,40,33,34,41,48,
-  27, 6,13,20,28,21,14, 7,
-  56,49,42,35,43,50,57,36,
-  15,22,29,30,23,44,37,58,
-  51,59,38,45,52,31,60,53,
-  46,39,47,54,61,62,55,63
-};
-
 void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
- int _pli,ogg_int16_t _dct_coeffs[64],int _last_zzi,int _ncoefs,
- ogg_uint16_t _dc_quant,const ogg_uint16_t _ac_quant[64]){
-  OC_ALIGN8(ogg_int16_t   res_buf[64]);
-  unsigned char          *dst;
-  ptrdiff_t               frag_buf_off;
-  int                     ystride;
-  int                     mb_mode;
-  /*Dequantize and apply the inverse transform.*/
+ int _pli,ogg_int16_t _dct_coeffs[64],int _last_zzi,ogg_uint16_t _dc_quant){
+  unsigned char *dst;
+  ptrdiff_t      frag_buf_off;
+  int            ystride;
+  int            mb_mode;
+  /*Apply the inverse transform.*/
   /*Special case only having a DC component.*/
   if(_last_zzi<2){
     /*Note that this value must be unsigned, to keep the __asm__ block from
@@ -54,11 +39,11 @@ void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
     /*We round this dequant product (and not any of the others) because there's
        no iDCT rounding.*/
     p=(ogg_int16_t)(_dct_coeffs[0]*(ogg_int32_t)_dc_quant+15>>5);
-    /*Fill res_buf with p.*/
+    /*Fill _dct_coeffs with p.*/
     __asm{
 #define Y eax
 #define P ecx
-      mov Y,res_buf
+      mov Y,_dct_coeffs
       movd P,p
       /*mm0=0000 0000 0000 AAAA*/
       movd mm0,P
@@ -87,44 +72,16 @@ void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
     }
   }
   else{
-    int zzi;
-    /*First zero the buffer.*/
-    /*On K7, etc., this could be replaced with movntq and sfence.*/
-    __asm{
-#define Y eax
-      mov Y,res_buf
-      pxor mm0,mm0
-      movq [Y],mm0
-      movq [8+Y],mm0
-      movq [16+Y],mm0
-      movq [24+Y],mm0
-      movq [32+Y],mm0
-      movq [40+Y],mm0
-      movq [48+Y],mm0
-      movq [56+Y],mm0
-      movq [64+Y],mm0
-      movq [72+Y],mm0
-      movq [80+Y],mm0
-      movq [88+Y],mm0
-      movq [96+Y],mm0
-      movq [104+Y],mm0
-      movq [112+Y],mm0
-      movq [120+Y],mm0
-#undef Y
-    }
-    /*Dequantize the coefficients.*/
-    res_buf[0]=(ogg_int16_t)(_dct_coeffs[0]*(int)_dc_quant);
-    for(zzi=1;zzi<_ncoefs;zzi++){
-      res_buf[OC_FZIG_ZAG_MMX[zzi]]=(ogg_int16_t)(_dct_coeffs[zzi]*(int)_ac_quant[zzi]);
-    }
-    oc_idct8x8_mmx(res_buf,_last_zzi,_ncoefs);
+    /*Dequantize the DC coefficient.*/
+    _dct_coeffs[0]=(ogg_int16_t)(_dct_coeffs[0]*(int)_dc_quant);
+    oc_idct8x8_mmx(_dct_coeffs,_last_zzi,_ncoefs);
   }
   /*Fill in the target buffer.*/
   frag_buf_off=_state->frag_buf_offs[_fragi];
   mb_mode=_state->frags[_fragi].mb_mode;
   ystride=_state->ref_ystride[_pli];
   dst=_state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_SELF]]+frag_buf_off;
-  if(mb_mode==OC_MODE_INTRA)oc_frag_recon_intra_mmx(dst,ystride,res_buf);
+  if(mb_mode==OC_MODE_INTRA)oc_frag_recon_intra_mmx(dst,ystride,_dct_coeffs);
   else{
     const unsigned char *ref;
     int                  mvoffsets[2];
@@ -134,9 +91,9 @@ void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
     if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,
      _state->frag_mvs[_fragi][0],_state->frag_mvs[_fragi][1])>1){
       oc_frag_recon_inter2_mmx(dst,ref+mvoffsets[0],ref+mvoffsets[1],ystride,
-       res_buf);
+       _dct_coeffs);
     }
-    else oc_frag_recon_inter_mmx(dst,ref+mvoffsets[0],ystride,res_buf);
+    else oc_frag_recon_inter_mmx(dst,ref+mvoffsets[0],ystride,_dct_coeffs);
   }
 }
 

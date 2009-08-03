@@ -93,6 +93,182 @@ static const unsigned char OC_MODE_ALPHABETS[7][OC_NMODES]={
 };
 
 
+/*The original DCT tokens are extended and reordered during the construction of
+   the Huffman tables.
+  This revised ordering reveals essential information in the token value
+   itself; specifically, whether or not there are extra bits to read and the
+   parameter to which those extra bits are applied.
+  The token is used to fetch a code word from the following table.
+  The extra bits are added into code word at the bit position inferred from the
+   token value and then optionally negated, according to the 'flip' bit, giving
+   the final code word from which all the required parameters are derived.*/
+
+/*The number of extra bits that are decoded with each of the internal DCT
+   tokens.*/
+static const unsigned char OC_INTERNAL_DCT_TOKEN_EXTRA_BITS[16]={
+  12,4,3,3,6,0,3,3,4,4,5,5,8,8,8,8
+};
+
+/*Whether or not an internal token needs any additional extra bits.*/
+#define OC_DCT_TOKEN_NEEDS_MORE(token) \
+ (token<(sizeof(OC_INTERNAL_DCT_TOKEN_EXTRA_BITS)/ \
+  sizeof(*OC_INTERNAL_DCT_TOKEN_EXTRA_BITS)))
+
+/*This token (OC_DCT_REPEAT_RUN3_TOKEN) requires more than 8 extra bits.*/
+#define OC_DCT_TOKEN_FAT_EOB (0)
+
+/*The location of the token magnitude bits in the code word.*/
+#define OC_DCT_CW_MAG_SHIFT  (21)
+/*The location of the flip bit in the code word.*/
+#define OC_DCT_CW_FLIP_BIT   (20)
+/*The location of the run legth bits in the code word.*/
+#define OC_DCT_CW_RLEN_SHIFT (12)
+
+#define OC_DCT_CW_PACK(_eobs,_rlen,_mag,_flip) \
+ ((_eobs)| \
+ (_rlen)<<OC_DCT_CW_RLEN_SHIFT| \
+ (_flip)<<OC_DCT_CW_FLIP_BIT| \
+ (_mag)-(_flip)<<OC_DCT_CW_MAG_SHIFT)
+
+/*A special codeword value that signals the end of the frame (a long EOB run of
+   zero).*/
+#define OC_DCT_CW_FINISH (0)
+
+/*The position at which to insert the extra bits in the code word.*/
+#define OC_DCT_TOKEN_EB_POS(_token) \
+ ((_token)>=6?OC_DCT_CW_MAG_SHIFT:(_token)>=2?OC_DCT_CW_RLEN_SHIFT:0)
+
+/*The code words for each internal token.
+  See the notes at OC_DCT_TOKEN_MAP for the reasons why things are slightly out
+   of order, and why there are a few gaps.*/
+static const ogg_int32_t OC_DCT_CODE_WORD[96]={
+  /*OC_DCT_REPEAT_RUN3_TOKEN (12 extra bits)*/
+  OC_DCT_CW_FINISH,
+  /*OC_DCT_REPEAT_RUN2_TOKEN (4 extra bits)*/
+  OC_DCT_CW_PACK(16, 0,  0,0),
+  /*OC_DCT_RUN_CAT1C (4 extra bits-1 already read)*/
+  OC_DCT_CW_PACK( 0,10, +1,0),
+  OC_DCT_CW_PACK( 0,10, -1,0),
+  /*OC_DCT_ZRL_TOKEN (6 extra bits)
+    Flip is set to distinguish this from OC_DCT_CW_FINISH.*/
+  OC_DCT_CW_PACK( 0, 0,  0,1),
+  /*Unused.*/
+  0,
+  /*OC_DCT_VAL_CAT5 (4 extra bits-1 already read)*/
+  OC_DCT_CW_PACK( 0, 0, 13,0),
+  OC_DCT_CW_PACK( 0, 0, 13,1),
+  /*OC_DCT_VAL_CAT6 (5 extra bits-1 already read)*/
+  OC_DCT_CW_PACK( 0, 0, 21,0),
+  OC_DCT_CW_PACK( 0, 0, 21,1),
+  /*OC_DCT_VAL_CAT7 (6 extra bits-1 already read)*/
+  OC_DCT_CW_PACK( 0, 0, 37,0),
+  OC_DCT_CW_PACK( 0, 0, 37,1),
+  /*OC_DCT_VAL_CAT8 (10 extra bits-2 already read)*/
+  OC_DCT_CW_PACK( 0, 0, 69,0),
+  OC_DCT_CW_PACK( 0, 0,325,0),
+  OC_DCT_CW_PACK( 0, 0, 69,1),
+  OC_DCT_CW_PACK( 0, 0,325,1),
+  /*Unused.*/
+  0,
+  /*OC_DCT_EOB1_TOKEN (0 extra bits)*/
+  OC_DCT_CW_PACK( 1, 0,  0,0),
+  /*OC_DCT_EOB2_TOKEN (0 extra bits)*/
+  OC_DCT_CW_PACK( 2, 0,  0,0),
+  /*OC_DCT_EOB3_TOKEN (0 extra bits)*/
+  OC_DCT_CW_PACK( 3, 0,  0,0),
+  /*OC_DCT_REPEAT_RUN0_TOKEN (2 extra bits-2 already read)*/
+  OC_DCT_CW_PACK( 4, 0,  0,0),
+  OC_DCT_CW_PACK( 5, 0,  0,0),
+  OC_DCT_CW_PACK( 6, 0,  0,0),
+  OC_DCT_CW_PACK( 7, 0,  0,0),
+  /*OC_DCT_REPEAT_RUN1_TOKEN (3 extra bits-3 already read)*/
+  OC_DCT_CW_PACK( 8, 0,  0,0),
+  OC_DCT_CW_PACK( 9, 0,  0,0),
+  OC_DCT_CW_PACK(10, 0,  0,0),
+  OC_DCT_CW_PACK(11, 0,  0,0),
+  OC_DCT_CW_PACK(12, 0,  0,0),
+  OC_DCT_CW_PACK(13, 0,  0,0),
+  OC_DCT_CW_PACK(14, 0,  0,0),
+  OC_DCT_CW_PACK(15, 0,  0,0),
+  /*OC_DCT_SHORT_ZRL_TOKEN (3 extra bits-3 already read)
+    Flip is set on the first one to distinguish it from OC_DCT_CW_FINISH.*/
+  OC_DCT_CW_PACK( 0, 0,  0,1),
+  OC_DCT_CW_PACK( 0, 1,  0,0),
+  OC_DCT_CW_PACK( 0, 2,  0,0),
+  OC_DCT_CW_PACK( 0, 3,  0,0),
+  OC_DCT_CW_PACK( 0, 4,  0,0),
+  OC_DCT_CW_PACK( 0, 5,  0,0),
+  OC_DCT_CW_PACK( 0, 6,  0,0),
+  OC_DCT_CW_PACK( 0, 7,  0,0),
+  /*OC_ONE_TOKEN (0 extra bits)*/
+  OC_DCT_CW_PACK( 0, 0, +1,0),
+  /*OC_MINUS_ONE_TOKEN (0 extra bits)*/
+  OC_DCT_CW_PACK( 0, 0, -1,0),
+  /*OC_TWO_TOKEN (0 extra bits)*/
+  OC_DCT_CW_PACK( 0, 0, +2,0),
+  /*OC_MINUS_TWO_TOKEN (0 extra bits)*/
+  OC_DCT_CW_PACK( 0, 0, -2,0),
+  /*OC_DCT_VAL_CAT2 (1 extra bit-1 already read)*/
+  OC_DCT_CW_PACK( 0, 0, +3,0),
+  OC_DCT_CW_PACK( 0, 0, -3,0),
+  OC_DCT_CW_PACK( 0, 0, +4,0),
+  OC_DCT_CW_PACK( 0, 0, -4,0),
+  OC_DCT_CW_PACK( 0, 0, +5,0),
+  OC_DCT_CW_PACK( 0, 0, -5,0),
+  OC_DCT_CW_PACK( 0, 0, +6,0),
+  OC_DCT_CW_PACK( 0, 0, -6,0),
+  /*OC_DCT_VAL_CAT3 (2 extra bits-2 already read)*/
+  OC_DCT_CW_PACK( 0, 0, +7,0),
+  OC_DCT_CW_PACK( 0, 0, +8,0),
+  OC_DCT_CW_PACK( 0, 0, -7,0),
+  OC_DCT_CW_PACK( 0, 0, -8,0),
+  /*OC_DCT_VAL_CAT4 (3 extra bits-3 already read)*/
+  OC_DCT_CW_PACK( 0, 0, +9,0),
+  OC_DCT_CW_PACK( 0, 0,+10,0),
+  OC_DCT_CW_PACK( 0, 0,+11,0),
+  OC_DCT_CW_PACK( 0, 0,+12,0),
+  OC_DCT_CW_PACK( 0, 0, -9,0),
+  OC_DCT_CW_PACK( 0, 0,-10,0),
+  OC_DCT_CW_PACK( 0, 0,-11,0),
+  OC_DCT_CW_PACK( 0, 0,-12,0),
+  /*OC_DCT_RUN_CAT1B (3 extra bits-3 already read)*/
+  OC_DCT_CW_PACK( 0, 6, +1,0),
+  OC_DCT_CW_PACK( 0, 7, +1,0),
+  OC_DCT_CW_PACK( 0, 8, +1,0),
+  OC_DCT_CW_PACK( 0, 9, +1,0),
+  OC_DCT_CW_PACK( 0, 6, -1,0),
+  OC_DCT_CW_PACK( 0, 7, -1,0),
+  OC_DCT_CW_PACK( 0, 8, -1,0),
+  OC_DCT_CW_PACK( 0, 9, -1,0),
+  /*OC_DCT_RUN_CAT2B (3 extra bits-3 already read)*/
+  OC_DCT_CW_PACK( 0, 2, +2,0),
+  OC_DCT_CW_PACK( 0, 3, +2,0),
+  OC_DCT_CW_PACK( 0, 2, +3,0),
+  OC_DCT_CW_PACK( 0, 3, +3,0),
+  OC_DCT_CW_PACK( 0, 2, -2,0),
+  OC_DCT_CW_PACK( 0, 3, -2,0),
+  OC_DCT_CW_PACK( 0, 2, -3,0),
+  OC_DCT_CW_PACK( 0, 3, -3,0),
+  /*OC_DCT_RUN_CAT2A (2 extra bits-2 already read)*/
+  OC_DCT_CW_PACK( 0, 1, +2,0),
+  OC_DCT_CW_PACK( 0, 1, +3,0),
+  OC_DCT_CW_PACK( 0, 1, -2,0),
+  OC_DCT_CW_PACK( 0, 1, -3,0),
+  /*OC_DCT_RUN_CAT1A (1 extra bit-1 already read)*/
+  OC_DCT_CW_PACK( 0, 1, +1,0),
+  OC_DCT_CW_PACK( 0, 1, -1,0),
+  OC_DCT_CW_PACK( 0, 2, +1,0),
+  OC_DCT_CW_PACK( 0, 2, -1,0),
+  OC_DCT_CW_PACK( 0, 3, +1,0),
+  OC_DCT_CW_PACK( 0, 3, -1,0),
+  OC_DCT_CW_PACK( 0, 4, +1,0),
+  OC_DCT_CW_PACK( 0, 4, -1,0),
+  OC_DCT_CW_PACK( 0, 5, +1,0),
+  OC_DCT_CW_PACK( 0, 5, -1,0),
+};
+
+
+
 static int oc_sb_run_unpack(oc_pack_buf *_opb){
   long bits;
   int ret;
@@ -186,10 +362,12 @@ static int oc_dec_init(oc_dec_ctx *_dec,const th_info *_info,
     }
     _dec->pp_sharp_mod[qi]=-(qsum>>11);
   }
-  _dec->dct_tokens=(unsigned char *)_ogg_malloc(64*
+  /*For each fragment, allocate one byte for every DCT coefficient token, plus
+     one byte for extra-bits for each token, plus one more byte for the long
+     EOB run, just in case it's the very last token and has a run length of
+     one.*/
+  _dec->dct_tokens=(unsigned char *)_ogg_malloc((64+64+1)*
    _dec->state.nfrags*sizeof(_dec->dct_tokens[0]));
-  _dec->extra_bits=(ogg_uint16_t *)_ogg_malloc(64*
-   _dec->state.nfrags*sizeof(_dec->extra_bits[0]));
   memcpy(_dec->state.loop_filter_limits,_setup->qinfo.loop_filter_limits,
    sizeof(_dec->state.loop_filter_limits));
   _dec->pp_level=OC_PP_LEVEL_DISABLED;
@@ -216,7 +394,6 @@ static void oc_dec_clear(oc_dec_ctx *_dec){
   _ogg_free(_dec->pp_frame_data);
   _ogg_free(_dec->variances);
   _ogg_free(_dec->dc_qis);
-  oc_free_2d(_dec->extra_bits);
   oc_free_2d(_dec->dct_tokens);
   oc_huff_trees_clear(_dec->huff_tables);
   oc_state_clear(&_dec->state);
@@ -748,107 +925,6 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
 
 
 
-/*Returns the decoded value of the first coefficient produced by the given
-   token.
-  It CANNOT be called for any of the EOB tokens.
-  _token:      The token value to skip.
-  _extra_bits: The extra bits attached to this token.
-  Return: The decoded coefficient value.*/
-typedef int (*oc_token_dec1val_func)(int _token,int _extra_bits);
-
-/*We want to avoid accessing arrays of constants in these functions, because
-   we take the address of them, which means that when compiling with -fPIC,
-   an expensive prolog is added to set up the PIC register in any functions
-   which access a global symbol (even if it has file scope or smaller).
-  Thus a lot of what would be tables are packed into 32-bit constants.*/
-
-/*Handles zero run tokens.*/
-static int oc_token_dec1val_zrl(void){
-  return 0;
-}
-
-/*Handles 1, -1, 2 and -2 tokens.*/
-static int oc_token_dec1val_const(int _token){
-  return OC_BYTE_TABLE32(1,-1,2,-2,_token-OC_NDCT_ZRL_TOKEN_MAX);
-}
-
-/*Handles DCT value tokens category 2.*/
-static int oc_token_dec1val_cat2(int _token,int _extra_bits){
-  int mask;
-  mask=-_extra_bits;
-  return _token-OC_DCT_VAL_CAT2+3+mask^mask;
-}
-
-/*Handles DCT value tokens categories 3 through 6.*/
-static int oc_token_dec1val_cat3_6(int _token,int _extra_bits){
-  int cati;
-  int mask;
-  int val_cat_offs;
-  int val_cat_shift;
-  cati=_token-OC_DCT_VAL_CAT3;
-  val_cat_shift=cati+1;
-  mask=-(_extra_bits>>val_cat_shift);
-  _extra_bits&=(1<<val_cat_shift)-1;
-  val_cat_offs=OC_BYTE_TABLE32(7,9,13,21,cati);
-  return val_cat_offs+_extra_bits+mask^mask;
-}
-
-/*Handles DCT value tokens categories 7 through 8.*/
-static int oc_token_dec1val_cat7_8(int _token,int _extra_bits){
-  int cati;
-  int mask;
-  int val_cat_offs;
-  int val_cat_shift;
-  cati=_token-OC_DCT_VAL_CAT7;
-  val_cat_shift=5+(cati<<2);
-  mask=-(_extra_bits>>val_cat_shift);
-  _extra_bits&=(1<<val_cat_shift)-1;
-  val_cat_offs=37+(cati<<5);
-  return val_cat_offs+_extra_bits+mask^mask;
-}
-
-/*A jump table for computing the first coefficient value the given token value
-   represents.*/
-static const oc_token_dec1val_func OC_TOKEN_DEC1VAL_TABLE[TH_NDCT_TOKENS-
- OC_NDCT_EOB_TOKEN_MAX]={
-  (oc_token_dec1val_func)oc_token_dec1val_zrl,
-  (oc_token_dec1val_func)oc_token_dec1val_zrl,
-  (oc_token_dec1val_func)oc_token_dec1val_const,
-  (oc_token_dec1val_func)oc_token_dec1val_const,
-  (oc_token_dec1val_func)oc_token_dec1val_const,
-  (oc_token_dec1val_func)oc_token_dec1val_const,
-  oc_token_dec1val_cat2,
-  oc_token_dec1val_cat2,
-  oc_token_dec1val_cat2,
-  oc_token_dec1val_cat2,
-  oc_token_dec1val_cat3_6,
-  oc_token_dec1val_cat3_6,
-  oc_token_dec1val_cat3_6,
-  oc_token_dec1val_cat3_6,
-  oc_token_dec1val_cat7_8,
-  oc_token_dec1val_cat7_8,
-  (oc_token_dec1val_func)oc_token_dec1val_zrl,
-  (oc_token_dec1val_func)oc_token_dec1val_zrl,
-  (oc_token_dec1val_func)oc_token_dec1val_zrl,
-  (oc_token_dec1val_func)oc_token_dec1val_zrl,
-  (oc_token_dec1val_func)oc_token_dec1val_zrl,
-  (oc_token_dec1val_func)oc_token_dec1val_zrl,
-  (oc_token_dec1val_func)oc_token_dec1val_zrl,
-  (oc_token_dec1val_func)oc_token_dec1val_zrl,
-  (oc_token_dec1val_func)oc_token_dec1val_zrl
-};
-
-/*Returns the decoded value of the first coefficient produced by the given
-   token.
-  It CANNOT be called for any of the EOB tokens.
-  _token:      The token value to skip.
-  _extra_bits: The extra bits attached to this token.
-  Return: The decoded coefficient value.*/
-static int oc_dct_token_dec1val(int _token,int _extra_bits){
-  return (*OC_TOKEN_DEC1VAL_TABLE[_token-OC_NDCT_EOB_TOKEN_MAX])(_token,
-   _extra_bits);
-}
-
 /*Unpacks the DC coefficient tokens.
   Unlike when unpacking the AC coefficient tokens, we actually need to decode
    the DC coefficient values now so that we can do DC prediction.
@@ -860,20 +936,17 @@ static int oc_dct_token_dec1val(int _token,int _extra_bits){
 static ptrdiff_t oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[2],
  ptrdiff_t _ntoks_left[3][64]){
   unsigned char   *dct_tokens;
-  ogg_uint16_t    *extra_bits;
   oc_fragment     *frags;
   const ptrdiff_t *coded_fragis;
   ptrdiff_t        ncoded_fragis;
   ptrdiff_t        fragii;
   ptrdiff_t        eobs;
   ptrdiff_t        ti;
-  ptrdiff_t        ebi;
   int              pli;
   dct_tokens=_dec->dct_tokens;
-  extra_bits=_dec->extra_bits;
   frags=_dec->state.frags;
   coded_fragis=_dec->state.coded_fragis;
-  ncoded_fragis=fragii=eobs=ti=ebi=0;
+  ncoded_fragis=fragii=eobs=ti=0;
   for(pli=0;pli<3;pli++){
     ptrdiff_t run_counts[64];
     ptrdiff_t eob_count;
@@ -883,7 +956,6 @@ static ptrdiff_t oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[2],
     memset(run_counts,0,sizeof(run_counts));
     _dec->eob_runs[pli][0]=eobs;
     _dec->ti0[pli][0]=ti;
-    _dec->ebi0[pli][0]=ebi;
     /*Continue any previous EOB run, if there was one.*/
     eobi=eobs;
     if(ncoded_fragis-fragii<eobi)eobi=ncoded_fragis-fragii;
@@ -892,32 +964,39 @@ static ptrdiff_t oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[2],
     while(eobi-->0)frags[coded_fragis[fragii++]].dc=0;
     while(fragii<ncoded_fragis){
       int token;
-      int neb;
+      int cw;
       int eb;
       int skip;
       token=oc_huff_token_decode(&_dec->opb,
        _dec->huff_tables[_huff_idxs[pli+1>>1]]);
       dct_tokens[ti++]=(unsigned char)token;
-      neb=OC_DCT_TOKEN_EXTRA_BITS[token];
-      if(neb){
-        long val;
-        val=oc_pack_read(&_dec->opb,neb);
-        eb=(int)val;
-        extra_bits[ebi++]=(ogg_uint16_t)eb;
+      if(OC_DCT_TOKEN_NEEDS_MORE(token)){
+        eb=(int)oc_pack_read(&_dec->opb,
+         OC_INTERNAL_DCT_TOKEN_EXTRA_BITS[token]);
+        dct_tokens[ti++]=(unsigned char)eb;
+        if(token==OC_DCT_TOKEN_FAT_EOB)dct_tokens[ti++]=(unsigned char)(eb>>8);
+        eb<<=OC_DCT_TOKEN_EB_POS(token);
       }
       else eb=0;
-      skip=oc_dct_token_skip(token,eb);
-      if(skip<0){
-        eobs=eobi=-skip;
-        if(ncoded_fragis-fragii<eobi)eobi=ncoded_fragis-fragii;
+      cw=OC_DCT_CODE_WORD[token]+eb;
+      eobs=cw&0xFFF;
+      /*Note: We want to set eobs to PTRDIFF_MAX here, but that requires C99,
+         which is not yet available everywhere; this should be equivalent.*/
+      if(cw==OC_DCT_CW_FINISH)eobs=~(size_t)0>>1;
+      if(eobs){
+        eobi=OC_MINI(eobs,ncoded_fragis-fragii);
         eob_count+=eobi;
         eobs-=eobi;
         while(eobi-->0)frags[coded_fragis[fragii++]].dc=0;
       }
       else{
-        run_counts[skip-1]++;
-        eobs=0;
-        frags[coded_fragis[fragii++]].dc=oc_dct_token_dec1val(token,eb);
+        int coeff;
+        skip=cw>>OC_DCT_CW_RLEN_SHIFT&0x3F;
+        cw^=-(cw&1<<OC_DCT_CW_FLIP_BIT);
+        coeff=cw>>OC_DCT_CW_MAG_SHIFT;
+        if(skip)coeff=0;
+        run_counts[skip]++;
+        frags[coded_fragis[fragii++]].dc=coeff;
       }
     }
     /*Add the total EOB count to the longest run length.*/
@@ -929,7 +1008,6 @@ static ptrdiff_t oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[2],
     for(rli=64;rli-->0;)_ntoks_left[pli][rli]-=run_counts[rli];
   }
   _dec->dct_tokens_count=ti;
-  _dec->extra_bits_count=ebi;
   return eobs;
 }
 
@@ -946,30 +1024,25 @@ static ptrdiff_t oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[2],
 static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[2],
  ptrdiff_t _ntoks_left[3][64],ptrdiff_t _eobs){
   unsigned char *dct_tokens;
-  ogg_uint16_t  *extra_bits;
   ptrdiff_t      ti;
-  ptrdiff_t      ebi;
   int            pli;
   dct_tokens=_dec->dct_tokens;
-  extra_bits=_dec->extra_bits;
   ti=_dec->dct_tokens_count;
-  ebi=_dec->extra_bits_count;
   for(pli=0;pli<3;pli++){
     ptrdiff_t run_counts[64];
-    ptrdiff_t ntoks_left;
     ptrdiff_t eob_count;
-    ptrdiff_t ntoks;
+    size_t    ntoks_left;
+    size_t    ntoks;
     int       rli;
     _dec->eob_runs[pli][_zzi]=_eobs;
     _dec->ti0[pli][_zzi]=ti;
-    _dec->ebi0[pli][_zzi]=ebi;
     ntoks_left=_ntoks_left[pli][_zzi];
     memset(run_counts,0,sizeof(run_counts));
     eob_count=0;
     ntoks=0;
     while(ntoks+_eobs<ntoks_left){
       int token;
-      int neb;
+      int cw;
       int eb;
       int skip;
       ntoks+=_eobs;
@@ -977,20 +1050,23 @@ static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[2],
       token=oc_huff_token_decode(&_dec->opb,
        _dec->huff_tables[_huff_idxs[pli+1>>1]]);
       dct_tokens[ti++]=(unsigned char)token;
-      neb=OC_DCT_TOKEN_EXTRA_BITS[token];
-      if(neb){
-        long val;
-        val=oc_pack_read(&_dec->opb,neb);
-        eb=(int)val;
-        extra_bits[ebi++]=(ogg_uint16_t)eb;
+      if(OC_DCT_TOKEN_NEEDS_MORE(token)){
+        eb=(int)oc_pack_read(&_dec->opb,
+         OC_INTERNAL_DCT_TOKEN_EXTRA_BITS[token]);
+        dct_tokens[ti++]=(unsigned char)eb;
+        if(token==OC_DCT_TOKEN_FAT_EOB)dct_tokens[ti++]=(unsigned char)(eb>>8);
+        eb<<=OC_DCT_TOKEN_EB_POS(token);
       }
       else eb=0;
-      skip=oc_dct_token_skip(token,eb);
-      if(skip<0)_eobs=-skip;
-      else{
-        run_counts[skip-1]++;
+      cw=OC_DCT_CODE_WORD[token]+eb;
+      skip=cw>>OC_DCT_CW_RLEN_SHIFT&0x3F;
+      _eobs=cw&0xFFF;
+      /*Note: We want to set eobs to PTRDIFF_MAX here, but that requires C99,
+         which is not yet available everywhere; this should be equivalent.*/
+      if(cw==OC_DCT_CW_FINISH)_eobs=~(size_t)0>>1;
+      if(_eobs==0){
+        run_counts[skip]++;
         ntoks++;
-        _eobs=0;
       }
     }
     /*Add the portion of the last EOB run actually used by this coefficient.*/
@@ -1006,7 +1082,6 @@ static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[2],
     for(rli=64-_zzi;rli-->0;)_ntoks_left[pli][_zzi+rli]-=run_counts[rli];
   }
   _dec->dct_tokens_count=ti;
-  _dec->extra_bits_count=ebi;
   return _eobs;
 }
 
@@ -1022,7 +1097,7 @@ static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[2],
   The former was VP3's choice, and it meant 2*w*h extra storage for all the
    decoded coefficient values.
 
-  We take the second option, which lets us store just one or three bytes per
+  We take the second option, which lets us store just one to three bytes per
    token (generally far fewer than the number of coefficients, due to EOB
    tokens and zero runs), and which requires us to only maintain a counter for
    each of the 64 coefficients, instead of a counter for every fragment to
@@ -1071,141 +1146,6 @@ static void oc_dec_residual_tokens_unpack(oc_dec_ctx *_dec){
      gets treated as an infinite EOB run (where infinity is PTRDIFF_MAX).
     If neither of these conditions holds, then a warning should be issued.*/
 }
-
-
-
-/*Expands a single token into the given coefficient list.
-  This fills in the zeros for zero runs as well as coefficient values, and
-   updates the index of the current coefficient.
-  It CANNOT be called for any of the EOB tokens.
-  _token:      The token value to expand.
-  _extra_bits: The extra bits associated with the token.
-  _dct_coeffs: The current list of coefficients, in zig-zag order.
-  _zzi:        The zig-zag index of the next coefficient to write to.
-  Return: The updated index of the next coefficient to write to.*/
-typedef int (*oc_token_expand_func)(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int _zzi);
-
-/*Expands a zero run token.*/
-static int oc_token_expand_zrl(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int _zzi){
-  do _dct_coeffs[_zzi++]=0;
-  while(_extra_bits-->0);
-  return _zzi;
-}
-
-/*Expands a constant, single-value token.*/
-static int oc_token_expand_const(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int _zzi){
-  _dct_coeffs[_zzi++]=(ogg_int16_t)oc_token_dec1val_const(_token);
-  return _zzi;
-}
-
-/*Expands category 2 single-valued tokens.*/
-static int oc_token_expand_cat2(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int _zzi){
-  _dct_coeffs[_zzi++]=(ogg_int16_t)oc_token_dec1val_cat2(_token,_extra_bits);
-  return _zzi;
-}
-
-/*Expands category 3 through 6 single-valued tokens.*/
-static int oc_token_expand_cat3_6(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int _zzi){
-  _dct_coeffs[_zzi++]=(ogg_int16_t)oc_token_dec1val_cat3_6(_token,_extra_bits);
-  return _zzi;
-}
-
-/*Expands category 7 through 8 single-valued tokens.*/
-static int oc_token_expand_cat7_8(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int _zzi){
-  _dct_coeffs[_zzi++]=(ogg_int16_t)oc_token_dec1val_cat7_8(_token,_extra_bits);
-  return _zzi;
-}
-
-/*Expands a category 1a zero run/value combo token.*/
-static int oc_token_expand_run_cat1a(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int _zzi){
-  int rl;
-  /*LOOP VECTORIZES.*/
-  for(rl=_token-OC_DCT_RUN_CAT1A+1;rl-->0;)_dct_coeffs[_zzi++]=0;
-  _dct_coeffs[_zzi++]=(ogg_int16_t)(1-(_extra_bits<<1));
-  return _zzi;
-}
-
-/*Expands all other zero run/value combo tokens.*/
-static int oc_token_expand_run(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int _zzi){
-  int nzeros_mask;
-  int nzeros_adjust;
-  int sign_shift;
-  int value_shift;
-  int value_mask;
-  int value_adjust;
-  int mask;
-  int rl;
-  _token-=OC_DCT_RUN_CAT1B;
-  nzeros_mask=OC_BYTE_TABLE32(3,7,0,1,_token);
-  nzeros_adjust=OC_BYTE_TABLE32(6,10,1,2,_token);
-  rl=(_extra_bits&nzeros_mask)+nzeros_adjust;
-  /*LOOP VECTORIZES.*/
-  while(rl-->0)_dct_coeffs[_zzi++]=0;
-  sign_shift=OC_BYTE_TABLE32(2,3,1,2,_token);
-  mask=-(_extra_bits>>sign_shift);
-  value_shift=_token+1>>2;
-  value_mask=_token>>1;
-  value_adjust=value_mask+1;
-  _dct_coeffs[_zzi++]=
-   (ogg_int16_t)(value_adjust+(_extra_bits>>value_shift&value_mask)+mask^mask);
-  return _zzi;
-}
-
-/*A jump table for expanding token values into coefficient values.
-  This reduces all the conditional branches, etc., needed to parse these token
-   values down to one indirect jump.*/
-static const oc_token_expand_func OC_TOKEN_EXPAND_TABLE[TH_NDCT_TOKENS-
- OC_NDCT_EOB_TOKEN_MAX]={
-  oc_token_expand_zrl,
-  oc_token_expand_zrl,
-  oc_token_expand_const,
-  oc_token_expand_const,
-  oc_token_expand_const,
-  oc_token_expand_const,
-  oc_token_expand_cat2,
-  oc_token_expand_cat2,
-  oc_token_expand_cat2,
-  oc_token_expand_cat2,
-  oc_token_expand_cat3_6,
-  oc_token_expand_cat3_6,
-  oc_token_expand_cat3_6,
-  oc_token_expand_cat3_6,
-  oc_token_expand_cat7_8,
-  oc_token_expand_cat7_8,
-  oc_token_expand_run_cat1a,
-  oc_token_expand_run_cat1a,
-  oc_token_expand_run_cat1a,
-  oc_token_expand_run_cat1a,
-  oc_token_expand_run_cat1a,
-  oc_token_expand_run,
-  oc_token_expand_run,
-  oc_token_expand_run,
-  oc_token_expand_run
-};
-
-/*Expands a single token into the given coefficient list.
-  This fills in the zeros for zero runs as well as coefficient values, and
-   updates the index of the current coefficient.
-  It CANNOT be called for any of the EOB tokens.
-  _token:      The token value to expand.
-  _extra_bits: The extra bits associated with the token.
-  _dct_coeffs: The current list of coefficients, in zig-zag order.
-  _zzi:        The zig-zag index of the next coefficient to write to.
-  Return: The updated index of the next coefficient to write to.*/
-static int oc_dct_token_expand(int _token,int _extra_bits,
- ogg_int16_t _dct_coeffs[128],int _zzi){
-  return (*OC_TOKEN_EXPAND_TABLE[_token-OC_NDCT_EOB_TOKEN_MAX])(_token,
-   _extra_bits,_dct_coeffs,_zzi);
-}
-
 
 
 static int oc_dec_postprocess_init(oc_dec_ctx *_dec){
@@ -1314,7 +1254,6 @@ static int oc_dec_postprocess_init(oc_dec_ctx *_dec){
 typedef struct{
   int                 bounding_values[256];
   ptrdiff_t           ti[3][64];
-  ptrdiff_t           ebi[3][64];
   ptrdiff_t           eob_runs[3][64];
   const ptrdiff_t    *coded_fragis[3];
   const ptrdiff_t    *uncoded_fragis[3];
@@ -1345,7 +1284,6 @@ static void oc_dec_pipeline_init(oc_dec_ctx *_dec,
   /*Initialize the token and extra bits indices for each plane and
      coefficient.*/
   memcpy(_pipe->ti,_dec->ti0,sizeof(_pipe->ti));
-  memcpy(_pipe->ebi,_dec->ebi0,sizeof(_pipe->ebi));
   /*Also copy over the initial the EOB run counts.*/
   memcpy(_pipe->eob_runs,_dec->eob_runs,sizeof(_pipe->eob_runs));
   /*Set up per-plane pointers to the coded and uncoded fragments lists.*/
@@ -1514,64 +1452,82 @@ static void oc_dec_dc_unpredict_mcu_plane(oc_dec_ctx *_dec,
    counts.*/
 static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
  oc_dec_pipeline_state *_pipe,int _pli){
-  unsigned char     *dct_tokens;
-  ogg_uint16_t      *extra_bits;
-  ogg_uint16_t       dc_quant[2];
-  const oc_fragment *frags;
-  const ptrdiff_t   *coded_fragis;
-  ptrdiff_t          ncoded_fragis;
-  ptrdiff_t          fragii;
-  ptrdiff_t         *ti;
-  ptrdiff_t         *ebi;
-  ptrdiff_t         *eob_runs;
-  int                qti;
+  unsigned char       *dct_tokens;
+  const unsigned char *dct_fzig_zag;
+  ogg_uint16_t         dc_quant[2];
+  const oc_fragment   *frags;
+  const ptrdiff_t     *coded_fragis;
+  ptrdiff_t            ncoded_fragis;
+  ptrdiff_t            fragii;
+  ptrdiff_t           *ti;
+  ptrdiff_t           *eob_runs;
+  int                  qti;
   dct_tokens=_dec->dct_tokens;
-  extra_bits=_dec->extra_bits;
+  dct_fzig_zag=_dec->state.opt_data.dct_fzig_zag;
   frags=_dec->state.frags;
   coded_fragis=_pipe->coded_fragis[_pli];
   ncoded_fragis=_pipe->ncoded_fragis[_pli];
   ti=_pipe->ti[_pli];
-  ebi=_pipe->ebi[_pli];
   eob_runs=_pipe->eob_runs[_pli];
   for(qti=0;qti<2;qti++)dc_quant[qti]=_pipe->dequant[_pli][0][qti][0];
   for(fragii=0;fragii<ncoded_fragis;fragii++){
-    /*This array is made twice as large as necessary so that an invalid zero
-       run cannot cause a buffer overflow.*/
-    ogg_int16_t dct_coeffs[128];
-    ptrdiff_t   fragi;
-    int         last_zzi;
-    int         zzi;
+    /*This array is made one element larger because the zig-zag index array
+       uses the final element as a dumping ground for out-of-range indices
+       to protect us from buffer overflow.*/
+    OC_ALIGN8(ogg_int16_t dct_coeffs[65]);
+    const ogg_uint16_t *ac_quant;
+    ptrdiff_t           fragi;
+    int                 last_zzi;
+    int                 zzi;
     fragi=coded_fragis[fragii];
+    for(zzi=0;zzi<64;zzi++)dct_coeffs[zzi]=0;
+    qti=frags[fragi].mb_mode!=OC_MODE_INTRA;
+    ac_quant=_pipe->dequant[_pli][frags[fragi].qii][qti];
     /*Decode the AC coefficients.*/
     for(zzi=0;zzi<64;){
       int token;
-      int eb;
       last_zzi=zzi;
       if(eob_runs[zzi]){
         eob_runs[zzi]--;
         break;
       }
       else{
-        int ebflag;
-        token=dct_tokens[ti[zzi]++];
-        ebflag=OC_DCT_TOKEN_EXTRA_BITS[token]!=0;
-        eb=extra_bits[ebi[zzi]]&-ebflag;
-        ebi[zzi]+=ebflag;
-        if(token<OC_NDCT_EOB_TOKEN_MAX){
-          eob_runs[zzi]=-oc_dct_token_skip(token,eb);
+        ptrdiff_t eob;
+        int       cw;
+        int       rlen;
+        int       coeff;
+        int       lti;
+        lti=ti[zzi];
+        token=dct_tokens[lti++];
+        cw=OC_DCT_CODE_WORD[token];
+        if(OC_DCT_TOKEN_NEEDS_MORE(token)){
+          int eb;
+          eb=dct_tokens[lti++];
+          cw+=eb<<OC_DCT_TOKEN_EB_POS(token);
         }
-        else zzi=oc_dct_token_expand(token,eb,dct_coeffs,zzi);
+        eob=cw&0xFFF;
+        if(token==OC_DCT_TOKEN_FAT_EOB){
+          eob+=dct_tokens[lti++]<<8;
+          if(eob==0)eob=~(size_t)0>>1;
+        }
+        rlen=cw>>OC_DCT_CW_RLEN_SHIFT&0x3F;
+        cw^=-(cw&1<<OC_DCT_CW_FLIP_BIT);
+        coeff=cw>>OC_DCT_CW_MAG_SHIFT;
+        eob_runs[zzi]=eob;
+        ti[zzi]=lti;
+        zzi+=rlen;
+        dct_coeffs[dct_fzig_zag[zzi]]=(ogg_int16_t)(coeff*(int)ac_quant[zzi]);
+        zzi+=!eob;
       }
     }
     /*TODO: zzi should be exactly 64 here.
       If it's not, we should report some kind of warning.*/
     zzi=OC_MINI(zzi,64);
     dct_coeffs[0]=(ogg_int16_t)frags[fragi].dc;
-    qti=frags[fragi].mb_mode!=OC_MODE_INTRA;
     /*last_zzi is always initialized.
       If your compiler thinks otherwise, it is dumb.*/
-    oc_state_frag_recon(&_dec->state,fragi,_pli,dct_coeffs,last_zzi,zzi,
-     dc_quant[qti],_pipe->dequant[_pli][frags[fragi].qii][qti]);
+    oc_state_frag_recon(&_dec->state,fragi,_pli,
+     dct_coeffs,last_zzi,dc_quant[qti]);
   }
   _pipe->coded_fragis[_pli]+=ncoded_fragis;
   /*Right now the reconstructed MCU has only the coded blocks in it.*/
@@ -2702,26 +2658,31 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
         mult=(_dec->telemetry_bits>=0xFF?1:_dec->telemetry_bits);
         fullw=250*h*fpsd*mult/fpsn;
         padw=w-24;
-        /* header and coded block bits */
-        if(_dec->telemetry_frame_bytes<0 ||
-           _dec->telemetry_frame_bytes==OC_LOTS_OF_BITS)
+        /*Header and coded block bits.*/
+        if(_dec->telemetry_frame_bytes<0||
+         _dec->telemetry_frame_bytes==OC_LOTS_OF_BITS){
           _dec->telemetry_frame_bytes=0;
-        if(_dec->telemetry_coding_bytes<0 ||
-           _dec->telemetry_coding_bytes>_dec->telemetry_frame_bytes)
+        }
+        if(_dec->telemetry_coding_bytes<0||
+         _dec->telemetry_coding_bytes>_dec->telemetry_frame_bytes){
           _dec->telemetry_coding_bytes=0;
-        if(_dec->telemetry_mode_bytes<0 ||
-           _dec->telemetry_mode_bytes>_dec->telemetry_frame_bytes)
+        }
+        if(_dec->telemetry_mode_bytes<0||
+         _dec->telemetry_mode_bytes>_dec->telemetry_frame_bytes){
           _dec->telemetry_mode_bytes=0;
-        if(_dec->telemetry_mv_bytes<0 ||
-           _dec->telemetry_mv_bytes>_dec->telemetry_frame_bytes)
+        }
+        if(_dec->telemetry_mv_bytes<0||
+         _dec->telemetry_mv_bytes>_dec->telemetry_frame_bytes){
           _dec->telemetry_mv_bytes=0;
-        if(_dec->telemetry_qi_bytes<0 ||
-           _dec->telemetry_qi_bytes>_dec->telemetry_frame_bytes)
+        }
+        if(_dec->telemetry_qi_bytes<0||
+         _dec->telemetry_qi_bytes>_dec->telemetry_frame_bytes){
           _dec->telemetry_qi_bytes=0;
-        if(_dec->telemetry_dc_bytes<0 ||
-           _dec->telemetry_dc_bytes>_dec->telemetry_frame_bytes)
+        }
+        if(_dec->telemetry_dc_bytes<0||
+         _dec->telemetry_dc_bytes>_dec->telemetry_frame_bytes){
           _dec->telemetry_dc_bytes=0;
-
+        }
         widths[0]=padw*(_dec->telemetry_frame_bytes-_dec->telemetry_coding_bytes)/fullw;
         widths[1]=padw*(_dec->telemetry_coding_bytes-_dec->telemetry_mode_bytes)/fullw;
         widths[2]=padw*(_dec->telemetry_mode_bytes-_dec->telemetry_mv_bytes)/fullw;

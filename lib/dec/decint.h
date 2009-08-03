@@ -58,20 +58,15 @@ struct th_dec_ctx{
   oc_huff_node        *huff_tables[TH_NHUFFMAN_TABLES];
   /*The index of the first token in each plane for each coefficient.*/
   ptrdiff_t            ti0[3][64];
-  /*The index of the first extra bits entry in each plane for each
-     coefficient.*/
-  ptrdiff_t            ebi0[3][64];
   /*The number of outstanding EOB runs at the start of each coefficient in each
      plane.*/
   ptrdiff_t            eob_runs[3][64];
   /*The DCT token lists.*/
   unsigned char       *dct_tokens;
   /*The extra bits associated with DCT tokens.*/
-  ogg_uint16_t        *extra_bits;
+  unsigned char       *extra_bits;
   /*The number of dct tokens unpacked so far.*/
   int                  dct_tokens_count;
-  /*The number of extra bits entries unpacked so far.*/
-  int                  extra_bits_count;
   /*The out-of-loop post-processing level.*/
   int                  pp_level;
   /*The DC scale used for out-of-loop deblocking.*/
@@ -99,14 +94,12 @@ struct th_dec_ctx{
   int                  telemetry_mv;
   int                  telemetry_qi;
   int                  telemetry_bits;
-
   int                  telemetry_frame_bytes;
   int                  telemetry_coding_bytes;
   int                  telemetry_mode_bytes;
   int                  telemetry_mv_bytes;
   int                  telemetry_qi_bytes;
   int                  telemetry_dc_bytes;
-
   unsigned char       *telemetry_frame_data;
 # endif
 };
