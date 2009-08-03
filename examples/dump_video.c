@@ -286,6 +286,7 @@ int main(int argc,char *argv[]){
     int ret=buffer_data(infile,&oy);
     if(ret==0)break;
     while(ogg_sync_pageout(&oy,&og)>0){
+      int got_packet;
       ogg_stream_state test;
 
       /* is this a mandated initial header? If not, stop parsing */
@@ -298,10 +299,10 @@ int main(int argc,char *argv[]){
 
       ogg_stream_init(&test,ogg_page_serialno(&og));
       ogg_stream_pagein(&test,&og);
-      ogg_stream_packetpeek(&test,&op);
+      got_packet = ogg_stream_packetpeek(&test,&op);
 
       /* identify the codec: try theora */
-      if(!theora_p && (theora_processing_headers=
+      if((got_packet==1) && !theora_p && (theora_processing_headers=
        th_decode_headerin(&ti,&tc,&ts,&op))>=0){
         /* it is theora -- save this stream state */
         memcpy(&to,&test,sizeof(test));
