@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007,2009           *
  * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
@@ -40,7 +40,7 @@
 
 
 #define PROGRAM_NAME  "png2theora"
-#define PROGRAM_VERSION  "1.0"
+#define PROGRAM_VERSION  "1.1"
 
 static const char *option_output = NULL;
 static int video_fps_numerator = 24;
@@ -49,6 +49,7 @@ static int video_aspect_numerator = 0;
 static int video_aspect_denominator = 0;
 static int video_rate = 0;
 static int video_quality = 63;
+static int chroma_format = OC_PF_420;
 
 static int theora_initialized = 0;
 
@@ -60,10 +61,12 @@ static theora_info theora_ti;
 
 static char *input_filter;
 
-const char *optstring = "o:hv:V:s:S:f:F:";
+const char *optstring = "o:hv:\4:\2:V:s:S:f:F:";
 struct option options [] = {
  {"output",required_argument,NULL,'o'},
  {"help",no_argument,NULL,'h'},
+ {"chroma-444",no_argument,NULL,'\4'},
+ {"chroma-422",no_argument,NULL,'\2'},
  {"video-rate-target",required_argument,NULL,'V'},
  {"video-quality",required_argument,NULL,'v'},
  {"aspect-numerator",required_argument,NULL,'s'},
@@ -80,18 +83,21 @@ static void usage(void){
           "The input argument uses C printf format to represent a list of files,\n"
           "  i.e. file-%%06d.png to look for files file000001.png to file9999999.png \n\n"
           "Options: \n\n"
-          "  -o --output <filename.ogv>     file name for encoded output (required);\n"
-          "  -V --video-rate-target <n>     bitrate target for Theora video\n\n"
-          "  -v --video-quality <n>         Theora quality selector fro 0 to 10\n"
-          "                                 (0 yields smallest files but lowest\n"
-          "                                 video quality. 10 yields highest\n"
-          "                                 fidelity but large files).\n\n"
-          "   -s --aspect-numerator <n>     Aspect ratio numerator, default is 0\n"
-          "   -S --aspect-denominator <n>   Aspect ratio denominator, default is 0\n"
-          "   -f --framerate-numerator <n>  Frame rate numerator\n"
-          "   -F --framerate-denominator <n>Frame rate denominator\n"
-          "                                 The frame rate nominator divided by this\n"
-          "                                 determinates the frame rate in units per tick\n"
+          "  -o --output <filename.ogv>      file name for encoded output (required);\n"
+          "  -V --video-rate-target <n>      bitrate target for Theora video\n\n"
+          "  -v --video-quality <n>          Theora quality selector fro 0 to 10\n"
+          "                                  (0 yields smallest files but lowest\n"
+          "                                  video quality. 10 yields highest\n"
+          "                                  fidelity but large files)\n\n"
+          "      --chroma-444                Use 4:4:4 chroma subsampling\n"
+          "      --chroma-422                Use 4:2:2 chroma subsampling\n"
+          "                                  (4:2:0 is default)\n\n" 
+          "   -s --aspect-numerator <n>      Aspect ratio numerator, default is 0\n"
+          "   -S --aspect-denominator <n>    Aspect ratio denominator, default is 0\n"
+          "   -f --framerate-numerator <n>   Frame rate numerator\n"
+          "   -F --framerate-denominator <n> Frame rate denominator\n"
+          "                                  The frame rate nominator divided by this\n"
+          "                                  determines the frame rate in units per tick\n"
           ,PROGRAM_NAME, PROGRAM_VERSION, PROGRAM_NAME
   );
   exit(0);
@@ -179,32 +185,20 @@ theora_write_frame(unsigned long w, unsigned long h, unsigned char *yuv, int las
   /* Must hold: yuv_h >= h */
   yuv_h = (h + 15) & ~15;
 
+  yuv_buf.uv_width = (chroma_format == OC_PF_444) ? yuv_w : (yuv_w >> 1);
+  yuv_buf.uv_stride = yuv_buf.uv_width;
+  yuv_buf.uv_height = (chroma_format == OC_PF_420) ? (yuv_h >> 1) : yuv_h;
+
   yuv_y = malloc(yuv_w * yuv_h);
-  yuv_u = malloc(yuv_w * yuv_h / 4);
-  yuv_v = malloc(yuv_w * yuv_h / 4);
+  yuv_u = malloc(yuv_buf.uv_width * yuv_buf.uv_height);
+  yuv_v = malloc(yuv_buf.uv_width * yuv_buf.uv_height);
 
   yuv_buf.y_width = yuv_w;
   yuv_buf.y_height = yuv_h;
   yuv_buf.y_stride = yuv_w;
-  yuv_buf.uv_width = yuv_w >> 1;
-  yuv_buf.uv_height = yuv_h >> 1;
-  yuv_buf.uv_stride = yuv_w >> 1;
   yuv_buf.y = yuv_y;
   yuv_buf.u = yuv_u;
   yuv_buf.v = yuv_v;
-
-  for(y = 0; y < yuv_h; y++) {
-    for(x = 0; x < yuv_w; x++) {
-      yuv_y[x + y * yuv_w] = 0;
-    }
-  }
-
-  for(y = 0; y < yuv_h; y += 2) {
-    for(x = 0; x < yuv_w; x += 2) {
-      yuv_u[(x >> 1) + (y >> 1) * (yuv_w >> 1)] = 0;
-      yuv_v[(x >> 1) + (y >> 1) * (yuv_w >> 1)] = 0;
-    }
-  }
 
   for(y = 0; y < h; y++) {
     for(x = 0; x < w; x++) {
@@ -212,13 +206,31 @@ theora_write_frame(unsigned long w, unsigned long h, unsigned char *yuv, int las
     }
   }
 
-  for(y = 0; y < h; y += 2) {
-    for(x = 0; x < w; x += 2) {
-      yuv_u[(x >> 1) + (y >> 1) * (yuv_w >> 1)] =
-        yuv[3 * (x + y * w) + 1];
-      yuv_v[(x >> 1) + (y >> 1) * (yuv_w >> 1)] =
-        yuv[3 * (x + y * w) + 2];
+  if (chroma_format == OC_PF_420) {
+    for(y = 0; y < h; y += 2) {
+      for(x = 0; x < w; x += 2) {
+        yuv_u[(x >> 1) + (y >> 1) * (yuv_w >> 1)] =
+          yuv[3 * (x + y * w) + 1];
+        yuv_v[(x >> 1) + (y >> 1) * (yuv_w >> 1)] =
+          yuv[3 * (x + y * w) + 2];
+      }
     }
+  } else if (chroma_format == OC_PF_444) {
+    for(y = 0; y < h; y++) {
+      for(x = 0; x < w; x++) {
+        yuv_u[x + y * yuv_buf.uv_stride] = yuv[3 * (x + y * w) + 1];
+        yuv_v[x + y * yuv_buf.uv_stride] = yuv[3 * (x + y * w) + 2];
+      }
+    }
+  } else {  /* OC_PF_422 */
+    for(y = 0; y < h; y += 1) {
+      for(x = 0; x < w; x += 2) {
+        yuv_u[(x >> 1) + y * yuv_buf.uv_stride] =
+          yuv[3 * (x + y * w) + 1];
+        yuv_v[(x >> 1) + y * yuv_buf.uv_stride] =
+          yuv[3 * (x + y * w) + 2];
+      }
+    }    
   }
 
   if(theora_encode_YUVin(&theora_td, &yuv_buf)) {
@@ -480,6 +492,12 @@ main(int argc, char *argv[])
      case 'F':
        video_fps_denominator=rint(atof(optarg));
        break;
+     case '\2':
+       chroma_format=OC_PF_422;
+       break;
+     case '\4':
+       chroma_format=OC_PF_444;
+       break;
      default:
         usage();
         break;
@@ -537,7 +555,7 @@ main(int argc, char *argv[])
       theora_ti.aspect_numerator = video_aspect_numerator;
       theora_ti.aspect_denominator = video_aspect_denominator;
       theora_ti.colorspace = OC_CS_UNSPECIFIED;
-      theora_ti.pixelformat = OC_PF_420;
+      theora_ti.pixelformat = chroma_format;
       theora_ti.target_bitrate = video_rate;
       theora_ti.quality = video_quality;
 
