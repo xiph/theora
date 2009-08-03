@@ -74,7 +74,7 @@ void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
   else{
     /*Dequantize the DC coefficient.*/
     _dct_coeffs[0]=(ogg_int16_t)(_dct_coeffs[0]*(int)_dc_quant);
-    oc_idct8x8_mmx(_dct_coeffs,_last_zzi,_ncoefs);
+    oc_idct8x8_mmx(_dct_coeffs,_last_zzi);
   }
   /*Fill in the target buffer.*/
   frag_buf_off=_state->frag_buf_offs[_fragi];
