@@ -95,18 +95,25 @@ static const unsigned char OC_MODE_ALPHABETS[7][OC_NMODES]={
 
 /*The original DCT tokens are extended and reordered during the construction of
    the Huffman tables.
-  This revised ordering reveals essential information in the token value
-   itself; specifically, whether or not there are extra bits to read and the
-   parameter to which those extra bits are applied.
-  The token is used to fetch a code word from the following table.
+  The extension means more bits can be read with fewer calls to the bitpacker
+   during the Huffman decoding process (at the cost of larger Huffman tables),
+   and fewer tokens require additional extra bits (reducing the average storage
+   per decoded token).
+  The revised ordering reveals essential information in the token value
+   itself; specifically, whether or not there are additional extra bits to read
+   and the parameter to which those extra bits are applied.
+  The token is used to fetch a code word from the OC_DCT_CODE_WORD table below.
   The extra bits are added into code word at the bit position inferred from the
-   token value and then optionally negated, according to the 'flip' bit, giving
-   the final code word from which all the required parameters are derived.*/
+   token value, giving the final code word from which all required parameters
+   are derived.
+  The number of EOBs and the leading zero run length can be extracted directly.
+  The coefficient magnitude is optionally negated before extraction, according
+   to a 'flip' bit.*/
 
-/*The number of extra bits that are decoded with each of the internal DCT
-   tokens.*/
-static const unsigned char OC_INTERNAL_DCT_TOKEN_EXTRA_BITS[16]={
-  12,4,3,3,6,0,3,3,4,4,5,5,8,8,8,8
+/*The number of additional extra bits that are decoded with each of the
+   internal DCT tokens.*/
+static const unsigned char OC_INTERNAL_DCT_TOKEN_EXTRA_BITS[15]={
+  12,4,3,3,4,4,5,5,8,8,8,8,3,3,6
 };
 
 /*Whether or not an internal token needs any additional extra bits.*/
@@ -117,43 +124,57 @@ static const unsigned char OC_INTERNAL_DCT_TOKEN_EXTRA_BITS[16]={
 /*This token (OC_DCT_REPEAT_RUN3_TOKEN) requires more than 8 extra bits.*/
 #define OC_DCT_TOKEN_FAT_EOB (0)
 
-/*The location of the token magnitude bits in the code word.*/
-#define OC_DCT_CW_MAG_SHIFT  (21)
-/*The location of the flip bit in the code word.*/
-#define OC_DCT_CW_FLIP_BIT   (20)
-/*The location of the run legth bits in the code word.*/
-#define OC_DCT_CW_RLEN_SHIFT (12)
+/*The number of EOBs to use for an end-of-frame token.
+  Note: We want to set eobs to PTRDIFF_MAX here, but that requires C99, which
+   is not yet available everywhere; this should be equivalent.*/
+#define OC_DCT_EOB_FINISH (~(size_t)0>>1)
 
+/*The location of the (6) run legth bits in the code word.
+  These are placed at index 0 and given 8 bits (even though 6 would suffice)
+   because it may be faster to extract the lower byte on some platforms.*/
+#define OC_DCT_CW_RLEN_SHIFT (0)
+/*The location of the (12) EOB bits in the code word.*/
+#define OC_DCT_CW_EOB_SHIFT  (8)
+/*The location of the (1) flip bit in the code word.
+  This must be right under the magnitude bits.*/
+#define OC_DCT_CW_FLIP_BIT   (20)
+/*The location of the (11) token magnitude bits in the code word.
+  These must be last, and rely on a sign-extending right shift.*/
+#define OC_DCT_CW_MAG_SHIFT  (21)
+
+/*Pack the given fields into a code word.*/
 #define OC_DCT_CW_PACK(_eobs,_rlen,_mag,_flip) \
- ((_eobs)| \
+ ((_eobs)<<OC_DCT_CW_EOB_SHIFT| \
  (_rlen)<<OC_DCT_CW_RLEN_SHIFT| \
  (_flip)<<OC_DCT_CW_FLIP_BIT| \
  (_mag)-(_flip)<<OC_DCT_CW_MAG_SHIFT)
 
-/*A special codeword value that signals the end of the frame (a long EOB run of
-   zero).*/
+/*A special code word value that signals the end of the frame (a long EOB run
+   of zero).*/
 #define OC_DCT_CW_FINISH (0)
 
-/*The position at which to insert the extra bits in the code word.*/
+/*The position at which to insert the extra bits in the code word.
+  We use this formulation because Intel has no useful cmov.
+  A real architecture would probably do better with two of those.
+  This translates to 11 instructions(!), and is _still_ faster than either a
+   table lookup (just barely) or the naive double-ternary implementation (which
+   gcc translates to a jump and a cmov).
+  This assumes OC_DCT_CW_RLEN_SHIFT is zero, but could easily be reworked if
+   you want to make one of the other shifts zero.*/
 #define OC_DCT_TOKEN_EB_POS(_token) \
- ((_token)>=6?OC_DCT_CW_MAG_SHIFT:(_token)>=2?OC_DCT_CW_RLEN_SHIFT:0)
+ ((OC_DCT_CW_EOB_SHIFT-OC_DCT_CW_MAG_SHIFT&-((_token)<2)) \
+ +(OC_DCT_CW_MAG_SHIFT&-((_token)<12)))
 
 /*The code words for each internal token.
-  See the notes at OC_DCT_TOKEN_MAP for the reasons why things are slightly out
-   of order, and why there are a few gaps.*/
-static const ogg_int32_t OC_DCT_CODE_WORD[96]={
+  See the notes at OC_DCT_TOKEN_MAP for the reasons why things are out of
+   order.*/
+static const ogg_int32_t OC_DCT_CODE_WORD[92]={
+  /*These tokens require additional extra bits for the EOB count.*/
   /*OC_DCT_REPEAT_RUN3_TOKEN (12 extra bits)*/
   OC_DCT_CW_FINISH,
   /*OC_DCT_REPEAT_RUN2_TOKEN (4 extra bits)*/
   OC_DCT_CW_PACK(16, 0,  0,0),
-  /*OC_DCT_RUN_CAT1C (4 extra bits-1 already read)*/
-  OC_DCT_CW_PACK( 0,10, +1,0),
-  OC_DCT_CW_PACK( 0,10, -1,0),
-  /*OC_DCT_ZRL_TOKEN (6 extra bits)
-    Flip is set to distinguish this from OC_DCT_CW_FINISH.*/
-  OC_DCT_CW_PACK( 0, 0,  0,1),
-  /*Unused.*/
-  0,
+  /*These tokens require additional extra bits for the magnitude.*/
   /*OC_DCT_VAL_CAT5 (4 extra bits-1 already read)*/
   OC_DCT_CW_PACK( 0, 0, 13,0),
   OC_DCT_CW_PACK( 0, 0, 13,1),
@@ -168,28 +189,54 @@ static const ogg_int32_t OC_DCT_CODE_WORD[96]={
   OC_DCT_CW_PACK( 0, 0,325,0),
   OC_DCT_CW_PACK( 0, 0, 69,1),
   OC_DCT_CW_PACK( 0, 0,325,1),
-  /*Unused.*/
-  0,
+  /*These tokens require additional extra bits for the run length.*/
+  /*OC_DCT_RUN_CAT1C (4 extra bits-1 already read)*/
+  OC_DCT_CW_PACK( 0,10, +1,0),
+  OC_DCT_CW_PACK( 0,10, -1,0),
+  /*OC_DCT_ZRL_TOKEN (6 extra bits)
+    Flip is set to distinguish this from OC_DCT_CW_FINISH.*/
+  OC_DCT_CW_PACK( 0, 0,  0,1),
+  /*The remaining tokens require no additional extra bits.*/
   /*OC_DCT_EOB1_TOKEN (0 extra bits)*/
   OC_DCT_CW_PACK( 1, 0,  0,0),
   /*OC_DCT_EOB2_TOKEN (0 extra bits)*/
   OC_DCT_CW_PACK( 2, 0,  0,0),
   /*OC_DCT_EOB3_TOKEN (0 extra bits)*/
   OC_DCT_CW_PACK( 3, 0,  0,0),
-  /*OC_DCT_REPEAT_RUN0_TOKEN (2 extra bits-2 already read)*/
-  OC_DCT_CW_PACK( 4, 0,  0,0),
-  OC_DCT_CW_PACK( 5, 0,  0,0),
-  OC_DCT_CW_PACK( 6, 0,  0,0),
-  OC_DCT_CW_PACK( 7, 0,  0,0),
-  /*OC_DCT_REPEAT_RUN1_TOKEN (3 extra bits-3 already read)*/
-  OC_DCT_CW_PACK( 8, 0,  0,0),
-  OC_DCT_CW_PACK( 9, 0,  0,0),
-  OC_DCT_CW_PACK(10, 0,  0,0),
-  OC_DCT_CW_PACK(11, 0,  0,0),
-  OC_DCT_CW_PACK(12, 0,  0,0),
-  OC_DCT_CW_PACK(13, 0,  0,0),
-  OC_DCT_CW_PACK(14, 0,  0,0),
-  OC_DCT_CW_PACK(15, 0,  0,0),
+  /*OC_DCT_RUN_CAT1A (1 extra bit-1 already read)x5*/
+  OC_DCT_CW_PACK( 0, 1, +1,0),
+  OC_DCT_CW_PACK( 0, 1, -1,0),
+  OC_DCT_CW_PACK( 0, 2, +1,0),
+  OC_DCT_CW_PACK( 0, 2, -1,0),
+  OC_DCT_CW_PACK( 0, 3, +1,0),
+  OC_DCT_CW_PACK( 0, 3, -1,0),
+  OC_DCT_CW_PACK( 0, 4, +1,0),
+  OC_DCT_CW_PACK( 0, 4, -1,0),
+  OC_DCT_CW_PACK( 0, 5, +1,0),
+  OC_DCT_CW_PACK( 0, 5, -1,0),
+  /*OC_DCT_RUN_CAT2A (2 extra bits-2 already read)*/
+  OC_DCT_CW_PACK( 0, 1, +2,0),
+  OC_DCT_CW_PACK( 0, 1, +3,0),
+  OC_DCT_CW_PACK( 0, 1, -2,0),
+  OC_DCT_CW_PACK( 0, 1, -3,0),
+  /*OC_DCT_RUN_CAT1B (3 extra bits-3 already read)*/
+  OC_DCT_CW_PACK( 0, 6, +1,0),
+  OC_DCT_CW_PACK( 0, 7, +1,0),
+  OC_DCT_CW_PACK( 0, 8, +1,0),
+  OC_DCT_CW_PACK( 0, 9, +1,0),
+  OC_DCT_CW_PACK( 0, 6, -1,0),
+  OC_DCT_CW_PACK( 0, 7, -1,0),
+  OC_DCT_CW_PACK( 0, 8, -1,0),
+  OC_DCT_CW_PACK( 0, 9, -1,0),
+  /*OC_DCT_RUN_CAT2B (3 extra bits-3 already read)*/
+  OC_DCT_CW_PACK( 0, 2, +2,0),
+  OC_DCT_CW_PACK( 0, 3, +2,0),
+  OC_DCT_CW_PACK( 0, 2, +3,0),
+  OC_DCT_CW_PACK( 0, 3, +3,0),
+  OC_DCT_CW_PACK( 0, 2, -2,0),
+  OC_DCT_CW_PACK( 0, 3, -2,0),
+  OC_DCT_CW_PACK( 0, 2, -3,0),
+  OC_DCT_CW_PACK( 0, 3, -3,0),
   /*OC_DCT_SHORT_ZRL_TOKEN (3 extra bits-3 already read)
     Flip is set on the first one to distinguish it from OC_DCT_CW_FINISH.*/
   OC_DCT_CW_PACK( 0, 0,  0,1),
@@ -208,7 +255,7 @@ static const ogg_int32_t OC_DCT_CODE_WORD[96]={
   OC_DCT_CW_PACK( 0, 0, +2,0),
   /*OC_MINUS_TWO_TOKEN (0 extra bits)*/
   OC_DCT_CW_PACK( 0, 0, -2,0),
-  /*OC_DCT_VAL_CAT2 (1 extra bit-1 already read)*/
+  /*OC_DCT_VAL_CAT2 (1 extra bit-1 already read)x4*/
   OC_DCT_CW_PACK( 0, 0, +3,0),
   OC_DCT_CW_PACK( 0, 0, -3,0),
   OC_DCT_CW_PACK( 0, 0, +4,0),
@@ -231,40 +278,20 @@ static const ogg_int32_t OC_DCT_CODE_WORD[96]={
   OC_DCT_CW_PACK( 0, 0,-10,0),
   OC_DCT_CW_PACK( 0, 0,-11,0),
   OC_DCT_CW_PACK( 0, 0,-12,0),
-  /*OC_DCT_RUN_CAT1B (3 extra bits-3 already read)*/
-  OC_DCT_CW_PACK( 0, 6, +1,0),
-  OC_DCT_CW_PACK( 0, 7, +1,0),
-  OC_DCT_CW_PACK( 0, 8, +1,0),
-  OC_DCT_CW_PACK( 0, 9, +1,0),
-  OC_DCT_CW_PACK( 0, 6, -1,0),
-  OC_DCT_CW_PACK( 0, 7, -1,0),
-  OC_DCT_CW_PACK( 0, 8, -1,0),
-  OC_DCT_CW_PACK( 0, 9, -1,0),
-  /*OC_DCT_RUN_CAT2B (3 extra bits-3 already read)*/
-  OC_DCT_CW_PACK( 0, 2, +2,0),
-  OC_DCT_CW_PACK( 0, 3, +2,0),
-  OC_DCT_CW_PACK( 0, 2, +3,0),
-  OC_DCT_CW_PACK( 0, 3, +3,0),
-  OC_DCT_CW_PACK( 0, 2, -2,0),
-  OC_DCT_CW_PACK( 0, 3, -2,0),
-  OC_DCT_CW_PACK( 0, 2, -3,0),
-  OC_DCT_CW_PACK( 0, 3, -3,0),
-  /*OC_DCT_RUN_CAT2A (2 extra bits-2 already read)*/
-  OC_DCT_CW_PACK( 0, 1, +2,0),
-  OC_DCT_CW_PACK( 0, 1, +3,0),
-  OC_DCT_CW_PACK( 0, 1, -2,0),
-  OC_DCT_CW_PACK( 0, 1, -3,0),
-  /*OC_DCT_RUN_CAT1A (1 extra bit-1 already read)*/
-  OC_DCT_CW_PACK( 0, 1, +1,0),
-  OC_DCT_CW_PACK( 0, 1, -1,0),
-  OC_DCT_CW_PACK( 0, 2, +1,0),
-  OC_DCT_CW_PACK( 0, 2, -1,0),
-  OC_DCT_CW_PACK( 0, 3, +1,0),
-  OC_DCT_CW_PACK( 0, 3, -1,0),
-  OC_DCT_CW_PACK( 0, 4, +1,0),
-  OC_DCT_CW_PACK( 0, 4, -1,0),
-  OC_DCT_CW_PACK( 0, 5, +1,0),
-  OC_DCT_CW_PACK( 0, 5, -1,0),
+  /*OC_DCT_REPEAT_RUN1_TOKEN (3 extra bits-3 already read)*/
+  OC_DCT_CW_PACK( 8, 0,  0,0),
+  OC_DCT_CW_PACK( 9, 0,  0,0),
+  OC_DCT_CW_PACK(10, 0,  0,0),
+  OC_DCT_CW_PACK(11, 0,  0,0),
+  OC_DCT_CW_PACK(12, 0,  0,0),
+  OC_DCT_CW_PACK(13, 0,  0,0),
+  OC_DCT_CW_PACK(14, 0,  0,0),
+  OC_DCT_CW_PACK(15, 0,  0,0),
+  /*OC_DCT_REPEAT_RUN0_TOKEN (2 extra bits-2 already read)*/
+  OC_DCT_CW_PACK( 4, 0,  0,0),
+  OC_DCT_CW_PACK( 5, 0,  0,0),
+  OC_DCT_CW_PACK( 6, 0,  0,0),
+  OC_DCT_CW_PACK( 7, 0,  0,0),
 };
 
 
@@ -394,7 +421,7 @@ static void oc_dec_clear(oc_dec_ctx *_dec){
   _ogg_free(_dec->pp_frame_data);
   _ogg_free(_dec->variances);
   _ogg_free(_dec->dc_qis);
-  oc_free_2d(_dec->dct_tokens);
+  _ogg_free(_dec->dct_tokens);
   oc_huff_trees_clear(_dec->huff_tables);
   oc_state_clear(&_dec->state);
 }
@@ -979,10 +1006,8 @@ static ptrdiff_t oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[2],
       }
       else eb=0;
       cw=OC_DCT_CODE_WORD[token]+eb;
-      eobs=cw&0xFFF;
-      /*Note: We want to set eobs to PTRDIFF_MAX here, but that requires C99,
-         which is not yet available everywhere; this should be equivalent.*/
-      if(cw==OC_DCT_CW_FINISH)eobs=~(size_t)0>>1;
+      eobs=cw>>OC_DCT_CW_EOB_SHIFT&0xFFF;
+      if(cw==OC_DCT_CW_FINISH)eobs=OC_DCT_EOB_FINISH;
       if(eobs){
         eobi=OC_MINI(eobs,ncoded_fragis-fragii);
         eob_count+=eobi;
@@ -991,7 +1016,7 @@ static ptrdiff_t oc_dec_dc_coeff_unpack(oc_dec_ctx *_dec,int _huff_idxs[2],
       }
       else{
         int coeff;
-        skip=cw>>OC_DCT_CW_RLEN_SHIFT&0x3F;
+        skip=(unsigned char)(cw>>OC_DCT_CW_RLEN_SHIFT);
         cw^=-(cw&1<<OC_DCT_CW_FLIP_BIT);
         coeff=cw>>OC_DCT_CW_MAG_SHIFT;
         if(skip)coeff=0;
@@ -1059,11 +1084,9 @@ static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[2],
       }
       else eb=0;
       cw=OC_DCT_CODE_WORD[token]+eb;
-      skip=cw>>OC_DCT_CW_RLEN_SHIFT&0x3F;
-      _eobs=cw&0xFFF;
-      /*Note: We want to set eobs to PTRDIFF_MAX here, but that requires C99,
-         which is not yet available everywhere; this should be equivalent.*/
-      if(cw==OC_DCT_CW_FINISH)_eobs=~(size_t)0>>1;
+      skip=(unsigned char)(cw>>OC_DCT_CW_RLEN_SHIFT);
+      _eobs=cw>>OC_DCT_CW_EOB_SHIFT&0xFFF;
+      if(cw==OC_DCT_CW_FINISH)_eobs=OC_DCT_EOB_FINISH;
       if(_eobs==0){
         run_counts[skip]++;
         ntoks++;
@@ -1500,17 +1523,18 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
         lti=ti[zzi];
         token=dct_tokens[lti++];
         cw=OC_DCT_CODE_WORD[token];
+        /*These parts could be done branchless, but the branches are fairly
+           predictable and the C code translates into more than a few
+           instructions, so it's worth it to avoid them.*/
         if(OC_DCT_TOKEN_NEEDS_MORE(token)){
-          int eb;
-          eb=dct_tokens[lti++];
-          cw+=eb<<OC_DCT_TOKEN_EB_POS(token);
+          cw+=dct_tokens[lti++]<<OC_DCT_TOKEN_EB_POS(token);
         }
-        eob=cw&0xFFF;
+        eob=cw>>OC_DCT_CW_EOB_SHIFT&0xFFF;
         if(token==OC_DCT_TOKEN_FAT_EOB){
           eob+=dct_tokens[lti++]<<8;
-          if(eob==0)eob=~(size_t)0>>1;
+          if(eob==0)eob=OC_DCT_EOB_FINISH;
         }
-        rlen=cw>>OC_DCT_CW_RLEN_SHIFT&0x3F;
+        rlen=(unsigned char)(cw>>OC_DCT_CW_RLEN_SHIFT);
         cw^=-(cw&1<<OC_DCT_CW_FLIP_BIT);
         coeff=cw>>OC_DCT_CW_MAG_SHIFT;
         eob_runs[zzi]=eob;

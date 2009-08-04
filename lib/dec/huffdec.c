@@ -35,65 +35,67 @@ static const unsigned char OC_DCT_TOKEN_MAP_ENTRIES[TH_NDCT_TOKENS]={
    can be masked off the least significant bits of its internal token index.
   In addition, all of the tokens which require additional extra bits are placed
    at the start of the list, and grouped by type.
-  These requirements leave things slightly out of order, and leave a few gaps.*/
-static const unsigned char OC_DCT_TOKEN_MAP[TH_NDCT_TOKENS][8]={
+  OC_DCT_REPEAT_RUN3_TOKEN is placed first, as it is an extra-special case, so
+   giving it index 0 may simplify comparisons on some architectures.
+  These requirements require some substantial reordering.*/
+static const unsigned char OC_DCT_TOKEN_MAP[TH_NDCT_TOKENS]={
   /*OC_DCT_EOB1_TOKEN (0 extra bits)*/
-  {17},
+  15,
   /*OC_DCT_EOB2_TOKEN (0 extra bits)*/
-  {18},
+  16,
   /*OC_DCT_EOB3_TOKEN (0 extra bits)*/
-  {19},
+  17,
   /*OC_DCT_REPEAT_RUN0_TOKEN (2 extra bits)*/
-  {20,21,22,23},
+  88,
   /*OC_DCT_REPEAT_RUN1_TOKEN (3 extra bits)*/
-  {24,25,26,27,28,29,30,31},
+  80,
   /*OC_DCT_REPEAT_RUN2_TOKEN (4 extra bits)*/
-  {1},
+   1,
   /*OC_DCT_REPEAT_RUN3_TOKEN (12 extra bits)*/
-  {0},
+   0,
   /*OC_DCT_SHORT_ZRL_TOKEN (3 extra bits)*/
-  {32,33,34,35,36,37,38,39},
+  48,
   /*OC_DCT_ZRL_TOKEN (6 extra bits)*/
-  {4},
+  14,
   /*OC_ONE_TOKEN (0 extra bits)*/
-  {40},
+  56,
   /*OC_MINUS_ONE_TOKEN (0 extra bits)*/
-  {41},
+  57,
   /*OC_TWO_TOKEN (0 extra bits)*/
-  {42},
+  58,
   /*OC_MINUS_TWO_TOKEN (0 extra bits)*/
-  {43},
+  59,
   /*OC_DCT_VAL_CAT2 (1 extra bit)*/
-  {44,45},
-  {46,47},
-  {48,49},
-  {50,51},
+  60,
+  62,
+  64,
+  66,
   /*OC_DCT_VAL_CAT3 (2 extra bits)*/
-  {52,53,54,55},
+  68,
   /*OC_DCT_VAL_CAT4 (3 extra bits)*/
-  {56,57,58,59,60,61,62,63},
+  72,
   /*OC_DCT_VAL_CAT5 (4 extra bits)*/
-  {6,7},
+   2,
   /*OC_DCT_VAL_CAT6 (5 extra bits)*/
-  {8,9},
+   4,
   /*OC_DCT_VAL_CAT7 (6 extra bits)*/
-  {10,11},
+   6,
   /*OC_DCT_VAL_CAT8 (10 extra bits)*/
-  {12,13,14,15},
+   8,
   /*OC_DCT_RUN_CAT1A (1 extra bit)*/
-  {84,85},
-  {86,87},
-  {88,89},
-  {90,91},
-  {92,93},
+  18,
+  20,
+  22,
+  24,
+  26,
   /*OC_DCT_RUN_CAT1B (3 extra bits)*/
-  {64,65,66,67,68,69,70,71},
+  32,
   /*OC_DCT_RUN_CAT1C (4 extra bits)*/
-  {2,3},
+  12,
   /*OC_DCT_RUN_CAT2A (2 extra bits)*/
-  {80,81,82,83},
+  28,
   /*OC_DCT_RUN_CAT2B (3 extra bits)*/
-  {72,73,74,75,76,77,78,79}
+  40
 };
 
 /*These three functions are really part of the bitpack.c module, but
@@ -244,6 +246,7 @@ static int oc_huff_tree_unpack(oc_pack_buf *_opb,
   /*Read a leaf node:*/
   else{
     int ntokens;
+    int token;
     int i;
     bits=oc_pack_read(_opb,OC_NDCT_TOKEN_BITS);
     if(oc_pack_bytes_left(_opb)<0)return TH_EBADHEADER;
@@ -263,11 +266,12 @@ static int oc_huff_tree_unpack(oc_pack_buf *_opb,
       }
     }
     /*And now the leaf nodes with those tokens.*/
+    token=OC_DCT_TOKEN_MAP[bits];
     for(i=0;i<ntokens;i++){
       binode=_binodes+nused++;
       binode->nbits=0;
       binode->depth=1;
-      binode->token=OC_DCT_TOKEN_MAP[bits][i];
+      binode->token=token+i;
     }
   }
   return nused;
