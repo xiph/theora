@@ -327,10 +327,11 @@ void oc_enc_rc_resize(oc_enc_ctx *_enc){
     int cfm;
     int buf_delay;
     int reset_window;
-    reset_window=_enc->rc.frame_metrics==NULL&&buf_delay<
-     _enc->rc.frames_total[0]+_enc->rc.frames_total[1]+_enc->rc.frames_total[2];
-    cfm=_enc->rc.cframe_metrics;
     buf_delay=_enc->rc.buf_delay;
+    reset_window=_enc->rc.frame_metrics==NULL&&(_enc->rc.frames_total[0]==0||
+     buf_delay<_enc->rc.frames_total[0]+_enc->rc.frames_total[1]
+     +_enc->rc.frames_total[2]);
+    cfm=_enc->rc.cframe_metrics;
     /*Only try to resize the frame metrics buffer if a) it's too small and
        b) we were using a finite buffer, or are about to start.*/
     if(cfm<buf_delay&&(_enc->rc.frame_metrics!=NULL||reset_window)){
@@ -340,9 +341,12 @@ void oc_enc_rc_resize(oc_enc_ctx *_enc){
       fm=(oc_frame_metrics *)_ogg_realloc(_enc->rc.frame_metrics,
        buf_delay*sizeof(*_enc->rc.frame_metrics));
       if(fm==NULL){
-        /*We failed to allocate a finite buffer; revert to the largest finite
-           size previously set, or to whole-file buffering if we were using
-           that.*/
+        /*We failed to allocate a finite buffer.*/
+        /*If we don't have a valid 2-pass header yet, just return; we'll reset
+           the buffer size when we read the header.*/
+        if(_enc->rc.frames_total[0]==0)return;
+        /*Otherwise revert to the largest finite buffer previously set, or to
+           whole-file buffering if we were still using that.*/
         _enc->rc.buf_delay=_enc->rc.frame_metrics!=NULL?
          cfm:_enc->rc.frames_total[0]+_enc->rc.frames_total[1]
          +_enc->rc.frames_total[2];
@@ -922,8 +926,7 @@ int oc_enc_rc_2pass_in(oc_enc_ctx *_enc,unsigned char *_buf,size_t _bytes){
   if(_enc->rc.twopass==0){
     _enc->rc.twopass=2;
     _enc->rc.twopass_buffer_fill=0;
-    _enc->rc.frames_total[0]=_enc->rc.frames_total[1]=
-     _enc->rc.frames_total[2]=0;
+    _enc->rc.frames_total[0]=0;
     _enc->rc.nframe_metrics=0;
     _enc->rc.cframe_metrics=0;
     _enc->rc.frame_metrics_head=0;
