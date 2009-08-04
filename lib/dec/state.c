@@ -432,6 +432,11 @@ static int oc_state_frarray_init(oc_theora_state *_state){
   _state->mb_maps=_ogg_calloc(nmbs,sizeof(*_state->mb_maps));
   _state->mb_modes=_ogg_calloc(nmbs,sizeof(*_state->mb_modes));
   _state->coded_fragis=_ogg_malloc(nfrags*sizeof(*_state->coded_fragis));
+  if(_state->frags==NULL||_state->frag_mvs==NULL||_state->sb_maps==NULL||
+   _state->sb_flags==NULL||_state->mb_maps==NULL||_state->mb_modes==NULL||
+   _state->coded_fragis==NULL){
+    return TH_EFAULT;
+  }
   /*Create the mapping from super blocks to fragments.*/
   for(pli=0;pli<3;pli++){
     oc_fragment_plane *fplane;
@@ -506,6 +511,13 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state,int _nrefs){
     return TH_EIMPL;
   }
   ref_frame_data=_ogg_malloc(ref_frame_data_sz);
+  frag_buf_offs=_state->frag_buf_offs=
+   _ogg_malloc(_state->nfrags*sizeof(*frag_buf_offs));
+  if(ref_frame_data==NULL||frag_buf_offs==NULL){
+    _ogg_free(frag_buf_offs);
+    _ogg_free(ref_frame_data);
+    return TH_EFAULT;
+  }
   /*Set up the width, height and stride for the image buffers.*/
   _state->ref_frame_bufs[0][0].width=info->frame_width;
   _state->ref_frame_bufs[0][0].height=info->frame_height;
@@ -539,8 +551,6 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state,int _nrefs){
   _state->ref_ystride[1]=_state->ref_ystride[2]=-chstride;
   /*Initialize the fragment buffer offsets.*/
   ref_frame_data=_state->ref_frame_data[0];
-  frag_buf_offs=_state->frag_buf_offs=
-   _ogg_malloc(_state->nfrags*sizeof(*frag_buf_offs));
   fragi=0;
   for(pli=0;pli<3;pli++){
     th_img_plane      *iplane;
@@ -640,9 +650,11 @@ int oc_state_init(oc_theora_state *_state,const th_info *_info,int _nrefs){
   _state->frame_type=OC_UNKWN_FRAME;
   oc_state_vtable_init(_state);
   ret=oc_state_frarray_init(_state);
-  if(ret<0)return ret;
-  ret=oc_state_ref_bufs_init(_state,_nrefs);
-  if(ret<0)return ret;
+  if(ret>=0)ret=oc_state_ref_bufs_init(_state,_nrefs);
+  if(ret<0){
+    oc_state_frarray_clear(_state);
+    return ret;
+  }
   /*If the keyframe_granule_shift is out of range, use the maximum allowable
      value.*/
   if(_info->keyframe_granule_shift<0||_info->keyframe_granule_shift>31){
@@ -1085,6 +1097,10 @@ int oc_state_dump_frame(const oc_theora_state *_state,int _frame,
   fp=fopen(fname,"wb");
   if(fp==NULL)return TH_EFAULT;
   image=(png_bytep *)oc_malloc_2d(height,6*width,sizeof(**image));
+  if(image==NULL){
+    fclose(fp);
+    return TH_EFAULT;
+  }
   png=png_create_write_struct(PNG_LIBPNG_VER_STRING,NULL,NULL,NULL);
   if(png==NULL){
     oc_free_2d(image);

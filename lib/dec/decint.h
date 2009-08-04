@@ -80,7 +80,7 @@ struct th_dec_ctx{
   /*The storage for the post-processed frame buffer.*/
   unsigned char       *pp_frame_data;
   /*Whether or not the post-processsed frame buffer has space for chroma.*/
-  int                  pp_frame_has_chroma;
+  int                  pp_frame_state;
   /*The buffer used for the post-processed frame.
     Note that this is _not_ guaranteed to have the same strides and offsets as
      the reference frame buffers.*/

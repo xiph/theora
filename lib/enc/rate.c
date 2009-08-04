@@ -327,15 +327,29 @@ void oc_enc_rc_resize(oc_enc_ctx *_enc){
     int cfm;
     int buf_delay;
     int reset_window;
-    reset_window=_enc->rc.frame_metrics==NULL;
+    reset_window=_enc->rc.frame_metrics==NULL&&buf_delay<
+     _enc->rc.frames_total[0]+_enc->rc.frames_total[1]+_enc->rc.frames_total[2];
     cfm=_enc->rc.cframe_metrics;
     buf_delay=_enc->rc.buf_delay;
-    if(cfm<buf_delay){
+    /*Only try to resize the frame metrics buffer if a) it's too small and
+       b) we were using a finite buffer, or are about to start.*/
+    if(cfm<buf_delay&&(_enc->rc.frame_metrics!=NULL||reset_window)){
       oc_frame_metrics *fm;
       int               nfm;
       int               fmh;
-      fm=_enc->rc.frame_metrics=(oc_frame_metrics *)_ogg_realloc(
-       _enc->rc.frame_metrics,buf_delay*sizeof(*_enc->rc.frame_metrics));
+      fm=(oc_frame_metrics *)_ogg_realloc(_enc->rc.frame_metrics,
+       buf_delay*sizeof(*_enc->rc.frame_metrics));
+      if(fm==NULL){
+        /*We failed to allocate a finite buffer; revert to the largest finite
+           size previously set, or to whole-file buffering if we were using
+           that.*/
+        _enc->rc.buf_delay=_enc->rc.frame_metrics!=NULL?
+         cfm:_enc->rc.frames_total[0]+_enc->rc.frames_total[1]
+         +_enc->rc.frames_total[2];
+        oc_enc_rc_resize(_enc);
+        return;
+      }
+      _enc->rc.frame_metrics=fm;
       _enc->rc.cframe_metrics=buf_delay;
       /*Re-organize the circular buffer.*/
       fmh=_enc->rc.frame_metrics_head;

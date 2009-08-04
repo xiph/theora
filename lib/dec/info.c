@@ -55,14 +55,21 @@ void th_comment_init(th_comment *_tc){
 }
 
 void th_comment_add(th_comment *_tc,char *_comment){
-  int comment_len;
-  _tc->user_comments=_ogg_realloc(_tc->user_comments,
+  char **user_comments;
+  int   *comment_lengths;
+  int    comment_len;
+  user_comments=_ogg_realloc(_tc->user_comments,
    (_tc->comments+2)*sizeof(*_tc->user_comments));
-  _tc->comment_lengths=_ogg_realloc(_tc->comment_lengths,
+  if(user_comments==NULL)return;
+  _tc->user_comments=user_comments;
+  comment_lengths=_ogg_realloc(_tc->comment_lengths,
    (_tc->comments+2)*sizeof(*_tc->comment_lengths));
+  if(comment_lengths==NULL)return;
+  _tc->comment_lengths=comment_lengths;
   comment_len=strlen(_comment);
-  _tc->comment_lengths[_tc->comments]=comment_len;
-  _tc->user_comments[_tc->comments]=_ogg_malloc(comment_len+1);
+  comment_lengths[_tc->comments]=comment_len;
+  user_comments[_tc->comments]=_ogg_malloc(comment_len+1);
+  if(user_comments[_tc->comments]==NULL)return;
   memcpy(_tc->user_comments[_tc->comments],_comment,comment_len+1);
   _tc->comments++;
   _tc->user_comments[_tc->comments]=NULL;
@@ -76,6 +83,7 @@ void th_comment_add_tag(th_comment *_tc,char *_tag,char *_val){
   val_len=strlen(_val);
   /*+2 for '=' and '\0'.*/
   comment=_ogg_malloc(tag_len+val_len+2);
+  if(comment==NULL)return;
   memcpy(comment,_tag,tag_len);
   comment[tag_len]='=';
   memcpy(comment+tag_len+1,_val,val_len+1);

@@ -49,6 +49,7 @@ int theora_encode_init(theora_state *_te,theora_info *_ci){
     This avoids having to figure out whether or not we need to free the info
      struct in either theora_info_clear() or theora_clear().*/
   apiinfo=(th_api_info *)_ogg_malloc(sizeof(*apiinfo));
+  if(apiinfo==NULL)return TH_EFAULT;
   /*Make our own copy of the info struct, since its lifetime should be
      independent of the one we were passed in.*/
   *&apiinfo->info=*_ci;
@@ -136,9 +137,15 @@ int theora_encode_comment(theora_comment *_tc,ogg_packet *_op){
       This part works nothing like the Vorbis API, and the documentation on it
        has been wrong for some time, claiming libtheora owned the memory.*/
     buf=_ogg_malloc(_op->bytes);
-    memcpy(buf,_op->packet,_op->bytes);
-    _op->packet=buf;
-    ret=0;
+    if(buf==NULL){
+      _op->packet=NULL;
+      ret=TH_EFAULT;
+    }
+    else{
+      memcpy(buf,_op->packet,_op->bytes);
+      _op->packet=buf;
+      ret=0;
+    }
   }
   oggpack_writeclear(&opb);
   return ret;

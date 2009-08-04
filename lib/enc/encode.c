@@ -1034,6 +1034,8 @@ static int oc_enc_set_quant_params(oc_enc_ctx *_enc,
   return 0;
 }
 
+static void oc_enc_clear(oc_enc_ctx *_enc);
+
 static int oc_enc_init(oc_enc_ctx *_enc,const th_info *_info){
   th_info   info;
   size_t    mcu_nmbs;
@@ -1081,13 +1083,28 @@ static int oc_enc_init(oc_enc_ctx *_enc,const th_info *_info){
 #else
   oc_enc_vtable_init_c(_enc);
 #endif
+  _enc->keyframe_frequency_force=1<<_enc->state.info.keyframe_granule_shift;
+  _enc->state.qis[0]=_enc->state.info.quality;
+  _enc->state.nqis=1;
+  oc_rc_state_init(&_enc->rc,_enc);
+  oggpackB_writeinit(&_enc->opb);
+  if(_enc->mb_info==NULL||_enc->frag_dc==NULL||_enc->coded_mbis==NULL||
+   _enc->mcu_skip_ssd==NULL||_enc->dct_tokens[0]==NULL||
+   _enc->dct_tokens[1]==NULL||_enc->dct_tokens[2]==NULL||
+   _enc->extra_bits[0]==NULL||_enc->extra_bits[1]==NULL||
+   _enc->extra_bits[2]==NULL
+#if defined(OC_COLLECT_METRICS)
+   ||_enc->frag_satd==NULL||_enc->frag_ssd==NULL
+#endif
+   ){
+    oc_enc_clear(_enc);
+    return TH_EFAULT;
+  }
   oc_mode_scheme_chooser_init(&_enc->chooser);
   oc_enc_mb_info_init(_enc);
   memset(_enc->huff_idxs,0,sizeof(_enc->huff_idxs));
   /*Reset the packet-out state machine.*/
-  oggpackB_writeinit(&_enc->opb);
   _enc->packet_state=OC_PACKET_INFO_HDR;
-  _enc->keyframe_frequency_force=1<<_enc->state.info.keyframe_granule_shift;
   _enc->dup_count=0;
   _enc->nqueued_dups=0;
   _enc->prev_dup_count=0;
@@ -1097,13 +1114,10 @@ static int oc_enc_init(oc_enc_ctx *_enc,const th_info *_info){
   _enc->coded_inter_frame=0;
   memcpy(_enc->huff_codes,TH_VP31_HUFF_CODES,sizeof(_enc->huff_codes));
   oc_enc_set_quant_params(_enc,NULL);
-  _enc->state.qis[0]=_enc->state.info.quality;
-  _enc->state.nqis=1;
-  oc_rc_state_init(&_enc->rc,_enc);
   return 0;
 }
 
-static void oc_enc_clear(th_enc_ctx *_enc){
+static void oc_enc_clear(oc_enc_ctx *_enc){
   int pli;
   oc_rc_state_clear(&_enc->rc);
 #if defined(OC_COLLECT_METRICS)
@@ -1207,7 +1221,7 @@ th_enc_ctx *th_encode_alloc(const th_info *_info){
   oc_enc_ctx *enc;
   if(_info==NULL)return NULL;
   enc=_ogg_malloc(sizeof(*enc));
-  if(oc_enc_init(enc,_info)<0){
+  if(enc==NULL||oc_enc_init(enc,_info)<0){
     _ogg_free(enc);
     return NULL;
   }
@@ -1547,14 +1561,18 @@ int th_encode_packetout(th_enc_ctx *_enc,int _last_p,ogg_packet *_op){
   if(_enc==NULL||_op==NULL)return TH_EFAULT;
   if(_enc->packet_state==OC_PACKET_READY){
     _enc->packet_state=OC_PACKET_EMPTY;
+    if(_enc->rc.twopass!=1){
+      unsigned char *packet;
+      packet=oggpackB_get_buffer(&_enc->opb);
+      /*If there's no packet, malloc failed while writing; it's lost forever.*/
+      if(packet==NULL)return TH_EFAULT;
+      _op->packet=packet;
+      _op->bytes=oggpackB_bytes(&_enc->opb);
+    }
     /*For the first pass in 2-pass mode, don't emit any packet data.*/
-    if(_enc->rc.twopass==1){
+    else{
       _op->packet=NULL;
       _op->bytes=0;
-    }
-    else{
-      _op->packet=oggpackB_get_buffer(&_enc->opb);
-      _op->bytes=oggpackB_bytes(&_enc->opb);
     }
   }
   else if(_enc->packet_state==OC_PACKET_EMPTY){

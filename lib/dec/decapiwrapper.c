@@ -96,6 +96,7 @@ int theora_decode_init(theora_state *_td,theora_info *_ci){
     This avoids having to figure out whether or not we need to free the info
      struct in either theora_info_clear() or theora_clear().*/
   apiinfo=(th_api_info *)_ogg_calloc(1,sizeof(*apiinfo));
+  if(apiinfo==NULL)return OC_FAULT;
   /*Make our own copy of the info struct, since its lifetime should be
      independent of the one we were passed in.*/
   *&apiinfo->info=*_ci;
@@ -131,6 +132,7 @@ int theora_decode_header(theora_info *_ci,theora_comment *_cc,ogg_packet *_op){
      theora_info struct like the ones that are used in a theora_state struct.*/
   if(api==NULL){
     _ci->codec_setup=_ogg_calloc(1,sizeof(*api));
+    if(_ci->codec_setup==NULL)return OC_FAULT;
     api=(th_api_wrapper *)_ci->codec_setup;
     api->clear=(oc_setup_clear_func)th_dec_api_clear;
   }

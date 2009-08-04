@@ -21,6 +21,8 @@ int oc_state_flushheader(oc_theora_state *_state,int *_packet_state,
  oggpack_buffer *_opb,const th_quant_info *_qinfo,
  const th_huff_code _codes[TH_NHUFFMAN_TABLES][TH_NDCT_TOKENS],
  const char *_vendor,th_comment *_tc,ogg_packet *_op){
+  unsigned char *packet;
+  int            b_o_s;
   if(_op==NULL)return TH_EFAULT;
   switch(*_packet_state){
     /*Codec info header.*/
@@ -53,7 +55,7 @@ int oc_state_flushheader(oc_theora_state *_state,int *_packet_state,
       oggpackB_write(_opb,_state->info.pixel_fmt,2);
       /*Spare configuration bits.*/
       oggpackB_write(_opb,0,3);
-      _op->b_o_s=1;
+      b_o_s=1;
     }break;
     /*Comment header.*/
     case OC_PACKET_COMMENT_HDR:{
@@ -77,7 +79,7 @@ int oc_state_flushheader(oc_theora_state *_state,int *_packet_state,
         }
         else oggpack_write(_opb,0,32);
       }
-      _op->b_o_s=0;
+      b_o_s=0;
     }break;
     /*Codec setup header.*/
     case OC_PACKET_SETUP_HDR:{
@@ -95,7 +97,7 @@ int oc_state_flushheader(oc_theora_state *_state,int *_packet_state,
          are set.
         If you see, it's a good chance memory is being corrupted.*/
       if(ret<0)return ret;
-      _op->b_o_s=0;
+      b_o_s=0;
     }break;
     /*No more headers to emit.*/
     default:return 0;
@@ -106,8 +108,12 @@ int oc_state_flushheader(oc_theora_state *_state,int *_packet_state,
     Vorbis is little better: it hands back buffers that it will free the next
      time the headers are requested, or when the encoder is cleared.
     Hopefully libogg2 will make this much cleaner.*/
-  _op->packet=oggpackB_get_buffer(_opb);
+  packet=oggpackB_get_buffer(_opb);
+  /*If there's no packet, malloc failed while writing.*/
+  if(packet==NULL)return TH_EFAULT;
+  _op->packet=packet;
   _op->bytes=oggpackB_bytes(_opb);
+  _op->b_o_s=b_o_s;
   _op->e_o_s=0;
   _op->granulepos=0;
   _op->packetno=*_packet_state+3;

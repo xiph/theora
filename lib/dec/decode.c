@@ -370,8 +370,23 @@ static int oc_dec_init(oc_dec_ctx *_dec,const th_info *_info,
   int ret;
   ret=oc_state_init(&_dec->state,_info,3);
   if(ret<0)return ret;
-  oc_huff_trees_copy(_dec->huff_tables,
+  ret=oc_huff_trees_copy(_dec->huff_tables,
    (const oc_huff_node *const *)_setup->huff_tables);
+  if(ret<0){
+    oc_state_clear(&_dec->state);
+    return ret;
+  }
+  /*For each fragment, allocate one byte for every DCT coefficient token, plus
+     one byte for extra-bits for each token, plus one more byte for the long
+     EOB run, just in case it's the very last token and has a run length of
+     one.*/
+  _dec->dct_tokens=(unsigned char *)_ogg_malloc((64+64+1)*
+   _dec->state.nfrags*sizeof(_dec->dct_tokens[0]));
+  if(_dec->dct_tokens==NULL){
+    oc_huff_trees_clear(_dec->huff_tables);
+    oc_state_clear(&_dec->state);
+    return TH_EFAULT;
+  }
   for(qi=0;qi<64;qi++)for(pli=0;pli<3;pli++)for(qti=0;qti<2;qti++){
     _dec->state.dequant_tables[qi][pli][qti]=
      _dec->state.dequant_table_data[qi][pli][qti];
@@ -389,12 +404,6 @@ static int oc_dec_init(oc_dec_ctx *_dec,const th_info *_info,
     }
     _dec->pp_sharp_mod[qi]=-(qsum>>11);
   }
-  /*For each fragment, allocate one byte for every DCT coefficient token, plus
-     one byte for extra-bits for each token, plus one more byte for the long
-     EOB run, just in case it's the very last token and has a run length of
-     one.*/
-  _dec->dct_tokens=(unsigned char *)_ogg_malloc((64+64+1)*
-   _dec->state.nfrags*sizeof(_dec->dct_tokens[0]));
   memcpy(_dec->state.loop_filter_limits,_setup->qinfo.loop_filter_limits,
    sizeof(_dec->state.loop_filter_limits));
   _dec->pp_level=OC_PP_LEVEL_DISABLED;
@@ -1190,6 +1199,7 @@ static int oc_dec_postprocess_init(oc_dec_ctx *_dec){
     if(_dec->state.frame_type!=OC_INTRA_FRAME)return 1;
     _dec->dc_qis=(unsigned char *)_ogg_malloc(
      _dec->state.nfrags*sizeof(_dec->dc_qis[0]));
+    if(_dec->dc_qis==NULL)return 1;
     memset(_dec->dc_qis,_dec->state.qis[0],_dec->state.nfrags);
   }
   else{
@@ -1218,15 +1228,37 @@ static int oc_dec_postprocess_init(oc_dec_ctx *_dec){
     }
     return 1;
   }
-  if(_dec->variances==NULL||
-   _dec->pp_frame_has_chroma!=(_dec->pp_level>=OC_PP_LEVEL_DEBLOCKC)){
+  if(_dec->variances==NULL){
     size_t frame_sz;
+    size_t c_sz;
+    int    c_w;
+    int    c_h;
     frame_sz=_dec->state.info.frame_width*(size_t)_dec->state.info.frame_height;
+    c_w=_dec->state.info.frame_width>>!(_dec->state.info.pixel_fmt&1);
+    c_h=_dec->state.info.frame_height>>!(_dec->state.info.pixel_fmt&2);
+    c_sz=c_w*(size_t)c_h;
+    /*Allocate space for the chroma planes, even if we're not going to use
+       them; this simplifies allocation state management, though it may waste
+       memory on the few systems that don't overcommit pages.*/
+    frame_sz+=c_sz<<1;
+    _dec->pp_frame_data=(unsigned char *)_ogg_malloc(
+     frame_sz*sizeof(_dec->pp_frame_data[0]));
+    _dec->variances=(int *)_ogg_malloc(
+     _dec->state.nfrags*sizeof(_dec->variances[0]));
+    if(_dec->variances==NULL||_dec->pp_frame_data==NULL){
+      _ogg_free(_dec->pp_frame_data);
+      _dec->pp_frame_data=NULL;
+      _ogg_free(_dec->variances);
+      _dec->variances=NULL;
+      return 1;
+    }
+    /*Force an update of the PP buffer pointers.*/
+    _dec->pp_frame_state=0;
+  }
+  /*Update the PP buffer pointers if necessary.*/
+  if(_dec->pp_frame_state!=1+(_dec->pp_level>=OC_PP_LEVEL_DEBLOCKC)){
     if(_dec->pp_level<OC_PP_LEVEL_DEBLOCKC){
-      _dec->variances=(int *)_ogg_realloc(_dec->variances,
-       _dec->state.fplanes[0].nfrags*sizeof(_dec->variances[0]));
-      _dec->pp_frame_data=(unsigned char *)_ogg_realloc(
-       _dec->pp_frame_data,frame_sz*sizeof(_dec->pp_frame_data[0]));
+      /*If chroma processing is disabled, just use the PP luma plane.*/
       _dec->pp_frame_buf[0].width=_dec->state.info.frame_width;
       _dec->pp_frame_buf[0].height=_dec->state.info.frame_height;
       _dec->pp_frame_buf[0].stride=-_dec->pp_frame_buf[0].width;
@@ -1238,15 +1270,11 @@ static int oc_dec_postprocess_init(oc_dec_ctx *_dec){
       size_t c_sz;
       int    c_w;
       int    c_h;
-      _dec->variances=(int *)_ogg_realloc(_dec->variances,
-       _dec->state.nfrags*sizeof(_dec->variances[0]));
-      y_sz=frame_sz;
+      /*Otherwise, set up pointers to all three PP planes.*/
+      y_sz=_dec->state.info.frame_width*(size_t)_dec->state.info.frame_height;
       c_w=_dec->state.info.frame_width>>!(_dec->state.info.pixel_fmt&1);
       c_h=_dec->state.info.frame_height>>!(_dec->state.info.pixel_fmt&2);
-      c_sz=c_w*c_h;
-      frame_sz+=c_sz<<1;
-      _dec->pp_frame_data=(unsigned char *)_ogg_realloc(
-       _dec->pp_frame_data,frame_sz*sizeof(_dec->pp_frame_data[0]));
+      c_sz=c_w*(size_t)c_h;
       _dec->pp_frame_buf[0].width=_dec->state.info.frame_width;
       _dec->pp_frame_buf[0].height=_dec->state.info.frame_height;
       _dec->pp_frame_buf[0].stride=_dec->pp_frame_buf[0].width;
@@ -1261,7 +1289,7 @@ static int oc_dec_postprocess_init(oc_dec_ctx *_dec){
       _dec->pp_frame_buf[2].data=_dec->pp_frame_buf[1].data+c_sz;
       oc_ycbcr_buffer_flip(_dec->pp_frame_buf,_dec->pp_frame_buf);
     }
-    _dec->pp_frame_has_chroma=(_dec->pp_level>=OC_PP_LEVEL_DEBLOCKC);
+    _dec->pp_frame_state=1+(_dec->pp_level>=OC_PP_LEVEL_DEBLOCKC);
   }
   /*If we're not processing chroma, copy the reference frame's chroma planes.*/
   if(_dec->pp_level<OC_PP_LEVEL_DEBLOCKC){
@@ -1927,7 +1955,7 @@ th_dec_ctx *th_decode_alloc(const th_info *_info,const th_setup_info *_setup){
   oc_dec_ctx *dec;
   if(_info==NULL||_setup==NULL)return NULL;
   dec=_ogg_malloc(sizeof(*dec));
-  if(oc_dec_init(dec,_info,_setup)<0){
+  if(dec==NULL||oc_dec_init(dec,_info,_setup)<0){
     _ogg_free(dec);
     return NULL;
   }
@@ -2274,13 +2302,18 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
        memory, but complicate the allocation logic there.
       I don't think anyone cares about memory usage when using telemetry; it is
        not meant for embedded devices.*/
-    if(!_dec->telemetry_frame_data){
+    if(_dec->telemetry_frame_data==NULL){
       _dec->telemetry_frame_data=_ogg_malloc(
        (w*h+2*(w>>hdec)*(h>>vdec))*sizeof(*_dec->telemetry_frame_data));
+      if(_dec->telemetry_frame_data==NULL)return 0;
     }
     cs=cairo_image_surface_create(CAIRO_FORMAT_RGB24,w,h);
     /*Sadly, no YUV support in Cairo (yet); convert into the RGB buffer.*/
     data=cairo_image_surface_get_data(cs);
+    if(data==NULL){
+      cairo_surface_destroy(cs);
+      return 0;
+    }
     cstride=cairo_image_surface_get_stride(cs);
     y_row=_ycbcr[0].data;
     u_row=_ycbcr[1].data;
