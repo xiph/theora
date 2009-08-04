@@ -365,6 +365,7 @@ png_read(const char *pathname, unsigned int *w, unsigned int *h, unsigned char *
   if(png_sig_cmp(header, 0, 8)) {
     fprintf(stderr, "%s: error: %s\n",
       pathname, "not a PNG");
+    fclose(fp);
     return 1;
   }
 
@@ -373,6 +374,7 @@ png_read(const char *pathname, unsigned int *w, unsigned int *h, unsigned char *
   if(!png_ptr) {
     fprintf(stderr, "%s: error: %s\n",
       pathname, "couldn't create png read structure");
+    fclose(fp);
     return 1;
   }
 
@@ -380,7 +382,8 @@ png_read(const char *pathname, unsigned int *w, unsigned int *h, unsigned char *
   if(!info_ptr) {
     fprintf(stderr, "%s: error: %s\n",
       pathname, "couldn't create png info structure");
-    /* XXX: cleanup */
+    png_destroy_read_struct(&png_ptr, NULL, NULL);
+    fclose(fp);
     return 1;
   }
 
@@ -388,7 +391,8 @@ png_read(const char *pathname, unsigned int *w, unsigned int *h, unsigned char *
   if(!end_ptr) {
     fprintf(stderr, "%s: error: %s\n",
       pathname, "couldn't create png info structure");
-    /* XXX: cleanup */
+    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+    fclose(fp);
     return 1;
   }
 
