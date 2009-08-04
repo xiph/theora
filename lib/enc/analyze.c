@@ -1750,6 +1750,7 @@ static void oc_cost_inter4mv(oc_enc_ctx *_enc,oc_mode_choice *_modec,
  unsigned _mbi,oc_mv _mv[4],const oc_fr_state *_fr,const oc_qii_state *_qs,
  const unsigned _skip_ssd[12]){
   unsigned               frag_satd[12];
+  oc_mv                  lbmvs[4];
   oc_mv                  cbmvs[4];
   const unsigned char   *src;
   const unsigned char   *ref;
@@ -1806,16 +1807,16 @@ static void oc_cost_inter4mv(oc_enc_ctx *_enc,oc_mode_choice *_modec,
   nqis=_enc->state.nqis;
   for(bi=0;bi<4;bi++){
     if(_modec->qii[OC_MB_PHASE[_mbi&3][bi]]>=nqis){
-      memset(cbmvs+bi,0,sizeof(*cbmvs));
+      memset(lbmvs+bi,0,sizeof(*lbmvs));
     }
     else{
-      memcpy(cbmvs+bi,_mv+bi,sizeof(*cbmvs));
+      memcpy(lbmvs+bi,_mv+bi,sizeof(*lbmvs));
       bits0+=OC_MV_BITS[0][_mv[bi][0]+31]+OC_MV_BITS[0][_mv[bi][1]+31];
       bits1+=12;
     }
   }
   (*OC_SET_CHROMA_MVS_TABLE[_enc->state.info.pixel_fmt])(cbmvs,
-   (const oc_mv *)cbmvs);
+   (const oc_mv *)lbmvs);
   map_idxs=OC_MB_MAP_IDXS[_enc->state.info.pixel_fmt];
   map_nidxs=OC_MB_MAP_NIDXS[_enc->state.info.pixel_fmt];
   /*Note: This assumes ref_ystride[1]==ref_ystride[2].*/
