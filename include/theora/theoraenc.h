@@ -243,8 +243,9 @@ extern "C" {
 #define TH_ENCCTL_2PASS_OUT (24)
 /**Submits two-pass encoding metric data collected the first encoding pass to
  *  the second pass.
- * The first call must be made before the first frame is encoded, and sets the
- *  encoder to pass 2 mode implicitly.
+ * The first call must be made before the first frame is encoded, and a target
+ *  bitrate must have already been specified to the encoder.
+ * It sets the encoder to pass 2 mode implicitly; this cannot be disabled.
  * The encoder may require reading data from some or all of the frames in
  *  advance, depending on, e.g., the reservoir size used in the second pass.
  * You must call this function repeatedly before each frame to provide data
@@ -275,8 +276,9 @@ extern "C" {
  * \retval >0            The number of bytes of metric data required/consumed.
  * \retval 0             No more data is required before the next frame.
  * \retval TH_EFAULT     \a _enc_ctx is <tt>NULL</tt>.
- * \retval TH_EINVAL     The first call was made after the first frame was
- *                        submitted for encoding.
+ * \retval TH_EINVAL     No target bitrate has been set, or the first call was
+ *                        made after the first frame was submitted for
+ *                        encoding.
  * \retval TH_ENOTFORMAT The data did not appear to be pass 1 from a compatible
  *                        implementation of this library.
  * \retval TH_EBADHEADER The data was invalid; this may be returned when
@@ -285,6 +287,44 @@ extern "C" {
  *                        data.
  * \retval TH_IMPL       Not supported by this implementation.*/
 #define TH_ENCCTL_2PASS_IN (26)
+/**Sets the current encoding quality.
+ * This is only valid so long as no bitrate has been specified, either through
+ *  the #th_info struct used to initialize the encoder or through
+ *  #TH_ENCCTL_SET_BITRATE (this restriction may be relaxed in a future
+ *  version).
+ * If it is set before the headers are emitted, the target quality encoded in
+ *  them will be updated.
+ *
+ * \param[in] _buf <tt>int</tt>: The new target quality, in the range 0...63,
+ *                  inclusive.
+ * \retval 0             Success.
+ * \retval TH_EFAULT     \a _enc_ctx or \a _buf is <tt>NULL</tt>.
+ * \retval TH_EINVAL     A target bitrate has already been specified, or the
+ *                        quality index was not in the range 0...63.
+ * \retval TH_IMPL       Not supported by this implementation.*/
+#define TH_ENCCTL_SET_QUALITY (28)
+/**Sets the current encoding bitrate.
+ * Once a bitrate is set, the encoder must use a rate-controlled mode for all
+ *  future frames (this restriction may be relaxed in a future version).
+ * If it is set before the headers are emitted, the target bitrate encoded in
+ *  them will be updated.
+ * Due to the buffer delay, the exact bitrate of each section of the encode is
+ *  not guaranteed.
+ * The encoder may have already used more bits than allowed for the frames it
+ *  has encoded, expecting to make them up in future frames, or it may have
+ *  used fewer, holding the excess in reserve.
+ * The exact transition between the two bitrates is not well-defined by this
+ *  API, but may be affected by flags set with #TH_ENCCTL_SET_RATE_FLAGS.
+ * After a number of frames equal to the buffer delay, one may expect further
+ *  output to average at the target bitrate.
+ *
+ * \param[in] _buf <tt>long</tt>: The new target bitrate, in bits per second.
+ * \retval 0             Success.
+ * \retval TH_EFAULT     \a _enc_ctx or \a _buf is <tt>NULL</tt>.
+ * \retval TH_EINVAL     The target bitrate was not positive.
+ * \retval TH_IMPL       Not supported by this implementation.*/
+#define TH_ENCCTL_SET_BITRATE (30)
+
 /*@}*/
 
 

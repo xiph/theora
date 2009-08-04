@@ -1330,6 +1330,29 @@ int th_encode_ctl(th_enc_ctx *_enc,int _req,void *_buf,size_t _buf_sz){
       _enc->dup_count=OC_MAXI(dup_count,0);
       return 0;
     }break;
+    case TH_ENCCTL_SET_QUALITY:{
+      int qi;
+      if(_enc==NULL||_buf==NULL)return TH_EFAULT;
+      if(_enc->state.info.target_bitrate>0)return TH_EINVAL;
+      qi=*(int *)_buf;
+      if(qi<0||qi>63)return TH_EINVAL;
+      _enc->state.info.quality=qi;
+      _enc->state.qis[0]=(unsigned char)qi;
+      _enc->state.nqis=1;
+      return 0;
+    }break;
+    case TH_ENCCTL_SET_BITRATE:{
+      long bitrate;
+      int  reset;
+      if(_enc==NULL||_buf==NULL)return TH_EFAULT;
+      bitrate=*(long *)bitrate;
+      if(bitrate<=0)return TH_EINVAL;
+      reset=_enc->state.info.target_bitrate<=0;
+      _enc->state.info.target_bitrate=bitrate>INT_MAX?INT_MAX:bitrate;
+      if(reset)oc_rc_state_init(&_enc->rc,_enc);
+      else oc_enc_rc_resize(_enc);
+      return 0;
+    }break;
     case TH_ENCCTL_SET_RATE_FLAGS:{
       int set;
       if(_enc==NULL||_buf==NULL)return TH_EFAULT;
