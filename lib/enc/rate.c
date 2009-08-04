@@ -922,7 +922,8 @@ int oc_enc_rc_2pass_in(oc_enc_ctx *_enc,unsigned char *_buf,size_t _bytes){
   if(_enc->rc.twopass==0){
     _enc->rc.twopass=2;
     _enc->rc.twopass_buffer_fill=0;
-    _enc->rc.frames_total[0]=0;
+    _enc->rc.frames_total[0]=_enc->rc.frames_total[1]=
+     _enc->rc.frames_total[2]=0;
     _enc->rc.nframe_metrics=0;
     _enc->rc.cframe_metrics=0;
     _enc->rc.frame_metrics_head=0;
