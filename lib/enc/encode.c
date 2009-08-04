@@ -1345,7 +1345,7 @@ int th_encode_ctl(th_enc_ctx *_enc,int _req,void *_buf,size_t _buf_sz){
       long bitrate;
       int  reset;
       if(_enc==NULL||_buf==NULL)return TH_EFAULT;
-      bitrate=*(long *)bitrate;
+      bitrate=*(long *)_buf;
       if(bitrate<=0)return TH_EINVAL;
       reset=_enc->state.info.target_bitrate<=0;
       _enc->state.info.target_bitrate=bitrate>INT_MAX?INT_MAX:bitrate;
