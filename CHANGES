@@ -1,6 +1,18 @@
-libtheora 1.1alpha3 (unreleased snapshot)
+libtheora 1.1beta1 (2008 August 5)
 
- - no changes recorded
+ - Support for multipass encoding
+ - Performance optimization of both encoder and decoder
+ - Encoder supports dynamic adjustment of quality and 
+   bitrate targets
+ - Encoder bitrate management window size is selectable
+ - Encoder support for adaptive (per-block) quantization
+   and new default matrix set
+ - Encoder rate control can now drop frames if necessary
+   to meet the target bitrate
+ - Encoder now accepts 4:2:2 and 4:4:4 chroma sampling
+ - Decoder telemetry output shows quantization choice
+   and a breakdown of bitrate usage in the frame
+ - MSVC assembly optimizations up to date and functional
 
 libtheora 1.1alpha2 (2009 May 26)
 
