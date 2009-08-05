@@ -3,20 +3,11 @@ AM_CFLAGS = $(OGG_CFLAGS) $(CAIRO_CFLAGS)
 
 EXTRA_DIST = \
 	cpu.c \
-	enc/x86/dsp_sse2.c \
 	enc/x86/mmxencfrag.c \
 	enc/x86/mmxfdct.c \
 	enc/x86/sse2fdct.c \
 	enc/x86/x86enc.c \
 	enc/x86/x86enc.h \
-	enc/x86_32_vs/dsp_mmx.c \
-	enc/x86_32_vs/fdct_mmx.c \
-	enc/x86_32_vs/recon_mmx.c \
-	enc/analyize.c \
-	enc/encinfo.c \
-	enc/encode.c \
-	enc/rate.c \
-	enc/tokenize.c \
 	dec/x86/mmxfrag.c \
 	dec/x86/mmxfrag.h \
 	dec/x86/mmxidct.c \
@@ -129,10 +120,12 @@ decoder_sources = \
 noinst_HEADERS = \
 	cpu.h \
 	internal.h \
+	enc/encint.h \
 	enc/enquant.h \
 	enc/huffenc.h \
 	enc/mathops.h \
 	enc/modedec.h \
+	enc/x86/x86enc.h \
 	dec/apiwrapper.h \
 	dec/bitpack.h \
 	dec/dct.h \
@@ -142,6 +135,8 @@ noinst_HEADERS = \
 	dec/huffman.h \
 	dec/ocintrin.h \
 	dec/quant.h \
+	dec/x86/mmxfrag.h \
+	dec/x86/mmxloop.h \
 	dec/x86/x86int.h
 
 libtheoradec_la_SOURCES = \
