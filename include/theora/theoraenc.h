@@ -55,19 +55,13 @@ extern "C" {
  * The parameters are copied, not stored by reference, so they can be freed
  *  after this call.
  * <tt>NULL</tt> may be specified to revert to the default parameters.
- * For the current encoder, <tt>scale[ci!=0][qi]</tt> must be no greater than
- *  <tt>scale[ci!=0][qi-1]</tt> and <tt>base[qti][pli][qi][ci]</tt> must be no
- *  greater than <tt>base[qti][pli][qi-1][ci]</tt>.
- * These two conditions ensure that the actual quantizer for a given \a qti,
- *  \a pli, and \a ci does not increase as \a qi increases.
  *
  * \param[in] _buf #th_quant_info
  * \retval TH_EFAULT \a _enc_ctx is <tt>NULL</tt>.
- * \retval TH_EINVAL Encoding has already begun, the quantization parameters
- *                    do not meet one of the above stated conditions, \a _buf
- *                    is <tt>NULL</tt> and \a _buf_sz is not zero, or \a _buf
- *                    is non-<tt>NULL</tt> and \a _buf_sz is not
- *                    <tt>sizeof(#th_quant_info)</tt>.
+ * \retval TH_EINVAL Encoding has already begun, \a _buf is 
+ *                    <tt>NULL</tt> and \a _buf_sz is not zero,
+ *                    or \a _buf is non-<tt>NULL</tt> and
+ *                    \a _buf_sz is not <tt>sizeof(#th_quant_info)</tt>.
  * \retval TH_IMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SET_QUANT_PARAMS (2)
 /**Sets the maximum distance between key frames.

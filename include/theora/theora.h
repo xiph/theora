@@ -292,13 +292,20 @@ typedef struct theora_comment{
 
 
 /**\name theora_control() codes */
-
-/**\anchor decctlcodes
+/* \anchor decctlcodes_old
  * These are the available request codes for theora_control()
  * when called with a decoder instance.
- * By convention, these are odd, to distinguish them from the
- *  \ref encctlcodes "encoder control codes".
+ * By convention decoder control codes are odd, to distinguish 
+ * them from \ref encctlcodes_old "encoder control codes" which
+ * are even.
+ *
+ * Note that since the 1.0 release, both the legacy and the final
+ * implementation accept all the same control codes, but only the
+ * final API declares the newer codes.
+ *
  * Keep any experimental or vendor-specific values above \c 0x8000.*/
+
+/*@{*/
 
 /**Get the maximum post-processing level.
  * The decoder supports a post-processing filter that can improve
@@ -338,37 +345,23 @@ typedef struct theora_comment{
  */
 #define TH_DECCTL_SET_GRANPOS (5)
 
-#define TH_DECCTL_SET_TELEMETRY_MBMODE (9)
-#define TH_DECCTL_SET_TELEMETRY_MV (11)
-#define TH_DECCTL_SET_TELEMETRY_QI (13)
-#define TH_DECCTL_SET_TELEMETRY_BITS (15)
+/**\anchor encctlcodes_old */
 
-/**\anchor encctlcodes
- * These are the available request codes for theora_control()
- * when called with an encoder instance.
- * By convention, these are even, to distinguish them from the
- *  \ref decctlcodes "decoder control codes".
- * Keep any experimental or vendor-specific values above \c 0x8000.*/
-/*@{*/
 /**Sets the quantization parameters to use.
  * The parameters are copied, not stored by reference, so they can be freed
  *  after this call.
  * <tt>NULL</tt> may be specified to revert to the default parameters.
- * For the current encoder, <tt>scale[ci!=0][qi]</tt> must be no greater than
- *  <tt>scale[ci!=0][qi-1]</tt> and <tt>base[qti][pli][qi][ci]</tt> must be no
- *  greater than <tt>base[qti][pli][qi-1][ci]</tt>.
- * These two conditions ensure that the actual quantizer for a given \a qti,
- *  \a pli, and \a ci does not increase as \a qi increases.
  *
  * \param[in] buf #th_quant_info
  * \retval TH_FAULT  \a theora_state is <tt>NULL</tt>.
  * \retval TH_EINVAL Encoding has already begun, the quantization parameters
- *                    do not meet one of the above stated conditions, \a buf
- *                    is <tt>NULL</tt> and \a buf_sz is not zero, or \a buf
- *                    is non-<tt>NULL</tt> and \a buf_sz is not
- *                    <tt>sizeof(#th_quant_info)</tt>.
+ *                    are not acceptable to this version of the encoder, 
+ *                    \a buf is <tt>NULL</tt> and \a buf_sz is not zero, 
+ *                    or \a buf is non-<tt>NULL</tt> and \a buf_sz is 
+ *                    not <tt>sizeof(#th_quant_info)</tt>.
  * \retval TH_IMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SET_QUANT_PARAMS (2)
+
 /**Disables any encoder features that would prevent lossless transcoding back
  *  to VP3.
  * This primarily means disabling block-level QI values and not using 4MV mode
@@ -397,6 +390,7 @@ typedef struct theora_comment{
  * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(int)</tt>.
  * \retval TH_IMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SET_VP3_COMPATIBLE (10)
+
 /**Gets the maximum speed level.
  * Higher speed levels favor quicker encoding over better quality per bit.
  * Depending on the encoding mode, and the internal algorithms used, quality
@@ -411,6 +405,7 @@ typedef struct theora_comment{
  * \retval TH_IMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_GET_SPLEVEL_MAX (12)
+
 /**Sets the speed level.
  * By default a speed value of 1 is used.
  *
@@ -425,32 +420,7 @@ typedef struct theora_comment{
  * \retval TH_IMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_SET_SPLEVEL (14)
-/**Sets the number of duplicates of the next frame to produce.
- * Although libtheora can encode duplicate frames very cheaply, it costs some
- *  amount of CPU to detect them, and a run of duplicates cannot span a
- *  keyframe boundary.
- * This control code tells the encoder to produce the specified number of extra
- *  duplicates of the next frame.
- * This allows the encoder to make smarter keyframe placement decisions and
- *  rate control decisions, as well as reduces CPU usage, when compared to just
- *  submitting the same frame for encoding multiple times.
- * This setting only applies to the next frame submitted for encoding.
- * You MUST call th_encode_packetout() repeatedly until it returns 0, or the
- *  extra duplicate frames will be lost.
- *
- * \param[in] _buf int: The number of duplicates to produce.
- *                      Unless this is positive, no duplicates will be produced.
- * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
- * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(int)</tt>, or the
- *                    number of duplicates is greater than or equal to the
- *                    maximum keyframe interval.
- *                   In the latter case, NO duplicate frames will be produced.
- *                   You must ensure that the maximum keyframe interval is set
- *                    larger than the maximum number of duplicates you will
- *                    ever wish to insert prior to encoding.
- * \retval TH_IMPL   Not supported by this implementation in the current
- *                    encoding mode.*/
-#define TH_ENCCTL_SET_DUP_COUNT (18)
+
 /*@}*/
 
 #define OC_FAULT       -1       /**< General failure */
@@ -809,8 +779,8 @@ extern void  theora_comment_clear(theora_comment *tc);
  * This is used to provide advanced control the encoding process.
  * \param th     A #theora_state handle.
  * \param req    The control code to process.
- *                See \ref encctlcodes "the list of available control codes"
- *                 for details.
+ *                See \ref encctlcodes_old "the list of available 
+ *			control codes" for details.
  * \param buf    The parameters for this control code.
  * \param buf_sz The size of the parameter buffer.*/
 extern int theora_control(theora_state *th,int req,void *buf,size_t buf_sz);
