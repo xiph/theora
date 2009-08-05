@@ -1,6 +1,6 @@
 libtheora 1.1beta1 (2008 August 5)
 
- - Support for two-pass encoding (actually multipass)
+ - Support for two-pass encoding
  - Performance optimization of both encoder and decoder
  - Encoder supports dynamic adjustment of quality and 
    bitrate targets
