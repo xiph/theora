@@ -31,7 +31,7 @@ encoder_example_LDADD = $(GETOPT_OBJS) $(LDADDENC) $(VORBIS_LIBS) $(VORBISENC_LI
 
 png2theora_SOURCES = png2theora.c
 png2theora_CFLAGS = $(OGG_CFLAGS) $(PNG_CFLAGS)
-png2theora_LDADD = $(GETOPT_OBJS) $(LDADD) $(PNG_LIBS)
+png2theora_LDADD = $(GETOPT_OBJS) $(LDADDENC) $(PNG_LIBS)
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@"
