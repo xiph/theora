@@ -2,7 +2,7 @@ libtheora 1.1beta2 (unreleased)
 
  - no changes recorded
 
-libtheora 1.1beta1 (2008 August 5)
+libtheora 1.1beta1 (2009 August 5)
 
  - Support for two-pass encoding
  - Performance optimization of both encoder and decoder
