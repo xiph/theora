@@ -1115,10 +1115,8 @@ int fetch_and_process_video_packet(FILE *video,FILE *twopass_file,int passno,
   }
   /*We submit the buffer to the library as if it were padded, but we do not
      actually allocate space for the padding.
-    This is okay, because the library will never read data from the padded
-     region.
-    This is only currently true of the 1.1 encoder; do NOT do this
-     with the 1.0 encoder.*/
+    This is okay, because with the 1.0 API the library will never read data from the padded
+     region.*/
   ycbcr[0].width=frame_w;
   ycbcr[0].height=frame_h;
   ycbcr[0].stride=pic_w;
