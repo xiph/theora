@@ -72,7 +72,7 @@ typedef struct oc_theora_state          oc_theora_state;
 
 
 /*This library's version.*/
-# define OC_VENDOR_STRING "Xiph.Org libtheora 1.1 20090805 (Thusnelda)"
+# define OC_VENDOR_STRING "Xiph.Org libtheora 1.1 20090806 (Thusnelda)"
 
 /*Theora bitstream version.*/
 # define TH_VERSION_MAJOR (3)

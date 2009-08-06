@@ -112,8 +112,6 @@ static ogg_int64_t oc_iir_filter_update(oc_iir_filter *_f,int _x){
   return ya;
 }
 
-
-
 /*Search for the quantizer that matches the target most closely.
   We don't assume a linear ordering, but when there are ties we pick the
    quantizer closest to the old one.*/
@@ -193,18 +191,19 @@ void oc_enc_calc_lambda(oc_enc_ctx *_enc,int _qti){
 /*Binary exponential of _log_scale with 24-bit fractional precision and
    saturation.
   _log_scale: A binary logarithm in Q57 format.
-  Return: The binary exponential in Q24 format, saturated to 2**31-1 if
-   _log_scale was too large.*/
-static ogg_int32_t oc_bexp_q24(ogg_int64_t _log_scale){
-  if(_log_scale<OC_Q57(8)){
-    ogg_int64_t ret;
-    ret=oc_bexp64(_log_scale+OC_Q57(24));
-    return ret<0x7FFFFFFF?(ogg_int32_t)ret:0x7FFFFFFF;
-  }
-  return 0x7FFFFFFF;
+  Return: The binary exponential in Q24 format.*/
+static ogg_int64_t oc_bexp_q24(ogg_int64_t _log_scale){
+  return oc_bexp64(_log_scale+OC_Q57(24));
 }
 
-
+/*Convenience function converts Q57 value to a clamped 32-bit Q24 value
+  _in: input in Q57 format.
+  Return: same number in Q24 */
+static ogg_int32_t oc_q57_q24(ogg_int64_t _in){
+  ogg_int64_t ret;
+  ret=_in+((ogg_int64_t)1<<32)>>33;
+  return (ret>2147483647?2147483647:(ret<-2147483648?-2147483648:ret));
+}
 
 static void oc_enc_rc_reset(oc_enc_ctx *_enc){
   ogg_int64_t npixels;
@@ -264,11 +263,11 @@ static void oc_enc_rc_reset(oc_enc_ctx *_enc){
   /*Set up second order followers, initialized according to corresponding
      time constants.*/
   oc_iir_filter_init(&_enc->rc.scalefilter[0],2,
-   oc_bexp_q24(_enc->rc.log_scale[0]));
+   oc_q57_q24(_enc->rc.log_scale[0]));
   inter_delay=_enc->rc.twopass?
    OC_MAXI(_enc->keyframe_frequency_force,12):_enc->rc.buf_delay;
   oc_iir_filter_init(&_enc->rc.scalefilter[1],inter_delay>>1,
-   oc_bexp_q24(_enc->rc.log_scale[1]));
+   oc_q57_q24(_enc->rc.log_scale[1]));
   oc_iir_filter_init(&_enc->rc.vfrfilter,2,
    oc_bexp_q24(_enc->rc.log_drop_scale));
 }
@@ -319,7 +318,7 @@ void oc_enc_rc_resize(oc_enc_ctx *_enc){
     _enc->rc.target=(_enc->rc.max+1>>1)+(_enc->rc.bits_per_frame+2>>2)*
      OC_MINI(_enc->keyframe_frequency_force,_enc->rc.buf_delay);
     oc_iir_filter_init(&_enc->rc.scalefilter[1],_enc->rc.buf_delay>>1,
-     oc_bexp_q24(_enc->rc.log_scale[1]));
+     oc_q57_q24(_enc->rc.log_scale[1]));
   }
   /*If we're in pass-2 mode, make sure the frame metrics array is big enough
      to hold frame statistics for the full buffer.*/
@@ -379,7 +378,7 @@ void oc_enc_rc_resize(oc_enc_ctx *_enc){
         qti=_enc->rc.cur_metrics.frame_type;
         _enc->rc.nframes[qti]++;
         _enc->rc.nframes[2]+=_enc->rc.cur_metrics.dup_count;
-        _enc->rc.scale_sum[qti]+=_enc->rc.cur_metrics.scale;
+        _enc->rc.scale_sum[qti]+=oc_bexp_q24(_enc->rc.cur_metrics.log_scale<<33);
         _enc->rc.scale_window_end+=_enc->rc.cur_metrics.dup_count+1;
         if(_enc->rc.scale_window_end-_enc->rc.scale_window0<buf_delay){
           /*We need more frame data.*/
@@ -493,7 +492,7 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
               do{
                 qti=m->frame_type;
                 nframes[qti]--;
-                scale_sum[qti]-=m->scale;
+                scale_sum[qti]-=oc_bexp_q24(m->log_scale<<33);
                 buf_delay-=m->dup_count+1;
                 fmi++;
                 if(fmi>=_enc->rc.cframe_metrics)fmi=0;
@@ -512,7 +511,7 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
       qti=_enc->rc.cur_metrics.frame_type;
       if(qti!=_qti){
         nframes[qti]--;
-        scale_sum[qti]-=_enc->rc.cur_metrics.scale;
+        scale_sum[qti]-=oc_bexp_q24(_enc->rc.cur_metrics.log_scale<<33);
       }
       /*Compute corrected log_scale estimates for each frame type from the
          pass-1 scales we measured in the current window.*/
@@ -567,7 +566,7 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
         ogg_int64_t scale;
         scale=oc_bexp_q24(_enc->rc.log_scale[_qti])*(ogg_int64_t)nframes[_qti];
         nframes[_qti]++;
-        scale+=_enc->rc.scalefilter[_qti].y[0];
+        scale+=oc_bexp_q24((ogg_int64_t)_enc->rc.scalefilter[_qti].y[0]<<33);
         _enc->rc.log_scale[_qti]=oc_blog64(scale)-OC_Q57(24);
       }
       /*Add the padding from above.
@@ -583,7 +582,8 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
         /*And blend in the low-pass filtered scale according to how many frames
            we added.*/
         scale=oc_bexp_q24(_enc->rc.log_scale[1])*(ogg_int64_t)nframes[1]
-         +_enc->rc.scalefilter[1].y[0]*(ogg_int64_t)nextra_frames;
+          +oc_bexp_q24((ogg_int64_t)_enc->rc.scalefilter[1].y[0]<<33)*
+          (ogg_int64_t)nextra_frames;
         nframes[1]+=nextra_frames;
         _enc->rc.log_scale[1]=
          oc_blog64((scale+(nframes[1]>>1))/nframes[1])-OC_Q57(24);
@@ -700,16 +700,14 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
  long _bits,int _qti,int _qi,int _trial,int _droppable){
   ogg_int64_t buf_delta;
   ogg_int64_t log_scale;
-  ogg_int32_t scale;
   int         dropped;
   dropped=0;
-  if(!_enc->rc.drop_frames)_droppable=0;
+  if(!_enc->rc.drop_frames || _enc->rc.twopass)_droppable=0;
   buf_delta=_enc->rc.bits_per_frame*(1+_enc->dup_count);
   if(_bits<=0){
     /*We didn't code any blocks in this frame.*/
     log_scale=OC_Q57(-64);
     _bits=0;
-    scale=0;
   }
   else{
     ogg_int64_t log_bits;
@@ -719,13 +717,12 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
     log_qexp=_enc->rc.log_qtarget-OC_Q57(2);
     log_qexp=(log_qexp>>6)*(_enc->rc.exp[_qti]);
     log_scale=OC_MINI(log_bits-_enc->rc.log_npixels+log_qexp,OC_Q57(16));
-    scale=oc_bexp_q24(log_scale);
   }
   /*Special two-pass processing.*/
   switch(_enc->rc.twopass){
     case 1:{
-      /*Pass-1 mode: save the metrics for this frame.*/
-      _enc->rc.cur_metrics.scale=scale;
+      /*Pass 1 mode: save the metrics for this frame.*/
+      _enc->rc.cur_metrics.log_scale=oc_q57_q24(log_scale);
       _enc->rc.cur_metrics.dup_count=_enc->dup_count;
       _enc->rc.cur_metrics.frame_type=_enc->state.frame_type;
       _enc->rc.twopass_buffer_bytes=0;
@@ -738,7 +735,7 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
         oc_log_linear_fit *fit;
         ogg_int64_t        x;
         ogg_int64_t        y;
-        x=oc_blog64(_enc->rc.cur_metrics.scale)-OC_Q57(24)>>33;
+        x=_enc->rc.cur_metrics.log_scale;
         y=log_scale>>33;
         fit=_enc->rc.corr+_qti;
         /*Use long-term exponential moving averages for the fit statistics.*/
@@ -767,7 +764,7 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
         _enc->rc.frames_left[2]-=_enc->rc.prev_metrics.dup_count;
         _enc->rc.nframes[qti]--;
         _enc->rc.nframes[2]-=_enc->rc.prev_metrics.dup_count;
-        _enc->rc.scale_sum[qti]-=_enc->rc.prev_metrics.scale;
+        _enc->rc.scale_sum[qti]-=oc_bexp_q24(_enc->rc.prev_metrics.log_scale<<33);
         _enc->rc.scale_window0=(int)next_frame_num;
         /*Free the corresponding entry in the circular buffer.*/
         if(_enc->rc.frame_metrics!=NULL){
@@ -794,8 +791,8 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
     else{
       /*Otherwise update the low-pass scale filter for this frame type,
          regardless of whether or not we dropped this frame.*/
-      _enc->rc.log_scale[_qti]=oc_blog64(oc_iir_filter_update(
-       _enc->rc.scalefilter+_qti,scale))-OC_Q57(24);
+      _enc->rc.log_scale[_qti]=oc_iir_filter_update(
+        _enc->rc.scalefilter+_qti,oc_q57_q24(log_scale))<<33;
       /*If this frame busts our budget, it must be dropped.*/
       if(_droppable&&_enc->rc.fullness+buf_delta<_bits){
         _enc->rc.prev_drop_count+=1+_enc->dup_count;
@@ -869,12 +866,12 @@ int oc_enc_rc_2pass_out(oc_enc_ctx *_enc,unsigned char **_buf){
     else{
       int qti;
       qti=_enc->rc.cur_metrics.frame_type;
-      _enc->rc.scale_sum[qti]+=_enc->rc.cur_metrics.scale;
+      _enc->rc.scale_sum[qti]+=oc_bexp_q24(_enc->rc.cur_metrics.log_scale<<33);
       _enc->rc.frames_total[qti]++;
       _enc->rc.frames_total[2]+=_enc->rc.cur_metrics.dup_count;
       oc_rc_buffer_val(&_enc->rc,
        _enc->rc.cur_metrics.dup_count|_enc->rc.cur_metrics.frame_type<<31,4);
-      oc_rc_buffer_val(&_enc->rc,_enc->rc.cur_metrics.scale,4);
+      oc_rc_buffer_val(&_enc->rc,_enc->rc.cur_metrics.log_scale,4);
     }
   }
   else if(_enc->packet_state==OC_PACKET_DONE&&
@@ -1025,13 +1022,13 @@ int oc_enc_rc_2pass_in(oc_enc_ctx *_enc,unsigned char *_buf,size_t _bytes){
          _buf,_bytes,consumed,OC_RC_2PASS_PACKET_SZ);
         if(_enc->rc.twopass_buffer_fill>=OC_RC_2PASS_PACKET_SZ){
           ogg_uint32_t dup_count;
-          ogg_int32_t  scale;
+          ogg_int32_t  log_scale;
           int          qti;
           int          arg;
           /*Read the metrics for the next frame.*/
           dup_count=oc_rc_unbuffer_val(&_enc->rc,4);
-          scale=oc_rc_unbuffer_val(&_enc->rc,4);
-          _enc->rc.cur_metrics.scale=scale;
+          log_scale=oc_rc_unbuffer_val(&_enc->rc,4);
+          _enc->rc.cur_metrics.log_scale=log_scale;
           qti=(dup_count&0x80000000)>>31;
           _enc->rc.cur_metrics.dup_count=dup_count&0x7FFFFFFF;
           _enc->rc.cur_metrics.frame_type=qti;
@@ -1061,23 +1058,23 @@ int oc_enc_rc_2pass_in(oc_enc_ctx *_enc,unsigned char *_buf,size_t _bytes){
             oc_frame_metrics *m;
             int               fmi;
             ogg_uint32_t      dup_count;
-            ogg_int32_t       scale;
+            ogg_int32_t       log_scale;
             int               qti;
             /*Read the metrics for the next frame.*/
             dup_count=oc_rc_unbuffer_val(&_enc->rc,4);
-            scale=oc_rc_unbuffer_val(&_enc->rc,4);
+            log_scale=oc_rc_unbuffer_val(&_enc->rc,4);
             /*Add the to the circular buffer.*/
             fmi=_enc->rc.frame_metrics_head+_enc->rc.nframe_metrics++;
             if(fmi>=_enc->rc.cframe_metrics)fmi-=_enc->rc.cframe_metrics;
             m=_enc->rc.frame_metrics+fmi;
-            m->scale=scale;
+            m->log_scale=log_scale;
             qti=(dup_count&0x80000000)>>31;
             m->dup_count=dup_count&0x7FFFFFFF;
             m->frame_type=qti;
             /*And accumulate the statistics over the window.*/
             _enc->rc.nframes[qti]++;
             _enc->rc.nframes[2]+=m->dup_count;
-            _enc->rc.scale_sum[qti]+=m->scale;
+            _enc->rc.scale_sum[qti]+=oc_bexp_q24(m->log_scale<<33);
             _enc->rc.scale_window_end+=m->dup_count+1;
             /*Compute an upper bound on the number of remaining packets needed
                for the current window.*/
