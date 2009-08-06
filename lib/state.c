@@ -17,7 +17,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "../internal.h"
+#include "internal.h"
 #if defined(OC_X86_ASM)
 #if defined(_MSC_VER)
 # include "x86_vc/x86int.h"

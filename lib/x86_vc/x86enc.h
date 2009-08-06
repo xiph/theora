@@ -15,10 +15,10 @@
 
  ********************************************************************/
 
-#if !defined(_x86_x86enc_H)
-# define _x86_x86enc_H (1)
+#if !defined(_x86_vc_x86enc_H)
+# define _x86_vc_x86enc_H (1)
 # include "../encint.h"
-# include "../../dec/x86/x86int.h"
+# include "x86int.h"
 
 void oc_enc_vtable_init_x86(oc_enc_ctx *_enc);
 

@@ -37,9 +37,9 @@
 #  endif
 # endif
 
-# include "dec/ocintrin.h"
-# include "dec/huffman.h"
-# include "dec/quant.h"
+# include "ocintrin.h"
+# include "huffman.h"
+# include "quant.h"
 
 /*Some assembly constructs require aligned operands.*/
 # if defined(OC_X86_ASM)

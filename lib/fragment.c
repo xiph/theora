@@ -15,7 +15,7 @@
 
  ********************************************************************/
 #include <string.h>
-#include "../internal.h"
+#include "internal.h"
 
 void oc_frag_copy(const oc_theora_state *_state,unsigned char *_dst,
  const unsigned char *_src,int _ystride){

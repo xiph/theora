@@ -1,6 +1,6 @@
 #if !defined(_huffenc_H)
 # define _huffenc_H (1)
-# include "../dec/huffman.h"
+# include "huffman.h"
 
 
 

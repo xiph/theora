@@ -20,8 +20,8 @@
 #  include "config.h"
 # endif
 # include "theora/theoraenc.h"
-# include "../internal.h"
-# include "../dec/ocintrin.h"
+# include "internal.h"
+# include "ocintrin.h"
 # include "mathops.h"
 # include "enquant.h"
 # include "huffenc.h"

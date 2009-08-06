@@ -16,7 +16,7 @@
  ********************************************************************/
 
 #include <string.h>
-#include "../internal.h"
+#include "internal.h"
 #include "dct.h"
 
 /*Performs an inverse 8 point Type-II DCT transform.

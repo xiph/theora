@@ -18,7 +18,7 @@
 
 #if defined(OC_X86_ASM)
 
-#include "../../cpu.c"
+#include "../cpu.c"
 
 void oc_enc_vtable_init_x86(oc_enc_ctx *_enc){
   ogg_uint32_t cpu_flags;
@@ -42,7 +42,7 @@ void oc_enc_vtable_init_x86(oc_enc_ctx *_enc){
   }
   if(cpu_flags&OC_CPU_X86_SSE2){
 # if defined(OC_X86_64_ASM)
-    /*_enc->opt_vtable.fdct8x8=oc_enc_fdct8x8_x86_64sse2;*/
+    _enc->opt_vtable.fdct8x8=oc_enc_fdct8x8_x86_64sse2;
 # endif
   }
 }

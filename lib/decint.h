@@ -19,7 +19,7 @@
 #if !defined(_decint_H)
 # define _decint_H (1)
 # include "theora/theoradec.h"
-# include "../internal.h"
+# include "internal.h"
 # include "bitpack.h"
 
 typedef struct th_setup_info oc_setup_info;

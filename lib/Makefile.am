@@ -3,42 +3,42 @@ AM_CFLAGS = $(OGG_CFLAGS) $(CAIRO_CFLAGS)
 
 EXTRA_DIST = \
 	cpu.c \
-	enc/x86/mmxencfrag.c \
-	enc/x86/mmxfdct.c \
-	enc/x86/sse2fdct.c \
-	enc/x86/x86enc.c \
-	enc/x86/x86enc.h \
-	dec/x86/mmxfrag.c \
-	dec/x86/mmxfrag.h \
-	dec/x86/mmxidct.c \
-	dec/x86/mmxloop.h \
-	dec/x86/mmxstate.c \
-	dec/x86/x86int.h \
-	dec/x86/x86state.c \
-	dec/x86_vc
+	x86/mmxencfrag.c \
+	x86/mmxfdct.c \
+	x86/sse2fdct.c \
+	x86/x86enc.c \
+	x86/x86enc.h \
+	x86/mmxfrag.c \
+	x86/mmxfrag.h \
+	x86/mmxidct.c \
+	x86/mmxloop.h \
+	x86/mmxstate.c \
+	x86/x86int.h \
+	x86/x86state.c \
+	x86_vc
 
 lib_LTLIBRARIES = libtheoradec.la libtheoraenc.la libtheora.la
 
 if THEORA_DISABLE_ENCODE
 encoder_uniq_sources = \
-	enc/encoder_disabled.c
+	encoder_disabled.c
 
 encoder_sources = \
 	$(encoder_uniq_sources)
 else
 encoder_uniq_x86_sources = \
-	enc/x86/mmxencfrag.c \
-	enc/x86/mmxfdct.c \
-	enc/x86/x86enc.c
+	x86/mmxencfrag.c \
+	x86/mmxfdct.c \
+	x86/x86enc.c
 
 encoder_uniq_x86_64_sources = \
-	enc/x86/sse2fdct.c
+	x86/sse2fdct.c
 
 encoder_shared_x86_sources = \
-	dec/x86/mmxfrag.c \
-	dec/x86/mmxidct.c \
-	dec/x86/mmxstate.c \
-	dec/x86/x86state.c
+	x86/mmxfrag.c \
+	x86/mmxidct.c \
+	x86/mmxstate.c \
+	x86/x86state.c
 
 encoder_shared_x86_64_sources =
 
@@ -60,37 +60,37 @@ endif
 endif
 
 encoder_uniq_sources = \
-	enc/analyze.c \
-	enc/fdct.c \
-	enc/encfrag.c \
-	enc/encapiwrapper.c \
-	enc/encinfo.c \
-	enc/encode.c \
-	enc/enquant.c \
-	enc/huffenc.c \
-	enc/mathops.c \
-	enc/mcenc.c \
-	enc/rate.c \
-	enc/tokenize.c \
+	analyze.c \
+	fdct.c \
+	encfrag.c \
+	encapiwrapper.c \
+	encinfo.c \
+	encode.c \
+	enquant.c \
+	huffenc.c \
+	mathops.c \
+	mcenc.c \
+	rate.c \
+	tokenize.c \
 	$(encoder_uniq_arch_sources)
 
 encoder_sources = \
-	dec/apiwrapper.c \
-	dec/fragment.c \
-	dec/idct.c \
-	dec/internal.c \
-	dec/state.c \
-	dec/quant.c \
+	apiwrapper.c \
+	fragment.c \
+	idct.c \
+	internal.c \
+	state.c \
+	quant.c \
 	$(encoder_shared_arch_sources) \
 	$(encoder_uniq_sources)
 
 endif
 
 decoder_x86_sources = \
-	dec/x86/mmxidct.c \
-	dec/x86/mmxfrag.c \
-	dec/x86/mmxstate.c \
-	dec/x86/x86state.c
+	x86/mmxidct.c \
+	x86/mmxfrag.c \
+	x86/mmxstate.c \
+	x86/x86state.c
 if CPU_x86_64
 decoder_arch_sources = $(decoder_x86_sources)
 else
@@ -102,42 +102,42 @@ endif
 endif
 
 decoder_sources = \
-	dec/apiwrapper.c \
-	dec/bitpack.c \
-	dec/decapiwrapper.c \
-	dec/decinfo.c \
-	dec/decode.c \
-	dec/dequant.c \
-	dec/fragment.c \
-	dec/huffdec.c \
-	dec/idct.c \
-	dec/info.c \
-	dec/internal.c \
-	dec/quant.c \
-	dec/state.c \
+	apiwrapper.c \
+	bitpack.c \
+	decapiwrapper.c \
+	decinfo.c \
+	decode.c \
+	dequant.c \
+	fragment.c \
+	huffdec.c \
+	idct.c \
+	info.c \
+	internal.c \
+	quant.c \
+	state.c \
 	$(decoder_arch_sources)
 
 noinst_HEADERS = \
 	cpu.h \
 	internal.h \
-	enc/encint.h \
-	enc/enquant.h \
-	enc/huffenc.h \
-	enc/mathops.h \
-	enc/modedec.h \
-	enc/x86/x86enc.h \
-	dec/apiwrapper.h \
-	dec/bitpack.h \
-	dec/dct.h \
-	dec/decint.h \
-	dec/dequant.h \
-	dec/huffdec.h \
-	dec/huffman.h \
-	dec/ocintrin.h \
-	dec/quant.h \
-	dec/x86/mmxfrag.h \
-	dec/x86/mmxloop.h \
-	dec/x86/x86int.h
+	encint.h \
+	enquant.h \
+	huffenc.h \
+	mathops.h \
+	modedec.h \
+	x86/x86enc.h \
+	apiwrapper.h \
+	bitpack.h \
+	dct.h \
+	decint.h \
+	dequant.h \
+	huffdec.h \
+	huffman.h \
+	ocintrin.h \
+	quant.h \
+	x86/mmxfrag.h \
+	x86/mmxloop.h \
+	x86/x86int.h
 
 libtheoradec_la_SOURCES = \
 	$(decoder_sources) \

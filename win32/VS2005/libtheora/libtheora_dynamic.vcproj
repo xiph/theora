@@ -53,7 +53,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_BIND_TO_CURRENT_CRT_VERSION;WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;DEBUG;OC_X86_ASM"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -130,7 +130,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_BIND_TO_CURRENT_CRT_VERSION;WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;DEBUG"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -208,7 +208,7 @@
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_DEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;WINCE;$(ARCHFAM);$(_ARCHFAM_);$(PLATFORMDEFINES)"
 				MinimalRebuild="true"
 				RuntimeLibrary="1"
@@ -284,7 +284,7 @@
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_DEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;WINCE;$(ARCHFAM);$(_ARCHFAM_);$(PLATFORMDEFINES)"
 				MinimalRebuild="true"
 				RuntimeLibrary="1"
@@ -360,7 +360,7 @@
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_DEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;WINCE;$(ARCHFAM);$(_ARCHFAM_);$(PLATFORMDEFINES)"
 				MinimalRebuild="true"
 				RuntimeLibrary="1"
@@ -438,7 +438,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_BIND_TO_CURRENT_CRT_VERSION;WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;OC_X86_ASM"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -522,7 +522,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_BIND_TO_CURRENT_CRT_VERSION;WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -607,7 +607,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;_WIN32_WCE=$(CEVER);UNDER_CE;WINCE;$(ARCHFAM);$(_ARCHFAM_);$(PLATFORMDEFINES)"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -691,7 +691,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;_WIN32_WCE=$(CEVER);UNDER_CE;WINCE;$(ARCHFAM);$(_ARCHFAM_);$(PLATFORMDEFINES)"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -775,7 +775,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;_WIN32_WCE=$(CEVER);UNDER_CE;WINCE;$(ARCHFAM);$(_ARCHFAM_);$(PLATFORMDEFINES)"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -857,7 +857,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_BIND_TO_CURRENT_CRT_VERSION;WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -942,7 +942,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_BIND_TO_CURRENT_CRT_VERSION;WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -1027,7 +1027,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;_WIN32_WCE=$(CEVER);UNDER_CE;WINCE;$(ARCHFAM);$(_ARCHFAM_);$(PLATFORMDEFINES)"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -1111,7 +1111,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;_WIN32_WCE=$(CEVER);UNDER_CE;WINCE;$(ARCHFAM);$(_ARCHFAM_);$(PLATFORMDEFINES)"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -1195,7 +1195,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;_WIN32_WCE=$(CEVER);UNDER_CE;WINCE;$(ARCHFAM);$(_ARCHFAM_);$(PLATFORMDEFINES)"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -1277,7 +1277,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_BIND_TO_CURRENT_CRT_VERSION;WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -1362,7 +1362,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_BIND_TO_CURRENT_CRT_VERSION;WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -1447,7 +1447,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;_WIN32_WCE=$(CEVER);UNDER_CE;WINCE;$(ARCHFAM);$(_ARCHFAM_);$(PLATFORMDEFINES)"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -1531,7 +1531,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;_WIN32_WCE=$(CEVER);UNDER_CE;WINCE;$(ARCHFAM);$(_ARCHFAM_);$(PLATFORMDEFINES)"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -1615,7 +1615,7 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\lib\enc;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
+				AdditionalIncludeDirectories="..\..\..\include;..\..\..\lib;..\..\..\..\libogg\include;..\..\..\..\..\..\..\core\ogg\libogg\include\"
 				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;_WINDOWS;_USRDLL;LIBTHEORA_EXPORTS;_WIN32_WCE=$(CEVER);UNDER_CE;WINCE;$(ARCHFAM);$(_ARCHFAM_);$(PLATFORMDEFINES)"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -1714,27 +1714,27 @@
 				Name="enc"
 				>
 				<File
-					RelativePath="..\..\..\lib\enc\analyze.c"
+					RelativePath="..\..\..\lib\analyze.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\encapiwrapper.c"
+					RelativePath="..\..\..\lib\encapiwrapper.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\encfrag.c"
+					RelativePath="..\..\..\lib\encfrag.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\encinfo.c"
+					RelativePath="..\..\..\lib\encinfo.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\encint.h"
+					RelativePath="..\..\..\lib\encint.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\encode.c"
+					RelativePath="..\..\..\lib\encode.c"
 					>
 					<FileConfiguration
 						Name="Debug|Win32"
@@ -1942,7 +1942,7 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\encoder_disabled.c"
+					RelativePath="..\..\..\lib\encoder_disabled.c"
 					>
 					<FileConfiguration
 						Name="Debug|Win32"
@@ -2106,62 +2106,62 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\enquant.c"
+					RelativePath="..\..\..\lib\enquant.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\enquant.h"
+					RelativePath="..\..\..\lib\enquant.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\fdct.c"
+					RelativePath="..\..\..\lib\fdct.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\huffenc.c"
+					RelativePath="..\..\..\lib\huffenc.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\huffenc.h"
+					RelativePath="..\..\..\lib\huffenc.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\mathops.c"
+					RelativePath="..\..\..\lib\mathops.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\mathops.h"
+					RelativePath="..\..\..\lib\mathops.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\mcenc.c"
+					RelativePath="..\..\..\lib\mcenc.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\mode_select.h"
+					RelativePath="..\..\..\lib\mode_select.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\rate.c"
+					RelativePath="..\..\..\lib\rate.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\enc\tokenize.c"
+					RelativePath="..\..\..\lib\tokenize.c"
 					>
 				</File>
 				<Filter
 					Name="x86_vc"
 					>
 					<File
-						RelativePath="..\..\..\lib\enc\x86_vc\mmxencfrag.c"
+						RelativePath="..\..\..\lib\x86_vc\mmxencfrag.c"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\lib\enc\x86_vc\mmxfdct.c"
+						RelativePath="..\..\..\lib\x86_vc\mmxfdct.c"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\lib\enc\x86_vc\x86enc.c"
+						RelativePath="..\..\..\lib\x86_vc\x86enc.c"
 						>
 					</File>
 				</Filter>
@@ -2170,275 +2170,39 @@
 				Name="dec"
 				>
 				<File
-					RelativePath="..\..\..\lib\dec\apiwrapper.c"
+					RelativePath="..\..\..\lib\apiwrapper.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\apiwrapper.h"
+					RelativePath="..\..\..\lib\apiwrapper.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\bitpack.c"
+					RelativePath="..\..\..\lib\bitpack.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\bitpack.h"
+					RelativePath="..\..\..\lib\bitpack.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\dct.h"
+					RelativePath="..\..\..\lib\dct.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\decapiwrapper.c"
+					RelativePath="..\..\..\lib\decapiwrapper.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\decinfo.c"
+					RelativePath="..\..\..\lib\decinfo.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\decint.h"
+					RelativePath="..\..\..\lib\decint.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\decode.c"
-					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_RTL_dll|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_RTL_dll|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_RTL_dll|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_RTL_dll|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-				</File>
-				<File
-					RelativePath="..\..\..\lib\dec\dequant.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\lib\dec\dequant.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\lib\dec\enquant.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\lib\dec\fragment.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\lib\dec\huffdec.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\lib\dec\huffdec.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\lib\dec\huffman.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\lib\dec\idct.c"
+					RelativePath="..\..\..\lib\decode.c"
 					>
 					<FileConfiguration
 						Name="Debug|Win32"
@@ -2646,23 +2410,35 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\idct.h"
+					RelativePath="..\..\..\lib\dequant.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\info.c"
+					RelativePath="..\..\..\lib\dequant.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\internal.c"
+					RelativePath="..\..\..\lib\enquant.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\ocintrin.h"
+					RelativePath="..\..\..\lib\fragment.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\quant.c"
+					RelativePath="..\..\..\lib\huffdec.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\lib\huffdec.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\lib\huffman.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\lib\idct.c"
 					>
 					<FileConfiguration
 						Name="Debug|Win32"
@@ -2870,30 +2646,254 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\quant.h"
+					RelativePath="..\..\..\lib\idct.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\lib\dec\state.c"
+					RelativePath="..\..\..\lib\info.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\lib\internal.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\lib\ocintrin.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\lib\quant.c"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|x64"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|x64"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE|x64"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE|Windows Mobile 6 Professional SDK (ARMV4I)"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE2|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE2|x64"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_SSE2|Windows Mobile 6 Professional SDK (ARMV4I)"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug_RTL_dll|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug_RTL_dll|x64"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_RTL_dll|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_RTL_dll|x64"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\..\..\lib\quant.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\lib\state.c"
 					>
 				</File>
 				<Filter
 					Name="x86_vc"
 					>
 					<File
-						RelativePath="..\..\..\lib\dec\x86_vc\mmxfrag.c"
+						RelativePath="..\..\..\lib\x86_vc\mmxfrag.c"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\lib\dec\x86_vc\mmxidct.c"
+						RelativePath="..\..\..\lib\x86_vc\mmxidct.c"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\lib\dec\x86_vc\mmxstate.c"
+						RelativePath="..\..\..\lib\x86_vc\mmxstate.c"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\lib\dec\x86_vc\x86state.c"
+						RelativePath="..\..\..\lib\x86_vc\x86state.c"
 						>
 					</File>
 				</Filter>

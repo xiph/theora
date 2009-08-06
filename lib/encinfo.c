@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#include "../internal.h"
+#include "internal.h"
 #include "enquant.h"
 #include "huffenc.h"
 

@@ -33,7 +33,8 @@ ENCODER_EXAMPLE_TARGET = encoder_example.exe
 # The compiler tools to use
 # The is no standard mingw prefix, so try to guess
 MINGW_PREFIX := $(or $(strip $(foreach exeprefix, \
-	i686-mingw32 i586-mingw32msvc i386-mingw32 no-mingw32, \
+	i686-mingw32 i686-pc-mingw32 i586-mingw32msvc i386-mingw32 \
+	no-mingw32, \
 	$(if $(shell which $(exeprefix)-gcc 2>/dev/null), $(exeprefix) ))))
 CC = $(MINGW_PREFIX)-gcc
 RC = $(MINGW_PREFIX)-windres
@@ -70,53 +71,53 @@ WORKDIR = objs
 # C source file lists
 
 LIBTHEORADEC_CSOURCES = \
-dec/apiwrapper.c \
-dec/bitpack.c \
-dec/decapiwrapper.c \
-dec/decinfo.c \
-dec/decode.c \
-dec/dequant.c \
-dec/fragment.c \
-dec/huffdec.c \
-dec/idct.c \
-dec/info.c \
-dec/internal.c \
-dec/quant.c \
-dec/state.c \
+apiwrapper.c \
+bitpack.c \
+decapiwrapper.c \
+decinfo.c \
+decode.c \
+dequant.c \
+fragment.c \
+huffdec.c \
+idct.c \
+info.c \
+internal.c \
+quant.c \
+state.c \
 $(if $(findstring -DOC_X86_ASM,${CFLAGS}), \
-dec/x86/mmxidct.c \
-dec/x86/mmxfrag.c \
-dec/x86/mmxstate.c \
-dec/x86/x86state.c \
+x86/mmxidct.c \
+x86/mmxfrag.c \
+x86/mmxstate.c \
+x86/x86state.c \
 )
 
 LIBTHEORAENC_CSOURCES = \
-dec/apiwrapper.c \
-dec/fragment.c \
-dec/idct.c \
-dec/internal.c \
-dec/state.c \
-dec/quant.c \
-enc/analyze.c \
-enc/fdct.c \
-enc/encfrag.c \
-enc/encapiwrapper.c \
-enc/encinfo.c \
-enc/encode.c \
-enc/enquant.c \
-enc/huffenc.c \
-enc/mathops.c \
-enc/mcenc.c \
-enc/rate.c \
-enc/tokenize.c \
+apiwrapper.c \
+fragment.c \
+idct.c \
+internal.c \
+state.c \
+quant.c \
+analyze.c \
+fdct.c \
+encfrag.c \
+encapiwrapper.c \
+encinfo.c \
+encode.c \
+enquant.c \
+huffenc.c \
+mathops.c \
+mcenc.c \
+rate.c \
+tokenize.c \
 $(if $(findstring -DOC_X86_ASM,${CFLAGS}), \
-dec/x86/mmxfrag.c \
-dec/x86/mmxidct.c \
-dec/x86/mmxstate.c \
-dec/x86/x86state.c \
-enc/x86/mmxencfrag.c \
-enc/x86/mmxfdct.c \
-enc/x86/x86enc.c \
+x86/mmxfrag.c \
+x86/mmxidct.c \
+x86/mmxstate.c \
+x86/x86state.c \
+x86/mmxencfrag.c \
+x86/mmxfdct.c \
+x86/x86enc.c \
 )
 
 
@@ -344,10 +345,7 @@ ${PLAYER_EXAMPLE_TARGET}: ${PLAYER_EXAMPLE_OBJS} ${LIBTHEORADEC_TARGET}
 # Remove all targets.
 clean:
 	-rm $(sort ${ALL_OBJS} ${ALL_DEPS} ${ALL_TARGETS} ${IMPLIB_TARGETS})
-	-rmdir ${WORKDIR}/enc/x86
-	-rmdir ${WORKDIR}/enc
-	-rmdir ${WORKDIR}/dec/x86
-	-rmdir ${WORKDIR}/dec
+	-rmdir ${WORKDIR}/x86
 	-rmdir ${WORKDIR}
 
 # Make everything depend on changes in the Makefile

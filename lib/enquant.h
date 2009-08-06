@@ -1,6 +1,6 @@
 #if !defined(_enquant_H)
 # define _enquant_H (1)
-# include "../dec/quant.h"
+# include "quant.h"
 
 typedef struct oc_iquant oc_iquant;
 

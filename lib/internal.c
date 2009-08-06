@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <string.h>
-#include "../internal.h"
+#include "internal.h"
 
 
 
