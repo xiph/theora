@@ -1544,7 +1544,7 @@ int main(int argc,char *argv[]){
         if((keyframe_frequency*7>>1) > 5*video_fps_n/video_fps_d)
           arg=keyframe_frequency*7>>1;
         else
-          arg=30*video_fps_n/video_fps_d;
+          arg=5*video_fps_n/video_fps_d;
         ret=th_encode_ctl(td,TH_ENCCTL_SET_RATE_BUFFER,&arg,sizeof(arg));
         if(ret<0)
           fprintf(stderr,"Could not set rate control buffer for --soft-target\n");
