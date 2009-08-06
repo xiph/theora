@@ -623,14 +623,14 @@ int main(int argc,char *const *argv){
     theora_control(&td,TH_DECCTL_SET_PPLEVEL,&pp_level,sizeof(pp_level));
     pp_inc=0;
 
-    {
+    /*{
       int arg = 0xffff;
       theora_control(&td,TH_DECCTL_SET_TELEMETRY_MBMODE,&arg,sizeof(arg));
       theora_control(&td,TH_DECCTL_SET_TELEMETRY_MV,&arg,sizeof(arg));
       theora_control(&td,TH_DECCTL_SET_TELEMETRY_QI,&arg,sizeof(arg));
       arg=10;
       theora_control(&td,TH_DECCTL_SET_TELEMETRY_BITS,&arg,sizeof(arg));
-    }
+    }*/
   }else{
     /* tear down the partial theora setup */
     theora_info_clear(&ti);
