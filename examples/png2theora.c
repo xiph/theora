@@ -852,7 +852,7 @@ main(int argc, char *argv[])
     do {
       if(i >= n-1) last = 1;
       if(theora_write_frame(w, h, yuv, last)) {
-        goto close;
+          fprintf(stderr,"Encoding error.\n");
         exit(1);
       }
       free(yuv);    
@@ -888,7 +888,6 @@ main(int argc, char *argv[])
     th_encode_free(td);
   }
 
-close: 
   if(ogg_stream_flush(&ogg_os, &og)) {
     fwrite(og.header, og.header_len, 1, ogg_fp);
     fwrite(og.body, og.body_len, 1, ogg_fp);
