@@ -1409,7 +1409,7 @@ int main(int argc,char *argv[]){
 
   if(soft_target){
     if(video_r<=0){
-      fprintf(stderr,"Soft rate target (--soft-tagret) requested without a bitrate (-V).\n");
+      fprintf(stderr,"Soft rate target (--soft-target) requested without a bitrate (-V).\n");
       exit(1);
     }
     if(video_q==-1)
