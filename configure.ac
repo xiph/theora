@@ -320,7 +320,6 @@ AM_PATH_SDL(,[
 
 dnl check for OSS
 HAVE_OSS=no
-
 AC_CHECK_HEADERS([sys/soundcard.h soundcard.h machine/soundcard.h],[
   HAVE_OSS=yes
   break
@@ -328,6 +327,15 @@ AC_CHECK_HEADERS([sys/soundcard.h soundcard.h machine/soundcard.h],[
 if test x$HAVE_OSS != xyes; then
   AC_MSG_WARN([OSS audio support not found -- not compiling player_example])
 fi
+
+dnl OpenBSD needs -lossaudio to use the oss interface
+OSS_LIBS=
+case "$target_os" in
+  openbsd*)
+    OSS_LIBS='-lossaudio'
+    ;;
+esac
+AC_SUBST(OSS_LIBS)
 
 dnl check for libpng
 HAVE_PNG=no
@@ -343,16 +351,6 @@ HAVE_CAIRO=no
 AC_ARG_ENABLE(telemetry,
     [  --enable-telemetry      enable debugging output controls ],
     [ ac_enable_telemetry=$enableval ], [ ac_enable_telemetry=no] )
-
-dnl OpenBSD needs some extra flags for examples to build
-case "$target_os" in
-  openbsd*)
-    OBSD_COMPAT='-lcompat'
-    OBSD_OSSAUDIO='-lossaudio'
-    ;;
-esac
-AC_SUBST(OBSD_COMPAT)
-AC_SUBST(OBSD_OSSAUDIO)
 
 if test "x${ac_enable_telemetry}" = xyes; then
    if test "x$HAVE_PKG_CONFIG" = "xyes"
@@ -426,6 +424,9 @@ dnl none
 dnl --------------------------------------------------
 dnl Check for library functions
 dnl --------------------------------------------------
+
+dnl OpenBSD needs -lcompat for ftime() used by dump_video.c
+AC_SEARCH_LIBS([ftime], [compat])
 
 dnl substitute the included getopt if the system doesn't support long options
 AC_CHECK_FUNC(getopt_long,
