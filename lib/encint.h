@@ -188,9 +188,11 @@ struct oc_log_linear_fit{
 
 /*The 2-pass metrics associated with a single frame.*/
 struct oc_frame_metrics{
-  ogg_int64_t   log_scale; /* Q24; int64 to avoid casting each time we
-                              wish to convert back to Q57 */
+  /*The log base 2 of the scale factor for this frame in Q24 format.*/
+  ogg_int32_t   log_scale;
+  /*The number of application-requested duplicates of this frame.*/
   unsigned      dup_count:31;
+  /*The frame type from pass 1.*/
   unsigned      frame_type:1;
 };
 
