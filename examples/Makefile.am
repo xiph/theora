@@ -22,7 +22,7 @@ dump_psnr_LDADD = $(GETOPT_OBJS) $(LDADDDEC) -lm
 
 player_example_SOURCES = player_example.c
 player_example_CFLAGS = $(SDL_CFLAGS) $(OGG_CFLAGS) $(VORBIS_CFLAGS)
-player_example_LDADD = $(LDADD) $(SDL_LIBS) $(VORBIS_LIBS)
+player_example_LDADD = $(LDADDDEC) $(SDL_LIBS) $(VORBIS_LIBS)
 
 encoder_example_SOURCES = encoder_example.c
 EXTRA_encoder_example_SOURCES = getopt.c getopt1.c getopt.h

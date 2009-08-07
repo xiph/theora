@@ -56,7 +56,7 @@
 #include <fcntl.h>
 #include <math.h>
 #include <signal.h>
-#include "theora/theora.h"
+#include "theora/theoradec.h"
 #include "vorbis/codec.h"
 #include <SDL.h>
 
@@ -91,14 +91,15 @@ ogg_sync_state   oy;
 ogg_page         og;
 ogg_stream_state vo;
 ogg_stream_state to;
-theora_info      ti;
-theora_comment   tc;
-theora_state     td;
+th_info      ti;
+th_comment   tc;
+th_dec_ctx       *td;
+th_setup_info    *ts;
 vorbis_info      vi;
 vorbis_dsp_state vd;
 vorbis_block     vb;
 vorbis_comment   vc;
-theora_pixelformat     px_fmt;
+th_pixel_fmt     px_fmt;
 
 int              theora_p=0;
 int              vorbis_p=0;
@@ -307,8 +308,8 @@ static void sigint_handler (int signal) {
 static void open_video(void){
   int w;
   int h;
-  w=(ti.offset_x+ti.frame_width+1&~1)-(ti.offset_x&~1);
-  h=(ti.offset_y+ti.frame_height+1&~1)-(ti.offset_y&~1);
+  w=(ti.pic_x+ti.frame_width+1&~1)-(ti.pic_x&~1);
+  h=(ti.pic_y+ti.frame_height+1&~1)-(ti.pic_y&~1);
   if ( SDL_Init(SDL_INIT_VIDEO) < 0 ) {
     fprintf(stderr, "Unable to init SDL: %s\n", SDL_GetError());
     exit(1);
@@ -321,7 +322,7 @@ static void open_video(void){
     exit(1);
   }
 
-  if (px_fmt==OC_PF_422)
+  if (px_fmt==TH_PF_422)
     yuv_overlay = SDL_CreateYUVOverlay(w, h,
                                      SDL_YUY2_OVERLAY,
                                      screen);
@@ -345,10 +346,9 @@ static void open_video(void){
 
 static void video_write(void){
   int i;
-  yuv_buffer yuv;
+  th_ycbcr_buffer yuv;
   int y_offset, uv_offset;
-  theora_decode_YUVout(&td,&yuv);
-
+  th_decode_ycbcr_out(td,yuv);
   /* Lock SDL_yuv_overlay */
   if ( SDL_MUSTLOCK(screen) ) {
     if ( SDL_LockSurface(screen) < 0 ) return;
@@ -361,36 +361,36 @@ static void video_write(void){
   /* and crop input properly, respecting the encoded frame rect */
   /* problems may exist for odd frame rect for some encodings */
 
-  y_offset=(ti.offset_x&~1)+yuv.y_stride*(ti.offset_y&~1);
+  y_offset=(ti.pic_x&~1)+yuv[0].stride*(ti.pic_y&~1);
 
-  if (px_fmt==OC_PF_422) {
-    uv_offset=(ti.offset_x/2)+(yuv.uv_stride)*(ti.offset_y);
+  if (px_fmt==TH_PF_422) {
+    uv_offset=(ti.pic_x/2)+(yuv[1].stride)*(ti.pic_y);
     /* SDL doesn't have a planar 4:2:2 */ 
     for(i=0;i<yuv_overlay->h;i++) {
       int j;
-      char *in_y  = (char *)yuv.y+y_offset+yuv.y_stride*i;
+      char *in_y  = (char *)yuv[0].data+y_offset+yuv[0].stride*i;
       char *out = (char *)(yuv_overlay->pixels[0]+yuv_overlay->pitches[0]*i);
       for (j=0;j<yuv_overlay->w;j++)
         out[j*2] = in_y[j];
-      char *in_u  = (char *)yuv.u+uv_offset+yuv.uv_stride*i;
-      char *in_v  = (char *)yuv.v+uv_offset+yuv.uv_stride*i;
+      char *in_u  = (char *)yuv[1].data+uv_offset+yuv[1].stride*i;
+      char *in_v  = (char *)yuv[1].data+uv_offset+yuv[2].stride*i;
       for (j=0;j<yuv_overlay->w>>1;j++) {
         out[j*4+1] = in_u[j];
         out[j*4+3] = in_v[j];
       }
     }
   } else {
-    uv_offset=(ti.offset_x/2)+(yuv.uv_stride)*(ti.offset_y/2);
+    uv_offset=(ti.pic_x/2)+(yuv[1].stride)*(ti.pic_y/2);
     for(i=0;i<yuv_overlay->h;i++)
       memcpy(yuv_overlay->pixels[0]+yuv_overlay->pitches[0]*i,
-           yuv.y+y_offset+yuv.y_stride*i,
+           yuv[0].data+y_offset+yuv[0].stride*i,
            yuv_overlay->w);
     for(i=0;i<yuv_overlay->h/2;i++){
       memcpy(yuv_overlay->pixels[1]+yuv_overlay->pitches[1]*i,
-           yuv.v+uv_offset+yuv.uv_stride*i,
+           yuv[2].data+uv_offset+yuv[2].stride*i,
            yuv_overlay->w/2);
       memcpy(yuv_overlay->pixels[2]+yuv_overlay->pitches[2]*i,
-           yuv.u+uv_offset+yuv.uv_stride*i,
+           yuv[1].data+uv_offset+yuv[1].stride*i,
            yuv_overlay->w/2);
     }
   }
@@ -407,7 +407,7 @@ static void video_write(void){
 
 }
 /* dump the theora (or vorbis) comment header */
-static int dump_comments(theora_comment *tc){
+static int dump_comments(th_comment *tc){
   int i, len;
   char *value;
   FILE *out=stdout;
@@ -433,16 +433,16 @@ static int dump_comments(theora_comment *tc){
    We don't actually make use of the information in this example;
    a real player should attempt to perform color correction for
    whatever display device it supports. */
-static void report_colorspace(theora_info *ti)
+static void report_colorspace(th_info *ti)
 {
     switch(ti->colorspace){
-      case OC_CS_UNSPECIFIED:
+      case TH_CS_UNSPECIFIED:
         /* nothing to report */
         break;;
-      case OC_CS_ITU_REC_470M:
+      case TH_CS_ITU_REC_470M:
         fprintf(stderr,"  encoder specified ITU Rec 470M (NTSC) color.\n");
         break;;
-      case OC_CS_ITU_REC_470BG:
+      case TH_CS_ITU_REC_470BG:
         fprintf(stderr,"  encoder specified ITU Rec 470BG (PAL) color.\n");
         break;;
       default:
@@ -509,8 +509,8 @@ int main(int argc,char *const *argv){
   vorbis_comment_init(&vc);
 
   /* init supporting Theora structures needed in header parsing */
-  theora_comment_init(&tc);
-  theora_info_init(&ti);
+  th_comment_init(&tc);
+  th_info_init(&ti);
 
   /* Ogg file open; parse the headers */
   /* Only interested in Vorbis/Theora streams */
@@ -532,8 +532,9 @@ int main(int argc,char *const *argv){
       ogg_stream_pagein(&test,&og);
       ogg_stream_packetout(&test,&op);
 
+
       /* identify the codec: try theora */
-      if(!theora_p && theora_decode_header(&ti,&tc,&op)>=0){
+      if(!theora_p && th_decode_headerin(&ti,&tc,&ts,&op)>=0){
         /* it is theora */
         memcpy(&to,&test,sizeof(test));
         theora_p=1;
@@ -560,7 +561,7 @@ int main(int argc,char *const *argv){
          "corrupt stream?\n");
         exit(1);
       }
-      if(theora_decode_header(&ti,&tc,&op)){
+      if(!th_decode_headerin(&ti,&tc,&ts,&op)){
         fprintf(stderr,"Error parsing Theora stream headers; "
          "corrupt stream?\n");
         exit(1);
@@ -598,44 +599,47 @@ int main(int argc,char *const *argv){
 
   /* and now we have it all.  initialize decoders */
   if(theora_p){
-    theora_decode_init(&td,&ti);
+    td=th_decode_alloc(&ti,ts);
     printf("Ogg logical stream %lx is Theora %dx%d %.02f fps",
-           to.serialno,ti.width,ti.height,
+           to.serialno,ti.pic_width,ti.pic_height,
            (double)ti.fps_numerator/ti.fps_denominator);
-    px_fmt=ti.pixelformat;
-    switch(ti.pixelformat){
-      case OC_PF_420: printf(" 4:2:0 video\n"); break;
-      case OC_PF_422: printf(" 4:2:2 video\n"); break;
-      case OC_PF_444: printf(" 4:4:4 video\n"); break;
-      case OC_PF_RSVD:
+    px_fmt=ti.pixel_fmt;
+    switch(ti.pixel_fmt){
+      case TH_PF_420: printf(" 4:2:0 video\n"); break;
+      case TH_PF_422: printf(" 4:2:2 video\n"); break;
+      case TH_PF_444: printf(" 4:4:4 video\n"); break;
+      case TH_PF_RSVD:
       default:
        printf(" video\n  (UNKNOWN Chroma sampling!)\n");
        break;
     }
-    if(ti.width!=ti.frame_width || ti.height!=ti.frame_height)
+    if(ti.pic_width!=ti.frame_width || ti.pic_height!=ti.frame_height)
       printf("  Frame content is %dx%d with offset (%d,%d).\n",
-           ti.frame_width, ti.frame_height, ti.offset_x, ti.offset_y);
+           ti.frame_width, ti.frame_height, ti.pic_x, ti.pic_y);
     report_colorspace(&ti);
     dump_comments(&tc);
-    theora_control(&td,TH_DECCTL_GET_PPLEVEL_MAX,&pp_level_max,
+    th_decode_ctl(td,TH_DECCTL_GET_PPLEVEL_MAX,&pp_level_max,
      sizeof(pp_level_max));
     pp_level=pp_level_max;
-    theora_control(&td,TH_DECCTL_SET_PPLEVEL,&pp_level,sizeof(pp_level));
+    th_decode_ctl(td,TH_DECCTL_SET_PPLEVEL,&pp_level,sizeof(pp_level));
     pp_inc=0;
 
     /*{
       int arg = 0xffff;
-      theora_control(&td,TH_DECCTL_SET_TELEMETRY_MBMODE,&arg,sizeof(arg));
-      theora_control(&td,TH_DECCTL_SET_TELEMETRY_MV,&arg,sizeof(arg));
-      theora_control(&td,TH_DECCTL_SET_TELEMETRY_QI,&arg,sizeof(arg));
+      th_decode_ctl(td,TH_DECCTL_SET_TELEMETRY_MBMODE,&arg,sizeof(arg));
+      th_decode_ctl(td,TH_DECCTL_SET_TELEMETRY_MV,&arg,sizeof(arg));
+      th_decode_ctl(td,TH_DECCTL_SET_TELEMETRY_QI,&arg,sizeof(arg));
       arg=10;
-      theora_control(&td,TH_DECCTL_SET_TELEMETRY_BITS,&arg,sizeof(arg));
+      th_decode_ctl(td,TH_DECCTL_SET_TELEMETRY_BITS,&arg,sizeof(arg));
     }*/
   }else{
     /* tear down the partial theora setup */
-    theora_info_clear(&ti);
-    theora_comment_clear(&tc);
+    th_info_clear(&ti);
+    th_comment_clear(&tc);
   }
+  
+  th_setup_free(ts);
+  
   if(vorbis_p){
     vorbis_synthesis_init(&vd,&vi);
     vorbis_block_init(&vd,&vb);
@@ -708,7 +712,7 @@ int main(int argc,char *const *argv){
 
         if(pp_inc){
           pp_level+=pp_inc;
-          theora_control(&td,TH_DECCTL_SET_PPLEVEL,&pp_level,
+          th_decode_ctl(td,TH_DECCTL_SET_PPLEVEL,&pp_level,
            sizeof(pp_level));
           pp_inc=0;
         }
@@ -719,12 +723,11 @@ int main(int argc,char *const *argv){
            page and compute the correct granulepos for the first packet after
            a seek or a gap.*/
         if(op.granulepos>=0){
-          theora_control(&td,TH_DECCTL_SET_GRANPOS,&op.granulepos,
+          th_decode_ctl(td,TH_DECCTL_SET_GRANPOS,&op.granulepos,
            sizeof(op.granulepos));
         }
-        if(theora_decode_packetin(&td,&op)==0){
-          videobuf_granulepos=td.granulepos;
-          videobuf_time=theora_granule_time(&td,videobuf_granulepos);
+        if(th_decode_packetin(td,&op,&videobuf_granulepos)==0){
+          videobuf_time=th_granule_time(td,videobuf_granulepos);
           frames++;
 
           /* is it already too old to be useful?  This is only actually
@@ -834,9 +837,9 @@ int main(int argc,char *const *argv){
   }
   if(theora_p){
     ogg_stream_clear(&to);
-    theora_clear(&td);
-    theora_comment_clear(&tc);
-    theora_info_clear(&ti);
+    th_decode_free(td);
+    th_comment_clear(&tc);
+    th_info_clear(&ti);
   }
   ogg_sync_clear(&oy);
 
