@@ -344,6 +344,16 @@ AC_ARG_ENABLE(telemetry,
     [  --enable-telemetry      enable debugging output controls ],
     [ ac_enable_telemetry=$enableval ], [ ac_enable_telemetry=no] )
 
+dnl OpenBSD needs some extra flags for examples to build
+case "$target_os" in
+  openbsd*)
+    OBSD_COMPAT='-lcompat'
+    OBSD_OSSAUDIO='-lossaudio'
+    ;;
+esac
+AC_SUBST(OBSD_COMPAT)
+AC_SUBST(OBSD_OSSAUDIO)
+
 if test "x${ac_enable_telemetry}" = xyes; then
    if test "x$HAVE_PKG_CONFIG" = "xyes"
    then
