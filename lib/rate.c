@@ -815,9 +815,13 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
   }
   /*Common to all passes:*/
   if(_bits>0){
-    /*Use the estimated scale factor directly directly if this was a
-       trial.*/
-    if(_trial)_enc->rc.log_scale[_qti]=log_scale;
+    if(_trial){
+      oc_iir_filter *f;
+      /*Use the estimated scale factor directly if this was a trial.*/
+      f=_enc->rc.scalefilter+_qti;
+      f->y[1]=f->y[0]=f->x[1]=f->x[0]=oc_q57_to_q24(log_scale);
+      _enc->rc.log_scale[_qti]=log_scale;
+    }
     else{
       /*Otherwise update the low-pass scale filter for this frame type,
          regardless of whether or not we dropped this frame.*/
