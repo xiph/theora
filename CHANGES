@@ -1,6 +1,9 @@
 libtheora 1.1beta2 (unreleased)
 
- - no changes recorded
+ - Fix a rate control problem with sudden entropy jumps
+ - Build fixes for OpenBSD
+ - Examples now all use the 1.0 api
+ - Various bug fixes and source tree rearrangement
 
 libtheora 1.1beta1 (2009 August 5)
 
