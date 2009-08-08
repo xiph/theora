@@ -120,7 +120,7 @@ extern "C" {
  *                    encoding mode.*/
 #define TH_ENCCTL_GET_SPLEVEL_MAX (12)
 /**Sets the speed level.
- * By default, the slowest speed (0) is used.
+ * The current speed level may be retrieved using #TH_ENCCTL_GET_SPLEVEL.
  *
  * \param[in] _buf <tt>int</tt>: The new encoding speed level.
  *                 0 is slowest, larger values use less CPU.
@@ -133,6 +133,20 @@ extern "C" {
  * \retval TH_IMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_SET_SPLEVEL (14)
+/**Gets the current speed level.
+ * The default speed level may vary according to encoder implementation, but if
+ *  this control code is not supported (it returns #TH_IMPL), the default may
+ *  be assumed to be the slowest available speed (0).
+ * The maximum encoding speed level may be implementation- and encoding
+ *  mode-specific, and can be obtained via #TH_ENCCTL_GET_SPLEVEL_MAX.
+ *
+ * \param[out] _buf <tt>int</tt>: The current encoding speed level.
+ *                  0 is slowest, larger values use less CPU.
+ * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
+ * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(int)</tt>.
+ * \retval TH_IMPL   Not supported by this implementation in the current
+ *                    encoding mode.*/
+#define TH_ENCCTL_GET_SPLEVEL (16)
 /**Sets the number of duplicates of the next frame to produce.
  * Although libtheora can encode duplicate frames very cheaply, it costs some
  *  amount of CPU to detect them, and a run of duplicates cannot span a

@@ -61,7 +61,7 @@ static double rint(double x)
 }
 #endif
 
-const char *optstring = "b:e:o:a:A:v:V:s:S:f:F:ck:d:\1\2\3\4";
+const char *optstring = "b:e:o:a:A:v:V:s:S:f:F:ck:d:z:\1\2\3\4";
 struct option options [] = {
   {"begin-time",required_argument,NULL,'b'},
   {"end-time",required_argument,NULL,'e'},
@@ -75,6 +75,7 @@ struct option options [] = {
   {"framerate-numerator",required_argument,NULL,'f'},
   {"framerate-denominator",required_argument,NULL,'F'},
   {"vp3-compatible",no_argument,NULL,'c'},
+  {"speed",required_argument,NULL,'z'},
   {"soft-target",no_argument,NULL,'\1'},
   {"keyframe-freq",required_argument,NULL,'k'},
   {"buf-delay",required_argument,NULL,'d'},
@@ -188,6 +189,17 @@ static void usage(void){
           "                                  The frame rate nominator divided by this\n"
           "                                  determinates the frame rate in units per tick\n"
           "   -k --keyframe-freq <n>         Keyframe frequency\n"
+          "   -z --speed <n>                 Sets the encoder speed level. Higher speed\n"
+          "                                  levels favor quicker encoding over better\n"
+          "                                  quality per bit. Depending on the encoding\n"
+          "                                  mode, and the internal algorithms used,\n"
+          "                                  quality may actually improve with higher\n"
+          "                                  speeds, but in this case bitrate will also\n"
+          "                                  likely increase. The maximum value, and the\n"
+          "                                  meaning of each value, are implementation-\n"
+          "                                  specific and may change depending on the\n"
+          "                                  current encoding mode (rate constrained,\n"
+          "                                  two-pass, etc.).\n"
           "   -d --buf-delay <n>             Buffer delay (in frames). Longer delays\n"
           "                                  allow smoother rate adaptation and provide\n"
           "                                  better overall quality, but require more\n"
@@ -1217,6 +1229,7 @@ int main(int argc,char *argv[]){
   vorbis_dsp_state vd; /* central working state for the packet->PCM decoder */
   vorbis_block     vb; /* local working space for packet->PCM decode */
 
+  int speed=-1;
   int audioflag=0;
   int videoflag=0;
   int akbps=0;
@@ -1323,6 +1336,14 @@ int main(int argc,char *argv[]){
       buf_delay=atoi(optarg);
       if(buf_delay<=0){
         fprintf(stderr,"Illegal buffer delay\n");
+        exit(1);
+      }
+      break;
+
+    case 'z':
+      speed=atoi(optarg);
+      if(speed<0){
+        fprintf(stderr,"Illegal speed level\n");
         exit(1);
       }
       break;
@@ -1605,6 +1626,32 @@ int main(int argc,char *argv[]){
        &buf_delay,sizeof(buf_delay));
       if(ret<0){
         fprintf(stderr,"Warning: could not set desired buffer delay.\n");
+      }
+    }
+    /*Speed should also be set after the current encoder mode is established,
+       since the available speed levels may change depending.*/
+    if(speed>=0){
+      int speed_max;
+      int ret;
+      ret=th_encode_ctl(td,TH_ENCCTL_GET_SPLEVEL_MAX,
+       &speed_max,sizeof(speed_max));
+      if(ret<0){
+        fprintf(stderr,"Warning: could not determine maximum speed level.\n");
+        speed_max=0;
+      }
+      ret=th_encode_ctl(td,TH_ENCCTL_SET_SPLEVEL,&speed,sizeof(speed));
+      if(ret<0){
+        fprintf(stderr,"Warning: could not set speed level to %i of %i\n",
+         speed,speed_max);
+        if(speed>speed_max){
+          fprintf(stderr,"Setting it to %i instead\n",speed_max);
+        }
+        ret=th_encode_ctl(td,TH_ENCCTL_SET_SPLEVEL,
+         &speed_max,sizeof(speed_max));
+        if(ret<0){
+          fprintf(stderr,"Warning: could not set speed level to %i of %i\n",
+           speed_max,speed_max);
+        }
       }
     }
     /* write the bitstream header packets with proper page interleave */

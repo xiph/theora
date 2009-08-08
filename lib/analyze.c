@@ -675,14 +675,15 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   qii=frags[_fragi].qii;
   if(qii&~3){
 #if !defined(OC_COLLECT_METRICS)
-    /*Enable early skip detection.*/
-    frags[_fragi].coded=0;
-    return 0;
-#else
+    if(_enc->sp_level>=OC_SP_LEVEL_EARLY_SKIP){
+      /*Enable early skip detection.*/
+      frags[_fragi].coded=0;
+      return 0;
+    }
+#endif
     /*Try and code this block anyway.*/
     qii&=3;
     frags[_fragi].qii=qii;
-#endif
   }
   mb_mode=frags[_fragi].mb_mode;
   ref=_enc->state.ref_frame_data[
@@ -1937,7 +1938,7 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
         /*Motion estimation:
           We always do a basic 1MV search for all macroblocks, coded or not,
            keyframe or not.*/
-        if(!_recode)oc_mcenc_search(_enc,mbi);
+        if(!_recode&&_enc->sp_level<OC_SP_LEVEL_NOMC)oc_mcenc_search(_enc,mbi);
         dx=dy=0;
         /*Find the block choice with the lowest estimated coding cost.
           If a Cb or Cr block is coded but no Y' block from a macro block then
@@ -1966,68 +1967,96 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
         oc_skip_cost(_enc,&pipe,mbi,skip_ssd);
         oc_cost_inter_nomv(_enc,modes+OC_MODE_INTER_NOMV,mbi,
          OC_MODE_INTER_NOMV,pipe.fr+0,pipe.qs+0,skip_ssd);
-        oc_cost_intra(_enc,modes+OC_MODE_INTRA,mbi,
-         pipe.fr+0,pipe.qs+0,intra_satd,skip_ssd);
-        mb_mv_bits_0=oc_cost_inter1mv(_enc,modes+OC_MODE_INTER_MV,mbi,
-         OC_MODE_INTER_MV,embs[mbi].unref_mv[OC_FRAME_PREV],
-         pipe.fr+0,pipe.qs+0,skip_ssd);
-        oc_cost_inter(_enc,modes+OC_MODE_INTER_MV_LAST,mbi,
-         OC_MODE_INTER_MV_LAST,last_mv,pipe.fr+0,pipe.qs+0,skip_ssd);
-        oc_cost_inter(_enc,modes+OC_MODE_INTER_MV_LAST2,mbi,
-         OC_MODE_INTER_MV_LAST2,prior_mv,pipe.fr+0,pipe.qs+0,skip_ssd);
-        oc_cost_inter_nomv(_enc,modes+OC_MODE_GOLDEN_NOMV,mbi,
-         OC_MODE_GOLDEN_NOMV,pipe.fr+0,pipe.qs+0,skip_ssd);
-        mb_gmv_bits_0=oc_cost_inter1mv(_enc,modes+OC_MODE_GOLDEN_MV,mbi,
-         OC_MODE_GOLDEN_MV,embs[mbi].unref_mv[OC_FRAME_GOLD],
-         pipe.fr+0,pipe.qs+0,skip_ssd);
-        oc_cost_inter4mv(_enc,modes+OC_MODE_INTER_MV_FOUR,mbi,
-         embs[mbi].block_mv,pipe.fr+0,pipe.qs+0,skip_ssd);
-        /*The explicit MV modes (2,6,7) have not yet gone through halfpel
-           refinement.
-          We choose the explicit MV mode that's already furthest ahead on bits
-           and refine only that one.
-          We have to be careful to remember which ones we've refined so that
-           we don't refine it again if we re-encode this frame.*/
-        inter_mv_pref=_enc->lambda*3;
-        if(modes[OC_MODE_INTER_MV_FOUR].cost<modes[OC_MODE_INTER_MV].cost&&
-         modes[OC_MODE_INTER_MV_FOUR].cost<modes[OC_MODE_GOLDEN_MV].cost){
-          if(!(embs[mbi].refined&0x80)){
-            oc_mcenc_refine4mv(_enc,mbi);
-            embs[mbi].refined|=0x80;
-          }
-          oc_cost_inter4mv(_enc,modes+OC_MODE_INTER_MV_FOUR,mbi,
-           embs[mbi].ref_mv,pipe.fr+0,pipe.qs+0,skip_ssd);
-        }
-        else if(modes[OC_MODE_GOLDEN_MV].cost+inter_mv_pref<
-         modes[OC_MODE_INTER_MV].cost){
-          if(!(embs[mbi].refined&0x40)){
-            oc_mcenc_refine1mv(_enc,mbi,OC_FRAME_GOLD);
-            embs[mbi].refined|=0x40;
-          }
-          mb_gmv_bits_0=oc_cost_inter1mv(_enc,modes+OC_MODE_GOLDEN_MV,mbi,
-           OC_MODE_GOLDEN_MV,embs[mbi].analysis_mv[0][OC_FRAME_GOLD],
+        if(_enc->sp_level<OC_SP_LEVEL_NOMC){
+          oc_cost_intra(_enc,modes+OC_MODE_INTRA,mbi,
+           pipe.fr+0,pipe.qs+0,intra_satd,skip_ssd);
+          mb_mv_bits_0=oc_cost_inter1mv(_enc,modes+OC_MODE_INTER_MV,mbi,
+           OC_MODE_INTER_MV,embs[mbi].unref_mv[OC_FRAME_PREV],
            pipe.fr+0,pipe.qs+0,skip_ssd);
+          oc_cost_inter(_enc,modes+OC_MODE_INTER_MV_LAST,mbi,
+           OC_MODE_INTER_MV_LAST,last_mv,pipe.fr+0,pipe.qs+0,skip_ssd);
+          oc_cost_inter(_enc,modes+OC_MODE_INTER_MV_LAST2,mbi,
+           OC_MODE_INTER_MV_LAST2,prior_mv,pipe.fr+0,pipe.qs+0,skip_ssd);
+          oc_cost_inter4mv(_enc,modes+OC_MODE_INTER_MV_FOUR,mbi,
+           embs[mbi].block_mv,pipe.fr+0,pipe.qs+0,skip_ssd);
+          oc_cost_inter_nomv(_enc,modes+OC_MODE_GOLDEN_NOMV,mbi,
+           OC_MODE_GOLDEN_NOMV,pipe.fr+0,pipe.qs+0,skip_ssd);
+          mb_gmv_bits_0=oc_cost_inter1mv(_enc,modes+OC_MODE_GOLDEN_MV,mbi,
+           OC_MODE_GOLDEN_MV,embs[mbi].unref_mv[OC_FRAME_GOLD],
+           pipe.fr+0,pipe.qs+0,skip_ssd);
+          /*The explicit MV modes (2,6,7) have not yet gone through halfpel
+             refinement.
+            We choose the explicit MV mode that's already furthest ahead on
+             R-D cost and refine only that one.
+            We have to be careful to remember which ones we've refined so that
+             we don't refine it again if we re-encode this frame.*/
+          inter_mv_pref=_enc->lambda*3;
+          if(modes[OC_MODE_INTER_MV_FOUR].cost<modes[OC_MODE_INTER_MV].cost&&
+           modes[OC_MODE_INTER_MV_FOUR].cost<modes[OC_MODE_GOLDEN_MV].cost){
+            if(!(embs[mbi].refined&0x80)){
+              oc_mcenc_refine4mv(_enc,mbi);
+              embs[mbi].refined|=0x80;
+            }
+            oc_cost_inter4mv(_enc,modes+OC_MODE_INTER_MV_FOUR,mbi,
+             embs[mbi].ref_mv,pipe.fr+0,pipe.qs+0,skip_ssd);
+          }
+          else if(modes[OC_MODE_GOLDEN_MV].cost+inter_mv_pref<
+           modes[OC_MODE_INTER_MV].cost){
+            if(!(embs[mbi].refined&0x40)){
+              oc_mcenc_refine1mv(_enc,mbi,OC_FRAME_GOLD);
+              embs[mbi].refined|=0x40;
+            }
+            mb_gmv_bits_0=oc_cost_inter1mv(_enc,modes+OC_MODE_GOLDEN_MV,mbi,
+             OC_MODE_GOLDEN_MV,embs[mbi].analysis_mv[0][OC_FRAME_GOLD],
+             pipe.fr+0,pipe.qs+0,skip_ssd);
+          }
+          if(!(embs[mbi].refined&0x04)){
+            oc_mcenc_refine1mv(_enc,mbi,OC_FRAME_PREV);
+            embs[mbi].refined|=0x04;
+          }
+          mb_mv_bits_0=oc_cost_inter1mv(_enc,modes+OC_MODE_INTER_MV,mbi,
+           OC_MODE_INTER_MV,embs[mbi].analysis_mv[0][OC_FRAME_PREV],
+           pipe.fr+0,pipe.qs+0,skip_ssd);
+          /*Finally, pick the mode with the cheapest estimated R-D cost.*/
+          mb_mode=OC_MODE_INTER_NOMV;
+          if(modes[OC_MODE_INTRA].cost<modes[OC_MODE_INTER_NOMV].cost){
+            mb_mode=OC_MODE_INTRA;
+          }
+          if(modes[OC_MODE_INTER_MV_LAST].cost<modes[mb_mode].cost){
+            mb_mode=OC_MODE_INTER_MV_LAST;
+          }
+          if(modes[OC_MODE_INTER_MV_LAST2].cost<modes[mb_mode].cost){
+            mb_mode=OC_MODE_INTER_MV_LAST2;
+          }
+          if(modes[OC_MODE_GOLDEN_NOMV].cost<modes[mb_mode].cost){
+            mb_mode=OC_MODE_GOLDEN_NOMV;
+          }
+          if(modes[OC_MODE_GOLDEN_MV].cost<modes[mb_mode].cost){
+            mb_mode=OC_MODE_GOLDEN_MV;
+          }
+          if(modes[OC_MODE_INTER_MV_FOUR].cost<modes[mb_mode].cost){
+            mb_mode=OC_MODE_INTER_MV_FOUR;
+          }
+          /*We prefer OC_MODE_INTER_MV, but not over LAST and LAST2.*/
+          if(mb_mode==OC_MODE_INTER_MV_LAST||mb_mode==OC_MODE_INTER_MV_LAST2){
+            inter_mv_pref=0;
+          }
+          if(modes[OC_MODE_INTER_MV].cost<modes[mb_mode].cost+inter_mv_pref){
+            mb_mode=OC_MODE_INTER_MV;
+          }
         }
-        if(!(embs[mbi].refined&0x04)){
-          oc_mcenc_refine1mv(_enc,mbi,OC_FRAME_PREV);
-          embs[mbi].refined|=0x04;
+        else{
+          oc_cost_inter_nomv(_enc,modes+OC_MODE_GOLDEN_NOMV,mbi,
+           OC_MODE_GOLDEN_NOMV,pipe.fr+0,pipe.qs+0,skip_ssd);
+          mb_mode=OC_MODE_INTER_NOMV;
+          if(modes[OC_MODE_INTRA].cost<modes[OC_MODE_INTER_NOMV].cost){
+            mb_mode=OC_MODE_INTRA;
+          }
+          if(modes[OC_MODE_GOLDEN_NOMV].cost<modes[mb_mode].cost){
+            mb_mode=OC_MODE_GOLDEN_NOMV;
+          }
+          mb_mv_bits_0=mb_gmv_bits_0;
         }
-        mb_mv_bits_0=oc_cost_inter1mv(_enc,modes+OC_MODE_INTER_MV,mbi,
-         OC_MODE_INTER_MV,embs[mbi].analysis_mv[0][OC_FRAME_PREV],
-         pipe.fr+0,pipe.qs+0,skip_ssd);
-        /*Finally, pick the mode with the cheapest estimated R-D cost.*/
-        mb_mode=0;
-        if(modes[1].cost<modes[0].cost)mb_mode=1;
-        if(modes[3].cost<modes[mb_mode].cost)mb_mode=3;
-        if(modes[4].cost<modes[mb_mode].cost)mb_mode=4;
-        if(modes[5].cost<modes[mb_mode].cost)mb_mode=5;
-        if(modes[6].cost<modes[mb_mode].cost)mb_mode=6;
-        if(modes[7].cost<modes[mb_mode].cost)mb_mode=7;
-        /*We prefer OC_MODE_INTER_MV, but not over LAST and LAST2.*/
-        if(mb_mode==OC_MODE_INTER_MV_LAST||mb_mode==OC_MODE_INTER_MV_LAST2){
-          inter_mv_pref=0;
-        }
-        if(modes[2].cost<modes[mb_mode].cost+inter_mv_pref)mb_mode=2;
         mb_modes[mbi]=mb_mode;
         /*Propagate the MVs to the luma blocks.*/
         if(mb_mode!=OC_MODE_INTER_MV_FOUR){

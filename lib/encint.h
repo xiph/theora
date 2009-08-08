@@ -50,6 +50,14 @@ typedef struct oc_token_checkpoint    oc_token_checkpoint;
 /*Next packet to emit: Data packet, and one is ready.*/
 #define OC_PACKET_READY (1)
 
+/*All features enabled.*/
+#define OC_SP_LEVEL_SLOW       (0)
+/*Enable early skip.*/
+#define OC_SP_LEVEL_EARLY_SKIP (1)
+/*Disable motion compensation.*/
+#define OC_SP_LEVEL_NOMC       (2)
+/*Maximum valid speed level.*/
+#define OC_SP_LEVEL_MAX        (2)
 
 
 /*The bits used for each of the MB mode codebooks.*/
@@ -319,6 +327,8 @@ struct th_enc_ctx{
   ogg_uint32_t             nqueued_dups;
   /*The number of duplicates emitted for the last frame.*/
   ogg_uint32_t             prev_dup_count;
+  /*The current speed level.*/
+  int                      sp_level;
   /*Whether or not VP3 compatibility mode has been enabled.*/
   unsigned char            vp3_compatible;
   /*Whether or not any INTER frames have been coded.*/

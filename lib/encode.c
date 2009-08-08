@@ -1108,6 +1108,8 @@ static int oc_enc_init(oc_enc_ctx *_enc,const th_info *_info){
   _enc->dup_count=0;
   _enc->nqueued_dups=0;
   _enc->prev_dup_count=0;
+  /*Enable speed optimizations up through early skip by default.*/
+  _enc->sp_level=OC_SP_LEVEL_EARLY_SKIP;
   /*Disable VP3 compatibility by default.*/
   _enc->vp3_compatible=0;
   /*No INTER frames coded yet.*/
@@ -1294,7 +1296,7 @@ int th_encode_ctl(th_enc_ctx *_enc,int _req,void *_buf,size_t _buf_sz){
     case TH_ENCCTL_GET_SPLEVEL_MAX:{
       if(_enc==NULL||_buf==NULL)return TH_EFAULT;
       if(_buf_sz!=sizeof(int))return TH_EINVAL;
-      *(int *)_buf=2;
+      *(int *)_buf=OC_SP_LEVEL_MAX;
       return 0;
     }break;
     case TH_ENCCTL_SET_SPLEVEL:{
@@ -1302,25 +1304,16 @@ int th_encode_ctl(th_enc_ctx *_enc,int _req,void *_buf,size_t _buf_sz){
       if(_enc==NULL||_buf==NULL)return TH_EFAULT;
       if(_buf_sz!=sizeof(speed))return TH_EINVAL;
       speed=*(int *)_buf;
-      switch(speed){
-        case 0:{
-          /*_enc->MotionCompensation=1;*/
-          /*_enc->info.quick_p=0;*/
-        }break;
-        case 1:{
-          /*_enc->MotionCompensation=1;*/
-          /*_enc->info.quick_p=1;*/
-        }break;
-        case 2:{
-          /*_enc->MotionCompensation=0;*/
-          /*_enc->info.quick_p=1;*/
-        }break;
-        default:{
-          return TH_EINVAL;
-        }
-      }
+      if(speed<0||speed>OC_SP_LEVEL_MAX)return TH_EINVAL;
+      _enc->sp_level=speed;
       return 0;
     }break;
+    case TH_ENCCTL_GET_SPLEVEL:{
+      if(_enc==NULL||_buf==NULL)return TH_EFAULT;
+      if(_buf_sz!=sizeof(int))return TH_EINVAL;
+      *(int *)_buf=_enc->sp_level;
+      return 0;
+    }
     case TH_ENCCTL_SET_DUP_COUNT:{
       int dup_count;
       if(_enc==NULL||_buf==NULL)return TH_EFAULT;
