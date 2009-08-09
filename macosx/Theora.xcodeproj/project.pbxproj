@@ -242,9 +242,27 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		084C31D80FE4E5BD00117FC9 /* dec */ = {
+		084C31D80FE4E5BD00117FC9 /* lib */ = {
 			isa = PBXGroup;
 			children = (
+				084C32450FE4E5D500117FC9 /* analyze.c */,
+				084C32460FE4E5D500117FC9 /* encapiwrapper.c */,
+				084C32470FE4E5D500117FC9 /* encfrag.c */,
+				084C32480FE4E5D500117FC9 /* encinfo.c */,
+				084C32490FE4E5D500117FC9 /* encint.h */,
+				084C324A0FE4E5D500117FC9 /* encode.c */,
+				084C324B0FE4E5D500117FC9 /* encoder_disabled.c */,
+				084C324C0FE4E5D500117FC9 /* enquant.c */,
+				084C324D0FE4E5D500117FC9 /* enquant.h */,
+				084C324E0FE4E5D500117FC9 /* fdct.c */,
+				084C324F0FE4E5D500117FC9 /* huffenc.c */,
+				084C32500FE4E5D500117FC9 /* huffenc.h */,
+				084C32510FE4E5D500117FC9 /* mathops.c */,
+				084C32520FE4E5D500117FC9 /* mathops.h */,
+				084C32530FE4E5D500117FC9 /* mcenc.c */,
+				084C32540FE4E5D500117FC9 /* modedec.h */,
+				084C32550FE4E5D500117FC9 /* rate.c */,
+				084C32560FE4E5D500117FC9 /* tokenize.c */,
 				084C31D90FE4E5BD00117FC9 /* apiwrapper.c */,
 				084C31DA0FE4E5BD00117FC9 /* apiwrapper.h */,
 				084C31DB0FE4E5BD00117FC9 /* bitpack.c */,
@@ -267,13 +285,13 @@
 				084C31EC0FE4E5BD00117FC9 /* quant.c */,
 				084C31ED0FE4E5BD00117FC9 /* quant.h */,
 				084C31EE0FE4E5BD00117FC9 /* state.c */,
-				084C31EF0FE4E5BD00117FC9 /* x86 */,
+				084C32570FE4E5D500117FC9 /* x86 */,
 			);
-			name = dec;
-			path = ../lib/dec;
+			name = lib;
+			path = ../lib;
 			sourceTree = SOURCE_ROOT;
 		};
-		084C31EF0FE4E5BD00117FC9 /* x86 */ = {
+		084C32570FE4E5D500117FC9 /* x86 */ = {
 			isa = PBXGroup;
 			children = (
 				084C31F00FE4E5BD00117FC9 /* mmxfrag.c */,
@@ -283,40 +301,6 @@
 				084C31F40FE4E5BD00117FC9 /* mmxstate.c */,
 				084C31F50FE4E5BD00117FC9 /* x86int.h */,
 				084C31F60FE4E5BD00117FC9 /* x86state.c */,
-			);
-			path = x86;
-			sourceTree = "<group>";
-		};
-		084C32440FE4E5D500117FC9 /* enc */ = {
-			isa = PBXGroup;
-			children = (
-				084C32450FE4E5D500117FC9 /* analyze.c */,
-				084C32460FE4E5D500117FC9 /* encapiwrapper.c */,
-				084C32470FE4E5D500117FC9 /* encfrag.c */,
-				084C32480FE4E5D500117FC9 /* encinfo.c */,
-				084C32490FE4E5D500117FC9 /* encint.h */,
-				084C324A0FE4E5D500117FC9 /* encode.c */,
-				084C324B0FE4E5D500117FC9 /* encoder_disabled.c */,
-				084C324C0FE4E5D500117FC9 /* enquant.c */,
-				084C324D0FE4E5D500117FC9 /* enquant.h */,
-				084C324E0FE4E5D500117FC9 /* fdct.c */,
-				084C324F0FE4E5D500117FC9 /* huffenc.c */,
-				084C32500FE4E5D500117FC9 /* huffenc.h */,
-				084C32510FE4E5D500117FC9 /* mathops.c */,
-				084C32520FE4E5D500117FC9 /* mathops.h */,
-				084C32530FE4E5D500117FC9 /* mcenc.c */,
-				084C32540FE4E5D500117FC9 /* modedec.h */,
-				084C32550FE4E5D500117FC9 /* rate.c */,
-				084C32560FE4E5D500117FC9 /* tokenize.c */,
-				084C32570FE4E5D500117FC9 /* x86 */,
-			);
-			name = enc;
-			path = ../lib/enc;
-			sourceTree = SOURCE_ROOT;
-		};
-		084C32570FE4E5D500117FC9 /* x86 */ = {
-			isa = PBXGroup;
-			children = (
 				084C32590FE4E5D500117FC9 /* mmxencfrag.c */,
 				084C325A0FE4E5D500117FC9 /* mmxfdct.c */,
 				084C325B0FE4E5D500117FC9 /* sse2fdct.c */,
@@ -358,8 +342,7 @@
 		08FB77ACFE841707C02AAC07 /* Source */ = {
 			isa = PBXGroup;
 			children = (
-				084C31D80FE4E5BD00117FC9 /* dec */,
-				084C32440FE4E5D500117FC9 /* enc */,
+				084C31D80FE4E5BD00117FC9 /* lib */,
 				0844FE7E0FCCC99A004A99B0 /* cpu.c */,
 				73514EC70B0C7E5700CEC060 /* cpu.h */,
 				37CA8E380DD747F1005C8CB6 /* internal.h */,
@@ -516,6 +499,7 @@
 		0867D690FE84028FC02AAC07 /* Project object */ = {
 			isa = PBXProject;
 			buildConfigurationList = 4FADC24608B4156D00ABE55E /* Build configuration list for PBXProject "Theora" */;
+			compatibilityVersion = "Xcode 2.4";
 			hasScannedForEncodings = 1;
 			mainGroup = 0867D691FE84028FC02AAC07 /* Theora */;
 			productRefGroup = 034768DDFF38A45A11DB9C8B /* Products */;
