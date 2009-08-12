@@ -2118,14 +2118,14 @@ int main(int argc,char *argv[]){
     y4o_free(y4o_video);
   if(y4o_audio)
     y4o_free(y4o_audio);
-  if(audio){
+  if(audio && twopass!=1){
     ogg_stream_clear(&vo);
     vorbis_block_clear(&vb);
     vorbis_dsp_clear(&vd);
     vorbis_comment_clear(&vc);
     vorbis_info_clear(&vi);
-    if(audio!=stdin)fclose(audio);
   }
+  if(audio && audio!=stdin)fclose(audio);
   if(video){
     ogg_stream_clear(&to);
     th_comment_clear(&tc);
