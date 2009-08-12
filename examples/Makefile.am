@@ -24,7 +24,7 @@ player_example_SOURCES = player_example.c
 player_example_CFLAGS = $(SDL_CFLAGS) $(OGG_CFLAGS) $(VORBIS_CFLAGS)
 player_example_LDADD = $(LDADDDEC) $(SDL_LIBS) $(VORBIS_LIBS) $(OSS_LIBS)
 
-encoder_example_SOURCES = encoder_example.c
+encoder_example_SOURCES = encoder_example.c y4o.c y4o.h
 EXTRA_encoder_example_SOURCES = getopt.c getopt1.c getopt.h
 encoder_example_CFLAGS = $(OGG_CFLAGS) $(VORBIS_CFLAGS)
 encoder_example_LDADD = $(GETOPT_OBJS) $(LDADDENC) $(VORBIS_LIBS) $(VORBISENC_LIBS)
