@@ -2055,7 +2055,7 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
           if(modes[OC_MODE_GOLDEN_NOMV].cost<modes[mb_mode].cost){
             mb_mode=OC_MODE_GOLDEN_NOMV;
           }
-          mb_mv_bits_0=mb_gmv_bits_0;
+          mb_mv_bits_0=mb_gmv_bits_0=0;
         }
         mb_modes[mbi]=mb_mode;
         /*Propagate the MVs to the luma blocks.*/
