@@ -1,8 +1,9 @@
-libtheora 1.1beta2 (unreleased)
+libtheora 1.1beta2 (2009 August 12)
 
  - Fix a rate control problem with difficult input
- - Build fixes for OpenBSD
+ - Build fixes for OpenBSD and Apple Xcode
  - Examples now all use the 1.0 api
+ - TH_ENCCTL_SET_SPLEVEL works again
  - Various bug fixes and source tree rearrangement
 
 libtheora 1.1beta1 (2009 August 5)

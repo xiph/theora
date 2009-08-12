@@ -4,7 +4,7 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT(libtheora,[1.1beta2svn])
+AC_INIT(libtheora,[1.1beta2])
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
@@ -22,21 +22,21 @@ dnl - interfaces added -> increment AGE
 dnl - interfaces removed -> AGE = 0
 
 TH_LIB_CURRENT=3
-TH_LIB_REVISION=6
+TH_LIB_REVISION=7
 TH_LIB_AGE=3
 AC_SUBST(TH_LIB_CURRENT)
 AC_SUBST(TH_LIB_REVISION)
 AC_SUBST(TH_LIB_AGE)
 
 THDEC_LIB_CURRENT=2
-THDEC_LIB_REVISION=0
+THDEC_LIB_REVISION=1
 THDEC_LIB_AGE=1
 AC_SUBST(THDEC_LIB_CURRENT)
 AC_SUBST(THDEC_LIB_REVISION)
 AC_SUBST(THDEC_LIB_AGE)
 
 THENC_LIB_CURRENT=2
-THENC_LIB_REVISION=0
+THENC_LIB_REVISION=1
 THENC_LIB_AGE=1
 AC_SUBST(THENC_LIB_CURRENT)
 AC_SUBST(THENC_LIB_REVISION)
