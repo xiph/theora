@@ -1473,11 +1473,11 @@ int main(int argc,char *argv[]){
 
   /* Set up Ogg output stream */
   srand(time(NULL));
-  if(audio)ogg_stream_init(&vo,rand());
   ogg_stream_init(&to,rand()); /* oops, add one ot the above */
 
   /* initialize Vorbis assuming we have audio to compress. */
   if(audio && twopass!=1){
+    ogg_stream_init(&vo,rand());
     vorbis_info_init(&vi);
     if(audio_q>-99)
       ret = vorbis_encode_init_vbr(&vi,audio_ch,audio_hz,audio_q);
@@ -1801,7 +1801,7 @@ int main(int argc,char *argv[]){
   }
 
   /* clear out state */
-  if(audio){
+  if(audio && twopass!=1){
     ogg_stream_clear(&vo);
     vorbis_block_clear(&vb);
     vorbis_dsp_clear(&vd);
