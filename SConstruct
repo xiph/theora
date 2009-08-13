@@ -202,6 +202,7 @@ if have_vorbis:
   encex.ParseConfig('pkg-config --cflags --libs vorbisenc vorbis')
   encex_Sources = Split("""
 	encoder_example.c
+	y4o.c
 	../lib/libtheoraenc.a 
 	../lib/libtheoradec.a
   """)
