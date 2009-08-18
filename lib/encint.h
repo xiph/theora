@@ -35,7 +35,6 @@ typedef struct oc_enc_opt_vtable      oc_enc_opt_vtable;
 typedef struct oc_mb_enc_info         oc_mb_enc_info;
 typedef struct oc_mode_scheme_chooser oc_mode_scheme_chooser;
 typedef struct oc_iir_filter          oc_iir_filter;
-typedef struct oc_log_linear_fit      oc_log_linear_fit;
 typedef struct oc_frame_metrics       oc_frame_metrics;
 typedef struct oc_rc_state            oc_rc_state;
 typedef struct th_enc_ctx             oc_enc_ctx;
@@ -183,17 +182,6 @@ struct oc_iir_filter{
 
 
 
-/*A linear fit for the log-domain scale factors used in 2-pass.*/
-struct oc_log_linear_fit{
-  ogg_int64_t  x;
-  ogg_int64_t  y;
-  ogg_int64_t  x2;
-  ogg_int64_t  xy;
-  ogg_uint32_t n;
-};
-
-
-
 /*The 2-pass metrics associated with a single frame.*/
 struct oc_frame_metrics{
   /*The log base 2 of the scale factor for this frame in Q24 format.*/
@@ -282,8 +270,8 @@ struct oc_rc_state{
   /*The frame count of each type in the current 2-pass window; this does not
      include dup frames.*/
   int                nframes[3];
-  /*Bias correction fits for the 1st-pass scale factors.*/
-  oc_log_linear_fit  corr[2];
+  /*The total accumulated estimation bias.*/
+  ogg_int64_t        rate_bias;
 };
 
 
