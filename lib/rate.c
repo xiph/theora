@@ -672,7 +672,11 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
      next buf_delay frames.
     However, we could bust the budget on the very next frame, so check for that
      here, if we're not using a soft target.*/
-  if(!_enc->rc.cap_underflow||_enc->rc.drop_frames){
+  /* Disabled when our minimum qi > 0; if we saturate log_qtarget to
+     to the maximum possible size when we have a minimum qi, the
+     resulting lambda will interact very strangely with SKIP.  The
+     resulting artifacts look like waterfalls. */
+  if(_enc->state.info.quality==0){
     ogg_int64_t log_hard_limit;
     /*Compute the maximum number of bits we can use in the next frame.
       Allow 50% of the rate for a single frame for prediction error.
@@ -704,6 +708,8 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
   ogg_int64_t log_scale;
   int         dropped;
   dropped=0;
+  /* Drop frames also disabled for now in the case of infinite-buffer
+     two-pass mode */
   if(!_enc->rc.drop_frames||_enc->rc.twopass&&_enc->rc.frame_metrics==NULL){
     _droppable=0;
   }
