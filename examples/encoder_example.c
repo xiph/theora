@@ -1436,10 +1436,12 @@ int main(int argc,char *argv[]){
     if(video_q==-1)
       video_q=0;
   }else{
-    if(video_r>0)
-      video_q=0;
-    if(video_q==-1)
-      video_q=48;
+    if(video_q==-1){
+      if(video_r>0)
+        video_q=0;
+      else
+        video_q=48;
+    }
   }
 
   if(keyframe_frequency<=0){
