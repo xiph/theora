@@ -76,7 +76,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -153,7 +153,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -230,7 +230,7 @@
 				AdditionalOptions=""
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -306,7 +306,7 @@
 				AdditionalOptions=""
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -382,7 +382,7 @@
 				AdditionalOptions=""
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -464,7 +464,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -548,7 +548,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -633,7 +633,7 @@
 				AdditionalOptions=""
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -717,7 +717,7 @@
 				AdditionalOptions=""
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -801,7 +801,7 @@
 				AdditionalOptions=""
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -884,7 +884,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -968,7 +968,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1053,7 +1053,7 @@
 				AdditionalOptions=""
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1137,7 +1137,7 @@
 				AdditionalOptions=""
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1221,7 +1221,7 @@
 				AdditionalOptions=""
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1304,7 +1304,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1388,7 +1388,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1473,7 +1473,7 @@
 				AdditionalOptions=""
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1557,7 +1557,7 @@
 				AdditionalOptions=""
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1641,7 +1641,7 @@
 				AdditionalOptions=""
 				AdditionalDependencies="libogg.lib"
 				AdditionalLibraryDirectories="..\..\..\..\libogg\win32\VS2005\$(PlatformName)\$(ConfigurationName)"
-				ModuleDefinitionFile="..\..\libtheora.def "
+				ModuleDefinitionFile="..\..\..\lib\theora.def "
 			/>
 			<Tool
 				Name="VCALinkTool"
