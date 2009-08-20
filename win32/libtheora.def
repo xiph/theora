@@ -42,3 +42,10 @@ EXPORTS
 	th_info_clear
 	th_info_init
 	th_packet_isheader
+
+	th_decode_free
+	th_decode_packetin
+	th_decode_headerin
+	th_decode_alloc
+	th_decode_ctl
+	th_setup_free
