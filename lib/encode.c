@@ -1258,6 +1258,7 @@ int th_encode_ctl(th_enc_ctx *_enc,int _req,void *_buf,size_t _buf_sz){
       if(_enc==NULL||_buf==NULL)return TH_EFAULT;
       if(_buf_sz!=sizeof(keyframe_frequency_force))return TH_EINVAL;
       keyframe_frequency_force=*(ogg_uint32_t *)_buf;
+      if(keyframe_frequency_force<=0)keyframe_frequency_force=1;
       if(_enc->packet_state==OC_PACKET_INFO_HDR){
         /*It's still early enough to enlarge keyframe_granule_shift.*/
         _enc->state.info.keyframe_granule_shift=OC_CLAMPI(
