@@ -231,6 +231,9 @@ struct oc_rc_state{
   unsigned char      cap_underflow;
   /*Second-order lowpass filters to track scale and VFR.*/
   oc_iir_filter      scalefilter[2];
+  int                inter_count;
+  int                inter_delay;
+  int                inter_delay_target;
   oc_iir_filter      vfrfilter;
   /*Two-pass mode state.
     0 => 1-pass encoding.
