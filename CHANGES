@@ -1,6 +1,8 @@
-libtheora 1.1.0 (unreleased)
+libtheora 1.1beta3 (2009 August 22)
 
- - no changes recorded.
+ - Rate control fixes to smooth quality
+ - MSVC build now exports all of the 1.0 api
+ - Assorted small bug fixes
 
 libtheora 1.1beta2 (2009 August 12)
 
