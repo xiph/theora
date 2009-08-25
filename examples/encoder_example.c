@@ -731,10 +731,9 @@ static void id_file(char *f){
 
     /* Parse the rest of the header */
 
-    ret=fread(buffer,1,4,test);
-    ret=fread(buffer,1,4,test);
-    if(ret<4)goto riff_err;
-    if(!memcmp(buffer,"WAVE",4)){
+    ret=fread(buffer,1,8,test);
+    if(ret<8)goto riff_err;
+    if(!memcmp(buffer+4,"WAVE",4)){
 
       while(!feof(test)){
         ret=fread(buffer,1,4,test);
