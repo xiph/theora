@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2009                *
  * by the Xiph.Org Foundation http://www.xiph.org/                  *
  *                                                                  *
  ********************************************************************
@@ -45,10 +45,14 @@ static int oc_warp_alpha(int _alpha){
   return (int)(((ogg_int64_t)t0<<32)+(t1-t0<<8)*(ogg_int64_t)d>>32);
 }
 
-/*Initialize a 2nd order low-pass Bessel filter with the corresponding delay
-   and initial value.
-  _value is Q24.*/
-void oc_iir_filter_init(oc_iir_filter *_f,int _delay,ogg_int32_t _value){
+/*Re-initialize the Bessel filter coefficients with the specified delay.
+  This does not alter the x/y state, but changes the reaction time of the
+   filter.
+  Altering the time constant of a reactive filter without alterning internal
+   state is something that has to be done carefuly, but our design operates at
+   high enough delays and with small enough time constant changes to make it
+   safe.*/
+static void oc_iir_filter_reinit(oc_iir_filter *_f,int _delay){
   int         alpha;
   ogg_int64_t one48;
   ogg_int64_t warp;
@@ -85,6 +89,13 @@ void oc_iir_filter_init(oc_iir_filter *_f,int _delay,ogg_int32_t _value){
   _f->c[0]=(ogg_int32_t)(b1+((ogg_int64_t)1<<31)>>32);
   _f->c[1]=(ogg_int32_t)(b2+((ogg_int64_t)1<<31)>>32);
   _f->g=(ogg_int32_t)(a+128>>8);
+}
+
+/*Initialize a 2nd order low-pass Bessel filter with the corresponding delay
+   and initial value.
+  _value is Q24.*/
+static void oc_iir_filter_init(oc_iir_filter *_f,int _delay,ogg_int32_t _value){
+  oc_iir_filter_reinit(_f,_delay);
   _f->y[1]=_f->y[0]=_f->x[1]=_f->x[0]=_value;
 }
 
@@ -288,13 +299,19 @@ static void oc_enc_rc_reset(oc_enc_ctx *_enc){
   _enc->rc.log_drop_scale=OC_Q57(0);
   /*Set up second order followers, initialized according to corresponding
      time constants.*/
-  oc_iir_filter_init(&_enc->rc.scalefilter[0],2,
+  oc_iir_filter_init(&_enc->rc.scalefilter[0],4,
    oc_q57_to_q24(_enc->rc.log_scale[0]));
-  inter_delay=_enc->rc.twopass?
-   OC_MAXI(_enc->keyframe_frequency_force,12):_enc->rc.buf_delay;
-  oc_iir_filter_init(&_enc->rc.scalefilter[1],inter_delay>>1,
+  inter_delay=(_enc->rc.twopass?
+   OC_MAXI(_enc->keyframe_frequency_force,12):_enc->rc.buf_delay)>>1;
+  _enc->rc.inter_count=0;
+  /*We clamp the actual inter_delay to a minimum of 10 to work within the range
+     of values where later incrementing the delay works as designed.
+    10 is not an exact choice, but rather a good working trade-off.*/
+  _enc->rc.inter_delay=10;
+  _enc->rc.inter_delay_target=inter_delay;
+  oc_iir_filter_init(&_enc->rc.scalefilter[1],_enc->rc.inter_delay,
    oc_q57_to_q24(_enc->rc.log_scale[1]));
-  oc_iir_filter_init(&_enc->rc.vfrfilter,2,
+  oc_iir_filter_init(&_enc->rc.vfrfilter,4,
    oc_bexp64_q24(_enc->rc.log_drop_scale));
 }
 
@@ -303,6 +320,7 @@ void oc_rc_state_init(oc_rc_state *_rc,oc_enc_ctx *_enc){
   _rc->twopass_buffer_bytes=0;
   _rc->twopass_force_kf=0;
   _rc->frame_metrics=NULL;
+  _rc->rate_bias=0;
   if(_enc->state.info.target_bitrate>0){
     /*The buffer size is set equal to the keyframe interval, clamped to the
        range [12,256] frames.
@@ -328,6 +346,7 @@ void oc_enc_rc_resize(oc_enc_ctx *_enc){
   /*If encoding has not yet begun, reset the buffer state.*/
   if(_enc->state.curframe_num<0)oc_enc_rc_reset(_enc);
   else{
+    int idt;
     /*Otherwise, update the bounds on the buffer, but not the current
        fullness.*/
     _enc->rc.bits_per_frame=(_enc->state.info.target_bitrate*
@@ -343,8 +362,15 @@ void oc_enc_rc_resize(oc_enc_ctx *_enc){
     _enc->rc.max=_enc->rc.bits_per_frame*_enc->rc.buf_delay;
     _enc->rc.target=(_enc->rc.max+1>>1)+(_enc->rc.bits_per_frame+2>>2)*
      OC_MINI(_enc->keyframe_frequency_force,_enc->rc.buf_delay);
-    oc_iir_filter_init(&_enc->rc.scalefilter[1],_enc->rc.buf_delay>>1,
-     oc_q57_to_q24(_enc->rc.log_scale[1]));
+    /*Update the INTER-frame scale filter delay.
+      We jump to it immediately if we've already seen enough frames; otherwise
+       it is simply set as the new target.*/
+    _enc->rc.inter_delay_target=idt=OC_MAXI(_enc->rc.buf_delay>>1,10);
+    if(idt<OC_MINI(_enc->rc.inter_delay,_enc->rc.inter_count)){
+      oc_iir_filter_init(&_enc->rc.scalefilter[1],idt,
+       _enc->rc.scalefilter[1].y[0]);
+      _enc->rc.inter_delay=idt;
+    }
   }
   /*If we're in pass-2 mode, make sure the frame metrics array is big enough
      to hold frame statistics for the full buffer.*/
@@ -436,15 +462,22 @@ static int oc_rc_scale_drop(oc_rc_state *_rc,int _nframes){
 
 int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
   ogg_int64_t  rate_total;
+  ogg_int64_t  rate_bias;
   int          nframes[2];
   int          buf_delay;
+  int          buf_pad;
   ogg_int64_t  log_qtarget;
   ogg_int64_t  log_scale0;
+  ogg_int64_t  log_cur_scale;
+  ogg_int64_t  log_qexp;
+  int          exp0;
   int          old_qi;
   int          qi;
   /*Figure out how to re-distribute bits so that we hit our fullness target
      before the last keyframe in our current buffer window (after the current
      frame), or the end of the buffer window, whichever comes first.*/
+  log_cur_scale=(ogg_int64_t)_enc->rc.scalefilter[_qti].y[0]<<33;
+  buf_pad=0;
   switch(_enc->rc.twopass){
     default:{
       ogg_uint32_t next_key_frame;
@@ -473,7 +506,6 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
     case 2:{
       ogg_int64_t scale_sum[2];
       int         qti;
-      int         buf_pad;
       /*Pass 2 mode: we know exactly how much of each frame type there is in
          the current buffer window, and have estimates for the scales.*/
       nframes[0]=_enc->rc.nframes[0];
@@ -539,46 +571,12 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
         nframes[qti]--;
         scale_sum[qti]-=oc_bexp_q24(_enc->rc.cur_metrics.log_scale);
       }
-      /*Compute corrected log_scale estimates for each frame type from the
-         pass-1 scales we measured in the current window.*/
+      /*Compute log_scale estimates for each frame type from the pass-1 scales
+         we measured in the current window.*/
       for(qti=0;qti<2;qti++){
-        oc_log_linear_fit *fit;
-        ogg_int64_t        x;
-        x=nframes[qti]>0?
+        _enc->rc.log_scale[qti]=nframes[qti]>0?
          oc_blog64(scale_sum[qti])-oc_blog64(nframes[qti])-OC_Q57(24):
          -_enc->rc.log_npixels;
-        fit=_enc->rc.corr+qti;
-        if(fit->n>0){
-          ogg_int64_t  var;
-          ogg_uint32_t n_2;
-          n_2=fit->n>>1;
-          var=fit->x2;
-          var-=(fit->x+2048>>12)*(((fit->x+2048>>12)+n_2)/fit->n);
-          if(var>fit->n){
-            ogg_int64_t cov;
-            ogg_int64_t beta;
-            ogg_int64_t alpha;
-            ogg_int64_t y;
-            cov=fit->xy;
-            cov-=(fit->y+2048>>12)*(((fit->x+2048>>12)+n_2)/fit->n);
-            /*beta is Q33.*/
-            beta=((cov+n_2)/fit->n<<33)/((var+n_2)/fit->n);
-            /*alpha is Q57.*/
-            alpha=((fit->y+n_2)/fit->n<<33)-beta*((fit->x+n_2)/fit->n);
-            /*Predict the mean y from the mean x.
-              What we're really trying to compensate for is error in exp[], not
-               error in the scales, and hence we can apply the correction to
-               the mean scale instead of applying it to each pass-1 scale and
-               then taking the mean.*/
-            y=(x+((ogg_int64_t)1<<32)>>33)*beta+alpha;
-            /*If we have enough points for a good estimation, use the corrected
-               predictor value directly.*/
-            if(fit->n>=(128<<qti))x=y;
-            /*Otherwise interpolate between the two.*/
-            else x+=fit->n*(y-x>>7+qti);
-          }
-        }
-        _enc->rc.log_scale[qti]=x;
       }
       /*If we're not using the same frame type as in pass 1, add a scale
          estimate for the corresponding frame using the current low-pass
@@ -594,10 +592,11 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
          oc_bexp64(_enc->rc.log_scale[_qti]+OC_Q57(24)):0x7FFFFFFFFFFFLL;
         scale*=nframes[_qti];
         nframes[_qti]++;
-        scale+=oc_bexp_q24(_enc->rc.scalefilter[_qti].y[0]);
+        scale+=oc_bexp_q24(log_cur_scale>>33);
         _enc->rc.log_scale[_qti]=oc_blog64(scale)
          -oc_blog64(nframes[qti])-OC_Q57(24);
       }
+      else log_cur_scale=(ogg_int64_t)_enc->rc.cur_metrics.log_scale<<33;
       /*Add the padding from above.
         This basically reverts to 1-pass estimations in the last keyframe
          interval.*/
@@ -618,8 +617,11 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
       }
     }break;
   }
+  /*If we've been missing our target, add a penalty term.*/
+  rate_bias=(_enc->rc.rate_bias/(_enc->state.curframe_num+1000))*
+   (buf_delay-buf_pad);
   /*rate_total is the total bits available over the next buf_delay frames.*/
-  rate_total=_enc->rc.fullness-_enc->rc.target
+  rate_total=_enc->rc.fullness-_enc->rc.target+rate_bias
    +buf_delay*_enc->rc.bits_per_frame;
   log_scale0=_enc->rc.log_scale[_qti]+_enc->rc.log_npixels;
   /*If there aren't enough bits to achieve our desired fullness level, use the
@@ -658,12 +660,11 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
      next buf_delay frames.
     However, we could overflow the buffer on the very next frame, so check for
      that here, if we're not using a soft target.*/
+  exp0=_enc->rc.exp[_qti];
   if(_enc->rc.cap_overflow){
     ogg_int64_t margin;
     ogg_int64_t soft_limit;
     ogg_int64_t log_soft_limit;
-    ogg_int64_t log_qexp;
-    int         exp0;
     /*Allow 3% of the buffer for prediction error.
       This should be plenty, and we don't mind if we go a bit over; we only
        want to keep these bits from being completely wasted.*/
@@ -672,7 +673,6 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
     soft_limit=_enc->rc.fullness+_enc->rc.bits_per_frame-(_enc->rc.max-margin);
     log_soft_limit=oc_blog64(soft_limit);
     /*If we're predicting we won't use that many...*/
-    exp0=_enc->rc.exp[_qti];
     log_qexp=(log_qtarget-OC_Q57(2)>>6)*exp0;
     if(log_scale0-log_qexp<log_soft_limit){
       /*Scale the adjustment based on how far into the margin we are.*/
@@ -698,16 +698,17 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
      next buf_delay frames.
     However, we could bust the budget on the very next frame, so check for that
      here, if we're not using a soft target.*/
-  if(!_enc->rc.cap_underflow||_enc->rc.drop_frames){
+  /* Disabled when our minimum qi > 0; if we saturate log_qtarget to
+     to the maximum possible size when we have a minimum qi, the
+     resulting lambda will interact very strangely with SKIP.  The
+     resulting artifacts look like waterfalls. */
+  if(_enc->state.info.quality==0){
     ogg_int64_t log_hard_limit;
-    ogg_int64_t log_qexp;
-    int         exp0;
     /*Compute the maximum number of bits we can use in the next frame.
       Allow 50% of the rate for a single frame for prediction error.
       This may not be enough for keyframes or sudden changes in complexity.*/
     log_hard_limit=oc_blog64(_enc->rc.fullness+(_enc->rc.bits_per_frame>>1));
     /*If we're predicting we'll use more than this...*/
-    exp0=_enc->rc.exp[_qti];
     log_qexp=(log_qtarget-OC_Q57(2)>>6)*exp0;
     if(log_scale0-log_qexp>log_hard_limit){
       /*Force the target to hit our limit exactly.*/
@@ -717,6 +718,9 @@ int oc_enc_select_qi(oc_enc_ctx *_enc,int _qti,int _clamp){
       log_qtarget=OC_MINI(log_qtarget,OC_QUANT_MAX_LOG);
     }
   }
+  /*Compute a final estimate of the number of bits we plan to use.*/
+  log_qexp=(log_qtarget-OC_Q57(2)>>6)*_enc->rc.exp[_qti];
+  _enc->rc.rate_bias+=oc_bexp64(log_cur_scale+_enc->rc.log_npixels-log_qexp);
   qi=oc_enc_find_qi_for_target(_enc,_qti,old_qi,
    _enc->state.info.quality,log_qtarget);
   /*Save the quantizer target for lambda calculations.*/
@@ -730,6 +734,8 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
   ogg_int64_t log_scale;
   int         dropped;
   dropped=0;
+  /* Drop frames also disabled for now in the case of infinite-buffer
+     two-pass mode */
   if(!_enc->rc.drop_frames||_enc->rc.twopass&&_enc->rc.frame_metrics==NULL){
     _droppable=0;
   }
@@ -759,29 +765,6 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
     }break;
     case 2:{
       /*Pass 2 mode:*/
-      /*Accumulate statistics for estimation bias correction.
-        Everything is done in Q24 format.*/
-      if(_bits>0&&_enc->rc.cur_metrics.frame_type==_qti){
-        oc_log_linear_fit *fit;
-        ogg_int64_t        x;
-        ogg_int64_t        y;
-        x=_enc->rc.cur_metrics.log_scale;
-        y=log_scale>>33;
-        fit=_enc->rc.corr+_qti;
-        /*Use long-term exponential moving averages for the fit statistics.*/
-        if(fit->n>=1000){
-          fit->n>>=1;
-          fit->x>>=1;
-          fit->y>>=1;
-          fit->x2>>=1;
-          fit->xy>>=1;
-        }
-        fit->n++;
-        fit->x+=x;
-        fit->y+=y;
-        fit->x2+=(x+2048>>12)*(x+2048>>12);
-        fit->xy+=(x+2048>>12)*(y+2048>>12);
-      }
       if(!_trial){
         ogg_int64_t next_frame_num;
         int         qti;
@@ -823,6 +806,12 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
       _enc->rc.log_scale[_qti]=log_scale;
     }
     else{
+      /*Lengthen the time constant for the INTER filter as we collect more
+         frame statistics, until we reach our target.*/
+      if(_enc->rc.inter_delay<_enc->rc.inter_delay_target&&
+       _enc->rc.inter_count>=_enc->rc.inter_delay&&_qti==OC_INTER_FRAME){
+        oc_iir_filter_reinit(&_enc->rc.scalefilter[1],++_enc->rc.inter_delay);
+      }
       /*Otherwise update the low-pass scale filter for this frame type,
          regardless of whether or not we dropped this frame.*/
       _enc->rc.log_scale[_qti]=oc_iir_filter_update(
@@ -850,6 +839,8 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
         _enc->rc.prev_drop_count=_enc->dup_count;
       }
     }
+    /*Increment the INTER frame count, for filter adaptation purposes.*/
+    if(_enc->rc.inter_count<INT_MAX)_enc->rc.inter_count+=_qti;
   }
   /*Increase the drop count.*/
   else _enc->rc.prev_drop_count+=1+_enc->dup_count;
@@ -866,6 +857,8 @@ int oc_enc_update_rc_state(oc_enc_ctx *_enc,
     if(_enc->rc.cap_underflow&&_enc->rc.fullness<0){
       _enc->rc.fullness=0;
     }
+    /*Adjust the bias for the real bits we've used.*/
+    _enc->rc.rate_bias-=_bits;
   }
   return dropped;
 }
@@ -1024,7 +1017,6 @@ int oc_enc_rc_2pass_in(oc_enc_ctx *_enc,unsigned char *_buf,size_t _bytes){
       }
       _enc->rc.exp[0]=exp[0];
       _enc->rc.exp[1]=exp[1];
-      memset(_enc->rc.corr,0,sizeof(_enc->rc.corr));
       /*Clear the header data from the buffer to make room for packet data.*/
       _enc->rc.twopass_buffer_fill=0;
       _enc->rc.twopass_buffer_bytes=0;

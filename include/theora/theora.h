@@ -42,7 +42,7 @@ extern "C"
  *
  * libtheora is the reference implementation for
  * <a href="http://www.theora.org/">Theora</a>, a free video codec.
- * Theora is derived from On2's VP3 codec with improved integration for
+ * Theora is derived from On2's VP3 codec with improved integration with
  * Ogg multimedia formats by <a href="http://www.xiph.org/">Xiph.Org</a>.
  * 
  * \section overview Overview

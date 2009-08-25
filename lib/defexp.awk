@@ -8,7 +8,7 @@
 /^\w*;.*/ {next}
 
 # remember and propagate the library name
-/LIBRARY/ {name = $2; print "\# export list for", name; next}
+/LIBRARY/ {name = $2; print "# export list for", name; next}
 
 # skip various other lines
 /^\w*NAME/ ||

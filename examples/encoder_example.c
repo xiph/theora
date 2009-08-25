@@ -1752,10 +1752,12 @@ int main(int argc,char *argv[]){
     if(video_q==-1)
       video_q=0;
   }else{
-    if(video_r>0)
-      video_q=0;
-    if(video_q==-1)
-      video_q=48;
+    if(video_q==-1){
+      if(video_r>0)
+        video_q=0;
+      else
+        video_q=48;
+    }
   }
 
   if(keyframe_frequency<=0){
@@ -1790,11 +1792,11 @@ int main(int argc,char *argv[]){
 
   /* Set up Ogg output stream */
   srand(time(NULL));
-  if(audio)ogg_stream_init(&vo,rand());
   ogg_stream_init(&to,rand()); /* oops, add one ot the above */
 
   /* initialize Vorbis assuming we have audio to compress. */
   if(audio && twopass!=1){
+    ogg_stream_init(&vo,rand());
     vorbis_info_init(&vi);
     if(audio_q>-99)
       ret = vorbis_encode_init_vbr(&vi,audio_ch,audio_hz,audio_q);

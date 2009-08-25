@@ -5,7 +5,7 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2007                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2009                *
  * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
@@ -72,7 +72,7 @@ typedef struct oc_theora_state          oc_theora_state;
 
 
 /*This library's version.*/
-# define OC_VENDOR_STRING "Xiph.Org libtheora 1.1 20090806 (Thusnelda)"
+# define OC_VENDOR_STRING "Xiph.Org libtheora 1.1 20090822 (Thusnelda)"
 
 /*Theora bitstream version.*/
 # define TH_VERSION_MAJOR (3)
