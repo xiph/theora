@@ -2713,7 +2713,7 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
         fpsn=_dec->state.info.fps_numerator;
         fpsd=_dec->state.info.fps_denominator;
         mult=(_dec->telemetry_bits>=0xFF?1:_dec->telemetry_bits);
-        fullw=250*h*fpsd*mult/fpsn;
+        fullw=250.f*h*fpsd*mult/fpsn;
         padw=w-24;
         /*Header and coded block bits.*/
         if(_dec->telemetry_frame_bytes<0||
