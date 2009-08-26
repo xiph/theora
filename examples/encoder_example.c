@@ -959,8 +959,8 @@ static void id_file(char *f){
 
           pic_w = s->m.video.w;
           pic_h = s->m.video.h;
-          video_fps_n = s->m.video.fps_n;
-          video_fps_d = s->m.video.fps_d;
+          if(video_fps_n == -1)video_fps_n = s->m.video.fps_n;
+          if(video_fps_d == -1)video_fps_d = s->m.video.fps_d;
           interlace = (s->m.video.i == Y4O_I_PROGRESSIVE ? 'p' : 'i');
           video_par_n = s->m.video.pa_n;
           video_par_d = s->m.video.pa_d;
