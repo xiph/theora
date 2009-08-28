@@ -27,11 +27,11 @@ player_example_LDADD = $(LDADDDEC) $(SDL_LIBS) $(VORBIS_LIBS) $(OSS_LIBS)
 encoder_example_SOURCES = encoder_example.c
 EXTRA_encoder_example_SOURCES = getopt.c getopt1.c getopt.h
 encoder_example_CFLAGS = $(OGG_CFLAGS) $(VORBIS_CFLAGS)
-encoder_example_LDADD = $(GETOPT_OBJS) $(LDADDENC) $(VORBIS_LIBS) $(VORBISENC_LIBS)
+encoder_example_LDADD = $(GETOPT_OBJS) $(LDADDENC) $(VORBIS_LIBS) $(VORBISENC_LIBS) -lm
 
 png2theora_SOURCES = png2theora.c
 png2theora_CFLAGS = $(OGG_CFLAGS) $(PNG_CFLAGS)
-png2theora_LDADD = $(GETOPT_OBJS) $(LDADDENC) $(PNG_LIBS)
+png2theora_LDADD = $(GETOPT_OBJS) $(LDADDENC) $(PNG_LIBS) -lm
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@"
