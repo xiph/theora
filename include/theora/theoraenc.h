@@ -49,7 +49,7 @@ extern "C" {
  *                     <tt>NULL</tt> and \a _buf_sz is not zero, or \a _buf is
  *                     non-<tt>NULL</tt> and \a _buf_sz is not
  *                     <tt>sizeof(#th_huff_code)*#TH_NHUFFMAN_TABLES*#TH_NDCT_TOKENS</tt>.
- * \retval TH_IMPL   Not supported by this implementation.*/
+ * \retval TH_EIMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SET_HUFFMAN_CODES (0)
 /**Sets the quantization parameters to use.
  * The parameters are copied, not stored by reference, so they can be freed
@@ -62,7 +62,7 @@ extern "C" {
  *                    <tt>NULL</tt> and \a _buf_sz is not zero,
  *                    or \a _buf is non-<tt>NULL</tt> and
  *                    \a _buf_sz is not <tt>sizeof(#th_quant_info)</tt>.
- * \retval TH_IMPL   Not supported by this implementation.*/
+ * \retval TH_EIMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SET_QUANT_PARAMS (2)
 /**Sets the maximum distance between key frames.
  * This can be changed during an encode, but will be bounded by
@@ -75,7 +75,7 @@ extern "C" {
  * \param[out] _buf <tt>ogg_uint32_t</tt>: The actual maximum distance set.
  * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
  * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(ogg_uint32_t)</tt>.
- * \retval TH_IMPL   Not supported by this implementation.*/
+ * \retval TH_EIMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE (4)
 /**Disables any encoder features that would prevent lossless transcoding back
  *  to VP3.
@@ -103,7 +103,7 @@ extern "C" {
  *                   tables and codebooks from being set.
  * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
  * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(int)</tt>.
- * \retval TH_IMPL   Not supported by this implementation.*/
+ * \retval TH_EIMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SET_VP3_COMPATIBLE (10)
 /**Gets the maximum speed level.
  * Higher speed levels favor quicker encoding over better quality per bit.
@@ -116,7 +116,7 @@ extern "C" {
  * \param[out] _buf <tt>int</tt>: The maximum encoding speed level.
  * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
  * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(int)</tt>.
- * \retval TH_IMPL   Not supported by this implementation in the current
+ * \retval TH_EIMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_GET_SPLEVEL_MAX (12)
 /**Sets the speed level.
@@ -130,12 +130,12 @@ extern "C" {
  *                   The maximum encoding speed level may be
  *                    implementation- and encoding mode-specific, and can be
  *                    obtained via #TH_ENCCTL_GET_SPLEVEL_MAX.
- * \retval TH_IMPL   Not supported by this implementation in the current
+ * \retval TH_EIMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_SET_SPLEVEL (14)
 /**Gets the current speed level.
  * The default speed level may vary according to encoder implementation, but if
- *  this control code is not supported (it returns #TH_IMPL), the default may
+ *  this control code is not supported (it returns #TH_EIMPL), the default may
  *  be assumed to be the slowest available speed (0).
  * The maximum encoding speed level may be implementation- and encoding
  *  mode-specific, and can be obtained via #TH_ENCCTL_GET_SPLEVEL_MAX.
@@ -144,7 +144,7 @@ extern "C" {
  *                  0 is slowest, larger values use less CPU.
  * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
  * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(int)</tt>.
- * \retval TH_IMPL   Not supported by this implementation in the current
+ * \retval TH_EIMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_GET_SPLEVEL (16)
 /**Sets the number of duplicates of the next frame to produce.
@@ -170,7 +170,7 @@ extern "C" {
  *                   You must ensure that the maximum keyframe interval is set
  *                    larger than the maximum number of duplicates you will
  *                    ever wish to insert prior to encoding.
- * \retval TH_IMPL   Not supported by this implementation in the current
+ * \retval TH_EIMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_SET_DUP_COUNT (18)
 /**Modifies the default bitrate management behavior.
@@ -190,7 +190,7 @@ extern "C" {
  * \retval TH_EFAULT \a _enc_ctx or \a _buf is <tt>NULL</tt>.
  * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(int)</tt> or rate control
  *                    is not enabled.
- * \retval TH_IMPL   Not supported by this implementation in the current
+ * \retval TH_EIMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_SET_RATE_FLAGS (20)
 /**Sets the size of the bitrate management bit reservoir as a function
@@ -216,7 +216,7 @@ extern "C" {
  *                    is not enabled.  The buffer has an implementation
  *                    defined minimum and maximum size and the value in _buf
  *                    will be adjusted to match the actual value set.
- * \retval TH_IMPL   Not supported by this implementation in the current
+ * \retval TH_EIMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_SET_RATE_BUFFER (22)
 /**Enable pass 1 of two-pass encoding mode and retrieve the first pass metrics.
@@ -247,7 +247,7 @@ extern "C" {
  * \retval TH_EINVAL \a _buf_sz is not <tt>sizeof(char *)</tt>, no target
  *                    bitrate has been set, or the first call was made after
  *                    the first frame was submitted for encoding.
- * \retval TH_IMPL   Not supported by this implementation.*/
+ * \retval TH_EIMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_2PASS_OUT (24)
 /**Submits two-pass encoding metric data collected the first encoding pass to
  *  the second pass.
@@ -293,7 +293,7 @@ extern "C" {
  *                        attempting to read an aborted pass 1 file that still
  *                        has the placeholder data in place of the summary
  *                        data.
- * \retval TH_IMPL       Not supported by this implementation.*/
+ * \retval TH_EIMPL       Not supported by this implementation.*/
 #define TH_ENCCTL_2PASS_IN (26)
 /**Sets the current encoding quality.
  * This is only valid so long as no bitrate has been specified, either through
@@ -309,7 +309,7 @@ extern "C" {
  * \retval TH_EFAULT     \a _enc_ctx or \a _buf is <tt>NULL</tt>.
  * \retval TH_EINVAL     A target bitrate has already been specified, or the
  *                        quality index was not in the range 0...63.
- * \retval TH_IMPL       Not supported by this implementation.*/
+ * \retval TH_EIMPL       Not supported by this implementation.*/
 #define TH_ENCCTL_SET_QUALITY (28)
 /**Sets the current encoding bitrate.
  * Once a bitrate is set, the encoder must use a rate-controlled mode for all
@@ -330,7 +330,7 @@ extern "C" {
  * \retval 0             Success.
  * \retval TH_EFAULT     \a _enc_ctx or \a _buf is <tt>NULL</tt>.
  * \retval TH_EINVAL     The target bitrate was not positive.
- * \retval TH_IMPL       Not supported by this implementation.*/
+ * \retval TH_EIMPL       Not supported by this implementation.*/
 #define TH_ENCCTL_SET_BITRATE (30)
 
 /*@}*/

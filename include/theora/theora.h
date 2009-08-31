@@ -333,7 +333,7 @@ typedef struct theora_comment{
  * \param[out] buf <tt>ogg_uint32_t</tt>: The actual maximum distance set.
  * \retval TH_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
  * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(ogg_uint32_t)</tt>.
- * \retval TH_IMPL   Not supported by this implementation.*/
+ * \retval TH_EIMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE (4)
 
 /**Set the granule position.
@@ -359,7 +359,7 @@ typedef struct theora_comment{
  *                    \a buf is <tt>NULL</tt> and \a buf_sz is not zero, 
  *                    or \a buf is non-<tt>NULL</tt> and \a buf_sz is 
  *                    not <tt>sizeof(#th_quant_info)</tt>.
- * \retval TH_IMPL   Not supported by this implementation.*/
+ * \retval TH_EIMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SET_QUANT_PARAMS (2)
 
 /**Disables any encoder features that would prevent lossless transcoding back
@@ -388,7 +388,7 @@ typedef struct theora_comment{
  *                   tables and codebooks from being set.
  * \retval TH_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
  * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(int)</tt>.
- * \retval TH_IMPL   Not supported by this implementation.*/
+ * \retval TH_EIMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SET_VP3_COMPATIBLE (10)
 
 /**Gets the maximum speed level.
@@ -402,7 +402,7 @@ typedef struct theora_comment{
  * \param[out] buf int: The maximum encoding speed level.
  * \retval TH_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
  * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(int)</tt>.
- * \retval TH_IMPL   Not supported by this implementation in the current
+ * \retval TH_EIMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_GET_SPLEVEL_MAX (12)
 
@@ -417,7 +417,7 @@ typedef struct theora_comment{
  *                   The maximum encoding speed level may be
  *                    implementation- and encoding mode-specific, and can be
  *                    obtained via #TH_ENCCTL_GET_SPLEVEL_MAX.
- * \retval TH_IMPL   Not supported by this implementation in the current
+ * \retval TH_EIMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_SET_SPLEVEL (14)
 
