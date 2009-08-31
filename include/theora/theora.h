@@ -27,11 +27,11 @@ extern "C"
 
 #include <ogg/ogg.h>
 
-/** \defgroup oldfuncs Legacy pre-1.0 C API */
-/*  @{ */
-
-/** \mainpage
- * 
+/** \file
+ * The libtheora pre-1.0 legacy C API.
+ *
+ * \ingroup oldfuncs
+ *
  * \section intro Introduction
  *
  * This is the documentation for the libtheora legacy C API, declared in 
@@ -126,9 +126,9 @@ extern "C"
  * examples/encoder_example.c</a> for a simple encoder implementation.
  */
 
-/** \file
- * The libtheora pre-1.0 legacy C API.
- */
+
+/** \defgroup oldfuncs Legacy pre-1.0 C API */
+/*  @{ */
 
 /**
  * A YUV buffer for passing uncompressed frames to and from the codec.
