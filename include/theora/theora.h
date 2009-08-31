@@ -331,9 +331,9 @@ typedef struct theora_comment{
  * \param[in]  buf <tt>ogg_uint32_t</tt>: The maximum distance between key
  *                   frames.
  * \param[out] buf <tt>ogg_uint32_t</tt>: The actual maximum distance set.
- * \retval TH_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
- * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(ogg_uint32_t)</tt>.
- * \retval TH_EIMPL   Not supported by this implementation.*/
+ * \retval OC_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
+ * \retval OC_EINVAL \a buf_sz is not <tt>sizeof(ogg_uint32_t)</tt>.
+ * \retval OC_IMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE (4)
 
 /**Set the granule position.
@@ -353,13 +353,13 @@ typedef struct theora_comment{
  * <tt>NULL</tt> may be specified to revert to the default parameters.
  *
  * \param[in] buf #th_quant_info
- * \retval TH_FAULT  \a theora_state is <tt>NULL</tt>.
- * \retval TH_EINVAL Encoding has already begun, the quantization parameters
+ * \retval OC_FAULT  \a theora_state is <tt>NULL</tt>.
+ * \retval OC_EINVAL Encoding has already begun, the quantization parameters
  *                    are not acceptable to this version of the encoder, 
  *                    \a buf is <tt>NULL</tt> and \a buf_sz is not zero, 
  *                    or \a buf is non-<tt>NULL</tt> and \a buf_sz is 
  *                    not <tt>sizeof(#th_quant_info)</tt>.
- * \retval TH_EIMPL   Not supported by this implementation.*/
+ * \retval OC_IMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SET_QUANT_PARAMS (2)
 
 /**Disables any encoder features that would prevent lossless transcoding back
@@ -386,9 +386,9 @@ typedef struct theora_comment{
  *                   4:2:0, the picture region is smaller than the full frame,
  *                   or if encoding has begun, preventing the quantization
  *                   tables and codebooks from being set.
- * \retval TH_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
- * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(int)</tt>.
- * \retval TH_EIMPL   Not supported by this implementation.*/
+ * \retval OC_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
+ * \retval OC_EINVAL \a buf_sz is not <tt>sizeof(int)</tt>.
+ * \retval OC_IMPL   Not supported by this implementation.*/
 #define TH_ENCCTL_SET_VP3_COMPATIBLE (10)
 
 /**Gets the maximum speed level.
@@ -400,9 +400,9 @@ typedef struct theora_comment{
  *  the current encoding mode (VBR vs. CQI, etc.).
  *
  * \param[out] buf int: The maximum encoding speed level.
- * \retval TH_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
- * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(int)</tt>.
- * \retval TH_EIMPL   Not supported by this implementation in the current
+ * \retval OC_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
+ * \retval OC_EINVAL \a buf_sz is not <tt>sizeof(int)</tt>.
+ * \retval OC_IMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_GET_SPLEVEL_MAX (12)
 
@@ -411,13 +411,13 @@ typedef struct theora_comment{
  *
  * \param[in] buf int: The new encoding speed level.
  *                      0 is slowest, larger values use less CPU.
- * \retval TH_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
- * \retval TH_EINVAL \a buf_sz is not <tt>sizeof(int)</tt>, or the
+ * \retval OC_FAULT  \a theora_state or \a buf is <tt>NULL</tt>.
+ * \retval OC_EINVAL \a buf_sz is not <tt>sizeof(int)</tt>, or the
  *                    encoding speed level is out of bounds.
  *                   The maximum encoding speed level may be
  *                    implementation- and encoding mode-specific, and can be
  *                    obtained via #TH_ENCCTL_GET_SPLEVEL_MAX.
- * \retval TH_EIMPL   Not supported by this implementation in the current
+ * \retval OC_IMPL   Not supported by this implementation in the current
  *                    encoding mode.*/
 #define TH_ENCCTL_SET_SPLEVEL (14)
 
