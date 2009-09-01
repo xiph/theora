@@ -114,16 +114,6 @@ extern "C"
  * checking beyond whether a header bit is present.  Instead, use the
  * theora_decode_header() function and check the return value; or examine the
  * header bytes at the beginning of the Ogg page.
- *
- * \subsection example Example Decoder 
- *
- * See <a href="http://svn.xiph.org/trunk/theora/examples/dump_video.c">
- * examples/dump_video.c</a> for a simple decoder implementation.
- *
- * \section encoding Encoding Process
- *
- * See <a href="http://svn.xiph.org/trunk/theora/examples/encoder_example.c">
- * examples/encoder_example.c</a> for a simple encoder implementation.
  */
 
 
