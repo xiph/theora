@@ -1685,7 +1685,6 @@ static void oc_filter_vedge(unsigned char *_dst,int _dst_ystride,
       *rdst++=(unsigned char)(r[4]+r[5]+r[6]+r[7]*2+r[8]+r[9]*2+4>>3);
       *rdst=(unsigned char)(r[5]+r[6]+r[7]+r[8]*2+r[9]*3+4>>3);
     }
-    else for(bx=1;bx<=8;bx++)*rdst++=(unsigned char)r[bx];
     cdst+=_dst_ystride;
   }
 }
