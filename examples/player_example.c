@@ -373,7 +373,7 @@ static void video_write(void){
       for (j=0;j<yuv_overlay->w;j++)
         out[j*2] = in_y[j];
       char *in_u  = (char *)yuv[1].data+uv_offset+yuv[1].stride*i;
-      char *in_v  = (char *)yuv[1].data+uv_offset+yuv[2].stride*i;
+      char *in_v  = (char *)yuv[2].data+uv_offset+yuv[2].stride*i;
       for (j=0;j<yuv_overlay->w>>1;j++) {
         out[j*4+1] = in_u[j];
         out[j*4+3] = in_v[j];
