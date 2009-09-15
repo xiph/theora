@@ -2043,6 +2043,30 @@ int th_decode_ctl(th_dec_ctx *_dec,int _req,void *_buf,
   }
 }
 
+/*We're decoding an INTER frame, but have no initialized reference
+   buffers (i.e., decoding did not start on a key frame).
+  We initialize them to a solid gray here.*/
+static void oc_dec_init_dummy_frame(th_dec_ctx *_dec){
+  th_info *info;
+  size_t   yplane_sz;
+  size_t   cplane_sz;
+  int      yhstride;
+  int      yheight;
+  int      chstride;
+  int      cheight;
+  _dec->state.ref_frame_idx[OC_FRAME_GOLD]=0;
+  _dec->state.ref_frame_idx[OC_FRAME_PREV]=0;
+  _dec->state.ref_frame_idx[OC_FRAME_SELF]=1;
+  info=&_dec->state.info;
+  yhstride=info->frame_width+2*OC_UMV_PADDING;
+  yheight=info->frame_height+2*OC_UMV_PADDING;
+  chstride=yhstride>>!(info->pixel_fmt&1);
+  cheight=yheight>>!(info->pixel_fmt&2);
+  yplane_sz=yhstride*(size_t)yheight;
+  cplane_sz=chstride*(size_t)cheight;
+  memset(_dec->state.ref_frame_data[0],0x80,yplane_sz+2*cplane_sz);
+}
+
 int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
  ogg_int64_t *_granpos){
   int ret;
@@ -2069,27 +2093,9 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
     if(_dec->state.frame_type!=OC_INTRA_FRAME&&
      (_dec->state.ref_frame_idx[OC_FRAME_GOLD]<0||
      _dec->state.ref_frame_idx[OC_FRAME_PREV]<0)){
-      th_info *info;
-      size_t       yplane_sz;
-      size_t       cplane_sz;
-      int          yhstride;
-      int          yheight;
-      int          chstride;
-      int          cheight;
-      /*We're decoding an INTER frame, but have no initialized reference
-         buffers (i.e., decoding did not start on a key frame).
-        We initialize them to a solid gray here.*/
-      _dec->state.ref_frame_idx[OC_FRAME_GOLD]=0;
-      _dec->state.ref_frame_idx[OC_FRAME_PREV]=0;
-      _dec->state.ref_frame_idx[OC_FRAME_SELF]=refi=1;
-      info=&_dec->state.info;
-      yhstride=info->frame_width+2*OC_UMV_PADDING;
-      yheight=info->frame_height+2*OC_UMV_PADDING;
-      chstride=yhstride>>!(info->pixel_fmt&1);
-      cheight=yheight>>!(info->pixel_fmt&2);
-      yplane_sz=yhstride*(size_t)yheight;
-      cplane_sz=chstride*(size_t)cheight;
-      memset(_dec->state.ref_frame_data[0],0x80,yplane_sz+2*cplane_sz);
+      /*No reference frames yet!*/
+      oc_dec_init_dummy_frame(_dec);
+      refi=_dec->state.ref_frame_idx[OC_FRAME_SELF];
     }
     else{
       for(refi=0;refi==_dec->state.ref_frame_idx[OC_FRAME_GOLD]||
@@ -2262,6 +2268,16 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
     return 0;
   }
   else{
+    if(_dec->state.ref_frame_idx[OC_FRAME_GOLD]<0||
+     _dec->state.ref_frame_idx[OC_FRAME_PREV]<0){
+      int refi;
+      /*No reference frames yet!*/
+      oc_dec_init_dummy_frame(_dec);
+      refi=_dec->state.ref_frame_idx[OC_FRAME_PREV];
+      _dec->state.ref_frame_idx[OC_FRAME_SELF]=refi;
+      memcpy(_dec->pp_frame_buf,_dec->state.ref_frame_bufs[refi],
+       sizeof(_dec->pp_frame_buf[0])*3);
+    }
     /*Just update the granule position and return.*/
     _dec->state.granpos=(_dec->state.keyframe_num+_dec->state.granpos_bias<<
      _dec->state.info.keyframe_granule_shift)
