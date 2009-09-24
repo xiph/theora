@@ -1,6 +1,9 @@
-libtheora 1.1beta4 (unreleased)
+libtheora 1.1.0 (2009 September 24)
 
- - no changes recorded
+ - Fix various small issues with the example and telemetry code.
+ - Fix handing a zero-byte packet as the first frame.
+ - Documentation cleanup.
+ - Two minor build fixes.
 
 libtheora 1.1beta3 (2009 August 22)
 
