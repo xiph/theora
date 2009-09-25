@@ -125,7 +125,7 @@ void oc_state_frag_copy_list_mmx(const oc_theora_state *_state,
 #define SRC edx
 #define DST eax
 #define YSTRIDE ecx
-#define YSTRIDE3 ebx
+#define YSTRIDE3 edi
     OC_FRAG_COPY_MMX(dst_frame_data+frag_buf_off,
      src_frame_data+frag_buf_off,ystride);
 #undef SRC
