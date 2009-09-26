@@ -44,7 +44,7 @@ void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
 #define Y eax
 #define P ecx
       mov Y,_dct_coeffs
-      movd P,p
+      movzx P,p
       /*mm0=0000 0000 0000 AAAA*/
       movd mm0,P
       /*mm0=0000 0000 AAAA AAAA*/
