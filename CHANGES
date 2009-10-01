@@ -1,3 +1,7 @@
+libtheora 1.1.2 (unreleased snapshot)
+
+ - no changes recorded
+
 libtheora 1.1.1 (2009 October 1)
 
  - Fix problems with MSVC inline assembly
