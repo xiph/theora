@@ -109,6 +109,13 @@ int              stateflag=0;
 SDL_Surface *screen;
 SDL_Overlay *yuv_overlay;
 SDL_Rect rect;
+unsigned char *RGBbuffer;
+
+static int lu_Y[256];
+static int lu_R[256];
+static int lu_GU[256];
+static int lu_GV[256];
+static int lu_B[256];
 
 /* single frame video buffering */
 int          videobuf_ready=0;
@@ -158,6 +165,18 @@ int          audiofd_fragsize;      /* read and write only complete fragments
                                        switch */
 int          audiofd=-1;
 ogg_int64_t  audiofd_timer_calibrate=-1;
+
+static void init_yuv2rgb() {
+  int i;
+  for(i=0;i<256;i++)
+  {
+    lu_Y[i]  = (int)(  1.1644*(i- 16)*32768.0+0.5)+(1<<14);
+    lu_R[i]  = (int)(   1.596*(i-128)*32768.0+0.5);
+    lu_GU[i] = (int)(-0.39176*(i-128)*32768.0+0.5); 
+    lu_GV[i] = (int)(-0.81297*(i-128)*32768.0+0.5);
+    lu_B[i]  = (int)(  2.0172*(i-128)*32768.0+0.5);
+  }
+}
 
 static void open_audio(){
   audio_buf_info info;
@@ -326,13 +345,17 @@ static void open_video(void){
     yuv_overlay = SDL_CreateYUVOverlay(w, h,
                                      SDL_YUY2_OVERLAY,
                                      screen);
-  else
+  else if (px_fmt==TH_PF_444) {
+    RGBbuffer = calloc(sizeof(char),w*h*4);
+    fprintf(stderr,"warning: SDL does not support YUV 4:4:4, using slow software conversion.\n");
+    init_yuv2rgb();
+  } else
     yuv_overlay = SDL_CreateYUVOverlay(w, h,
                                      SDL_YV12_OVERLAY,
                                      screen);
   
-  if ( yuv_overlay == NULL ) {
-    fprintf(stderr, "SDL: Couldn't create SDL_yuv_overlay: %s\n",
+  if ( (yuv_overlay == NULL && px_fmt!=TH_PF_444) || (screen == NULL && px_fmt==TH_PF_444) ) {
+    fprintf(stderr, "SDL: xCouldn't create SDL_yuv_overlay: %s\n",
             SDL_GetError());
     exit(1);
   }
@@ -341,7 +364,8 @@ static void open_video(void){
   rect.w = w;
   rect.h = h;
 
-  SDL_DisplayYUVOverlay(yuv_overlay, &rect);
+  if (px_fmt!=TH_PF_444)
+    SDL_DisplayYUVOverlay(yuv_overlay, &rect);
 }
 
 static void video_write(void){
@@ -353,7 +377,7 @@ static void video_write(void){
   if ( SDL_MUSTLOCK(screen) ) {
     if ( SDL_LockSurface(screen) < 0 ) return;
   }
-  if (SDL_LockYUVOverlay(yuv_overlay) < 0) return;
+  if (px_fmt!=TH_PF_444 && SDL_LockYUVOverlay(yuv_overlay) < 0) return;
 
   /* let's draw the data on a SDL screen (*screen) */
   /* deal with border stride */
@@ -379,6 +403,27 @@ static void video_write(void){
         out[j*4+3] = in_v[j];
       }
     }
+  } else if (px_fmt==TH_PF_444){
+    SDL_Surface *output;
+    for(i=0;i<screen->h;i++) {
+      int j;
+      unsigned char *in_y  = (unsigned char *)yuv[0].data+y_offset+yuv[0].stride*i;
+      unsigned char *in_u  = (unsigned char *)yuv[1].data+y_offset+yuv[1].stride*i;
+      unsigned char *in_v  = (unsigned char *)yuv[2].data+y_offset+yuv[2].stride*i;
+      unsigned char *out = RGBbuffer+(screen->w*i*4);
+      for (j=0;j<screen->w;j++) {
+        int r, g, b;
+        int y = lu_Y[in_y[j]];
+        b=(y + lu_B[in_u[j]])>>15;
+        out[j*4]     = ((b) > 255 ? 255 : (b) < 0 ? 0 : (b));
+        g=(y + lu_GV[in_v[j]] + lu_GU[in_u[j]])>>15;
+        out[j*4+1]   = ((g) > 255 ? 255 : (g) < 0 ? 0 : (g));
+        r=(y + lu_R[in_v[j]])>>15;
+        out[j*4+2]   = ((r) > 255 ? 255 : (r) < 0 ? 0 : (r));
+      }  
+      output=SDL_CreateRGBSurfaceFrom(RGBbuffer,screen->w,screen->h,32,4*screen->w,0,0,0,0);
+      SDL_BlitSurface(output,NULL,screen,NULL);
+    }
   } else {
     uv_offset=(ti.pic_x/2)+(yuv[1].stride)*(ti.pic_y/2);
     for(i=0;i<yuv_overlay->h;i++)
@@ -399,12 +444,13 @@ static void video_write(void){
   if ( SDL_MUSTLOCK(screen) ) {
     SDL_UnlockSurface(screen);
   }
-  SDL_UnlockYUVOverlay(yuv_overlay);
-
-
-  /* Show, baby, show! */
-  SDL_DisplayYUVOverlay(yuv_overlay, &rect);
-
+  if (px_fmt!=TH_PF_444) {
+    SDL_UnlockYUVOverlay(yuv_overlay);
+    /* Show, baby, show! */
+    SDL_DisplayYUVOverlay(yuv_overlay, &rect);
+  } else { 
+    SDL_Flip(screen);
+  }
 }
 /* dump the theora (or vorbis) comment header */
 static int dump_comments(th_comment *tc){
