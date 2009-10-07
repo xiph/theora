@@ -116,6 +116,19 @@ static int lu_R[256];
 static int lu_GU[256];
 static int lu_GV[256];
 static int lu_B[256];
+#define OC_CLAMP255(_x)     ((unsigned char)((((_x)<0)-1)&((_x)|-((_x)>255))))
+
+static void init_yuv2rgb() {
+  int i;
+  for(i=0;i<256;i++)
+  {
+    lu_Y[i]  =  2441889*(i- 16) + 1048576;
+    lu_R[i]  =  3347111*(i-128);
+    lu_GV[i] = -1704917*(i-128);
+    lu_GU[i] =  -821585*(i-128);
+    lu_B[i]  =  4230442*(i-128);
+  }
+}
 
 /* single frame video buffering */
 int          videobuf_ready=0;
@@ -166,17 +179,6 @@ int          audiofd_fragsize;      /* read and write only complete fragments
 int          audiofd=-1;
 ogg_int64_t  audiofd_timer_calibrate=-1;
 
-static void init_yuv2rgb() {
-  int i;
-  for(i=0;i<256;i++)
-  {
-    lu_Y[i]  = (int)(  1.1644*(i- 16)*32768.0+0.5)+(1<<14);
-    lu_R[i]  = (int)(   1.596*(i-128)*32768.0+0.5);
-    lu_GU[i] = (int)(-0.39176*(i-128)*32768.0+0.5); 
-    lu_GV[i] = (int)(-0.81297*(i-128)*32768.0+0.5);
-    lu_B[i]  = (int)(  2.0172*(i-128)*32768.0+0.5);
-  }
-}
 
 static void open_audio(){
   audio_buf_info info;
@@ -414,12 +416,12 @@ static void video_write(void){
       for (j=0;j<screen->w;j++) {
         int r, g, b;
         int y = lu_Y[in_y[j]];
-        b=(y + lu_B[in_u[j]])>>15;
-        out[j*4]     = ((b) > 255 ? 255 : (b) < 0 ? 0 : (b));
-        g=(y + lu_GV[in_v[j]] + lu_GU[in_u[j]])>>15;
-        out[j*4+1]   = ((g) > 255 ? 255 : (g) < 0 ? 0 : (g));
-        r=(y + lu_R[in_v[j]])>>15;
-        out[j*4+2]   = ((r) > 255 ? 255 : (r) < 0 ? 0 : (r));
+        b=(y + lu_B[in_u[j]])>>21;
+        out[j*4]     = OC_CLAMP255(b);
+        g=(y + lu_GV[in_v[j]] + lu_GU[in_u[j]])>>21;
+        out[j*4+1]   = OC_CLAMP255(g);
+        r=(y + lu_R[in_v[j]])>>21;
+        out[j*4+2]   = OC_CLAMP255(r);
       }  
       output=SDL_CreateRGBSurfaceFrom(RGBbuffer,screen->w,screen->h,32,4*screen->w,0,0,0,0);
       SDL_BlitSurface(output,NULL,screen,NULL);
