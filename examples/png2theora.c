@@ -336,7 +336,7 @@ theora_write_frame(unsigned long w, unsigned long h, unsigned char *yuv, int las
 }
 
 static unsigned char
-clamp(double d)
+clamp(int d)
 {
   if(d < 0)
     return 0;
