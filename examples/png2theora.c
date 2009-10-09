@@ -365,19 +365,15 @@ rgb_to_yuv(png_bytep *png,
       g = png[y][3 * x + 1];
       b = png[y][3 * x + 2];
 
-      /* XXX: Cringe. */
+      /*This ignores gamma and RGB primary/whitepoint differences.
+        It also isn't terribly fast (though a decent compiler will
+         strength-reduce the division to a multiplication).*/
       yuv[3 * (x + w * y) + 0] = clamp(
-        0.299 * r
-        + 0.587 * g
-        + 0.114 * b);
-      yuv[3 * (x + w * y) + 1] = clamp((0.436 * 255
-        - 0.14713 * r
-        - 0.28886 * g
-        + 0.436 * b) / 0.872);
-      yuv[3 * (x + w * y) + 2] = clamp((0.615 * 255
-        + 0.615 * r
-        - 0.51499 * g
-        - 0.10001 * b) / 1.230);
+        (65481*r+128553*g+24966*b+4207500)/255000);
+      yuv[3 * (x + w * y) + 1] = clamp(
+        (-33488*r-65744*g+99232*b+29032005)/225930);
+      yuv[3 * (x + w * y) + 2] = clamp(
+        (157024*r-131488*g-25536*b+45940035)/357510);
     }
   }
 }
