@@ -329,8 +329,8 @@ static void sigint_handler (int signal) {
 static void open_video(void){
   int w;
   int h;
-  w=(ti.pic_x+ti.frame_width+1&~1)-(ti.pic_x&~1);
-  h=(ti.pic_y+ti.frame_height+1&~1)-(ti.pic_y&~1);
+  w=(ti.pic_x+ti.pic_width+1&~1)-(ti.pic_x&~1);
+  h=(ti.pic_y+ti.pic_height+1&~1)-(ti.pic_y&~1);
   if ( SDL_Init(SDL_INIT_VIDEO) < 0 ) {
     fprintf(stderr, "Unable to init SDL: %s\n", SDL_GetError());
     exit(1);
