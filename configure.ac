@@ -14,6 +14,8 @@ AC_CONFIG_SRCDIR([lib/fdct.c])
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
 
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+
 dnl Library versioning
 dnl CURRENT, REVISION, AGE
 dnl - library source changed -> increment REVISION
@@ -64,7 +66,19 @@ dnl Add parameters for aclocal
 AC_SUBST(ACLOCAL_AMFLAGS, "-I m4")
 
 dnl Check for doxygen
-AC_CHECK_PROG(HAVE_DOXYGEN, doxygen, true, false)
+AC_ARG_ENABLE([doc],
+	AS_HELP_STRING([--enable-doc], [Build API documentation]),
+	[ac_enable_doc=$enableval], [ac_enable_doc=auto])
+
+if test "x$ac_enable_doc" != "xno"; then
+	AC_CHECK_PROG(HAVE_DOXYGEN, doxygen, true, false)
+
+	if test "x$HAVE_DOXYGEN" = "xfalse" -a "x$ac_enable_doc" = "xyes"; then
+		AC_MSG_ERROR([*** API documentation explicitly requested but Doxygen not found])
+	fi
+else
+	HAVE_DOXYGEN=false
+fi
 AM_CONDITIONAL(HAVE_DOXYGEN,$HAVE_DOXYGEN)
 if test $HAVE_DOXYGEN = "false"; then
         AC_MSG_WARN([*** doxygen not found, API documentation will not be built])
@@ -74,7 +88,7 @@ dnl Check for tools used to build the format specification
 BUILD_SPEC="false"
 ac_build_spec=yes
 AC_ARG_ENABLE(spec,
-     [  --disable-spec          do not build spec ],
+     AS_HELP_STRING([--disable-spec], [Do not build the specification]),
      [
        if test "x$enableval" = "xno"; then
          ac_build_spec=$enableval
@@ -129,7 +143,8 @@ dnl Check for valgrind
 VALGRIND_ENVIRONMENT=""
 ac_enable_valgrind=no
 AC_ARG_ENABLE(valgrind-testing,
-     [  --enable-valgrind-testing     enable running of tests inside Valgrind ],     [ ac_enable_valgrind=yes ], [ ac_enable_valgrind=no] )
+     AS_HELP_STRING([--enable-valgrind-testing], [Enable running of tests inside Valgrind]),
+     [ ac_enable_valgrind=$enableval ], [ ac_enable_valgrind=no] )
 
 if test "x${ac_enable_valgrind}" = xyes ; then
   if test "x${enable_shared}" = xyes ; then
@@ -177,7 +192,7 @@ CFLAGS="$CFLAGS $cflags_save"
 cpu_x86_64=no
 cpu_x86_32=no
 AC_ARG_ENABLE(asm,
-    [  --disable-asm           disable assembly optimizations ],
+    AS_HELP_STRING([--disable-asm], [Disable assembly optimizations]),
     [ ac_enable_asm=$enableval ], [ ac_enable_asm=yes] )
 
 if test "x${ac_enable_asm}" = xyes; then
@@ -349,7 +364,7 @@ AC_SUBST(PNG_LIBS)
 dnl check for libcairo
 HAVE_CAIRO=no
 AC_ARG_ENABLE(telemetry,
-    [  --enable-telemetry      enable debugging output controls ],
+    AS_HELP_STRING([--enable-telemetry], [Enable debugging output controls]),
     [ ac_enable_telemetry=$enableval ], [ ac_enable_telemetry=no] )
 
 if test "x${ac_enable_telemetry}" = xyes; then
@@ -373,7 +388,7 @@ dnl Configuration option for building of floating point code.
 
 ac_enable_float=yes
 AC_ARG_ENABLE(float,
-     [  --disable-float         disable use of floating point code ],
+     AS_HELP_STRING([--disable-float], [Disable use of floating point code]),
      [ ac_enable_float=$enableval ], [ ac_enable_float=yes] )
 
 if test "x${ac_enable_float}" != xyes ; then
@@ -386,7 +401,7 @@ dnl Configuration option for building of encoding support.
 
 ac_enable_encode=yes
 AC_ARG_ENABLE(encode,
-     [  --disable-encode        disable encoding support ],
+     AS_HELP_STRING([--disable-encode], [Disable encoding support]),
      [ ac_enable_encode=$enableval ], [ ac_enable_encode=yes] )
 
 if test "x${ac_enable_encode}" != xyes ; then
@@ -405,7 +420,7 @@ dnl Configuration option for examples
 
 ac_enable_examples=yes
 AC_ARG_ENABLE(examples,
-     [  --disable-examples      disable examples ],
+     AS_HELP_STRING([--disable-examples], [Disable examples]),
      [ ac_enable_examples=$enableval ], [ ac_enable_examples=yes] )
 AM_CONDITIONAL(THEORA_ENABLE_EXAMPLES, [test "x${ac_enable_examples}" != xno])
 
