@@ -484,7 +484,7 @@ AC_OUTPUT([
 AS_AC_EXPAND(LIBDIR, ${libdir})
 AS_AC_EXPAND(INCLUDEDIR, ${includedir})
 AS_AC_EXPAND(BINDIR, ${bindir})
-AS_AC_EXPAND(DOCDIR, ${datadir}/doc)
+AS_AC_EXPAND(DOCDIR, ${docdir})
 
 if test $HAVE_DOXYGEN = "false"; then
   doc_build="no"
@@ -515,7 +515,7 @@ AC_MSG_RESULT([
 
     libtheora: ................... ${LIBDIR}
     C header files: .............. ${INCLUDEDIR}/theora
-    Documentation: ............... ${DOCDIR}/$PACKAGE
+    Documentation: ............... ${DOCDIR}
 
   Building:
 

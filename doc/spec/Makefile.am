@@ -3,8 +3,6 @@
 # makefile to generate the spec document from sources
 # requires transfig and pdflatex
 
-docdir = $(datadir)/doc/$(PACKAGE)-$(VERSION)
-
 built_docs = Theora.pdf
 
 if BUILD_SPEC

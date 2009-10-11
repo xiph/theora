@@ -2,8 +2,6 @@
 
 SUBDIRS = spec
 
-docdir = $(datadir)/doc/$(PACKAGE)-$(VERSION)
-
 static_docs = vp3-format.txt color.html \
 	draft-ietf-avt-rtp-theora-00.xml \
 	draft-ietf-avt-rtp-theora-00.txt
