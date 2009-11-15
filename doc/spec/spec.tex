@@ -5402,7 +5402,7 @@ Those \qi\ values are applied only to the AC coefficients.
 \locvar{\bj}      & Integer & 36 & No  & The index of a neighboring block in
  coded order. \\
 \locvar{\mbi}     & Integer & 32 & No  & The index of the macro block
- containing block \locvar{\bi}. \\
+ containing block \bitvar{\bi}. \\
 \locvar{\mbi}     & Integer & 32 & No  & The index of the macro block
  containing block \locvar{\bj}. \\
 \locvar{\rfi}     & Integer &  2 & No  & The index of the reference frame
@@ -5454,10 +5454,10 @@ $7$ (INTER\_MV\_FOUR)     & $1$ (Previous)        \\
 \end{table}
 
 \item
-If block \locvar{\bi} is not along the left edge of the coded frame:
+If block \bitvar{\bi} is not along the left edge of the coded frame:
 \begin{enumerate}
 \item
-Assign \locvar{\bj} the coded-order index of block \locvar{\bi}'s left
+Assign \locvar{\bj} the coded-order index of block \bitvar{\bi}'s left
  neighbor, i.e., in the same row but one column to the left.
 \item
 If $\bitvar{BCODED}[\bj]$ is not zero:
@@ -5484,11 +5484,11 @@ Otherwise, assign $\locvar{P}[0]$ the value zero.
 Otherwise, assign $\locvar{P}[0]$ the value zero.
 
 \item
-If block \locvar{\bi} is not along the left edge nor the bottom edge of the
+If block \bitvar{\bi} is not along the left edge nor the bottom edge of the
  coded frame:
 \begin{enumerate}
 \item
-Assign \locvar{\bj} the coded-order index of block \locvar{\bi}'s lower-left
+Assign \locvar{\bj} the coded-order index of block \bitvar{\bi}'s lower-left
  neighbor, i.e., one row down and one column to the left.
 \item
 If $\bitvar{BCODED}[\bj]$ is not zero:
@@ -5515,10 +5515,10 @@ Otherwise, assign $\locvar{P}[1]$ the value zero.
 Otherwise, assign $\locvar{P}[1]$ the value zero.
 
 \item
-If block \locvar{\bi} is not along the the bottom edge of the coded frame:
+If block \bitvar{\bi} is not along the the bottom edge of the coded frame:
 \begin{enumerate}
 \item
-Assign \locvar{\bj} the coded-order index of block \locvar{\bi}'s lower
+Assign \locvar{\bj} the coded-order index of block \bitvar{\bi}'s lower
  neighbor, i.e., in the same column but one row down.
 \item
 If $\bitvar{BCODED}[\bj]$ is not zero:
@@ -5545,11 +5545,11 @@ Otherwise, assign $\locvar{P}[2]$ the value zero.
 Otherwise, assign $\locvar{P}[2]$ the value zero.
 
 \item
-If block \locvar{\bi} is not along the right edge nor the bottom edge of the
+If block \bitvar{\bi} is not along the right edge nor the bottom edge of the
  coded frame:
 \begin{enumerate}
 \item
-Assign \locvar{\bj} the coded-order index of block \locvar{\bi}'s lower-right
+Assign \locvar{\bj} the coded-order index of block \bitvar{\bi}'s lower-right
  neighbor, i.e., one row down and one column to the right.
 \item
 If $\bitvar{BCODED}[\bj]$ is not zero:
