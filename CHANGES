@@ -1,6 +1,10 @@
 libtheora 1.1.2 (unreleased snapshot)
 
- - no changes recorded
+ - Fix Huffman table decoding with OC_HUFF_SLUSH is set to 0
+ - Fix a frame size bug in player_example
+ - 4:4:4 support in player_example using software yuv->rgb
+ - Better rgb->yuv conversion in png2theora
+ - Build and documentation fixes
 
 libtheora 1.1.1 (2009 October 1)
 
