@@ -441,11 +441,25 @@ extern int th_encode_flushheader(th_enc_ctx *_enc,
 /**Submits an uncompressed frame to the encoder.
  * \param _enc   A #th_enc_ctx handle.
  * \param _ycbcr A buffer of Y'CbCr data to encode.
+ *               If the width and height of the buffer matches the frame size
+ *                the encoder was initialized with, the encoder will only
+ *                reference the portion inside the picture region.
+ *               Any data outside this region will be ignored, and need not map
+ *                to a valid address.
+ *               Alternatively, you can pass a buffer equal to the size of the
+ *                picture region, if this is less than the full frame size.
+ *               When using subsampled chroma planes, odd picture sizes or odd
+ *                picture offsets may require an unexpected chroma plane size,
+ *                and their use is generally discouraged, as they will not be
+ *                well-supported by players and other media frameworks.
+ *               See Section 4.4 of 
+ *                <a href="http://www.theora.org/doc/Theora.pdf">the Theora
+ *                specification</a> for details if you wish to use them anyway.
  * \retval 0         Success.
  * \retval TH_EFAULT \a _enc or \a _ycbcr is <tt>NULL</tt>.
- * \retval TH_EINVAL The buffer size does not match the frame size the encoder
- *                    was initialized with, or encoding has already
- *                    completed.*/
+ * \retval TH_EINVAL The buffer size matches neither the frame size nor the
+ *                    picture size the encoder was initialized with, or
+ *                    encoding has already completed.*/
 extern int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _ycbcr);
 /**Retrieves encoded video data packets.
  * This should be called repeatedly after each frame is submitted to flush any

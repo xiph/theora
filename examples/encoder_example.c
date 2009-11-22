@@ -1016,8 +1016,6 @@ int fetch_and_process_video_packet(FILE *video,FILE *twopass_file,int passno,
  th_enc_ctx *td,ogg_packet *op){
   int                        ret;
   int                        pic_sz;
-  int                        frame_c_w;
-  int                        frame_c_h;
   int                        c_w;
   int                        c_h;
   int                        c_sz;
@@ -1034,8 +1032,6 @@ int fetch_and_process_video_packet(FILE *video,FILE *twopass_file,int passno,
     frame_state=0;
   }
   pic_sz=pic_w*pic_h;
-  frame_c_w=frame_w/dst_c_dec_h;
-  frame_c_h=frame_h/dst_c_dec_v;
   c_w=(pic_w+dst_c_dec_h-1)/dst_c_dec_h;
   c_h=(pic_h+dst_c_dec_v-1)/dst_c_dec_v;
   c_sz=c_w*c_h;
@@ -1124,22 +1120,21 @@ int fetch_and_process_video_packet(FILE *video,FILE *twopass_file,int passno,
       else buf_pos+=ret;
     }
   }
-  /*We submit the buffer to the library as if it were padded, but we do not
-     actually allocate space for the padding.
-    This is okay, because with the 1.0 API the library will never read data from the padded
-     region.*/
-  ycbcr[0].width=frame_w;
-  ycbcr[0].height=frame_h;
+  /*We submit the buffer using the size of the picture region.
+    libtheora will pad the picture region out to the full frame size for us,
+     whether we pass in a full frame or not.*/
+  ycbcr[0].width=pic_w;
+  ycbcr[0].height=pic_h;
   ycbcr[0].stride=pic_w;
-  ycbcr[0].data=yuvframe[0]-pic_x-pic_y*pic_w;
-  ycbcr[1].width=frame_c_w;
-  ycbcr[1].height=frame_c_h;
+  ycbcr[0].data=yuvframe[0];
+  ycbcr[1].width=c_w;
+  ycbcr[1].height=c_h;
   ycbcr[1].stride=c_w;
-  ycbcr[1].data=yuvframe[0]+pic_sz-(pic_x/dst_c_dec_h)-(pic_y/dst_c_dec_v)*c_w;
-  ycbcr[2].width=frame_c_w;
-  ycbcr[2].height=frame_c_h;
+  ycbcr[1].data=yuvframe[0]+pic_sz;
+  ycbcr[2].width=c_w;
+  ycbcr[2].height=c_h;
   ycbcr[2].stride=c_w;
-  ycbcr[2].data=ycbcr[1].data+c_sz;
+  ycbcr[2].data=yuvframe[0]+pic_sz+c_sz;
   th_encode_ycbcr_in(td,ycbcr);
   {
     unsigned char *temp=yuvframe[0];

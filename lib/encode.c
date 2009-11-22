@@ -1492,34 +1492,45 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
   if(_enc==NULL||_img==NULL)return TH_EFAULT;
   if(_enc->packet_state==OC_PACKET_DONE)return TH_EINVAL;
   if(_enc->rc.twopass&&_enc->rc.twopass_buffer_bytes==0)return TH_EINVAL;
-  if((ogg_uint32_t)_img[0].width!=_enc->state.info.frame_width||
-   (ogg_uint32_t)_img[0].height!=_enc->state.info.frame_height){
-    return TH_EINVAL;
-  }
   hdec=!(_enc->state.info.pixel_fmt&1);
   vdec=!(_enc->state.info.pixel_fmt&2);
   cframe_width=_enc->state.info.frame_width>>hdec;
   cframe_height=_enc->state.info.frame_height>>vdec;
-  if(_img[1].width!=cframe_width||_img[2].width!=cframe_width||
-   _img[1].height!=cframe_height||_img[2].height!=cframe_height){
-    return TH_EINVAL;
-  }
-  /*Step 2: Copy the input to our internal buffer.
-    This lets us add padding, if necessary, so we don't have to worry about
-     dereferencing possibly invalid addresses, and allows us to use the same
-     strides and fragment offsets for both the input frame and the reference
-     frames.*/
-  /*Flip the input buffer upside down.*/
-  oc_ycbcr_buffer_flip(img,_img);
-  oc_img_plane_copy_pad(_enc->state.ref_frame_bufs[OC_FRAME_IO]+0,img+0,
-   _enc->state.info.pic_x,_enc->state.info.pic_y,
-   _enc->state.info.pic_width,_enc->state.info.pic_height);
   cpic_x=_enc->state.info.pic_x>>hdec;
   cpic_y=_enc->state.info.pic_y>>vdec;
   cpic_width=(_enc->state.info.pic_x+_enc->state.info.pic_width+hdec>>hdec)
    -cpic_x;
   cpic_height=(_enc->state.info.pic_y+_enc->state.info.pic_height+vdec>>vdec)
    -cpic_y;
+  /*Flip the input buffer upside down.*/
+  oc_ycbcr_buffer_flip(img,_img);
+  if((ogg_uint32_t)img[0].width!=_enc->state.info.frame_width||
+   (ogg_uint32_t)img[0].height!=_enc->state.info.frame_height||
+   img[1].width!=cframe_width||img[2].width!=cframe_width||
+   img[1].height!=cframe_height||img[2].height!=cframe_height){
+    /*The buffer does not match the frame size.
+      Check to see if it matches the picture size.*/
+    if((ogg_uint32_t)img[0].width!=_enc->state.info.pic_width||
+     (ogg_uint32_t)img[0].height!=_enc->state.info.pic_height||
+     img[1].width!=cpic_width||img[2].width!=cpic_width||
+     img[1].height!=cpic_height||img[2].height!=cpic_height){
+      /*It doesn't; we don't know how to handle it.*/
+      return TH_EINVAL;
+    }
+    /*Adjust the pointers to address a full frame.
+      We still only use the picture region, however.*/
+    img[0].data-=_enc->state.info.pic_y*img[0].stride+_enc->state.info.pic_x;
+    img[1].data-=cpic_y*img[1].stride+cpic_x;
+    img[2].data-=cpic_y*img[2].stride+cpic_x;
+  }
+  /*Step 2: Copy the input to our internal buffer.
+    This lets us add padding, if necessary, so we don't have to worry about
+     dereferencing possibly invalid addresses, and allows us to use the same
+     strides and fragment offsets for both the input frame and the reference
+     frames.*/
+  oc_img_plane_copy_pad(_enc->state.ref_frame_bufs[OC_FRAME_IO]+0,img+0,
+   _enc->state.info.pic_x,_enc->state.info.pic_y,
+   _enc->state.info.pic_width,_enc->state.info.pic_height);
   for(pli=1;pli<3;pli++){
     oc_img_plane_copy_pad(_enc->state.ref_frame_bufs[OC_FRAME_IO]+pli,img+pli,
      cpic_x,cpic_y,cpic_width,cpic_height);
