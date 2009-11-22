@@ -16,11 +16,12 @@
  ********************************************************************/
 #if !defined(_bitpack_H)
 # define _bitpack_H (1)
+# include <stddef.h>
 # include <limits.h>
 
 
 
-typedef unsigned long      oc_pb_window;
+typedef size_t             oc_pb_window;
 typedef struct oc_pack_buf oc_pack_buf;
 
 
