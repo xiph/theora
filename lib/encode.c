@@ -1519,9 +1519,10 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
     }
     /*Adjust the pointers to address a full frame.
       We still only use the picture region, however.*/
-    img[0].data-=_enc->state.info.pic_y*img[0].stride+_enc->state.info.pic_x;
-    img[1].data-=cpic_y*img[1].stride+cpic_x;
-    img[2].data-=cpic_y*img[2].stride+cpic_x;
+    img[0].data-=_enc->state.info.pic_y*(ptrdiff_t)img[0].stride
+     +_enc->state.info.pic_x;
+    img[1].data-=cpic_y*(ptrdiff_t)img[1].stride+cpic_x;
+    img[2].data-=cpic_y*(ptrdiff_t)img[2].stride+cpic_x;
   }
   /*Step 2: Copy the input to our internal buffer.
     This lets us add padding, if necessary, so we don't have to worry about
