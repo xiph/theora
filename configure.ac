@@ -237,7 +237,7 @@ if test "x$lt_cv_prog_gnu_ld" = "xyes"; then
     THC_VERSION_ARG="-export-symbols \$(top_srcdir)/win32/libtheora.def"
     AC_MSG_RESULT([-export-symbols])
     ;;
-  linux* | solaris* )
+  linux* | solaris* | gnu* | k*bsd*-gnu)
     THDEC_VERSION_ARG='-Wl,--version-script=$(srcdir)/Version_script-dec'
     THENC_VERSION_ARG='-Wl,--version-script=$(srcdir)/Version_script-enc'
     TH_VERSION_ARG='-Wl,--version-script=$(srcdir)/Version_script'
