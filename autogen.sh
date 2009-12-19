@@ -13,7 +13,7 @@ test -z "$srcdir" && srcdir=.
 cd "$srcdir"
 DIE=0
 
-echo "checking for autoconf... "
+/bin/echo "checking for autoconf... "
 (autoconf --version) < /dev/null > /dev/null 2>&1 || {
         echo
         echo "You must have autoconf installed to compile $package."
@@ -34,17 +34,17 @@ if test -r Makefile.am; then
     AM_NEEDED=""
   fi
   if test -z $AM_NEEDED; then
-    echo -n "checking for automake... "
+    /bin/echo -n "checking for automake... "
     AUTOMAKE=automake
     ACLOCAL=aclocal
     if ($AUTOMAKE --version < /dev/null > /dev/null 2>&1); then
-      echo "yes"
+      /bin/echo "yes"
     else
-      echo "no"
+      /bin/echo "no"
       AUTOMAKE=
     fi
   else
-    echo -n "checking for automake $AM_NEEDED or later... "
+    /bin/echo -n "checking for automake $AM_NEEDED or later... "
     majneeded=`echo $AM_NEEDED | $VERSIONMKMAJ`
     minneeded=`echo $AM_NEEDED | $VERSIONMKMIN`
     for am in automake-$AM_NEEDED automake$AM_NEEDED \
@@ -56,12 +56,12 @@ if test -r Makefile.am; then
       min=`echo $ver | $VERSIONMKMIN`
       if test $maj -eq $majneeded -a $min -ge $minneeded; then
         AUTOMAKE=$am
-        echo $AUTOMAKE
+        /bin/echo $AUTOMAKE
         break
       fi
     done
-    test -z $AUTOMAKE &&  echo "no"
-    echo -n "checking for aclocal $AM_NEEDED or later... "
+    test -z $AUTOMAKE &&  /bin/echo "no"
+    /bin/echo -n "checking for aclocal $AM_NEEDED or later... "
     for ac in aclocal-$AM_NEEDED aclocal$AM_NEEDED \
 	aclocal aclocal-1.7 aclocal-1.8 aclocal-1.9 aclocal-1.10 aclocal-1.11; do
       ($ac --version < /dev/null > /dev/null 2>&1) || continue
@@ -70,11 +70,11 @@ if test -r Makefile.am; then
       min=`echo $ver | $VERSIONMKMIN`
       if test $maj -eq $majneeded -a $min -ge $minneeded; then
         ACLOCAL=$ac
-        echo $ACLOCAL
+        /bin/echo $ACLOCAL
         break
       fi
     done
-    test -z $ACLOCAL && echo "no"
+    test -z $ACLOCAL && /bin/echo "no"
   fi
   test -z $AUTOMAKE || test -z $ACLOCAL && {
         echo
@@ -85,15 +85,15 @@ if test -r Makefile.am; then
   }
 fi
 
-echo -n "checking for libtool... "
+/bin/echo -n "checking for libtool... "
 for LIBTOOLIZE in libtoolize glibtoolize nope; do
   ($LIBTOOLIZE --version) < /dev/null > /dev/null 2>&1 && break
 done
 if test x$LIBTOOLIZE = xnope; then
-  echo "nope."
+  /bin/echo "nope."
   LIBTOOLIZE=libtoolize
 else
-  echo $LIBTOOLIZE
+  /bin/echo $LIBTOOLIZE
 fi
 ($LIBTOOLIZE --version) < /dev/null > /dev/null 2>&1 || {
 	echo
@@ -113,18 +113,18 @@ if test -z "$*"; then
         echo "to pass any to it, please specify them on the $0 command line."
 fi
 
-echo "Generating configuration files for $package, please wait...."
+/bin/echo "Generating configuration files for $package, please wait...."
 
-echo "  $ACLOCAL $ACLOCAL_FLAGS"
+/bin/echo "  $ACLOCAL $ACLOCAL_FLAGS"
 $ACLOCAL $ACLOCAL_FLAGS || exit 1
-echo "  $LIBTOOLIZE --automake --force"
+/bin/echo "  $LIBTOOLIZE --automake --force"
 $LIBTOOLIZE --automake --force || exit 1
-echo "  autoheader"
+/bin/echo "  autoheader"
 autoheader || exit 1
-echo "  $AUTOMAKE --add-missing $AUTOMAKE_FLAGS"
+/bin/echo "  $AUTOMAKE --add-missing $AUTOMAKE_FLAGS"
 $AUTOMAKE --add-missing $AUTOMAKE_FLAGS || exit 1
-echo "  autoconf"
+/bin/echo "  autoconf"
 autoconf || exit 1
 
 cd $olddir
-$srcdir/configure --enable-maintainer-mode "$@" && echo
+$srcdir/configure --enable-maintainer-mode "$@" && /bin/echo
