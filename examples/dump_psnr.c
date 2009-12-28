@@ -652,6 +652,15 @@ static int y4m_input_open(y4m_input *_y4m,FILE *_fin,char *_skip,int _nskip){
     _y4m->aux_buf_sz=_y4m->aux_buf_read_sz=2*((_y4m->pic_w+1)/2)*_y4m->pic_h;
     _y4m->convert=y4m_convert_42xmpeg2_42xjpeg;
   }
+  else if(strcmp(_y4m->chroma_type,"422jpeg")==0){
+    _y4m->src_c_dec_h=_y4m->dst_c_dec_h=2;
+    _y4m->src_c_dec_v=_y4m->dst_c_dec_v=1;
+    _y4m->dst_buf_read_sz=_y4m->pic_w*_y4m->pic_h
+     +2*((_y4m->pic_w+1)/2)*_y4m->pic_h;
+    /*Natively supported: no conversion required.*/
+    _y4m->aux_buf_sz=_y4m->aux_buf_read_sz=0;
+    _y4m->convert=y4m_convert_null;
+  }
   else if(strcmp(_y4m->chroma_type,"411")==0){
     _y4m->src_c_dec_h=4;
     /*We don't want to introduce any additional sub-sampling, so we

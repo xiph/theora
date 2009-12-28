@@ -825,6 +825,7 @@ static void id_file(char *f){
       if(strcmp(chroma_type,"420")==0||strcmp(chroma_type,"420jpeg")==0){
         src_c_dec_h=dst_c_dec_h=src_c_dec_v=dst_c_dec_v=2;
         y4m_dst_buf_read_sz=pic_w*pic_h+2*((pic_w+1)/2)*((pic_h+1)/2);
+        /*Natively supported: no conversion required.*/
         y4m_aux_buf_sz=y4m_aux_buf_read_sz=0;
         y4m_convert=y4m_convert_null;
       }
@@ -852,6 +853,14 @@ static void id_file(char *f){
         /*Chroma filter required: read into the aux buf first.*/
         y4m_aux_buf_sz=y4m_aux_buf_read_sz=2*((pic_w+1)/2)*pic_h;
         y4m_convert=y4m_convert_42xmpeg2_42xjpeg;
+      }
+      else if(strcmp(chroma_type,"422jpeg")==0){
+        src_c_dec_h=dst_c_dec_h=2;
+        src_c_dec_v=dst_c_dec_v=1;
+        y4m_dst_buf_read_sz=pic_w*pic_h+2*((pic_w+1)/2)*pic_h;
+        /*Natively supported: no conversion required.*/
+        y4m_aux_buf_sz=y4m_aux_buf_read_sz=0;
+        y4m_convert=y4m_convert_null;
       }
       else if(strcmp(chroma_type,"411")==0){
         src_c_dec_h=4;

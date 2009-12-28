@@ -376,7 +376,7 @@ int main(int argc,char *argv[]){
   if(theora_p)open_video();
 
   if(!raw && outfile){
-    static const char *CHROMA_TYPES[4]={"420jpeg",NULL,"422","444"};
+    static const char *CHROMA_TYPES[4]={"420jpeg",NULL,"422jpeg","444"};
     if(ti.pixel_fmt>=4||ti.pixel_fmt==TH_PF_RSVD){
       fprintf(stderr,"Unknown pixel format: %i\n",ti.pixel_fmt);
       exit(1);
