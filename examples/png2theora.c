@@ -188,74 +188,10 @@ scandir (const char *dir, struct dirent ***namelist,
 #endif
 
 static int
-theora_write_frame(unsigned long w, unsigned long h, unsigned char *yuv, int last)
+theora_write_frame(th_ycbcr_buffer ycbcr, int last)
 {
-  th_ycbcr_buffer ycbcr;
   ogg_packet op;
   ogg_page og;
-
-  unsigned long yuv_w;
-  unsigned long yuv_h;
-
-  unsigned char *yuv_y;
-  unsigned char *yuv_u;
-  unsigned char *yuv_v;
-
-  unsigned int x;
-  unsigned int y;
-
-  /* Must hold: yuv_w >= w */
-  yuv_w = (w + 15) & ~15;
-
-  /* Must hold: yuv_h >= h */
-  yuv_h = (h + 15) & ~15;
-
-  ycbcr[0].width = yuv_w;
-  ycbcr[0].height = yuv_h;
-  ycbcr[0].stride = yuv_w;
-  ycbcr[1].width = (chroma_format == TH_PF_444) ? yuv_w : (yuv_w >> 1);
-  ycbcr[1].stride = ycbcr[1].width;
-  ycbcr[1].height = (chroma_format == TH_PF_420) ? (yuv_h >> 1) : yuv_h;
-  ycbcr[2].width = ycbcr[1].width;
-  ycbcr[2].stride = ycbcr[1].stride;
-  ycbcr[2].height = ycbcr[1].height;
-
-  ycbcr[0].data = yuv_y = malloc(ycbcr[0].stride * ycbcr[0].height);
-  ycbcr[1].data = yuv_u = malloc(ycbcr[1].stride * ycbcr[1].height);
-  ycbcr[2].data = yuv_v = malloc(ycbcr[2].stride * ycbcr[2].height);
-
-  for(y = 0; y < h; y++) {
-    for(x = 0; x < w; x++) {
-      yuv_y[x + y * yuv_w] = yuv[3 * (x + y * w) + 0];
-    }
-  }
-
-  if (chroma_format == TH_PF_420) {
-    for(y = 0; y < h; y += 2) {
-      for(x = 0; x < w; x += 2) {
-        yuv_u[(x >> 1) + (y >> 1) * (yuv_w >> 1)] =
-          yuv[3 * (x + y * w) + 1];
-        yuv_v[(x >> 1) + (y >> 1) * (yuv_w >> 1)] =
-          yuv[3 * (x + y * w) + 2];
-      }
-    }
-  } else if (chroma_format == TH_PF_444) {
-    for(y = 0; y < h; y++) {
-      for(x = 0; x < w; x++) {
-        yuv_u[x + y * ycbcr[1].stride] = yuv[3 * (x + y * w) + 1];
-        yuv_v[x + y * ycbcr[2].stride] = yuv[3 * (x + y * w) + 2];
-      }
-    }
-  } else {  /* TH_PF_422 */
-    for(y = 0; y < h; y += 1) {
-      for(x = 0; x < w; x += 2) {
-        yuv_u[(x >> 1) + y * ycbcr[1].stride] =
-          yuv[3 * (x + y * w) + 1];
-        yuv_v[(x >> 1) + y * ycbcr[2].stride] =
-          yuv[3 * (x + y * w) + 2];
-      }
-    }    
-  }
 
   /* Theora is a one-frame-in,one-frame-out system; submit a frame
      for compression and pull out the packet */
@@ -328,10 +264,6 @@ theora_write_frame(unsigned long w, unsigned long h, unsigned char *yuv, int las
     }
   }  
 
-  free(yuv_y);
-  free(yuv_u);
-  free(yuv_v);
-
   return 0;
 }
 
@@ -349,37 +281,102 @@ clamp(int d)
 
 static void
 rgb_to_yuv(png_bytep *png,
-           unsigned char *yuv,
+           th_ycbcr_buffer ycbcr,
            unsigned int w, unsigned int h)
 {
   unsigned int x;
   unsigned int y;
 
-  for(y = 0; y < h; y++) {
-    for(x = 0; x < w; x++) {
-      png_byte r;
-      png_byte g;
-      png_byte b;
+  unsigned long yuv_w;
+  unsigned long yuv_h;
 
-      r = png[y][3 * x + 0];
-      g = png[y][3 * x + 1];
-      b = png[y][3 * x + 2];
+  unsigned char *yuv_y;
+  unsigned char *yuv_u;
+  unsigned char *yuv_v;
 
-      /*This ignores gamma and RGB primary/whitepoint differences.
-        It also isn't terribly fast (though a decent compiler will
-         strength-reduce the division to a multiplication).*/
-      yuv[3 * (x + w * y) + 0] = clamp(
-        (65481*r+128553*g+24966*b+4207500)/255000);
-      yuv[3 * (x + w * y) + 1] = clamp(
-        (-33488*r-65744*g+99232*b+29032005)/225930);
-      yuv[3 * (x + w * y) + 2] = clamp(
-        (157024*r-131488*g-25536*b+45940035)/357510);
+  yuv_w = ycbcr[0].width;
+  yuv_h = ycbcr[0].height;
+
+  yuv_y = ycbcr[0].data;
+  yuv_u = ycbcr[1].data;
+  yuv_v = ycbcr[2].data;
+  
+  /*This ignores gamma and RGB primary/whitepoint differences.
+    It also isn't terribly fast (though a decent compiler will
+    strength-reduce the division to a multiplication).*/
+
+  if (chroma_format == TH_PF_420) {
+    for(y = 0; y < h; y += 2) {
+      for(x = 0; x < w; x += 2) {
+        png_byte r0 = png[y][3 * x + 0];
+        png_byte g0 = png[y][3 * x + 1];
+        png_byte b0 = png[y][3 * x + 2];
+        png_byte r1 = png[y][3 * x + 3];
+        png_byte g1 = png[y][3 * x + 4];
+        png_byte b1 = png[y][3 * x + 5];
+        png_byte r2 = png[y+1][3 * x + 0];
+        png_byte g2 = png[y+1][3 * x + 1];
+        png_byte b2 = png[y+1][3 * x + 2];
+        png_byte r3 = png[y+1][3 * x + 3];
+        png_byte g3 = png[y+1][3 * x + 4];
+        png_byte b3 = png[y+1][3 * x + 5];
+        
+        yuv_y[x + y * yuv_w]         = clamp((65481*r0+128553*g0+24966*b0+4207500)/255000);
+        yuv_y[x + y * yuv_w + 1]     = clamp((65481*r1+128553*g1+24966*b1+4207500)/255000);
+        yuv_y[x + (y+1) * yuv_w]     = clamp((65481*r2+128553*g2+24966*b2+4207500)/255000);
+        yuv_y[x + (y+1) * yuv_w + 1] = clamp((65481*r3+128553*g3+24966*b3+4207500)/255000);
+        
+        yuv_u[(x >> 1) + (y >> 1) * ycbcr[1].stride] =
+          clamp( ((-33488*r0-65744*g0+99232*b0+29032005)/4 +
+                  (-33488*r0-65744*g0+99232*b0+29032005)/4 +
+                  (-33488*r2-65744*g2+99232*b2+29032005)/4 +
+                  (-33488*r3-65744*g3+99232*b3+29032005)/4)/225930);
+        yuv_v[(x >> 1) + (y >> 1) * ycbcr[2].stride] =
+          clamp( ((157024*r0-131488*g0-25536*b0+45940035)/4 +
+                  (157024*r1-131488*g1-25536*b1+45940035)/4 +
+                  (157024*r2-131488*g2-25536*b2+45940035)/4 +
+                  (157024*r3-131488*g3-25536*b3+45940035)/4)/357510);
+      }
     }
+  } else if (chroma_format == TH_PF_444) {
+    for(y = 0; y < h; y++) {
+      for(x = 0; x < w; x++) {
+        png_byte r = png[y][3 * x + 0];
+        png_byte g = png[y][3 * x + 1];
+        png_byte b = png[y][3 * x + 2];
+
+        yuv_y[x + y * yuv_w] = clamp((65481*r+128553*g+24966*b+4207500)/255000);
+        yuv_u[x + y * yuv_w] = clamp((-33488*r-65744*g+99232*b+29032005)/225930);
+        yuv_v[x + y * yuv_w] = clamp((157024*r-131488*g-25536*b+45940035)/357510);
+      }
+    }
+  } else {  /* TH_PF_422 */
+    for(y = 0; y < h; y += 1) {
+      for(x = 0; x < w; x += 2) {
+        png_byte r0 = png[y][3 * x + 0];
+        png_byte g0 = png[y][3 * x + 1];
+        png_byte b0 = png[y][3 * x + 2];
+        png_byte r1 = png[y][3 * x + 3];
+        png_byte g1 = png[y][3 * x + 4];
+        png_byte b1 = png[y][3 * x + 5];
+        
+        yuv_y[x + y * yuv_w]     = clamp((65481*r0+128553*g0+24966*b0+4207500)/255000);
+        yuv_y[x + y * yuv_w + 1] = clamp((65481*r1+128553*g1+24966*b1+4207500)/255000);
+        
+        yuv_u[(x >> 1) + y * ycbcr[1].stride] =
+          clamp( ((-33488*r0-65744*g0+99232*b0+29032005)/2 +
+                  (-33488*r1-65744*g1+99232*b1+29032005)/2)/225930);
+        yuv_v[(x >> 1) + y * ycbcr[2].stride] =
+          clamp( ((157024*r0-131488*g0-25536*b0+45940035)/2 +
+                  (157024*r1-131488*g1-25536*b1+45940035)/2)/357510);
+      }
+    }    
   }
+
 }
 
 static int
-png_read(const char *pathname, unsigned int *w, unsigned int *h, unsigned char **yuv)
+png_read(const char *pathname, unsigned int *w, unsigned int *h, th_ycbcr_buffer ycbcr)
 {
   FILE *fp;
   unsigned char header[8];
@@ -391,6 +388,8 @@ png_read(const char *pathname, unsigned int *w, unsigned int *h, unsigned char *
   png_color_16p bkgd;
   png_uint_32 width;
   png_uint_32 height;
+  unsigned long yuv_w;
+  unsigned long yuv_h;
   int bit_depth;
   int color_type;
   int interlace_type;
@@ -469,8 +468,34 @@ png_read(const char *pathname, unsigned int *w, unsigned int *h, unsigned char *
 
   *w = width;
   *h = height;
-  *yuv = malloc(*w * *h * 3);
-  rgb_to_yuv(row_pointers, *yuv, *w, *h);
+  /* Must hold: yuv_w >= w */
+  yuv_w = (*w + 15) & ~15;
+  /* Must hold: yuv_h >= h */
+  yuv_h = (*h + 15) & ~15;
+
+  /* Do we need to allocate a buffer */
+  if (!ycbcr[0].data){
+    ycbcr[0].width = yuv_w;
+    ycbcr[0].height = yuv_h;
+    ycbcr[0].stride = yuv_w;
+    ycbcr[1].width = (chroma_format == TH_PF_444) ? yuv_w : (yuv_w >> 1);
+    ycbcr[1].stride = ycbcr[1].width;
+    ycbcr[1].height = (chroma_format == TH_PF_420) ? (yuv_h >> 1) : yuv_h;
+    ycbcr[2].width = ycbcr[1].width;
+    ycbcr[2].stride = ycbcr[1].stride;
+    ycbcr[2].height = ycbcr[1].height;
+
+    ycbcr[0].data = malloc(ycbcr[0].stride * ycbcr[0].height);
+    ycbcr[1].data = malloc(ycbcr[1].stride * ycbcr[1].height);
+    ycbcr[2].data = malloc(ycbcr[2].stride * ycbcr[2].height);
+  } else {
+    if ((ycbcr[0].width != yuv_w) || (ycbcr[0].height != yuv_h)){
+      fprintf(stderr, "Input size %lux%lu does not match %dx%d\n", yuv_w,yuv_h,ycbcr[0].width,ycbcr[0].height);
+      exit(1);            
+    }
+  }
+
+  rgb_to_yuv(row_pointers, ycbcr, *w, *h);
 
   png_free(png_ptr, row_pointers);
   png_free(png_ptr, row_data);
@@ -671,12 +696,14 @@ main(int argc, char *argv[])
   for(passno=(twopass==3?1:twopass);passno<=(twopass==3?2:twopass);passno++){
     unsigned int w;
     unsigned int h;
-    unsigned char *yuv;
     char input_png[1024];
+    th_ycbcr_buffer ycbcr;
+
+    ycbcr[0].data = 0;
     int last = 0;
 
     snprintf(input_png, 1023,"%s/%s", input_directory, png_files[0]->d_name);
-    if(png_read(input_png, &w, &h, &yuv)) {
+    if(png_read(input_png, &w, &h, ycbcr)) {
       fprintf(stderr, "could not read %s\n", input_png);
       exit(1);
     }
@@ -847,15 +874,15 @@ main(int argc, char *argv[])
     i=0; last=0;
     do {
       if(i >= n-1) last = 1;
-      if(theora_write_frame(w, h, yuv, last)) {
+      if(theora_write_frame(ycbcr, last)) {
           fprintf(stderr,"Encoding error.\n");
         exit(1);
       }
-      free(yuv);    
+
       i++;
       if (!last) {
         snprintf(input_png, 1023,"%s/%s", input_directory, png_files[i]->d_name);
-        if(png_read(input_png, &w, &h, &yuv)) {
+        if(png_read(input_png, &w, &h, ycbcr)) {
           fprintf(stderr, "could not read %s\n", input_png);
           exit(1);
         }
@@ -882,6 +909,9 @@ main(int argc, char *argv[])
       fflush(twopass_file);
     }
     th_encode_free(td);
+    free(ycbcr[0].data);
+    free(ycbcr[1].data);
+    free(ycbcr[2].data);
   }
 
   if(ogg_stream_flush(&ogg_os, &og)) {
