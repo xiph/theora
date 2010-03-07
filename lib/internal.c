@@ -103,13 +103,13 @@ int oc_ilog(unsigned _v){
    (4:2:0).
   _cbmvs: The chroma block-level motion vectors to fill in.
   _lbmvs: The luma block-level motion vectors.*/
-static void oc_set_chroma_mvs00(oc_mv _cbmvs[4],const oc_mv _lbmvs[4]){
+static void oc_set_chroma_mvs00(oc_mv4 *_cbmvs,const oc_mv4 *_lbmvs){
   int dx;
   int dy;
-  dx=_lbmvs[0][0]+_lbmvs[1][0]+_lbmvs[2][0]+_lbmvs[3][0];
-  dy=_lbmvs[0][1]+_lbmvs[1][1]+_lbmvs[2][1]+_lbmvs[3][1];
-  _cbmvs[0][0]=(signed char)OC_DIV_ROUND_POW2(dx,2,2);
-  _cbmvs[0][1]=(signed char)OC_DIV_ROUND_POW2(dy,2,2);
+  dx=_lbmvs->v[0].v[0]+_lbmvs->v[1].v[0]+_lbmvs->v[2].v[0]+_lbmvs->v[3].v[0];
+  dy=_lbmvs->v[0].v[1]+_lbmvs->v[1].v[1]+_lbmvs->v[2].v[1]+_lbmvs->v[3].v[1];
+  _cbmvs->v[0].v[0]=(signed char)OC_DIV_ROUND_POW2(dx,2,2);
+  _cbmvs->v[0].v[1]=(signed char)OC_DIV_ROUND_POW2(dy,2,2);
 }
 
 /*The function used to fill in the chroma plane motion vectors for a macro
@@ -117,17 +117,17 @@ static void oc_set_chroma_mvs00(oc_mv _cbmvs[4],const oc_mv _lbmvs[4]){
   This version is for use with chroma decimated in the Y direction.
   _cbmvs: The chroma block-level motion vectors to fill in.
   _lbmvs: The luma block-level motion vectors.*/
-static void oc_set_chroma_mvs01(oc_mv _cbmvs[4],const oc_mv _lbmvs[4]){
+static void oc_set_chroma_mvs01(oc_mv4 *_cbmvs,const oc_mv4 *_lbmvs){
   int dx;
   int dy;
-  dx=_lbmvs[0][0]+_lbmvs[2][0];
-  dy=_lbmvs[0][1]+_lbmvs[2][1];
-  _cbmvs[0][0]=(signed char)OC_DIV_ROUND_POW2(dx,1,1);
-  _cbmvs[0][1]=(signed char)OC_DIV_ROUND_POW2(dy,1,1);
-  dx=_lbmvs[1][0]+_lbmvs[3][0];
-  dy=_lbmvs[1][1]+_lbmvs[3][1];
-  _cbmvs[1][0]=(signed char)OC_DIV_ROUND_POW2(dx,1,1);
-  _cbmvs[1][1]=(signed char)OC_DIV_ROUND_POW2(dy,1,1);
+  dx=_lbmvs->v[0].v[0]+_lbmvs->v[2].v[0];
+  dy=_lbmvs->v[0].v[1]+_lbmvs->v[2].v[1];
+  _cbmvs->v[0].v[0]=(signed char)OC_DIV_ROUND_POW2(dx,1,1);
+  _cbmvs->v[0].v[1]=(signed char)OC_DIV_ROUND_POW2(dy,1,1);
+  dx=_lbmvs->v[1].v[0]+_lbmvs->v[3].v[0];
+  dy=_lbmvs->v[1].v[1]+_lbmvs->v[3].v[1];
+  _cbmvs->v[1].v[0]=(signed char)OC_DIV_ROUND_POW2(dx,1,1);
+  _cbmvs->v[1].v[1]=(signed char)OC_DIV_ROUND_POW2(dy,1,1);
 }
 
 /*The function used to fill in the chroma plane motion vectors for a macro
@@ -135,17 +135,17 @@ static void oc_set_chroma_mvs01(oc_mv _cbmvs[4],const oc_mv _lbmvs[4]){
   This version is for use with chroma decimated in the X direction (4:2:2).
   _cbmvs: The chroma block-level motion vectors to fill in.
   _lbmvs: The luma block-level motion vectors.*/
-static void oc_set_chroma_mvs10(oc_mv _cbmvs[4],const oc_mv _lbmvs[4]){
+static void oc_set_chroma_mvs10(oc_mv4 *_cbmvs,const oc_mv4 *_lbmvs){
   int dx;
   int dy;
-  dx=_lbmvs[0][0]+_lbmvs[1][0];
-  dy=_lbmvs[0][1]+_lbmvs[1][1];
-  _cbmvs[0][0]=(signed char)OC_DIV_ROUND_POW2(dx,1,1);
-  _cbmvs[0][1]=(signed char)OC_DIV_ROUND_POW2(dy,1,1);
-  dx=_lbmvs[2][0]+_lbmvs[3][0];
-  dy=_lbmvs[2][1]+_lbmvs[3][1];
-  _cbmvs[2][0]=(signed char)OC_DIV_ROUND_POW2(dx,1,1);
-  _cbmvs[2][1]=(signed char)OC_DIV_ROUND_POW2(dy,1,1);
+  dx=_lbmvs->v[0].v[0]+_lbmvs->v[1].v[0];
+  dy=_lbmvs->v[0].v[1]+_lbmvs->v[1].v[1];
+  _cbmvs->v[0].v[0]=(signed char)OC_DIV_ROUND_POW2(dx,1,1);
+  _cbmvs->v[0].v[1]=(signed char)OC_DIV_ROUND_POW2(dy,1,1);
+  dx=_lbmvs->v[2].v[0]+_lbmvs->v[3].v[0];
+  dy=_lbmvs->v[2].v[1]+_lbmvs->v[3].v[1];
+  _cbmvs->v[2].v[0]=(signed char)OC_DIV_ROUND_POW2(dx,1,1);
+  _cbmvs->v[2].v[1]=(signed char)OC_DIV_ROUND_POW2(dy,1,1);
 }
 
 /*The function used to fill in the chroma plane motion vectors for a macro
@@ -155,8 +155,11 @@ static void oc_set_chroma_mvs10(oc_mv _cbmvs[4],const oc_mv _lbmvs[4]){
   _lmbmv: The luma macro-block level motion vector to fill in for use in
            prediction.
   _lbmvs: The luma block-level motion vectors.*/
-static void oc_set_chroma_mvs11(oc_mv _cbmvs[4],const oc_mv _lbmvs[4]){
-  memcpy(_cbmvs,_lbmvs,4*sizeof(_lbmvs[0]));
+static void oc_set_chroma_mvs11(oc_mv4 *_cbmvs,const oc_mv4 *_lbmvs){
+  COPY_MV(_cbmvs->v[0],_lbmvs->v[0]);
+  COPY_MV(_cbmvs->v[1],_lbmvs->v[1]);
+  COPY_MV(_cbmvs->v[2],_lbmvs->v[2]);
+  COPY_MV(_cbmvs->v[3],_lbmvs->v[3]);
 }
 
 /*A table of functions used to fill in the chroma plane motion vectors for a
@@ -250,7 +253,11 @@ ogg_uint32_t th_version_number(void){
   Note that this correctly interprets a 0-byte packet as a video data packet.
   Return: 1 for a header packet, 0 for a data packet.*/
 int th_packet_isheader(ogg_packet *_op){
-  return _op->bytes>0?_op->packet[0]>>7:0;
+#ifdef WORK_WITH_TREMOLO
+    return _op->bytes>0?_op->packet->buffer->data[0]>>7:0;
+#else
+    return _op->bytes>0?_op->packet[0]>>7:0;
+#endif
 }
 
 /*Determines the frame type of a video data packet.
@@ -258,5 +265,9 @@ int th_packet_isheader(ogg_packet *_op){
   Return: 1 for a key frame, 0 for a delta frame, and -1 for a header
            packet.*/
 int th_packet_iskeyframe(ogg_packet *_op){
+#ifdef WORK_WITH_TREMOLO
+  return _op->bytes<=0?0:_op->packet->buffer->data[0]&0x80?-1:!(_op->packet->buffer->data[0]&0x40);
+#else
   return _op->bytes<=0?0:_op->packet[0]&0x80?-1:!(_op->packet[0]&0x40);
+#endif
 }

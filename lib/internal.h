@@ -190,9 +190,65 @@ typedef oc_sb_map_quad  oc_sb_map[4];
 typedef ptrdiff_t       oc_mb_map_plane[4];
 /*A map from a macro block to fragment numbers.*/
 typedef oc_mb_map_plane oc_mb_map[3];
-/*A motion vector.*/
-typedef signed char     oc_mv[2];
 
+
+/* In order to allow efficient manipulation (copying, zeroing) of motion
+ * vectors on certain platforms (notably ARM), we need to ensure that they
+ * are kept aligned in memory. To force them to be aligned, we keep them in
+ * unions with types of the required size.
+ *
+ * Because of C's somewhat baroque type sizing rules we need to detect
+ * that this is appropriate. We can't use sizeof() at compile time, so are
+ * forced to use a formulation that looks at the values set in limits.
+ */
+#if SCHAR_MAX==127 && SHRT_MAX==32767
+/* Sane 8bit char/16bit short system */
+#define ALIGNED_MVS
+#endif
+
+/*A motion vector.*/
+typedef union
+{
+    signed char v[2];
+#ifdef ALIGNED_MVS
+    short s;
+#endif
+} oc_mv;
+/*A pair of motion vectors*/
+typedef union
+{
+    oc_mv v[2];
+#ifdef ALIGNED_MVS
+    int i;
+#endif
+} oc_mv2;
+/*4 motion vectors*/
+typedef union
+{
+    oc_mv v[4];
+#ifdef ALIGNED_MVS
+    int i[2];
+#endif
+} oc_mv4;
+
+#ifdef ALIGNED_MVS
+/* If we are using ALIGNED_MVs, then we can use the fast copy mechanisms */
+#define COPY_MV(D,S)  (((D).s)=((S).s))
+#define COPY_MV4(D,S) ((((D).i[0])=((S).i[0])),(((D).i[1])=((S).i[1])))
+#define ZERO_MV(D)    (((D).s)=0)
+#define ZERO_MV2(D)   (((D).i)=0)
+#else
+/* If we aren't using ALIGNED_MVs, then we need to do it another way.
+ * To produce code equivalent to the existing trunk code, use:
+ *   #define COPY_MV(D,S)  memcpy(&D,&S,sizeof(oc_mv))
+ *   #define COPY_MV4(D,S) memcpy(&D,&S,sizeof(oc_mv4))
+ * Instead however, we can do structure copies, which should be no worse and
+ * doesn't rely on C compilers 'magically' inlining memcpy. */
+#define COPY_MV(D,S)  (*(&D)=*(&S))
+#define COPY_MV4(D,S) (*(&D)=*(&S))
+#define ZERO_MV(D)    memset(&D,0,sizeof(oc_mv))
+#define ZERO_MV2(D)   memset(&D,0,sizeof(oc_mv2))
+#endif
 
 
 /*Super block information.*/
@@ -390,7 +446,7 @@ struct oc_theora_state{
   _lmbmv: The luma macro-block level motion vector to fill in for use in
            prediction.
   _lbmvs: The luma block-level motion vectors.*/
-typedef void (*oc_set_chroma_mvs_func)(oc_mv _cbmvs[4],const oc_mv _lbmvs[4]);
+typedef void (*oc_set_chroma_mvs_func)(oc_mv4 *_cbmvs,const oc_mv4 *_lbmvs);
 
 
 
@@ -437,7 +493,7 @@ int oc_state_mbi_for_pos(oc_theora_state *_state,int _mbx,int _mby);
 int oc_state_get_mv_offsets(const oc_theora_state *_state,int _offsets[2],
  int _pli,int _dx,int _dy);
 
-int oc_state_loop_filter_init(oc_theora_state *_state,int *_bv);
+int oc_state_loop_filter_init(oc_theora_state *_state,signed char*_bv);
 void oc_state_loop_filter(oc_theora_state *_state,int _frame);
 #if defined(OC_DUMP_IMAGES)
 int oc_state_dump_frame(const oc_theora_state *_state,int _frame,
@@ -461,8 +517,9 @@ void oc_state_frag_copy_list(const oc_theora_state *_state,
  const ptrdiff_t *_fragis,ptrdiff_t _nfragis,
  int _dst_frame,int _src_frame,int _pli);
 void oc_state_loop_filter_frag_rows(const oc_theora_state *_state,
- int _bv[256],int _refi,int _pli,int _fragy0,int _fragy_end);
+ signed char _bv[256],int _refi,int _pli,int _fragy0,int _fragy_end);
 void oc_restore_fpu(const oc_theora_state *_state);
+void oc_idct8x8(ogg_int16_t _y[64],int _last_zzi);
 
 /*Default pure-C implementations.*/
 void oc_frag_copy_c(unsigned char *_dst,

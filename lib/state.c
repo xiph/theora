@@ -24,6 +24,8 @@
 #else
 # include "x86/x86int.h"
 #endif
+#elif defined(OC_ARM_ASM)
+# include "arm/ARMint.h"
 #endif
 #if defined(OC_DUMP_IMAGES)
 # include <stdio.h>
@@ -589,7 +591,6 @@ static void oc_state_ref_bufs_clear(oc_theora_state *_state){
   _ogg_free(_state->ref_frame_data[0]);
 }
 
-
 void oc_state_vtable_init_c(oc_theora_state *_state){
   _state->opt_vtable.frag_copy=oc_frag_copy_c;
   _state->opt_vtable.frag_recon_intra=oc_frag_recon_intra_c;
@@ -608,6 +609,8 @@ void oc_state_vtable_init_c(oc_theora_state *_state){
 void oc_state_vtable_init(oc_theora_state *_state){
 #if defined(OC_X86_ASM)
   oc_state_vtable_init_x86(_state);
+#elif defined (OC_ARM_ASM)
+  oc_state_vtable_init_arm(_state);
 #else
   oc_state_vtable_init_c(_state);
 #endif

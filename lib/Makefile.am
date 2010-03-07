@@ -17,7 +17,8 @@ EXTRA_DIST = \
 	x86/mmxstate.c \
 	x86/x86int.h \
 	x86/x86state.c \
-	x86_vc
+	x86_vc \
+	arm
 
 lib_LTLIBRARIES = libtheoradec.la libtheoraenc.la libtheora.la
 
@@ -94,13 +95,24 @@ decoder_x86_sources = \
 	x86/mmxfrag.c \
 	x86/mmxstate.c \
 	x86/x86state.c
+
+decoder_arm_sources = \
+	arm/ARMfrag.s \
+	arm/ARMidct.s \
+	arm/ARMpp.s \
+	arm/ARMstate.c
+
 if CPU_x86_64
 decoder_arch_sources = $(decoder_x86_sources)
 else
 if CPU_x86_32
 decoder_arch_sources = $(decoder_x86_sources)
 else
+if CPU_ARM
+decoder_arch_sources = $(decoder_arm_sources)
+else
 decoder_arch_sources =
+endif
 endif
 endif
 
@@ -141,7 +153,9 @@ noinst_HEADERS = \
 	x86/mmxfrag.h \
 	x86/mmxloop.h \
 	x86/x86int.h \
-	x86/sse2trans.h
+	x86/sse2trans.h \
+	arm/ARMint.h \
+	arm/ARMoptions.s
 
 libtheoradec_la_SOURCES = \
 	$(decoder_sources) \
