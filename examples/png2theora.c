@@ -287,6 +287,9 @@ rgb_to_yuv(png_bytep *png,
   unsigned int x;
   unsigned int y;
 
+  unsigned int x1;
+  unsigned int y1;
+
   unsigned long yuv_w;
   unsigned long yuv_h;
 
@@ -307,24 +310,26 @@ rgb_to_yuv(png_bytep *png,
 
   if (chroma_format == TH_PF_420) {
     for(y = 0; y < h; y += 2) {
+      y1=y+(y+1<h);      
       for(x = 0; x < w; x += 2) {
+        x1=x+(x+1<w);
         png_byte r0 = png[y][3 * x + 0];
         png_byte g0 = png[y][3 * x + 1];
         png_byte b0 = png[y][3 * x + 2];
-        png_byte r1 = png[y][3 * x + 3];
-        png_byte g1 = png[y][3 * x + 4];
-        png_byte b1 = png[y][3 * x + 5];
-        png_byte r2 = png[y+1][3 * x + 0];
-        png_byte g2 = png[y+1][3 * x + 1];
-        png_byte b2 = png[y+1][3 * x + 2];
-        png_byte r3 = png[y+1][3 * x + 3];
-        png_byte g3 = png[y+1][3 * x + 4];
-        png_byte b3 = png[y+1][3 * x + 5];
+        png_byte r1 = png[y][3 * x1 + 0];
+        png_byte g1 = png[y][3 * x1 + 1];
+        png_byte b1 = png[y][3 * x1 + 2];
+        png_byte r2 = png[y1][3 * x + 0];
+        png_byte g2 = png[y1][3 * x + 1];
+        png_byte b2 = png[y1][3 * x + 2];
+        png_byte r3 = png[y1][3 * x1 + 0];
+        png_byte g3 = png[y1][3 * x1 + 1];
+        png_byte b3 = png[y1][3 * x1 + 2];
         
-        yuv_y[x + y * yuv_w]         = clamp((65481*r0+128553*g0+24966*b0+4207500)/255000);
-        yuv_y[x + y * yuv_w + 1]     = clamp((65481*r1+128553*g1+24966*b1+4207500)/255000);
-        yuv_y[x + (y+1) * yuv_w]     = clamp((65481*r2+128553*g2+24966*b2+4207500)/255000);
-        yuv_y[x + (y+1) * yuv_w + 1] = clamp((65481*r3+128553*g3+24966*b3+4207500)/255000);
+        yuv_y[x  + y * yuv_w]  = clamp((65481*r0+128553*g0+24966*b0+4207500)/255000);
+        yuv_y[x1 + y * yuv_w]  = clamp((65481*r1+128553*g1+24966*b1+4207500)/255000);
+        yuv_y[x  + y1 * yuv_w] = clamp((65481*r2+128553*g2+24966*b2+4207500)/255000);
+        yuv_y[x1 + y1 * yuv_w] = clamp((65481*r3+128553*g3+24966*b3+4207500)/255000);
         
         yuv_u[(x >> 1) + (y >> 1) * ycbcr[1].stride] =
           clamp( ((-33488*r0-65744*g0+99232*b0+29032005)/4 +
@@ -353,15 +358,16 @@ rgb_to_yuv(png_bytep *png,
   } else {  /* TH_PF_422 */
     for(y = 0; y < h; y += 1) {
       for(x = 0; x < w; x += 2) {
+        x1=x+(x+1<w);
         png_byte r0 = png[y][3 * x + 0];
         png_byte g0 = png[y][3 * x + 1];
         png_byte b0 = png[y][3 * x + 2];
-        png_byte r1 = png[y][3 * x + 3];
-        png_byte g1 = png[y][3 * x + 4];
-        png_byte b1 = png[y][3 * x + 5];
+        png_byte r1 = png[y][3 * x1 + 0];
+        png_byte g1 = png[y][3 * x1 + 1];
+        png_byte b1 = png[y][3 * x1 + 2];
         
-        yuv_y[x + y * yuv_w]     = clamp((65481*r0+128553*g0+24966*b0+4207500)/255000);
-        yuv_y[x + y * yuv_w + 1] = clamp((65481*r1+128553*g1+24966*b1+4207500)/255000);
+        yuv_y[x  + y * yuv_w] = clamp((65481*r0+128553*g0+24966*b0+4207500)/255000);
+        yuv_y[x1 + y * yuv_w] = clamp((65481*r1+128553*g1+24966*b1+4207500)/255000);
         
         yuv_u[(x >> 1) + y * ycbcr[1].stride] =
           clamp( ((-33488*r0-65744*g0+99232*b0+29032005)/2 +
