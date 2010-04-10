@@ -1,3 +1,8 @@
+theorarm_merge_branch
+
+ - Implement ARM versions of speed critical functions
+ - Tweak C to run better on ARMs
+
 libtheora 1.1.2 (unreleased snapshot)
 
  - Fix Huffman table decoding with OC_HUFF_SLUSH is set to 0

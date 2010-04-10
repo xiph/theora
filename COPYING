@@ -1,17 +1,4 @@
-The license for this branch is currently 'in flux'. Currently all the
-changes from the branch on which this is based are Copyright (C) 2009-2010
-Robin Watts for Pinknoise Productions Ltd, and can be used either under
-license from Pinknoise Productions, or under the standard GNU GPL.
-
-It is anticipated that this will change back to the simple BSD license
-used by the original branch within a month or so, whereupon this
-branch will be merged back to the trunk/branch it forked from.
-
-The original copyright statement follows:
------------------------------------------
-
-
-Copyright (C) 2002-2009 Xiph.org Foundation
+Copyright (C) 2002-2010 Xiph.org Foundation
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
