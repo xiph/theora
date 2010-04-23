@@ -1,0 +1,3 @@
+version=2
+
+http://downloads.xiph.org/releases/theora/libtheora-(.*)\.tar\.gz	debian uupdate

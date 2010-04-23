@@ -1,0 +1,24 @@
+Source: libtheora
+Section: libs
+Priority: optional
+Maintainer: Christopher L Cheney <ccheney@debian.org>
+Build-Depends: cdbs, autotools-dev, debhelper (>> 4.0.0), devscripts, libogg-dev (>= 1.1.0), libvorbis-dev, python
+Standards-Version: 3.6.1.0
+
+Package: libtheora0
+Architecture: any
+Section: libs
+Depends: ${shlibs:Depends}
+Description: The Theora Video Compression Codec
+ Ogg Theora
+
+Package: libtheora-dev
+Architecture: any
+Section: libdevel
+Depends: libtheora0 (= ${Source-Version}), libogg-dev
+Description: The Theora Compression Codec (development files)
+ Theora is a fully open, non-proprietary, patent-and-royalty-free,
+ general-purpose compressed video format.
+ .
+ This package contains the header files and documentation needed to develop
+ applications with libtheora.
