@@ -426,6 +426,7 @@ static int oc_state_frarray_init(oc_theora_state *_state){
   _state->nsbs=nsbs;
   _state->sb_maps=_ogg_malloc(nsbs*sizeof(*_state->sb_maps));
   _state->sb_flags=_ogg_calloc(nsbs,sizeof(*_state->sb_flags));
+  _state->sb_masks=_ogg_calloc(nsbs,sizeof(*_state->sb_masks));
   _state->nhmbs=yhsbs<<1;
   _state->nvmbs=yvsbs<<1;
   _state->nmbs=nmbs;
@@ -433,8 +434,8 @@ static int oc_state_frarray_init(oc_theora_state *_state){
   _state->mb_modes=_ogg_calloc(nmbs,sizeof(*_state->mb_modes));
   _state->coded_fragis=_ogg_malloc(nfrags*sizeof(*_state->coded_fragis));
   if(_state->frags==NULL||_state->frag_mvs==NULL||_state->sb_maps==NULL||
-   _state->sb_flags==NULL||_state->mb_maps==NULL||_state->mb_modes==NULL||
-   _state->coded_fragis==NULL){
+   _state->sb_flags==NULL||_state->sb_masks==NULL||_state->mb_maps==NULL||
+   _state->mb_modes==NULL||_state->coded_fragis==NULL){
     return TH_EFAULT;
   }
   /*Create the mapping from super blocks to fragments.*/
@@ -457,6 +458,7 @@ static void oc_state_frarray_clear(oc_theora_state *_state){
   _ogg_free(_state->coded_fragis);
   _ogg_free(_state->mb_modes);
   _ogg_free(_state->mb_maps);
+  _ogg_free(_state->sb_masks);
   _ogg_free(_state->sb_flags);
   _ogg_free(_state->sb_maps);
   _ogg_free(_state->frag_mvs);

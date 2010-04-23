@@ -480,6 +480,7 @@ static int oc_dec_frame_header_unpack(oc_dec_ctx *_dec){
 static void oc_dec_mark_all_intra(oc_dec_ctx *_dec){
   const oc_sb_map   *sb_maps;
   oc_sb_flags       *sb_flags;
+  ogg_uint16_t      *sb_masks;
   oc_fragment       *frags;
   ptrdiff_t         *coded_fragis;
   ptrdiff_t          ncoded_fragis;
@@ -491,14 +492,17 @@ static void oc_dec_mark_all_intra(oc_dec_ctx *_dec){
   prev_ncoded_fragis=ncoded_fragis=0;
   sb_maps=(const oc_sb_map *)_dec->state.sb_maps;
   sb_flags=_dec->state.sb_flags;
+  sb_masks=_dec->state.sb_masks;
   frags=_dec->state.frags;
   sbi=nsbs=0;
   for(pli=0;pli<3;pli++){
     nsbs+=_dec->state.fplanes[pli].nsbs;
     for(;sbi<nsbs;sbi++){
       int quadi;
+      ogg_uint16_t bmask;
       sb_flags[sbi].coded_fully=1;
       sb_flags[sbi].coded_partially=0;
+      bmask=0;
       for(quadi=0;quadi<4;quadi++)if(sb_flags[sbi].quad_valid&1<<quadi){
         int bi;
         for(bi=0;bi<4;bi++){
@@ -508,9 +512,11 @@ static void oc_dec_mark_all_intra(oc_dec_ctx *_dec){
             frags[fragi].coded=1;
             frags[fragi].mb_mode=OC_MODE_INTRA;
             coded_fragis[ncoded_fragis++]=fragi;
+            bmask|=1<<(quadi<<2|bi);
           }
         }
       }
+      sb_masks[sbi]=bmask;
     }
     _dec->state.ncoded_fragis[pli]=ncoded_fragis-prev_ncoded_fragis;
     prev_ncoded_fragis=ncoded_fragis;
@@ -597,6 +603,7 @@ static void oc_dec_coded_sb_flags_unpack(oc_dec_ctx *_dec){
 static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
   const oc_sb_map   *sb_maps;
   const oc_sb_flags *sb_flags;
+  ogg_uint16_t      *sb_masks;
   oc_fragment       *frags;
   unsigned           nsbs;
   unsigned           sbi;
@@ -619,6 +626,7 @@ static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
   else flag=0;
   sb_maps=(const oc_sb_map *)_dec->state.sb_maps;
   sb_flags=_dec->state.sb_flags;
+  sb_masks=_dec->state.sb_masks;
   frags=_dec->state.frags;
   sbi=nsbs=run_count=0;
   coded_fragis=_dec->state.coded_fragis;
@@ -627,7 +635,9 @@ static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
   for(pli=0;pli<3;pli++){
     nsbs+=_dec->state.fplanes[pli].nsbs;
     for(;sbi<nsbs;sbi++){
+      ogg_uint16_t bmask;
       int quadi;
+      bmask=0;
       for(quadi=0;quadi<4;quadi++)if(sb_flags[sbi].quad_valid&1<<quadi){
         int bi;
         for(bi=0;bi<4;bi++){
@@ -648,9 +658,11 @@ static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
             if(coded)coded_fragis[ncoded_fragis++]=fragi;
             else *(uncoded_fragis-++nuncoded_fragis)=fragi;
             frags[fragi].coded=coded;
+            bmask|=coded<<(quadi<<2|bi);
           }
         }
       }
+      sb_masks[sbi]=bmask;
     }
     _dec->state.ncoded_fragis[pli]=ncoded_fragis-prev_ncoded_fragis;
     prev_ncoded_fragis=ncoded_fragis;
@@ -1574,61 +1586,51 @@ static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
    counts.*/
 static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
  oc_dec_pipeline_state *_pipe,int _pli){
+  oc_fragment             *frags;
+  ogg_uint16_t            *sb_masks;
   int sbi, sb_end;
-  int nhfrags;
 
-  nhfrags = _dec->state.fplanes[_pli].nhfrags;
+  sb_masks = _dec->state.sb_masks;
+  frags=_dec->state.frags;
 
   sbi = _dec->state.fplanes[_pli].sboffset + (_pipe->fragy0[_pli] >> 2) * _dec->state.fplanes[_pli].nhsbs;
   sb_end = _dec->state.fplanes[_pli].sboffset + (_pipe->fragy_end[_pli] + 3 >> 2) * _dec->state.fplanes[_pli].nhsbs;
 
   for ( ; sbi < sb_end; sbi++)
   {
+    ptrdiff_t *fragip;
+    ogg_uint16_t bmask;
     int quadi;
-    oc_sb_flags sb_flags = _dec->state.sb_flags[sbi];
 
-    if (sb_flags.coded_fully == 0 && sb_flags.coded_partially == 0)
-      continue;
+    bmask = sb_masks[sbi];
+    if (bmask == 0) continue;
 
-    /* at this point I would like to pull a bitmap of coded blocks in the
-     * current superblock, and all the subsequent conditional stuff would be
-     * against that one uint16_t, but we don't have it yet. */
+    fragip = _dec->state.sb_maps[sbi][0];
 
-    for (quadi = 0; quadi < 4; quadi++)
+    for (quadi = 0; quadi < 16; quadi += 4, bmask >>= 4, fragip += 4)
     {
-      int last_zzi[4] = { -1 };
       /*This array is made one element larger because the zig-zag index array
          uses the final element as a dumping ground for out-of-range indices
          to protect us from buffer overflow.*/
       OC_ALIGN8(ogg_int16_t dct_coeffs[4][64 + 8]);
       int bi;
 
-      if ((sb_flags.quad_valid & 1 << quadi) == 0)
+      if ((bmask & 15) == 0)
         continue;
 
       for (bi = 0; bi < 4; bi++)
       {
         ptrdiff_t fragi;
-        fragi=_dec->state.sb_maps[sbi][quadi][bi];
-        if (fragi < 0) continue;
-        if (_dec->state.frags[fragi].coded == 0) continue;
+        int last_zzi;
+        if ((bmask & (1 << bi)) == 0) continue;
+        fragi = fragip[bi];
+        assert(fragi >= 0 && frags[fragi].coded);
 
-        last_zzi[bi] = oc_dec_get_dct_coeffs(dct_coeffs[bi], _dec, _pipe, _pli, _dec->state.frags + fragi);
-      }
-
-      for (bi = 0; bi < 4; bi++)
-      {
-        ogg_uint16_t dc_quant;
-        ptrdiff_t fragi;
-        fragi=_dec->state.sb_maps[sbi][quadi][bi];
-        if (fragi < 0) continue;
-        if (_dec->state.frags[fragi].coded == 0) continue;
-
-        dc_quant = _pipe->dequant[_pli][0][_dec->state.frags[fragi].mb_mode!=OC_MODE_INTRA][0];
-        oc_state_frag_recon(&_dec->state,fragi,_pli, dct_coeffs[bi],last_zzi[bi],dc_quant);
+        last_zzi = oc_dec_get_dct_coeffs(dct_coeffs[bi], _dec, _pipe, _pli, frags + fragi);
+        ogg_uint16_t dc_quant = _pipe->dequant[_pli][0][frags[fragi].mb_mode!=OC_MODE_INTRA][0];
+        oc_state_frag_recon(&_dec->state,fragi,_pli, dct_coeffs[bi],last_zzi,dc_quant);
       }
     }
-    
   }
 
   /*Right now the reconstructed MCU has only the coded blocks in it.*/

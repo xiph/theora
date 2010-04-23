@@ -325,6 +325,8 @@ struct oc_theora_state{
   oc_sb_map          *sb_maps;
   /*The list of super block flags, indexed in image order.*/
   oc_sb_flags        *sb_flags;
+  /*The list of super block block masks, indexed in image order.*/
+  ogg_uint16_t       *sb_masks;
   /*The total number of super blocks in a single frame.*/
   unsigned            nsbs;
   /*The fragments from each color plane that belong to each macro block.
