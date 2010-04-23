@@ -1308,7 +1308,7 @@ typedef struct{
   int                 bounding_values[256];
   ptrdiff_t           ti[3][64];
   ptrdiff_t           eob_runs[3][64];
-  const ptrdiff_t    *coded_fragis[3];
+  const ptrdiff_t    *coded_fragis[3]; /*XXX:DEBUG*/
   const ptrdiff_t    *uncoded_fragis[3];
   ptrdiff_t           ncoded_fragis[3];
   ptrdiff_t           nuncoded_fragis[3];
@@ -1344,7 +1344,7 @@ static void oc_dec_pipeline_init(oc_dec_ctx *_dec,
   uncoded_fragis=coded_fragis+_dec->state.nfrags;
   for(pli=0;pli<3;pli++){
     ptrdiff_t ncoded_fragis;
-    _pipe->coded_fragis[pli]=coded_fragis;
+    _pipe->coded_fragis[pli]=coded_fragis; /*XXX:DEBUG*/
     _pipe->uncoded_fragis[pli]=uncoded_fragis;
     ncoded_fragis=_dec->state.ncoded_fragis[pli];
     coded_fragis+=ncoded_fragis;
@@ -1488,119 +1488,12 @@ static void oc_dec_dc_unpredict_mcu_plane(oc_dec_ctx *_dec,
       }
     }
   }
-  _pipe->ncoded_fragis[_pli]=ncoded_fragis;
+  _pipe->ncoded_fragis[_pli]=ncoded_fragis; /*XXX:DEBUG*/
   /*Also save the number of uncoded fragments so we know how many to copy.*/
   _pipe->nuncoded_fragis[_pli]=
    (fragy_end-fragy0)*(ptrdiff_t)nhfrags-ncoded_fragis;
 }
 
-/*Reconstructs all coded fragments in a single MCU (one or two super block
-   rows).
-  This requires that each coded fragment have a proper macro block mode and
-   motion vector (if not in INTRA mode), and have it's DC value decoded, with
-   the DC prediction process reversed, and the number of coded and uncoded
-   fragments in this plane of the MCU be counted.
-  The token lists for each color plane and coefficient should also be filled
-   in, along with initial token offsets, extra bits offsets, and EOB run
-   counts.*/
-#if 0
-static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
- oc_dec_pipeline_state *_pipe,int _pli){
-  unsigned char       *dct_tokens;
-  const unsigned char *dct_fzig_zag;
-  ogg_uint16_t         dc_quant[2];
-  const oc_fragment   *frags;
-  const ptrdiff_t     *coded_fragis;
-  ptrdiff_t            ncoded_fragis;
-  ptrdiff_t            fragii;
-  ptrdiff_t           *ti;
-  ptrdiff_t           *eob_runs;
-  int                  qti;
-  dct_tokens=_dec->dct_tokens;
-  dct_fzig_zag=_dec->state.opt_data.dct_fzig_zag;
-  frags=_dec->state.frags;
-  coded_fragis=_pipe->coded_fragis[_pli];
-  ncoded_fragis=_pipe->ncoded_fragis[_pli];
-  ti=_pipe->ti[_pli];
-  eob_runs=_pipe->eob_runs[_pli];
-  for(qti=0;qti<2;qti++)dc_quant[qti]=_pipe->dequant[_pli][0][qti][0];
-  for(fragii=0;fragii<ncoded_fragis;fragii++){
-    /*This array is made one element larger because the zig-zag index array
-       uses the final element as a dumping ground for out-of-range indices
-       to protect us from buffer overflow.*/
-    OC_ALIGN8(ogg_int16_t dct_coeffs[65]);
-    const ogg_uint16_t *ac_quant;
-    ptrdiff_t           fragi;
-    int                 last_zzi;
-    int                 zzi;
-    fragi=coded_fragis[fragii];
-    for(zzi=0;zzi<64;zzi++)dct_coeffs[zzi]=0;
-    qti=frags[fragi].mb_mode!=OC_MODE_INTRA;
-    ac_quant=_pipe->dequant[_pli][frags[fragi].qii][qti];
-    /*Decode the AC coefficients.*/
-    for(zzi=0;zzi<64;){
-      int token;
-      last_zzi=zzi;
-      if(eob_runs[zzi]){
-        eob_runs[zzi]--;
-        break;
-      }
-      else{
-        ptrdiff_t eob;
-        int       cw;
-        int       rlen;
-        int       coeff;
-        int       lti;
-        lti=ti[zzi];
-        token=dct_tokens[lti++];
-        cw=OC_DCT_CODE_WORD[token];
-        /*These parts could be done branchless, but the branches are fairly
-           predictable and the C code translates into more than a few
-           instructions, so it's worth it to avoid them.*/
-        if(OC_DCT_TOKEN_NEEDS_MORE(token)){
-          cw+=dct_tokens[lti++]<<OC_DCT_TOKEN_EB_POS(token);
-        }
-        eob=cw>>OC_DCT_CW_EOB_SHIFT&0xFFF;
-        if(token==OC_DCT_TOKEN_FAT_EOB){
-          eob+=dct_tokens[lti++]<<8;
-          if(eob==0)eob=OC_DCT_EOB_FINISH;
-        }
-        rlen=(unsigned char)(cw>>OC_DCT_CW_RLEN_SHIFT);
-        cw^=-(cw&1<<OC_DCT_CW_FLIP_BIT);
-        coeff=cw>>OC_DCT_CW_MAG_SHIFT;
-        eob_runs[zzi]=eob;
-        ti[zzi]=lti;
-        zzi+=rlen;
-        dct_coeffs[dct_fzig_zag[zzi]]=(ogg_int16_t)(coeff*(int)ac_quant[zzi]);
-        zzi+=!eob;
-      }
-    }
-    /*TODO: zzi should be exactly 64 here.
-      If it's not, we should report some kind of warning.*/
-    zzi=OC_MINI(zzi,64);
-    dct_coeffs[0]=(ogg_int16_t)frags[fragi].dc;
-    /*last_zzi is always initialized.
-      If your compiler thinks otherwise, it is dumb.*/
-    oc_state_frag_recon(&_dec->state,fragi,_pli,
-     dct_coeffs,last_zzi,dc_quant[qti]);
-  }
-  _pipe->coded_fragis[_pli]+=ncoded_fragis;
-  /*Right now the reconstructed MCU has only the coded blocks in it.*/
-  /*TODO: We make the decision here to always copy the uncoded blocks into it
-     from the reference frame.
-    We could also copy the coded blocks back over the reference frame, if we
-     wait for an additional MCU to be decoded, which might be faster if only a
-     small number of blocks are coded.
-    However, this introduces more latency, creating a larger cache footprint.
-    It's unknown which decision is better, but this one results in simpler
-     code, and the hard case (high bitrate, high resolution) is handled
-     correctly.*/
-  /*Copy the uncoded blocks from the previous reference frame.*/
-  _pipe->uncoded_fragis[_pli]-=_pipe->nuncoded_fragis[_pli];
-  oc_state_frag_copy_list(&_dec->state,_pipe->uncoded_fragis[_pli],
-   _pipe->nuncoded_fragis[_pli],OC_FRAME_SELF,OC_FRAME_PREV,_pli);
-}
-#else
 #include <stdio.h>
 #include <assert.h>
 static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
@@ -1618,15 +1511,7 @@ static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
   ti=_pipe->ti[_pli];
   eob_runs=_pipe->eob_runs[_pli];
 
-  if (fragp != _dec->state.frags + *_pipe->coded_fragis[_pli])
-  {
-    fprintf(stderr, "%p!=%p  (%d!=%d)\n",
-      (void *)fragp, (void *)(_dec->state.frags + *_pipe->coded_fragis[_pli]),
-      (int)(fragp - _dec->state.frags),
-      (int)*_pipe->coded_fragis[_pli]);
-    assert(fragp != _dec->state.frags + *_pipe->coded_fragis[_pli]);
-  }
-  _pipe->coded_fragis[_pli]++;
+  assert(fragp == _dec->state.frags + *_pipe->coded_fragis[_pli]++); /*XXX:DEBUG*/
 
   for(zzi=0;zzi<64;zzi++)dct_coeffs[zzi]=0;
   qti=fragp->mb_mode!=OC_MODE_INTRA;
@@ -1678,6 +1563,15 @@ static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
   return last_zzi;
 }
 
+/*Reconstructs all coded fragments in a single MCU (one or two super block
+   rows).
+  This requires that each coded fragment have a proper macro block mode and
+   motion vector (if not in INTRA mode), and have it's DC value decoded, with
+   the DC prediction process reversed, and the number of coded and uncoded
+   fragments in this plane of the MCU be counted.
+  The token lists for each color plane and coefficient should also be filled
+   in, along with initial token offsets, extra bits offsets, and EOB run
+   counts.*/
 static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
  oc_dec_pipeline_state *_pipe,int _pli){
   int sbi, sb_end;
@@ -1744,7 +1638,6 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
   oc_state_frag_copy_list(&_dec->state,_pipe->uncoded_fragis[_pli],
    _pipe->nuncoded_fragis[_pli],OC_FRAME_SELF,OC_FRAME_PREV,_pli);
 }
-#endif
 
 /*Filter a horizontal block edge.*/
 static void oc_filter_hedge(unsigned char *_dst,int _dst_ystride,
