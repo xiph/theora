@@ -479,7 +479,7 @@ static int oc_dec_frame_header_unpack(oc_dec_ctx *_dec){
    those are not used when decoding INTRA frames.*/
 static void oc_dec_mark_all_intra(oc_dec_ctx *_dec){
   const oc_sb_map   *sb_maps;
-  const oc_sb_flags *sb_flags;
+  oc_sb_flags       *sb_flags;
   oc_fragment       *frags;
   ptrdiff_t         *coded_fragis;
   ptrdiff_t          ncoded_fragis;
@@ -497,6 +497,8 @@ static void oc_dec_mark_all_intra(oc_dec_ctx *_dec){
     nsbs+=_dec->state.fplanes[pli].nsbs;
     for(;sbi<nsbs;sbi++){
       int quadi;
+      sb_flags[sbi].coded_fully=1;
+      sb_flags[sbi].coded_partially=0;
       for(quadi=0;quadi<4;quadi++)if(sb_flags[sbi].quad_valid&1<<quadi){
         int bi;
         for(bi=0;bi<4;bi++){
@@ -1501,6 +1503,7 @@ static void oc_dec_dc_unpredict_mcu_plane(oc_dec_ctx *_dec,
   The token lists for each color plane and coefficient should also be filled
    in, along with initial token offsets, extra bits offsets, and EOB run
    counts.*/
+#if 0
 static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
  oc_dec_pipeline_state *_pipe,int _pli){
   unsigned char       *dct_tokens;
@@ -1597,6 +1600,151 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
   oc_state_frag_copy_list(&_dec->state,_pipe->uncoded_fragis[_pli],
    _pipe->nuncoded_fragis[_pli],OC_FRAME_SELF,OC_FRAME_PREV,_pli);
 }
+#else
+#include <stdio.h>
+#include <assert.h>
+static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
+ oc_dec_ctx *_dec,oc_dec_pipeline_state *_pipe,int _pli, const oc_fragment *fragp){
+  unsigned char       *dct_tokens;
+  const unsigned char *dct_fzig_zag;
+  ptrdiff_t           *ti;
+  ptrdiff_t           *eob_runs;
+  int                  qti;
+  const ogg_uint16_t *ac_quant;
+  int                 last_zzi;
+  int                 zzi;
+  dct_tokens=_dec->dct_tokens;
+  dct_fzig_zag=_dec->state.opt_data.dct_fzig_zag;
+  ti=_pipe->ti[_pli];
+  eob_runs=_pipe->eob_runs[_pli];
+
+  if (fragp != _dec->state.frags + *_pipe->coded_fragis[_pli])
+  {
+    fprintf(stderr, "%p!=%p  (%d!=%d)\n",
+      (void *)fragp, (void *)(_dec->state.frags + *_pipe->coded_fragis[_pli]),
+      (int)(fragp - _dec->state.frags),
+      (int)*_pipe->coded_fragis[_pli]);
+    assert(fragp != _dec->state.frags + *_pipe->coded_fragis[_pli]);
+  }
+  _pipe->coded_fragis[_pli]++;
+
+  for(zzi=0;zzi<64;zzi++)dct_coeffs[zzi]=0;
+  qti=fragp->mb_mode!=OC_MODE_INTRA;
+  ac_quant=_pipe->dequant[_pli][fragp->qii][qti];
+  /*Decode the AC coefficients.*/
+  for(zzi=0;zzi<64;){
+    int token;
+    last_zzi=zzi;
+    if(eob_runs[zzi]){
+      eob_runs[zzi]--;
+      break;
+    }
+    else{
+      ptrdiff_t eob;
+      int       cw;
+      int       rlen;
+      int       coeff;
+      int       lti;
+      lti=ti[zzi];
+      token=dct_tokens[lti++];
+      cw=OC_DCT_CODE_WORD[token];
+      /*These parts could be done branchless, but the branches are fairly
+         predictable and the C code translates into more than a few
+         instructions, so it's worth it to avoid them.*/
+      if(OC_DCT_TOKEN_NEEDS_MORE(token)){
+        cw+=dct_tokens[lti++]<<OC_DCT_TOKEN_EB_POS(token);
+      }
+      eob=cw>>OC_DCT_CW_EOB_SHIFT&0xFFF;
+      if(token==OC_DCT_TOKEN_FAT_EOB){
+        eob+=dct_tokens[lti++]<<8;
+        if(eob==0)eob=OC_DCT_EOB_FINISH;
+      }
+      rlen=(unsigned char)(cw>>OC_DCT_CW_RLEN_SHIFT);
+      cw^=-(cw&1<<OC_DCT_CW_FLIP_BIT);
+      coeff=cw>>OC_DCT_CW_MAG_SHIFT;
+      eob_runs[zzi]=eob;
+      ti[zzi]=lti;
+      zzi+=rlen;
+      dct_coeffs[dct_fzig_zag[zzi]]=(ogg_int16_t)(coeff*(int)ac_quant[zzi]);
+      zzi+=!eob;
+    }
+  }
+  /*TODO: zzi should be exactly 64 here.
+    If it's not, we should report some kind of warning.*/
+  zzi=OC_MINI(zzi,64);
+  dct_coeffs[0]=(ogg_int16_t)fragp->dc;
+  /*last_zzi is always initialized.
+    If your compiler thinks otherwise, it is dumb.*/
+  return last_zzi;
+}
+
+static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
+ oc_dec_pipeline_state *_pipe,int _pli){
+  int sbi, sb_end;
+  int nhfrags;
+
+  nhfrags = _dec->state.fplanes[_pli].nhfrags;
+
+  sbi = _dec->state.fplanes[_pli].sboffset + (_pipe->fragy0[_pli] >> 2) * _dec->state.fplanes[_pli].nhsbs;
+  sb_end = _dec->state.fplanes[_pli].sboffset + (_pipe->fragy_end[_pli] + 3 >> 2) * _dec->state.fplanes[_pli].nhsbs;
+
+  for ( ; sbi < sb_end; sbi++)
+  {
+    int quadi;
+    oc_sb_flags sb_flags = _dec->state.sb_flags[sbi];
+
+    if (sb_flags.coded_fully == 0 && sb_flags.coded_partially == 0)
+      continue;
+
+    /* at this point I would like to pull a bitmap of coded blocks in the
+     * current superblock, and all the subsequent conditional stuff would be
+     * against that one uint16_t, but we don't have it yet. */
+
+    for (quadi = 0; quadi < 4; quadi++)
+    {
+      int last_zzi[4] = { -1 };
+      /*This array is made one element larger because the zig-zag index array
+         uses the final element as a dumping ground for out-of-range indices
+         to protect us from buffer overflow.*/
+      OC_ALIGN8(ogg_int16_t dct_coeffs[4][64 + 8]);
+      int bi;
+
+      if ((sb_flags.quad_valid & 1 << quadi) == 0)
+        continue;
+
+      for (bi = 0; bi < 4; bi++)
+      {
+        ptrdiff_t fragi;
+        fragi=_dec->state.sb_maps[sbi][quadi][bi];
+        if (fragi < 0) continue;
+        if (_dec->state.frags[fragi].coded == 0) continue;
+
+        last_zzi[bi] = oc_dec_get_dct_coeffs(dct_coeffs[bi], _dec, _pipe, _pli, _dec->state.frags + fragi);
+      }
+
+      for (bi = 0; bi < 4; bi++)
+      {
+        ogg_uint16_t dc_quant;
+        ptrdiff_t fragi;
+        fragi=_dec->state.sb_maps[sbi][quadi][bi];
+        if (fragi < 0) continue;
+        if (_dec->state.frags[fragi].coded == 0) continue;
+
+        dc_quant = _pipe->dequant[_pli][0][_dec->state.frags[fragi].mb_mode!=OC_MODE_INTRA][0];
+        oc_state_frag_recon(&_dec->state,fragi,_pli, dct_coeffs[bi],last_zzi[bi],dc_quant);
+      }
+    }
+    
+  }
+
+  /*Right now the reconstructed MCU has only the coded blocks in it.*/
+
+  /*Copy the uncoded blocks from the previous reference frame.*/
+  _pipe->uncoded_fragis[_pli]-=_pipe->nuncoded_fragis[_pli];
+  oc_state_frag_copy_list(&_dec->state,_pipe->uncoded_fragis[_pli],
+   _pipe->nuncoded_fragis[_pli],OC_FRAME_SELF,OC_FRAME_PREV,_pli);
+}
+#endif
 
 /*Filter a horizontal block edge.*/
 static void oc_filter_hedge(unsigned char *_dst,int _dst_ystride,
