@@ -341,7 +341,7 @@ struct oc_base_opt_vtable{
    const ptrdiff_t *_fragis,ptrdiff_t _nfragis,
    int _dst_frame,int _src_frame,int _pli);
   void (*state_loop_filter_frag_rows)(const oc_theora_state *_state,
-   int _bv[256],int _refi,int _pli,int _fragy0,int _fragy_end);  
+   signed char *_bv,int _refi,int _pli,int _fragy0,int _fragy_end);  
   void (*restore_fpu)(void);
 };
 
@@ -519,7 +519,7 @@ void oc_state_frag_copy_list(const oc_theora_state *_state,
 void oc_state_loop_filter_frag_rows(const oc_theora_state *_state,
  signed char _bv[256],int _refi,int _pli,int _fragy0,int _fragy_end);
 void oc_restore_fpu(const oc_theora_state *_state);
-void oc_idct8x8(ogg_int16_t _y[64],int _last_zzi);
+void oc_idct8x8_arm(ogg_int16_t _y[64],int _last_zzi);
 
 /*Default pure-C implementations.*/
 void oc_frag_copy_c(unsigned char *_dst,
@@ -537,7 +537,7 @@ void oc_state_frag_copy_list_c(const oc_theora_state *_state,
  const ptrdiff_t *_fragis,ptrdiff_t _nfragis,
  int _dst_frame,int _src_frame,int _pli);
 void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,
- int _bv[256],int _refi,int _pli,int _fragy0,int _fragy_end);
+ signed char *_bv,int _refi,int _pli,int _fragy0,int _fragy_end);
 void oc_restore_fpu_c(void);
 
 /*We need a way to call a few encoder functions without introducing a link-time
