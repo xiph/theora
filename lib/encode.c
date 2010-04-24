@@ -663,7 +663,7 @@ static void oc_enc_mvs_pack(oc_enc_ctx *_enc){
           fragi=mb_maps[mbi][0][bi];
           if(frags[fragi].coded){
             oc_enc_mv_pack(_enc,mv_scheme,
-             frag_mvs[fragi].v[0],frag_mvs[fragi].v[1]);
+             frag_mvs[fragi][0],frag_mvs[fragi][1]);
             /*Only code a single MV for this macro block.*/
             break;
           }
@@ -674,7 +674,7 @@ static void oc_enc_mvs_pack(oc_enc_ctx *_enc){
           fragi=mb_maps[mbi][0][bi];
           if(frags[fragi].coded){
             oc_enc_mv_pack(_enc,mv_scheme,
-             frag_mvs[fragi].v[0],frag_mvs[fragi].v[1]);
+             frag_mvs[fragi][0],frag_mvs[fragi][1]);
             /*Keep coding all the MVs for this macro block.*/
           }
         }

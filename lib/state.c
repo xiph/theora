@@ -910,7 +910,7 @@ void oc_state_frag_recon_c(const oc_theora_state *_state,ptrdiff_t _fragi,
      _state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_FOR_MODE(mb_mode)]]
      +frag_buf_off;
     if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,
-     _state->frag_mvs[_fragi].v[0],_state->frag_mvs[_fragi].v[1])>1){
+     _state->frag_mvs[_fragi][0],_state->frag_mvs[_fragi][1])>1){
       oc_frag_recon_inter2(_state,
        dst,ref+mvoffsets[0],ref+mvoffsets[1],ystride,_dct_coeffs);
     }
@@ -952,7 +952,7 @@ void oc_state_frag_copy_list_c(const oc_theora_state *_state,
   }
 }
 
-static void loop_filter_h(unsigned char *_pix,int _ystride,signed char *_bv){
+static void loop_filter_h(unsigned char *_pix,int _ystride,int *_bv){
   int y;
   _pix-=2;
   for(y=0;y<8;y++){
@@ -968,7 +968,7 @@ static void loop_filter_h(unsigned char *_pix,int _ystride,signed char *_bv){
   }
 }
 
-static void loop_filter_v(unsigned char *_pix,int _ystride,signed char *_bv){
+static void loop_filter_v(unsigned char *_pix,int _ystride,int *_bv){
   int x;
   _pix-=_ystride*2;
   for(x=0;x<8;x++){
@@ -986,7 +986,7 @@ static void loop_filter_v(unsigned char *_pix,int _ystride,signed char *_bv){
 /*Initialize the bounding values array used by the loop filter.
   _bv: Storage for the array.
   Return: 0 on success, or a non-zero value if no filtering need be applied.*/
-int oc_state_loop_filter_init(oc_theora_state *_state,signed char _bv[256]){
+int oc_state_loop_filter_init(oc_theora_state *_state,int _bv[256]){
   int flimit;
   int i;
   flimit=_state->loop_filter_limits[_state->qis[0]];
@@ -1009,13 +1009,13 @@ int oc_state_loop_filter_init(oc_theora_state *_state,signed char _bv[256]){
   _pli:       The color plane to filter.
   _fragy0:    The Y coordinate of the first fragment row to filter.
   _fragy_end: The Y coordinate of the fragment row to stop filtering at.*/
-void oc_state_loop_filter_frag_rows(const oc_theora_state *_state,signed char *_bv,
+void oc_state_loop_filter_frag_rows(const oc_theora_state *_state,int _bv[256],
  int _refi,int _pli,int _fragy0,int _fragy_end){
   _state->opt_vtable.state_loop_filter_frag_rows(_state,_bv,_refi,_pli,
    _fragy0,_fragy_end);
 }
 
-void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,signed char *_bv,
+void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,int *_bv,
  int _refi,int _pli,int _fragy0,int _fragy_end){
   const oc_fragment_plane *fplane;
   const oc_fragment       *frags;

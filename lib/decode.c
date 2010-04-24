@@ -568,6 +568,7 @@ static void oc_dec_mark_all_intra(oc_dec_ctx *_dec){
 static unsigned oc_dec_partial_sb_flags_unpack(oc_dec_ctx *_dec){
   oc_sb_flags *sb_flags;
   unsigned     nsbs;
+  unsigned     sbi;
   unsigned     npartial;
   unsigned     run_count;
   int          flag;
@@ -780,6 +781,7 @@ static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
   unsigned char        scheme0_alphabet[8];
   oc_mode_unpack_func  mode_unpack;
   size_t               nmbs;
+  size_t               mbi;
   int                  mode_scheme;
   mode_scheme=(int)oc_pack_read(&_dec->opb,3);
   if(mode_scheme==0){
@@ -975,6 +977,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
 static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
   oc_fragment     *frags;
   const ptrdiff_t *coded_fragis;
+  const ptrdiff_t *coded_fragis_end;
   ptrdiff_t        ncoded_fragis;
   ptrdiff_t        fragi;
   ncoded_fragis=_dec->state.ntotal_coded_fragis;
@@ -1038,7 +1041,7 @@ static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
           flag=!flag;
         run_count=oc_sb_run_unpack(&_dec->opb);
         full_run=run_count>=4129;
-        for(;coded_fragis<coded_fragis_end;coded_fragis++){
+        for(;coded_fragis<coded_fragis_end;*coded_fragis++){
           fragi=*coded_fragis;
           if(frags[fragi].qii==0)continue;
           if(run_count--<=0)break;
@@ -1162,6 +1165,7 @@ static int oc_dec_ac_coeff_unpack(oc_dec_ctx *_dec,int _zzi,int _huff_idxs[2],
     ptrdiff_t run_counts[64];
     ptrdiff_t eob_count;
     size_t    ntoks_left;
+    size_t    ntoks;
     int       rli;
     _dec->eob_runs[pli][_zzi]=_eobs;
     _dec->ti0[pli][_zzi]=ti;
@@ -2197,11 +2201,7 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
     int                   pli;
     int                   notstart;
     int                   notdone;
-#ifdef OC_LIBOGG2
     oc_pack_readinit(&_dec->opb,_op->packet);
-#else
-    oc_pack_readinit(&_dec->opb,_op->packet,_op->bytes);
-#endif
 #if defined(HAVE_CAIRO)
     _dec->telemetry_frame_bytes=_op->bytes;
 #endif

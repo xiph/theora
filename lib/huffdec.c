@@ -130,7 +130,7 @@ static oc_pb_window oc_pack_refill(oc_pack_buf *_b,int _bits){
 
 /*Read in bits without advancing the bit pointer.
   Here we assume 0<=_bits&&_bits<=32.*/
-long oc_pack_look(oc_pack_buf *_b,int _bits){
+static long oc_pack_look(oc_pack_buf *_b,int _bits){
   oc_pb_window window;
   int          available;
   long         result;
@@ -143,7 +143,7 @@ long oc_pack_look(oc_pack_buf *_b,int _bits){
 }
 
 /*Advance the bit pointer.*/
-void oc_pack_adv(oc_pack_buf *_b,int _bits){
+static void oc_pack_adv(oc_pack_buf *_b,int _bits){
   /*We ignore the special cases for _bits==0 and _bits==32 here, since they are
      never used actually used.
     OC_HUFF_SLUSH (defined below) would have to be at least 27 to actually read

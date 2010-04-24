@@ -96,13 +96,11 @@ decoder_x86_sources = \
 	x86/mmxstate.c \
 	x86/x86state.c
 
-if CPU_ARM
 decoder_arm_sources = \
 	arm/ARMfrag.s \
 	arm/ARMidct.s \
 	arm/ARMpp.s \
 	arm/ARMstate.c
-endif
 
 if CPU_x86_64
 decoder_arch_sources = $(decoder_x86_sources)

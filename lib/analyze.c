@@ -545,7 +545,7 @@ static void oc_qii_state_advance(oc_qii_state *_qd,
 
 /*Temporary encoder state for the analysis pipeline.*/
 struct oc_enc_pipeline_state{
-  signed char         bounding_values[256];
+  int                 bounding_values[256];
   oc_fr_state         fr[3];
   oc_qii_state        qs[3];
   /*Condensed dequantization tables.*/
@@ -805,7 +805,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
       const oc_mv *frag_mvs;
       frag_mvs=(const oc_mv *)_enc->state.frag_mvs;
       nmv_offs=oc_state_get_mv_offsets(&_enc->state,mv_offs,_pli,
-       frag_mvs[_fragi].v[0],frag_mvs[_fragi].v[1]);
+       frag_mvs[_fragi][0],frag_mvs[_fragi][1]);
       if(nmv_offs>1){
         oc_enc_frag_copy2(_enc,dst,
          ref+mv_offs[0],ref+mv_offs[1],ystride);
@@ -2139,7 +2139,7 @@ static void oc_cost_inter_nomv(oc_enc_ctx *_enc,oc_mode_choice *_modec,
  unsigned _mbi,int _mb_mode,const oc_fr_state *_fr,const oc_qii_state *_qs,
  const unsigned _skip_ssd[12],const unsigned _rd_scale[4]){
   static const oc_mv OC_MV_ZERO;
-  oc_cost_inter(_enc,_modec,_mbi,_mb_mode,&OC_MV_ZERO.v[0],
+  oc_cost_inter(_enc,_modec,_mbi,_mb_mode,OC_MV_ZERO,
    _fr,_qs,_skip_ssd,_rd_scale);
 }
 
@@ -2165,8 +2165,8 @@ static void oc_cost_inter4mv(oc_enc_ctx *_enc,oc_mode_choice *_modec,
  unsigned _mbi,oc_mv _mv[4],const oc_fr_state *_fr,const oc_qii_state *_qs,
  const unsigned _skip_ssd[12],const unsigned _rd_scale[5]){
   unsigned               frag_satd[12];
-  oc_mv4                 lbmvs;
-  oc_mv4                 cbmvs;
+  oc_mv                  lbmvs[4];
+  oc_mv                  cbmvs[4];
   const unsigned char   *src;
   const unsigned char   *ref;
   int                    ystride;
@@ -2198,12 +2198,12 @@ static void oc_cost_inter4mv(oc_enc_ctx *_enc,oc_mode_choice *_modec,
   _modec->rate=_modec->ssd=0;
   for(bi=0;bi<4;bi++){
     fragi=mb_map[0][bi];
-    dx=_mv[bi].v[0];
-    dy=_mv[bi].v[1];
+    dx=_mv[bi][0];
+    dy=_mv[bi][1];
     /*Save the block MVs as the current ones while we're here; we'll replace
        them if we don't ultimately choose 4MV mode.*/
-    frag_mvs[fragi].v[0]=(signed char)dx;
-    frag_mvs[fragi].v[1]=(signed char)dy;
+    frag_mvs[fragi][0]=(signed char)dx;
+    frag_mvs[fragi][1]=(signed char)dy;
     frag_offs=frag_buf_offs[fragi];
     if(oc_state_get_mv_offsets(&_enc->state,mv_offs,0,dx,dy)>1){
       satd=oc_enc_frag_satd2(_enc,&dc,src+frag_offs,
@@ -2223,16 +2223,16 @@ static void oc_cost_inter4mv(oc_enc_ctx *_enc,oc_mode_choice *_modec,
   nqis=_enc->state.nqis;
   for(bi=0;bi<4;bi++){
     if(_modec->qii[OC_MB_PHASE[_mbi&3][bi]]>=nqis){
-      memset(&lbmvs.v[bi],0,sizeof(lbmvs.v[0]));
+      memset(lbmvs+bi,0,sizeof(*lbmvs));
     }
     else{
-      memcpy(&lbmvs.v[bi],_mv+bi,sizeof(lbmvs.v[0]));
-      bits0+=OC_MV_BITS[0][_mv[bi].v[0]+31]+OC_MV_BITS[0][_mv[bi].v[1]+31];
+      memcpy(lbmvs+bi,_mv+bi,sizeof(*lbmvs));
+      bits0+=OC_MV_BITS[0][_mv[bi][0]+31]+OC_MV_BITS[0][_mv[bi][1]+31];
       bits1+=12;
     }
   }
-  (*OC_SET_CHROMA_MVS_TABLE[_enc->state.info.pixel_fmt])(&cbmvs,
-   (const oc_mv4 *)&lbmvs);
+  (*OC_SET_CHROMA_MVS_TABLE[_enc->state.info.pixel_fmt])(cbmvs,
+   (const oc_mv *)lbmvs);
   map_idxs=OC_MB_MAP_IDXS[_enc->state.info.pixel_fmt];
   map_nidxs=OC_MB_MAP_NIDXS[_enc->state.info.pixel_fmt];
   /*Note: This assumes ref_ystride[1]==ref_ystride[2].*/
@@ -2242,8 +2242,8 @@ static void oc_cost_inter4mv(oc_enc_ctx *_enc,oc_mode_choice *_modec,
     pli=mapi>>2;
     bi=mapi&3;
     fragi=mb_map[pli][bi];
-    dx=cbmvs.v[bi].v[0];
-    dy=cbmvs.v[bi].v[1];
+    dx=cbmvs[bi][0];
+    dy=cbmvs[bi][1];
     frag_offs=frag_buf_offs[fragi];
     /*TODO: We could save half these calls by re-using the results for the Cb
        and Cr planes; is it worth it?*/
@@ -2314,7 +2314,7 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
   luma_avg=OC_CLAMPI(90<<8,_enc->luma_avg,160<<8);
   mcu_rd_scale=_enc->mcu_rd_scale;
   mcu_rd_iscale=_enc->mcu_rd_iscale;
-  last_mv.v[0]=last_mv.v[1]=prior_mv.v[0]=prior_mv.v[1]=0;
+  last_mv[0]=last_mv[1]=prior_mv[0]=prior_mv[1]=0;
   /*Choose MVs and MB modes and quantize and code luma.
     Must be done in Hilbert order.*/
   map_idxs=OC_MB_MAP_IDXS[_enc->state.info.pixel_fmt];
@@ -2405,18 +2405,18 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
           oc_cost_intra(_enc,modes+OC_MODE_INTRA,mbi,
            pipe.fr+0,pipe.qs+0,intra_satd,skip_ssd,rd_scale);
           mb_mv_bits_0=oc_cost_inter1mv(_enc,modes+OC_MODE_INTER_MV,mbi,
-           OC_MODE_INTER_MV,embs[mbi].unref_mv[OC_FRAME_PREV].v,
+           OC_MODE_INTER_MV,embs[mbi].unref_mv[OC_FRAME_PREV],
            pipe.fr+0,pipe.qs+0,skip_ssd,rd_scale);
           oc_cost_inter(_enc,modes+OC_MODE_INTER_MV_LAST,mbi,
-           OC_MODE_INTER_MV_LAST,last_mv.v,pipe.fr+0,pipe.qs+0,skip_ssd,rd_scale);
+           OC_MODE_INTER_MV_LAST,last_mv,pipe.fr+0,pipe.qs+0,skip_ssd,rd_scale);
           oc_cost_inter(_enc,modes+OC_MODE_INTER_MV_LAST2,mbi,
-           OC_MODE_INTER_MV_LAST2,prior_mv.v,pipe.fr+0,pipe.qs+0,skip_ssd,rd_scale);
+           OC_MODE_INTER_MV_LAST2,prior_mv,pipe.fr+0,pipe.qs+0,skip_ssd,rd_scale);
           oc_cost_inter4mv(_enc,modes+OC_MODE_INTER_MV_FOUR,mbi,
            embs[mbi].block_mv,pipe.fr+0,pipe.qs+0,skip_ssd,rd_scale);
           oc_cost_inter_nomv(_enc,modes+OC_MODE_GOLDEN_NOMV,mbi,
            OC_MODE_GOLDEN_NOMV,pipe.fr+0,pipe.qs+0,skip_ssd,rd_scale);
           mb_gmv_bits_0=oc_cost_inter1mv(_enc,modes+OC_MODE_GOLDEN_MV,mbi,
-           OC_MODE_GOLDEN_MV,embs[mbi].unref_mv[OC_FRAME_GOLD].v,
+           OC_MODE_GOLDEN_MV,embs[mbi].unref_mv[OC_FRAME_GOLD],
            pipe.fr+0,pipe.qs+0,skip_ssd,rd_scale);
           /*The explicit MV modes (2,6,7) have not yet gone through halfpel
              refinement.
@@ -2441,7 +2441,7 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
               embs[mbi].refined|=0x40;
             }
             mb_gmv_bits_0=oc_cost_inter1mv(_enc,modes+OC_MODE_GOLDEN_MV,mbi,
-             OC_MODE_GOLDEN_MV,embs[mbi].analysis_mv[0][OC_FRAME_GOLD].v,
+             OC_MODE_GOLDEN_MV,embs[mbi].analysis_mv[0][OC_FRAME_GOLD],
              pipe.fr+0,pipe.qs+0,skip_ssd,rd_scale);
           }
           if(!(embs[mbi].refined&0x04)){
@@ -2449,7 +2449,7 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
             embs[mbi].refined|=0x04;
           }
           mb_mv_bits_0=oc_cost_inter1mv(_enc,modes+OC_MODE_INTER_MV,mbi,
-           OC_MODE_INTER_MV,embs[mbi].analysis_mv[0][OC_FRAME_PREV].v,
+           OC_MODE_INTER_MV,embs[mbi].analysis_mv[0][OC_FRAME_PREV],
            pipe.fr+0,pipe.qs+0,skip_ssd,rd_scale);
           /*Finally, pick the mode with the cheapest estimated R-D cost.*/
           mb_mode=OC_MODE_INTER_NOMV;
@@ -2496,26 +2496,26 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
         if(mb_mode!=OC_MODE_INTER_MV_FOUR){
           switch(mb_mode){
             case OC_MODE_INTER_MV:{
-              dx=embs[mbi].analysis_mv[0][OC_FRAME_PREV].v[0];
-              dy=embs[mbi].analysis_mv[0][OC_FRAME_PREV].v[1];
+              dx=embs[mbi].analysis_mv[0][OC_FRAME_PREV][0];
+              dy=embs[mbi].analysis_mv[0][OC_FRAME_PREV][1];
             }break;
             case OC_MODE_INTER_MV_LAST:{
-              dx=last_mv.v[0];
-              dy=last_mv.v[1];
+              dx=last_mv[0];
+              dy=last_mv[1];
             }break;
             case OC_MODE_INTER_MV_LAST2:{
-              dx=prior_mv.v[0];
-              dy=prior_mv.v[1];
+              dx=prior_mv[0];
+              dy=prior_mv[1];
             }break;
             case OC_MODE_GOLDEN_MV:{
-              dx=embs[mbi].analysis_mv[0][OC_FRAME_GOLD].v[0];
-              dy=embs[mbi].analysis_mv[0][OC_FRAME_GOLD].v[1];
+              dx=embs[mbi].analysis_mv[0][OC_FRAME_GOLD][0];
+              dy=embs[mbi].analysis_mv[0][OC_FRAME_GOLD][1];
             }break;
           }
           for(bi=0;bi<4;bi++){
             fragi=mb_maps[mbi][0][bi];
-            frag_mvs[fragi].v[0]=(signed char)dx;
-            frag_mvs[fragi].v[1]=(signed char)dy;
+            frag_mvs[fragi][0]=(signed char)dx;
+            frag_mvs[fragi][1]=(signed char)dy;
           }
         }
         for(bi=0;bi<4;bi++){
@@ -2529,16 +2529,16 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
           mb_mode=mb_modes[mbi];
           switch(mb_mode){
             case OC_MODE_INTER_MV:{
-              memcpy(prior_mv.v,last_mv.v,sizeof(prior_mv));
+              memcpy(prior_mv,last_mv,sizeof(prior_mv));
               /*If we're backing out from 4MV, find the MV we're actually
                  using.*/
               if(orig_mb_mode==OC_MODE_INTER_MV_FOUR){
                 for(bi=0;;bi++){
                   fragi=mb_maps[mbi][0][bi];
                   if(frags[fragi].coded){
-                    memcpy(last_mv.v,frag_mvs[fragi].v,sizeof(last_mv));
-                    dx=frag_mvs[fragi].v[0];
-                    dy=frag_mvs[fragi].v[1];
+                    memcpy(last_mv,frag_mvs[fragi],sizeof(last_mv));
+                    dx=frag_mvs[fragi][0];
+                    dy=frag_mvs[fragi][1];
                     break;
                   }
                 }
@@ -2546,39 +2546,39 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
               }
               /*Otherwise we used the original analysis MV.*/
               else{
-                memcpy(last_mv.v,
-                 embs[mbi].analysis_mv[0][OC_FRAME_PREV].v,sizeof(last_mv));
+                memcpy(last_mv,
+                 embs[mbi].analysis_mv[0][OC_FRAME_PREV],sizeof(last_mv));
               }
               _enc->mv_bits[0]+=mb_mv_bits_0;
               _enc->mv_bits[1]+=12;
             }break;
             case OC_MODE_INTER_MV_LAST2:{
               oc_mv tmp_mv;
-              memcpy(tmp_mv.v,prior_mv.v,sizeof(tmp_mv));
-              memcpy(prior_mv.v,last_mv.v,sizeof(prior_mv));
-              memcpy(last_mv.v,tmp_mv.v,sizeof(last_mv));
+              memcpy(tmp_mv,prior_mv,sizeof(tmp_mv));
+              memcpy(prior_mv,last_mv,sizeof(prior_mv));
+              memcpy(last_mv,tmp_mv,sizeof(last_mv));
             }break;
             case OC_MODE_GOLDEN_MV:{
               _enc->mv_bits[0]+=mb_gmv_bits_0;
               _enc->mv_bits[1]+=12;
             }break;
             case OC_MODE_INTER_MV_FOUR:{
-              oc_mv4 lbmvs;
-              oc_mv4 cbmvs;
-              memcpy(prior_mv.v,last_mv.v,sizeof(prior_mv));
+              oc_mv lbmvs[4];
+              oc_mv cbmvs[4];
+              memcpy(prior_mv,last_mv,sizeof(prior_mv));
               for(bi=0;bi<4;bi++){
                 fragi=mb_maps[mbi][0][bi];
                 if(frags[fragi].coded){
-                  memcpy(last_mv.v,frag_mvs[fragi].v,sizeof(last_mv));
-                  memcpy(lbmvs.v[bi].v,frag_mvs[fragi].v,sizeof(lbmvs.v[bi]));
-                  _enc->mv_bits[0]+=OC_MV_BITS[0][frag_mvs[fragi].v[0]+31]
-                   +OC_MV_BITS[0][frag_mvs[fragi].v[1]+31];
+                  memcpy(last_mv,frag_mvs[fragi],sizeof(last_mv));
+                  memcpy(lbmvs[bi],frag_mvs[fragi],sizeof(lbmvs[bi]));
+                  _enc->mv_bits[0]+=OC_MV_BITS[0][frag_mvs[fragi][0]+31]
+                   +OC_MV_BITS[0][frag_mvs[fragi][1]+31];
                   _enc->mv_bits[1]+=12;
                 }
                 /*Replace the block MVs for not-coded blocks with (0,0).*/
-                else memset(lbmvs.v[bi].v,0,sizeof(lbmvs.v[bi]));
+                else memset(lbmvs[bi],0,sizeof(lbmvs[bi]));
               }
-              (*set_chroma_mvs)(&cbmvs,&lbmvs);
+              (*set_chroma_mvs)(cbmvs,(const oc_mv *)lbmvs);
               for(mapii=4;mapii<nmap_idxs;mapii++){
                 mapi=map_idxs[mapii];
                 pli=mapi>>2;
@@ -2586,7 +2586,7 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
                 fragi=mb_maps[mbi][pli][bi];
                 frags[fragi].mb_mode=mb_mode;
                 frags[fragi].qii=modes[OC_MODE_INTER_MV_FOUR].qii[mapii];
-                memcpy(frag_mvs[fragi].v,&cbmvs.v[bi],sizeof(frag_mvs[fragi]));
+                memcpy(frag_mvs[fragi],cbmvs[bi],sizeof(frag_mvs[fragi]));
               }
             }break;
           }
@@ -2613,8 +2613,8 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
                values won't have been chosen with the right MV, but it's
                probaby not worth re-estimating them.*/
             frags[fragi].qii=modes[mb_mode].qii[mapii];
-            frag_mvs[fragi].v[0]=(signed char)dx;
-            frag_mvs[fragi].v[1]=(signed char)dy;
+            frag_mvs[fragi][0]=(signed char)dx;
+            frag_mvs[fragi][1]=(signed char)dy;
           }
         }
         /*Save masking scale factors for chroma blocks.*/
