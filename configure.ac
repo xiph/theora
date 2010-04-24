@@ -58,6 +58,7 @@ AC_PROG_CC
 AC_PROG_CPP
 CFLAGS="$cflags_save"
 
+AM_PROG_AS
 AM_PROG_CC_C_O
 AC_LIBTOOL_WIN32_DLL
 AM_PROG_LIBTOOL
@@ -191,6 +192,7 @@ CFLAGS="$CFLAGS $cflags_save"
 
 cpu_x86_64=no
 cpu_x86_32=no
+cpu_arm=no
 AC_ARG_ENABLE(asm,
     AS_HELP_STRING([--disable-asm], [Disable assembly optimizations]),
     [ ac_enable_asm=$enableval ], [ ac_enable_asm=yes] )
@@ -212,12 +214,17 @@ if test "x${ac_enable_asm}" = xyes; then
     AC_DEFINE([OC_X86_ASM], [],  [make use of x86 asm optimization])
     AC_DEFINE([OC_X86_64_ASM], [],  [make use of x86_64 asm optimization])
     ;;
+  arm)
+    cpu_arm=yes
+    cpu_optimization="arm"
+    AC_DEFINE([OC_ARM_ASM], [],  [make use of ARM asm optimization])
   esac
 else
   cpu_optimization="disabled"
 fi
 AM_CONDITIONAL([CPU_x86_64], [test x$cpu_x86_64 = xyes])
 AM_CONDITIONAL([CPU_x86_32], [test x$cpu_x86_32 = xyes])
+AM_CONDITIONAL([CPU_ARM], [test x$cpu_arm = xyes])
 
 # Test whenever ld supports -version-script
 AC_PROG_LD

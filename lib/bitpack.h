@@ -51,10 +51,10 @@ int oc_pack_read1(oc_pack_buf *_b);
 /* returns -1 for read beyond EOF, or the number of whole bytes available */
 long oc_pack_bytes_left(oc_pack_buf *_b);
 
-/*These two functions are implemented locally in huffdec.c*/
+/*These two functions are implemented in huffdec.c*/
 /*Read in bits without advancing the bitptr.
   Here we assume 0<=_bits&&_bits<=32.*/
-/*static int oc_pack_look(oc_pack_buf *_b,int _bits);*/
-/*static void oc_pack_adv(oc_pack_buf *_b,int _bits);*/
+long oc_pack_look(oc_pack_buf *_b,int _bits);
+void oc_pack_adv(oc_pack_buf *_b,int _bits);
 
 #endif

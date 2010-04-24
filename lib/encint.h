@@ -26,8 +26,6 @@
 
 
 
-typedef oc_mv                         oc_mv2[2];
-
 typedef struct oc_enc_opt_vtable      oc_enc_opt_vtable;
 typedef struct oc_mb_enc_info         oc_mb_enc_info;
 typedef struct oc_mode_scheme_chooser oc_mode_scheme_chooser;
@@ -105,6 +103,7 @@ struct oc_enc_opt_vtable{
 void oc_enc_vtable_init(oc_enc_ctx *_enc);
 
 
+typedef oc_mv oc_mv2_[2];
 
 /*Encoder-specific macroblock information.*/
 struct oc_mb_enc_info{
@@ -124,7 +123,7 @@ struct oc_mb_enc_info{
      can be used to estimate constant velocity and constant acceleration
      predictors.
     Uninitialized MVs are (0,0).*/
-  oc_mv2        analysis_mv[3];
+  oc_mv2_       analysis_mv[3];
   /*Current unrefined analysis MVs.*/
   oc_mv         unref_mv[2];
   /*Unrefined block MVs.*/

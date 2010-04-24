@@ -36,7 +36,7 @@ void oc_state_frag_copy_list_mmx(const oc_theora_state *_state,
  const ptrdiff_t *_fragis,ptrdiff_t _nfragis,
  int _dst_frame,int _src_frame,int _pli);
 void oc_state_loop_filter_frag_rows_mmx(const oc_theora_state *_state,
- int _bv[256],int _refi,int _pli,int _fragy0,int _fragy_end);
+ signed char *_bv,int _refi,int _pli,int _fragy0,int _fragy_end);
 void oc_restore_fpu_mmx(void);
 
 #endif
