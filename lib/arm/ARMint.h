@@ -21,8 +21,6 @@
 
 void oc_state_vtable_init_arm(oc_theora_state *_state);
 
-void oc_frag_copy_arm(unsigned char *_dst,
- const unsigned char *_src,int _ystride);
 void oc_frag_recon_intra_arm(unsigned char *_dst,int _ystride,
  const ogg_int16_t *_residue);
 void oc_frag_recon_inter_arm(unsigned char *_dst,
