@@ -3,8 +3,8 @@
 
 	AREA	|.text|, CODE, READONLY
 
-	GET	common.s
-	GET	ARMoffsets.s
+	GET	ARMoptions.s
+ 	GET	ARMoffsets.s
 
 	EXPORT	oc_sb_run_unpack
 	EXPORT	oc_block_run_unpack

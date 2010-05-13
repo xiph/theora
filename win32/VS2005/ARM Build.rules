@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<VisualStudioToolFile
+    Name="ARM Assembly"
+    Version="8.00"
+    >
+    <Rules>
+        <CustomBuildRule
+            Name="ARM Assembly"
+            DisplayName="ARM Assembly"
+            CommandLine="armasm -arch 6 -list &quot;$(IntDir)\$(InputName).list&quot; -o &quot;$(IntDir)\$(InputName).obj&quot; [$Inputs] "
+            Outputs="$(IntDir)\$(InputName).obj"
+            FileExtensions="*.s"
+            ExecutionDescription="Executing ARM Assembler..."
+            >
+            <Properties>
+            </Properties>
+        </CustomBuildRule>
+    </Rules>
+</VisualStudioToolFile>

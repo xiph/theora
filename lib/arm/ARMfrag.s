@@ -357,7 +357,8 @@ oc_frag_recon_inter2_arm
 
 	MOV	PC,R14
  |
-  [ (ARMV6 && ARM_HAS_LDRD)
+  [ ARMV6
+  [ ARM_HAS_LDRD
 oc_frag_recon_intra_arm
 	; r0 =       unsigned char *dst
 	; r1 =       int            ystride
@@ -701,6 +702,7 @@ ofrinter2_lp
 	BGT	ofrinter2_lp
 
 	LDMFD	r13!,{r4-r8,PC}
+  ]
   ]
  ]
 	END

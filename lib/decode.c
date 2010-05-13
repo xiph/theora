@@ -28,12 +28,12 @@
 #endif
 
 #ifdef OC_ARM_ASM
-extern void oc_memzero_16_64ARM(ogg_uint16_t *);
-extern void oc_memzero_ptrdiff_64ARM(ptrdiff_t *);
-extern void oc_memset_al_mult8ARM(void *buffer, size_t size, int value);
-#define oc_memzero_16_64(B)       oc_memzero_16_64ARM(B)
-#define oc_memzero_ptrdiff_64(B)  oc_memzero_ptrdiff_64ARM(B)
-#define oc_memset_al_mult8(B,V,S) oc_memset_al_mult8ARM(B,S,V)
+extern void oc_memzero_16_64arm(ogg_uint16_t *);
+extern void oc_memzero_ptrdiff_64arm(ptrdiff_t *);
+extern void oc_memset_al_mult8arm(void *buffer, size_t size, int value);
+#define oc_memzero_16_64(B)       oc_memzero_16_64arm(B)
+#define oc_memzero_ptrdiff_64(B)  oc_memzero_ptrdiff_64arm(B)
+#define oc_memset_al_mult8(B,V,S) oc_memset_al_mult8arm(B,S,V)
 #else
 #define oc_memzero_16_64(B)       memset((void*)(B),0,64*sizeof(ogg_uint16_t))
 #define oc_memzero_ptrdiff_64(B)  memset((void*)(B),0,64*sizeof(ptrdiff_t))

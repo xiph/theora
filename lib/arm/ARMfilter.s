@@ -3,7 +3,7 @@
 
 	AREA	|.text|, CODE, READONLY
 
-	GET	common.s
+	GET	ARMoptions.s
 
 	EXPORT	loop_filter_h_arm
 	EXPORT	loop_filter_v_arm
@@ -584,7 +584,7 @@ osbfr_lp2
   ]
  ]
 
-oc_memzero_16_64ARM
+oc_memzero_16_64arm
 	; r0 = ptr to fill with 2*64 0 bytes
  [ ARM_HAS_NEON
 	VMOV.I8	Q0,#0
@@ -631,7 +631,7 @@ oc_memzero_16_64ARM
 	MOV	PC,R14
   ]
  ]
-oc_memzero_ptrdiff_64ARM
+oc_memzero_ptrdiff_64arm
 	; r0 = ptr to fill with 4*64 0 bytes
  [ ARM_HAS_NEON
 	VMOV.I8	Q0,#0
@@ -708,7 +708,7 @@ oc_memzero_ptrdiff_64ARM
 	MOV	PC,R14
   ]
  ]
-oc_memset_al_mult8ARM
+oc_memset_al_mult8arm
 	; r0 = ptr to fill with a multiple of 8 bytes aligned to 8 bytes
 	; r1 = size (in bytes)
 	; r2 = value to fill
