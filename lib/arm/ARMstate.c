@@ -39,7 +39,48 @@ static void oc_state_frag_copy_list_arm(const oc_theora_state *_state,
                    _state->ref_frame_data[_state->ref_frame_idx[_src_frame]],
                    _state->ref_ystride[_pli],
                    _nfragis,
-                   frag_bug_offs);
+                   _fragis,
+                   frag_buf_offs);
+}
+
+void oc_state_loop_filter_frag_rows_arm(const oc_theora_state *_state,signed char*_bv,
+ int _refi,int _pli,int _fragy0,int _fragy_end){
+  const oc_fragment_plane *fplane;
+  const oc_fragment       *frags;
+  const ptrdiff_t         *frag_buf_offs;
+  unsigned char           *ref_frame_data;
+  ptrdiff_t                fragi_top;
+  ptrdiff_t                fragi_bot;
+  ptrdiff_t                fragi0;
+  ptrdiff_t                fragi0_end;
+  int                      ystride;
+  int                      nhfrags;
+  _bv+=127;
+  fplane=_state->fplanes+_pli;
+  nhfrags=fplane->nhfrags;
+  fragi_top=fplane->froffset;
+  fragi_bot=fragi_top+fplane->nfrags;
+  fragi0=fragi_top+_fragy0*(ptrdiff_t)nhfrags;
+  fragi0_end=fragi0+(_fragy_end-_fragy0)*(ptrdiff_t)nhfrags;
+  ystride=_state->ref_ystride[_pli];
+  frags=_state->frags;
+  frag_buf_offs=_state->frag_buf_offs;
+  ref_frame_data=_state->ref_frame_data[_refi];
+  /*The following loops are constructed somewhat non-intuitively on purpose.
+    The main idea is: if a block boundary has at least one coded fragment on
+     it, the filter is applied to it.
+    However, the order that the filters are applied in matters, and VP3 chose
+     the somewhat strange ordering used below.*/
+  oc_state_loop_filter_frag_rows_inner(ref_frame_data,
+                                       ystride,
+                                       _bv,
+                                       frags,
+                                       fragi0,
+                                       fragi0_end,
+                                       fragi_top,
+                                       fragi_bot,
+                                       frag_buf_offs,
+                                       nhfrags);
 }
 
 static void oc_state_frag_recon_arm(const oc_theora_state *_state,ptrdiff_t _fragi,
@@ -77,7 +118,7 @@ static void oc_state_frag_recon_arm(const oc_theora_state *_state,ptrdiff_t _fra
      _state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_FOR_MODE(mb_mode)]]
      +frag_buf_off;
     if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,
-     _state->frag_mvs[_fragi][0],_state->frag_mvs[_fragi][1])>1){
+     _state->frag_mvs[_fragi].v[0],_state->frag_mvs[_fragi].v[1])>1){
       oc_frag_recon_inter2_arm(
        dst,ref+mvoffsets[0],ref+mvoffsets[1],ystride,_dct_coeffs);
     }
