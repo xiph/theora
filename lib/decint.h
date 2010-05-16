@@ -37,7 +37,7 @@ typedef struct th_dec_ctx    oc_dec_ctx;
 
 struct th_setup_info{
   /*The Huffman codes.*/
-  oc_huff_node      *huff_tables[TH_NHUFFMAN_TABLES];
+  ogg_int16_t   *huff_tables[TH_NHUFFMAN_TABLES];
   /*The quantization parameters.*/
   th_quant_info  qinfo;
 };
@@ -55,7 +55,7 @@ struct th_dec_ctx{
   /*Buffer in which to assemble packets.*/
   oc_pack_buf          opb;
   /*Huffman decode trees.*/
-  oc_huff_node        *huff_tables[TH_NHUFFMAN_TABLES];
+  ogg_int16_t         *huff_tables[TH_NHUFFMAN_TABLES];
   /*The index of the first token in each plane for each coefficient.*/
   ptrdiff_t            ti0[3][64];
   /*The number of outstanding EOB runs at the start of each coefficient in each

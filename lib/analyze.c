@@ -758,7 +758,6 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   int                     nonzero;
   unsigned                uncoded_ssd;
   unsigned                coded_ssd;
-  int                     coded_dc;
   oc_token_checkpoint    *checkpoint;
   oc_fragment            *frags;
   int                     mb_mode;
@@ -918,11 +917,10 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   {
     /*In retrospect, should we have skipped this block?*/
     oc_enc_frag_sub(_enc,data,src,dst,ystride);
-    coded_ssd=coded_dc=0;
+    coded_ssd=0;
     if(borderi<0){
       for(pi=0;pi<64;pi++){
         coded_ssd+=data[pi]*data[pi];
-        coded_dc+=data[pi];
       }
     }
     else{
@@ -930,13 +928,10 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
       mask=_enc->state.borders[borderi].mask;
       for(pi=0;pi<64;pi++,mask>>=1)if(mask&1){
         coded_ssd+=data[pi]*data[pi];
-        coded_dc+=data[pi];
       }
     }
     /*Scale to match DCT domain.*/
     coded_ssd<<=4;
-    /*We actually only want the AC contribution to the SSD.*/
-    coded_ssd-=coded_dc*coded_dc>>2;
 #if defined(OC_COLLECT_METRICS)
     _enc->frag_ssd[_fragi]=coded_ssd;
   }
@@ -1924,7 +1919,6 @@ static void oc_skip_cost(oc_enc_ctx *_enc,oc_enc_pipeline_state *_pipe,
   unsigned                uncoded_ssd;
   int                     uncoded_dc;
   unsigned                dc_dequant;
-  int                     dc_flag;
   int                     mapii;
   int                     mapi;
   int                     pli;
@@ -1949,7 +1943,6 @@ static void oc_skip_cost(oc_enc_ctx *_enc,oc_enc_pipeline_state *_pipe,
     if(borderi<0){
       for(pi=0;pi<64;pi++){
         uncoded_ssd+=buffer[pi]*buffer[pi];
-        uncoded_dc+=buffer[pi];
       }
     }
     else{
@@ -1957,18 +1950,16 @@ static void oc_skip_cost(oc_enc_ctx *_enc,oc_enc_pipeline_state *_pipe,
       mask=_enc->state.borders[borderi].mask;
       for(pi=0;pi<64;pi++,mask>>=1)if(mask&1){
         uncoded_ssd+=buffer[pi]*buffer[pi];
-        uncoded_dc+=buffer[pi];
       }
     }
     /*Scale to match DCT domain.*/
     uncoded_ssd<<=4;
-    /*We actually only want the AC contribution to the SSD.*/
-    uncoded_ssd-=uncoded_dc*uncoded_dc>>2;
     uncoded_ssd=OC_RD_SCALE(uncoded_ssd,_rd_scale[bi]);
-    /*DC is a special case; if there's more than a full-quantizer improvement
-       in the effective DC component, always force-code the block.*/
-    dc_flag=abs(uncoded_dc)>dc_dequant<<1;
-    uncoded_ssd|=-dc_flag;
+    /*Motion is a special case; if there is more than a full-pixel motion 
+      against the prior frame, penalize skipping. TODO: The factor of 
+      two here is a kludge, but it tested out better than a hard limit*/
+    if(_enc->mb_info[_mbi].block_mv[bi][0]!=0||
+      _enc->mb_info[_mbi].block_mv[bi][1]!=0)uncoded_ssd*=2;
     _pipe->skip_ssd[0][fragi-_pipe->froffset[0]]=_ssd[bi]=uncoded_ssd;
   }
   mb_map=(const oc_mb_map_plane *)_enc->state.mb_maps[_mbi];
@@ -1990,25 +1981,22 @@ static void oc_skip_cost(oc_enc_ctx *_enc,oc_enc_pipeline_state *_pipe,
       if(borderi<0){
         for(pi=0;pi<64;pi++){
           uncoded_ssd+=buffer[pi]*buffer[pi];
-          uncoded_dc+=buffer[pi];
         }
       }
       else{
         mask=_enc->state.borders[borderi].mask;
         for(pi=0;pi<64;pi++,mask>>=1)if(mask&1){
           uncoded_ssd+=buffer[pi]*buffer[pi];
-          uncoded_dc+=buffer[pi];
         }
       }
       /*Scale to match DCT domain.*/
       uncoded_ssd<<=4;
-      /*We actually only want the AC contribution to the SSD.*/
-      uncoded_ssd-=uncoded_dc*uncoded_dc>>2;
       uncoded_ssd=OC_RD_SCALE(uncoded_ssd,_rd_scale[4]);
-      /*DC is a special case; if there's more than a full-quantizer improvement
-         in the effective DC component, always force-code the block.*/
-      dc_flag=abs(uncoded_dc)>dc_dequant<<1;
-      uncoded_ssd|=-dc_flag;
+      /*Motion is a special case; if there is more than a full-pixel motion 
+        against the prior frame, penalize skipping. TODO: The factor of 
+        two here is a kludge, but it tested out better than a hard limit*/
+      if(_enc->mb_info[_mbi].unref_mv[OC_FRAME_PREV][0]!=0||
+        _enc->mb_info[_mbi].unref_mv[OC_FRAME_PREV][1]!=0)uncoded_ssd*=2;
       _pipe->skip_ssd[pli][fragi-_pipe->froffset[pli]]=_ssd[mapii]=uncoded_ssd;
     }
     map_nidxs=(map_nidxs-4<<1)+4;

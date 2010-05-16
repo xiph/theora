@@ -32,10 +32,10 @@ static oc_pb_window oc_pack_refill(oc_pack_buf *_b,int _bits){
   const unsigned char *stop;
   oc_pb_window         window;
   int                  available;
+  stop=_b->stop;
+  ptr=_b->ptr;
   window=_b->window;
   available=_b->bits;
-  ptr=_b->ptr;
-  stop=_b->stop;
   while(available<=OC_PB_WINDOW_SIZE-8&&ptr<stop){
     available+=8;
     window|=(oc_pb_window)*ptr++<<OC_PB_WINDOW_SIZE-available;
@@ -82,8 +82,8 @@ long oc_pack_read(oc_pack_buf *_b,int _bits){
   available-=_bits;
   window<<=1;
   window<<=_bits-1;
-  _b->bits=available;
   _b->window=window;
+  _b->bits=available;
   return result;
 }
 
@@ -100,8 +100,8 @@ int oc_pack_read1(oc_pack_buf *_b){
   result=window>>OC_PB_WINDOW_SIZE-1;
   available--;
   window<<=1;
-  _b->bits=available;
   _b->window=window;
+  _b->bits=available;
   return result;
 }
 

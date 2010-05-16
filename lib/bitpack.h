@@ -35,9 +35,9 @@ typedef struct oc_pack_buf oc_pack_buf;
 
 
 struct oc_pack_buf{
-  oc_pb_window         window;
-  const unsigned char *ptr;
   const unsigned char *stop;
+  const unsigned char *ptr;
+  oc_pb_window         window;
   int                  bits;
   int                  eof;
 };
