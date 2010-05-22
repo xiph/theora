@@ -1530,7 +1530,7 @@ static void oc_dec_dc_unpredict_mcu_plane(oc_dec_ctx *_dec,
 #include <stdio.h>
 #include <assert.h>
 static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
- oc_dec_ctx *_dec,oc_dec_pipeline_state *_pipe,int _pli, const oc_fragment *fragp){
+ oc_dec_ctx *_dec,oc_dec_pipeline_state *_pipe,int _pli, const oc_fragment *_fragp){
   unsigned char       *dct_tokens;
   const unsigned char *dct_fzig_zag;
   ptrdiff_t           *ti;
@@ -1544,11 +1544,11 @@ static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
   ti=_pipe->ti[_pli];
   eob_runs=_pipe->eob_runs[_pli];
 
-  assert(fragp == _dec->state.frags + *_pipe->coded_fragis[_pli]++); /*XXX:DEBUG*/
+  assert(_fragp == _dec->state.frags + *_pipe->coded_fragis[_pli]++); /*XXX:DEBUG*/
 
   for(zzi=0;zzi<64;zzi++)dct_coeffs[zzi]=0;
-  qti=fragp->mb_mode!=OC_MODE_INTRA;
-  ac_quant=_pipe->dequant[_pli][fragp->qii][qti];
+  qti=_fragp->mb_mode!=OC_MODE_INTRA;
+  ac_quant=_pipe->dequant[_pli][_fragp->qii][qti];
   /*Decode the AC coefficients.*/
   for(zzi=0;zzi<64;){
     int token;
@@ -1590,7 +1590,7 @@ static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
   /*TODO: zzi should be exactly 64 here.
     If it's not, we should report some kind of warning.*/
   zzi=OC_MINI(zzi,64);
-  dct_coeffs[0]=(ogg_int16_t)fragp->dc;
+  dct_coeffs[0]=(ogg_int16_t)_fragp->dc;
   /*last_zzi is always initialized.
     If your compiler thinks otherwise, it is dumb.*/
   return last_zzi;
@@ -1639,18 +1639,46 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
       if ((bmask & 15) == 0)
         continue;
 
-      for (bi = 0; bi < 4; bi++)
+      if (_pli == 0) /* or if the mode and subblocks and quantisation are compatible */
       {
-        ptrdiff_t fragi;
-        int last_zzi;
-        if ((bmask & (1 << bi)) == 0) continue;
-        fragi = fragip[bi];
-        assert(fragi >= 0 && frags[fragi].coded);
+        static const char rasterise[16] =
+        {
+          0, 1, 3, 2,
+          0, 2, 3, 1,
+          0, 2, 3, 1,
+          3, 2, 0, 1,
+        };
+        int last_zzi[4];
+        ogg_uint16_t dc_quant[4];
+        int mask = 0;
+        for (bi = 0; bi < 4; bi++)
+        {
+          ptrdiff_t fragi;
+          int obi;
+          if ((bmask & (1 << bi)) == 0) continue;
+          fragi = fragip[bi];
+          obi = rasterise[quadi | bi];
+          assert(fragi >= 0 && frags[fragi].coded);
 
-        last_zzi = oc_dec_get_dct_coeffs(dct_coeffs[bi], _dec, _pipe, _pli, frags + fragi);
-        ogg_uint16_t dc_quant = _pipe->dequant[_pli][0][frags[fragi].mb_mode!=OC_MODE_INTRA][0];
-        oc_state_frag_recon(&_dec->state,fragi,_pli, dct_coeffs[bi],last_zzi,dc_quant);
+          last_zzi[obi] = oc_dec_get_dct_coeffs(dct_coeffs[obi], _dec, _pipe, _pli, frags + fragi);
+          dc_quant[obi] = _pipe->dequant[_pli][0][frags[fragi].mb_mode!=OC_MODE_INTRA][0];
+          mask |= 1 << obi;
+        }
+        oc_state_mb_recon(&_dec->state,fragip[quadi==12?2:0],_pli,dct_coeffs,last_zzi,dc_quant,mask);
       }
+      else
+        for (bi = 0; bi < 4; bi++)
+        {
+          ptrdiff_t fragi;
+          int last_zzi;
+          if ((bmask & (1 << bi)) == 0) continue;
+          fragi = fragip[bi];
+          assert(fragi >= 0 && frags[fragi].coded);
+
+          last_zzi = oc_dec_get_dct_coeffs(dct_coeffs[0], _dec, _pipe, _pli, frags + fragi);
+          ogg_uint16_t dc_quant = _pipe->dequant[_pli][0][frags[fragi].mb_mode!=OC_MODE_INTRA][0];
+          oc_state_frag_recon(&_dec->state,fragi,_pli, dct_coeffs[0],last_zzi,dc_quant);
+        }
     }
   }
 

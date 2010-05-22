@@ -601,6 +601,7 @@ void oc_state_vtable_init_c(oc_theora_state *_state){
   _state->opt_vtable.frag_recon_inter2=oc_frag_recon_inter2_c;
   _state->opt_vtable.idct8x8=oc_idct8x8_c;
   _state->opt_vtable.state_frag_recon=oc_state_frag_recon_c;
+  //_state->opt_vtable.state_frag_recon=oc_state_mb_recon_c;
   _state->opt_vtable.state_frag_copy_list=oc_state_frag_copy_list_c;
   _state->opt_vtable.state_loop_filter_frag_rows=
    oc_state_loop_filter_frag_rows_c;
@@ -874,6 +875,13 @@ void oc_state_frag_recon(const oc_theora_state *_state,ptrdiff_t _fragi,
  int _pli,ogg_int16_t _dct_coeffs[64],int _last_zzi,ogg_uint16_t _dc_quant){
   _state->opt_vtable.state_frag_recon(_state,_fragi,_pli,_dct_coeffs,
    _last_zzi,_dc_quant);
+}
+
+void oc_state_mb_recon(const oc_theora_state *_state,ptrdiff_t _fragi,
+ int _pli,ogg_int16_t _dct_coeffs[][64+8],int _last_zzi[4],
+ ogg_uint16_t _dc_quant[4],int _mask){
+  _state->opt_vtable.state_mb_recon(_state,_fragi,_pli,_dct_coeffs,
+   _last_zzi,_dc_quant,_mask);
 }
 
 void oc_state_frag_recon_c(const oc_theora_state *_state,ptrdiff_t _fragi,
