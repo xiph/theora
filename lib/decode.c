@@ -129,7 +129,7 @@ static const unsigned char OC_INTERNAL_DCT_TOKEN_EXTRA_BITS[15]={
    is not yet available everywhere; this should be equivalent.*/
 #define OC_DCT_EOB_FINISH (~(size_t)0>>1)
 
-/*The location of the (6) run legth bits in the code word.
+/*The location of the (6) run length bits in the code word.
   These are placed at index 0 and given 8 bits (even though 6 would suffice)
    because it may be faster to extract the lower byte on some platforms.*/
 #define OC_DCT_CW_RLEN_SHIFT (0)
@@ -297,8 +297,6 @@ static const ogg_int32_t OC_DCT_CODE_WORD[92]={
 
 
 static int oc_sb_run_unpack(oc_pack_buf *_opb){
-  long bits;
-  int ret;
   /*Coding scheme:
        Codeword            Run Length
      0                       1
@@ -308,32 +306,26 @@ static int oc_sb_run_unpack(oc_pack_buf *_opb){
      11110xxx                10-17
      111110xxxx              18-33
      111111xxxxxxxxxxxx      34-4129*/
-  bits=oc_pack_read1(_opb);
-  if(bits==0)return 1;
-  bits=oc_pack_read(_opb,2);
-  if((bits&2)==0)return 2+(int)bits;
-  else if((bits&1)==0){
-    bits=oc_pack_read1(_opb);
-    return 4+(int)bits;
+  static const ogg_int16_t OC_SB_RUN_TREE[22]={
+    4,
+     -(1<<8|1),-(1<<8|1),-(1<<8|1),-(1<<8|1),
+     -(1<<8|1),-(1<<8|1),-(1<<8|1),-(1<<8|1),
+     -(3<<8|2),-(3<<8|2),-(3<<8|3),-(3<<8|3),
+     -(4<<8|4),-(4<<8|5),-(4<<8|2<<4|6-6),17,
+      2,
+       -(2<<8|2<<4|10-6),-(2<<8|2<<4|14-6),-(2<<8|4<<4|18-6),-(2<<8|12<<4|34-6)
+  };
+  int ret;
+  ret=oc_huff_token_decode(_opb,OC_SB_RUN_TREE);
+  if(ret>=0x10){
+    int offs;
+    offs=ret&0x1F;
+    ret=6+offs+(int)oc_pack_read(_opb,ret-offs>>4);
   }
-  bits=oc_pack_read(_opb,3);
-  if((bits&4)==0)return 6+(int)bits;
-  else if((bits&2)==0){
-    ret=10+((bits&1)<<2);
-    bits=oc_pack_read(_opb,2);
-    return ret+(int)bits;
-  }
-  else if((bits&1)==0){
-    bits=oc_pack_read(_opb,4);
-    return 18+(int)bits;
-  }
-  bits=oc_pack_read(_opb,12);
-  return 34+(int)bits;
+  return ret;
 }
 
 static int oc_block_run_unpack(oc_pack_buf *_opb){
-  long bits;
-  long bits2;
   /*Coding scheme:
      Codeword             Run Length
      0x                      1-2
@@ -342,22 +334,26 @@ static int oc_block_run_unpack(oc_pack_buf *_opb){
      1110xx                  7-10
      11110xx                 11-14
      11111xxxx               15-30*/
-  bits=oc_pack_read(_opb,2);
-  if((bits&2)==0)return 1+(int)bits;
-  else if((bits&1)==0){
-    bits=oc_pack_read1(_opb);
-    return 3+(int)bits;
-  }
-  bits=oc_pack_read(_opb,2);
-  if((bits&2)==0)return 5+(int)bits;
-  else if((bits&1)==0){
-    bits=oc_pack_read(_opb,2);
-    return 7+(int)bits;
-  }
-  bits=oc_pack_read(_opb,3);
-  if((bits&4)==0)return 11+bits;
-  bits2=oc_pack_read(_opb,2);
-  return 15+((bits&3)<<2)+bits2;
+  static const ogg_int16_t OC_BLOCK_RUN_TREE[61]={
+    5,
+     -(2<<8|1),-(2<<8|1),-(2<<8|1),-(2<<8|1),
+     -(2<<8|1),-(2<<8|1),-(2<<8|1),-(2<<8|1),
+     -(2<<8|2),-(2<<8|2),-(2<<8|2),-(2<<8|2),
+     -(2<<8|2),-(2<<8|2),-(2<<8|2),-(2<<8|2),
+     -(3<<8|3),-(3<<8|3),-(3<<8|3),-(3<<8|3),
+     -(3<<8|4),-(3<<8|4),-(3<<8|4),-(3<<8|4),
+     -(4<<8|5),-(4<<8|5),-(4<<8|6),-(4<<8|6),
+     33,       36,       39,       44,
+      1,-(1<<8|7),-(1<<8|8),
+      1,-(1<<8|9),-(1<<8|10),
+      2,-(2<<8|11),-(2<<8|12),-(2<<8|13),-(2<<8|14),
+      4,
+       -(4<<8|15),-(4<<8|16),-(4<<8|17),-(4<<8|18),
+       -(4<<8|19),-(4<<8|20),-(4<<8|21),-(4<<8|22),
+       -(4<<8|23),-(4<<8|24),-(4<<8|25),-(4<<8|26),
+       -(4<<8|27),-(4<<8|28),-(4<<8|29),-(4<<8|30)
+  };
+  return oc_huff_token_decode(_opb,OC_BLOCK_RUN_TREE);
 }
 
 
@@ -673,24 +669,32 @@ static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
 }
 
 
+/*Coding scheme:
+   Codeword            Mode Index
+   0                       0
+   10                      1
+   110                     2
+   1110                    3
+   11110                   4
+   111110                  5
+   1111110                 6
+   1111111                 7*/
+static const ogg_int16_t OC_VLC_MODE_TREE[26]={
+  4,
+   -(1<<8|0),-(1<<8|0),-(1<<8|0),-(1<<8|0),
+   -(1<<8|0),-(1<<8|0),-(1<<8|0),-(1<<8|0),
+   -(2<<8|1),-(2<<8|1),-(2<<8|1),-(2<<8|1),
+   -(3<<8|2),-(3<<8|2),-(4<<8|3),17,
+    3,
+     -(1<<8|4),-(1<<8|4),-(1<<8|4),-(1<<8|4),
+     -(2<<8|5),-(2<<8|5),-(3<<8|6),-(3<<8|7)
+};
 
-typedef int (*oc_mode_unpack_func)(oc_pack_buf *_opb);
-
-static int oc_vlc_mode_unpack(oc_pack_buf *_opb){
-  long val;
-  int  i;
-  for(i=0;i<7;i++){
-    val=oc_pack_read1(_opb);
-    if(!val)break;
-  }
-  return i;
-}
-
-static int oc_clc_mode_unpack(oc_pack_buf *_opb){
-  long val;
-  val=oc_pack_read(_opb,3);
-  return (int)val;
-}
+static const ogg_int16_t OC_CLC_MODE_TREE[9]={
+  3,
+   -(3<<8|0),-(3<<8|1),-(3<<8|2),-(3<<8|3),
+   -(3<<8|4),-(3<<8|5),-(3<<8|6),-(3<<8|7)
+};
 
 /*Unpacks the list of macro block modes for INTER frames.*/
 static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
@@ -699,7 +703,7 @@ static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
   const oc_fragment   *frags;
   const unsigned char *alphabet;
   unsigned char        scheme0_alphabet[8];
-  oc_mode_unpack_func  mode_unpack;
+  const ogg_int16_t   *mode_tree;
   size_t               nmbs;
   size_t               mbi;
   long                 val;
@@ -721,8 +725,7 @@ static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
     alphabet=scheme0_alphabet;
   }
   else alphabet=OC_MODE_ALPHABETS[mode_scheme-1];
-  if(mode_scheme==7)mode_unpack=oc_clc_mode_unpack;
-  else mode_unpack=oc_vlc_mode_unpack;
+  mode_tree=mode_scheme==7?OC_CLC_MODE_TREE:OC_VLC_MODE_TREE;
   mb_modes=_dec->state.mb_modes;
   mb_maps=(const oc_mb_map *)_dec->state.mb_maps;
   nmbs=_dec->state.nmbs;
@@ -733,7 +736,9 @@ static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
       /*Check for a coded luma block in this macro block.*/
       for(bi=0;bi<4&&!frags[mb_maps[mbi][0][bi]].coded;bi++);
       /*We found one, decode a mode.*/
-      if(bi<4)mb_modes[mbi]=alphabet[(*mode_unpack)(&_dec->opb)];
+      if(bi<4){
+        mb_modes[mbi]=alphabet[oc_huff_token_decode(&_dec->opb,mode_tree)];
+      }
       /*There were none: INTER_NOMV is forced.*/
       else mb_modes[mbi]=OC_MODE_INTER_NOMV;
     }
@@ -742,44 +747,62 @@ static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
 
 
 
-typedef int (*oc_mv_comp_unpack_func)(oc_pack_buf *_opb);
+static const ogg_int16_t OC_VLC_MV_COMP_TREE[101]={
+  5,
+   -(3<<8|32+0),-(3<<8|32+0),-(3<<8|32+0),-(3<<8|32+0),
+   -(3<<8|32+1),-(3<<8|32+1),-(3<<8|32+1),-(3<<8|32+1),
+   -(3<<8|32-1),-(3<<8|32-1),-(3<<8|32-1),-(3<<8|32-1),
+   -(4<<8|32+2),-(4<<8|32+2),-(4<<8|32-2),-(4<<8|32-2),
+   -(4<<8|32+3),-(4<<8|32+3),-(4<<8|32-3),-(4<<8|32-3),
+   33,          36,          39,          42,
+   45,          50,          55,          60,
+   65,          74,          83,          92,
+    1,-(1<<8|32+4),-(1<<8|32-4),
+    1,-(1<<8|32+5),-(1<<8|32-5),
+    1,-(1<<8|32+6),-(1<<8|32-6),
+    1,-(1<<8|32+7),-(1<<8|32-7),
+    2,-(2<<8|32+8),-(2<<8|32-8),-(2<<8|32+9),-(2<<8|32-9),
+    2,-(2<<8|32+10),-(2<<8|32-10),-(2<<8|32+11),-(2<<8|32-11),
+    2,-(2<<8|32+12),-(2<<8|32-12),-(2<<8|32+13),-(2<<8|32-13),
+    2,-(2<<8|32+14),-(2<<8|32-14),-(2<<8|32+15),-(2<<8|32-15),
+    3,
+     -(3<<8|32+16),-(3<<8|32-16),-(3<<8|32+17),-(3<<8|32-17),
+     -(3<<8|32+18),-(3<<8|32-18),-(3<<8|32+19),-(3<<8|32-19),
+    3,
+     -(3<<8|32+20),-(3<<8|32-20),-(3<<8|32+21),-(3<<8|32-21),
+     -(3<<8|32+22),-(3<<8|32-22),-(3<<8|32+23),-(3<<8|32-23),
+    3,
+     -(3<<8|32+24),-(3<<8|32-24),-(3<<8|32+25),-(3<<8|32-25),
+     -(3<<8|32+26),-(3<<8|32-26),-(3<<8|32+27),-(3<<8|32-27),
+    3,
+     -(3<<8|32+28),-(3<<8|32-28),-(3<<8|32+29),-(3<<8|32-29),
+     -(3<<8|32+30),-(3<<8|32-30),-(3<<8|32+31),-(3<<8|32-31)
+};
 
-static int oc_vlc_mv_comp_unpack(oc_pack_buf *_opb){
-  long bits;
-  int  mask;
-  int  mv;
-  bits=oc_pack_read(_opb,3);
-  switch(bits){
-    case  0:return 0;
-    case  1:return 1;
-    case  2:return -1;
-    case  3:
-    case  4:{
-      mv=(int)(bits-1);
-      bits=oc_pack_read1(_opb);
-    }break;
-    /*case  5:
-    case  6:
-    case  7:*/
-    default:{
-      mv=1<<bits-3;
-      bits=oc_pack_read(_opb,bits-2);
-      mv+=(int)(bits>>1);
-      bits&=1;
-    }break;
-  }
-  mask=-(int)bits;
-  return mv+mask^mask;
-}
+static const ogg_int16_t OC_CLC_MV_COMP_TREE[65]={
+  6,
+   -(6<<8|32 +0),-(6<<8|32 -0),-(6<<8|32 +1),-(6<<8|32 -1),
+   -(6<<8|32 +2),-(6<<8|32 -2),-(6<<8|32 +3),-(6<<8|32 -3),
+   -(6<<8|32 +4),-(6<<8|32 -4),-(6<<8|32 +5),-(6<<8|32 -5),
+   -(6<<8|32 +6),-(6<<8|32 -6),-(6<<8|32 +7),-(6<<8|32 -7),
+   -(6<<8|32 +8),-(6<<8|32 -8),-(6<<8|32 +9),-(6<<8|32 -9),
+   -(6<<8|32+10),-(6<<8|32-10),-(6<<8|32+11),-(6<<8|32-11),
+   -(6<<8|32+12),-(6<<8|32-12),-(6<<8|32+13),-(6<<8|32-13),
+   -(6<<8|32+14),-(6<<8|32-14),-(6<<8|32+15),-(6<<8|32-15),
+   -(6<<8|32+16),-(6<<8|32-16),-(6<<8|32+17),-(6<<8|32-17),
+   -(6<<8|32+18),-(6<<8|32-18),-(6<<8|32+19),-(6<<8|32-19),
+   -(6<<8|32+20),-(6<<8|32-20),-(6<<8|32+21),-(6<<8|32-21),
+   -(6<<8|32+22),-(6<<8|32-22),-(6<<8|32+23),-(6<<8|32-23),
+   -(6<<8|32+24),-(6<<8|32-24),-(6<<8|32+25),-(6<<8|32-25),
+   -(6<<8|32+26),-(6<<8|32-26),-(6<<8|32+27),-(6<<8|32-27),
+   -(6<<8|32+28),-(6<<8|32-28),-(6<<8|32+29),-(6<<8|32-29),
+   -(6<<8|32+30),-(6<<8|32-30),-(6<<8|32+31),-(6<<8|32-31)
+};
 
-static int oc_clc_mv_comp_unpack(oc_pack_buf *_opb){
-  long bits;
-  int  mask;
-  int  mv;
-  bits=oc_pack_read(_opb,6);
-  mv=(int)bits>>1;
-  mask=-((int)bits&1);
-  return mv+mask^mask;
+
+static void oc_mv_unpack(oc_pack_buf *_opb,const ogg_int16_t *_tree,oc_mv _mv){
+  _mv[0]=(signed char)(oc_huff_token_decode(_opb,_tree)-32);
+  _mv[1]=(signed char)(oc_huff_token_decode(_opb,_tree)-32);
 }
 
 /*Unpacks the list of motion vectors for INTER frames, and propagtes the macro
@@ -788,7 +811,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
   const oc_mb_map        *mb_maps;
   const signed char      *mb_modes;
   oc_set_chroma_mvs_func  set_chroma_mvs;
-  oc_mv_comp_unpack_func  mv_comp_unpack;
+  const ogg_int16_t      *mv_comp_tree;
   oc_fragment            *frags;
   oc_mv                  *frag_mvs;
   const unsigned char    *map_idxs;
@@ -800,7 +823,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
   long                    val;
   set_chroma_mvs=OC_SET_CHROMA_MVS_TABLE[_dec->state.info.pixel_fmt];
   val=oc_pack_read1(&_dec->opb);
-  mv_comp_unpack=val?oc_clc_mv_comp_unpack:oc_vlc_mv_comp_unpack;
+  mv_comp_tree=val?OC_CLC_MV_COMP_TREE:OC_VLC_MV_COMP_TREE;
   map_idxs=OC_MB_MAP_IDXS[_dec->state.info.pixel_fmt];
   map_nidxs=OC_MB_MAP_NIDXS[_dec->state.info.pixel_fmt];
   memset(last_mv,0,sizeof(last_mv));
@@ -840,8 +863,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
               codedi++;
               fragi=mb_maps[mbi][0][bi];
               frags[fragi].mb_mode=mb_mode;
-              lbmvs[bi][0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
-              lbmvs[bi][1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+              oc_mv_unpack(&_dec->opb,mv_comp_tree,lbmvs[bi]);
               memcpy(frag_mvs[fragi],lbmvs[bi],sizeof(lbmvs[bi]));
             }
             else lbmvs[bi][0]=lbmvs[bi][1]=0;
@@ -863,8 +885,8 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
         }break;
         case OC_MODE_INTER_MV:{
           memcpy(last_mv[1],last_mv[0],sizeof(last_mv[1]));
-          mbmv[0]=last_mv[0][0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
-          mbmv[1]=last_mv[0][1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+          oc_mv_unpack(&_dec->opb,mv_comp_tree,mbmv);
+          memcpy(last_mv[0],mbmv,sizeof(last_mv[0]));
         }break;
         case OC_MODE_INTER_MV_LAST:memcpy(mbmv,last_mv[0],sizeof(mbmv));break;
         case OC_MODE_INTER_MV_LAST2:{
@@ -873,8 +895,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
           memcpy(last_mv[0],mbmv,sizeof(last_mv[0]));
         }break;
         case OC_MODE_GOLDEN_MV:{
-          mbmv[0]=(signed char)(*mv_comp_unpack)(&_dec->opb);
-          mbmv[1]=(signed char)(*mv_comp_unpack)(&_dec->opb);
+          oc_mv_unpack(&_dec->opb,mv_comp_tree,mbmv);
         }break;
         default:memset(mbmv,0,sizeof(mbmv));break;
       }
