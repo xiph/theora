@@ -344,6 +344,10 @@ struct oc_theora_state{
     A negative number indicates the macro block lies entirely outside the
      coded frame.*/
   signed char        *mb_modes;
+
+  signed char        *raster_mb_modes;
+  oc_mv             (*raster_mb_mvs)[4];
+
   /*The number of macro blocks in the X direction.*/
   unsigned            nhmbs;
   /*The number of macro blocks in the Y direction.*/

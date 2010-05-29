@@ -226,6 +226,8 @@ static void oc_mb_create_mapping(oc_mb_map _mb_maps[],
   oc_mb_fill_cmapping_func  mb_fill_cmapping;
   unsigned                  sbi;
   int                       y;
+  int                       nhmbs;
+  nhmbs=_fplanes[0].nhsbs<<1;
   mb_fill_cmapping=OC_MB_FILL_CMAPPING_TABLE[_pixel_fmt];
   /*Loop through the luma plane super blocks.*/
   for(sbi=y=0;y<_fplanes[0].nvfrags;y+=4){
@@ -246,7 +248,7 @@ static void oc_mb_create_mapping(oc_mb_map _mb_maps[],
           memset(_mb_maps[mbi],0xFF,sizeof(_mb_maps[mbi]));
           /*Make sure this macro block is within the encoded region.*/
           if(mbx>=_fplanes[0].nhfrags||mby>=_fplanes[0].nvfrags){
-            _mb_modes[mbi]=OC_MODE_INVALID;
+            _mb_modes[(mby>>1)*nhmbs+(mbx>>1)]=OC_MODE_INVALID;
             continue;
           }
           /*Fill in the fragment indices for the luma plane.*/
@@ -432,10 +434,13 @@ static int oc_state_frarray_init(oc_theora_state *_state){
   _state->nmbs=nmbs;
   _state->mb_maps=_ogg_calloc(nmbs,sizeof(*_state->mb_maps));
   _state->mb_modes=_ogg_calloc(nmbs,sizeof(*_state->mb_modes));
+  _state->raster_mb_modes=_ogg_calloc(nmbs,sizeof(*_state->raster_mb_modes));
+  _state->raster_mb_mvs=_ogg_calloc(nmbs,sizeof(*_state->raster_mb_modes));
   _state->coded_fragis=_ogg_malloc(nfrags*sizeof(*_state->coded_fragis));
   if(_state->frags==NULL||_state->frag_mvs==NULL||_state->sb_maps==NULL||
    _state->sb_flags==NULL||_state->sb_masks==NULL||_state->mb_maps==NULL||
-   _state->mb_modes==NULL||_state->coded_fragis==NULL){
+   _state->mb_modes==NULL||_state->coded_fragis==NULL
+   ||_state->raster_mb_modes==NULL||_state->raster_mb_mvs==NULL){
     return TH_EFAULT;
   }
   /*Create the mapping from super blocks to fragments.*/
@@ -447,7 +452,7 @@ static int oc_state_frarray_init(oc_theora_state *_state){
      fplane->nhfrags,fplane->nvfrags);
   }
   /*Create the mapping from macro blocks to fragments.*/
-  oc_mb_create_mapping(_state->mb_maps,_state->mb_modes,
+  oc_mb_create_mapping(_state->mb_maps,_state->raster_mb_modes,
    _state->fplanes,_state->info.pixel_fmt);
   /*Initialize the invalid and borderi fields of each fragment.*/
   oc_state_border_init(_state);
@@ -455,6 +460,8 @@ static int oc_state_frarray_init(oc_theora_state *_state){
 }
 
 static void oc_state_frarray_clear(oc_theora_state *_state){
+  _ogg_free(_state->raster_mb_mvs);
+  _ogg_free(_state->raster_mb_modes);
   _ogg_free(_state->coded_fragis);
   _ogg_free(_state->mb_modes);
   _ogg_free(_state->mb_maps);

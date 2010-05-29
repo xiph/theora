@@ -27,6 +27,7 @@
 # include <cairo.h>
 #endif
 
+#include <assert.h>
 
 /*No post-processing.*/
 #define OC_PP_LEVEL_DISABLED  (0)
@@ -698,16 +699,18 @@ static const ogg_int16_t OC_CLC_MODE_TREE[9]={
 
 /*Unpacks the list of macro block modes for INTER frames.*/
 static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
-  const oc_mb_map     *mb_maps;
-  signed char         *mb_modes;
-  const oc_fragment   *frags;
   const unsigned char *alphabet;
   unsigned char        scheme0_alphabet[8];
   const ogg_int16_t   *mode_tree;
-  size_t               nmbs;
   size_t               mbi;
+  size_t               nhsbs;
+  size_t               nhmbs;
   long                 val;
   int                  mode_scheme;
+  ogg_uint16_t        *sb_masks;
+  signed char         *rmb_modes[4];
+  signed char         *mb_modes;
+  int                  sbx,sby;
   val=oc_pack_read(&_dec->opb,3);
   mode_scheme=(int)val;
   if(mode_scheme==0){
@@ -726,23 +729,25 @@ static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
   }
   else alphabet=OC_MODE_ALPHABETS[mode_scheme-1];
   mode_tree=mode_scheme==7?OC_CLC_MODE_TREE:OC_VLC_MODE_TREE;
+  sb_masks=_dec->state.sb_masks;
+  nhsbs=_dec->state.fplanes[0].nhsbs;
+  nhmbs=_dec->state.nhmbs;
+  rmb_modes[0]=_dec->state.raster_mb_modes;
+  rmb_modes[1]=rmb_modes[0]+nhmbs;
+  rmb_modes[2]=rmb_modes[1]+1;
+  rmb_modes[3]=rmb_modes[0]+1;
   mb_modes=_dec->state.mb_modes;
-  mb_maps=(const oc_mb_map *)_dec->state.mb_maps;
-  nmbs=_dec->state.nmbs;
-  frags=_dec->state.frags;
-  for(mbi=0;mbi<nmbs;mbi++){
-    if(mb_modes[mbi]!=OC_MODE_INVALID){
-      int bi;
-      /*Check for a coded luma block in this macro block.*/
-      for(bi=0;bi<4&&!frags[mb_maps[mbi][0][bi]].coded;bi++);
-      /*We found one, decode a mode.*/
-      if(bi<4){
-        mb_modes[mbi]=alphabet[oc_huff_token_decode(&_dec->opb,mode_tree)];
+  for (mbi=sby=0;sby<_dec->state.fplanes[0].nsbs;sby+=nhsbs,mbi+=nhmbs)
+    for (sbx=0;sbx<nhsbs;sbx++,mbi+=2){
+      int i,mask=sb_masks[sby+sbx];
+      for (i=0;i<4;i++,mask>>=4){
+        if (rmb_modes[i][mbi]!=OC_MODE_INVALID)
+          rmb_modes[i][mbi]=(mask&15)
+           ?alphabet[oc_huff_token_decode(&_dec->opb,mode_tree)]
+           :OC_MODE_INTER_NOMV;
+        *mb_modes++=rmb_modes[i][mbi];/*legacy*/
       }
-      /*There were none: INTER_NOMV is forced.*/
-      else mb_modes[mbi]=OC_MODE_INTER_NOMV;
     }
-  }
 }
 
 
@@ -1527,8 +1532,6 @@ static void oc_dec_dc_unpredict_mcu_plane(oc_dec_ctx *_dec,
    (fragy_end-fragy0)*(ptrdiff_t)nhfrags-ncoded_fragis;
 }
 
-#include <stdio.h>
-#include <assert.h>
 static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
  oc_dec_ctx *_dec,oc_dec_pipeline_state *_pipe,int _pli, const oc_fragment *_fragp){
   unsigned char       *dct_tokens;
@@ -1609,19 +1612,40 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
  oc_dec_pipeline_state *_pipe,int _pli){
   oc_fragment             *frags;
   ogg_uint16_t            *sb_masks;
-  int sbi, sb_end;
+  int                      mbi,
+                           mb_stepx,
+                           mb_stepy;
+  int                      sbi,
+                           sb_end,
+                           sb_newline;
+  int                      pixel_fmt;
+  int                      mbo[4]={0,_dec->state.nhmbs,_dec->state.nhmbs+1,1};
 
   sb_masks = _dec->state.sb_masks;
   frags=_dec->state.frags;
 
+  pixel_fmt=_pli?TH_PF_NFORMATS/*_dec->state.info.pixel_fmt*/:TH_PF_444;
+
   sbi = _dec->state.fplanes[_pli].sboffset + (_pipe->fragy0[_pli] >> 2) * _dec->state.fplanes[_pli].nhsbs;
+  sb_newline=sbi+_dec->state.fplanes[_pli].nhsbs;
   sb_end = _dec->state.fplanes[_pli].sboffset + (_pipe->fragy_end[_pli] + 3 >> 2) * _dec->state.fplanes[_pli].nhsbs;
 
-  for ( ; sbi < sb_end; sbi++)
+  mb_stepx=!(pixel_fmt&2)?1:2;
+  mb_stepy=!(pixel_fmt&1)?1:2;
+
+  mbi=(_pipe->fragy0[_pli]>>mb_stepy-1)*_dec->state.nhmbs;
+
+  for ( ; sbi < sb_end; sbi++,mbi+=1<<3-mb_stepx)
   {
     ptrdiff_t *fragip;
     ogg_uint16_t bmask;
     int quadi;
+
+    if(sbi>=sb_newline){
+      mbi-=_dec->state.nhmbs;
+      mbi+=_dec->state.nhmbs<<3-mb_stepy;
+      sb_newline+=_dec->state.fplanes[_pli].nhsbs;
+    }
 
     bmask = sb_masks[sbi];
     if (bmask == 0) continue;
@@ -1639,8 +1663,8 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
       if ((bmask & 15) == 0)
         continue;
 
-      if (_pli == 0) /* or if the mode and subblocks and quantisation are compatible */
-      {
+      switch (pixel_fmt){
+      case TH_PF_444:{
         static const char rasterise[16] =
         {
           0, 1, 3, 2,
@@ -1669,12 +1693,16 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
           mask |= 1 << obi;
           mv = &_dec->state.frag_mvs[fragi]; /* this just captures any valid pointer for the moment */
         }
+
+        assert(_dec->state.frame_type==OC_INTRA_FRAME||mb_mode==_dec->state.raster_mb_modes[mbi+mbo[quadi>>2]]);
         if (mb_mode==OC_MODE_INTER_MV_FOUR)
           oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask,&_dec->state.frag_mvs[fragip[quadi==12?2:0]]);
-        else
+        else{
+//        assert(mv[0]==_dec->state.raster_mvs[mbi][0][0]&&mv[1]==_dec->state.raster_mvs[mbi][0][1]);
           oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask,OC_FRAME_FOR_MODE(mb_mode),*mv);
-      }
-      else
+        }
+      }break;
+      default:
         for (bi = 0; bi < 4; bi++)
         {
           ptrdiff_t fragi;
@@ -1687,6 +1715,7 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
           ogg_uint16_t dc_quant = _pipe->dequant[_pli][0][frags[fragi].mb_mode!=OC_MODE_INTRA][0];
           oc_state_frag_recon(&_dec->state,fragi,_pli, dct_coeffs[0],last_zzi,dc_quant);
         }
+      }
     }
   }
 
