@@ -1649,22 +1649,30 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
           3, 2, 0, 1,
         };
         int last_zzi[4];
-        ogg_uint16_t dc_quant[4];
         int mask = 0;
+        int mb_mode = _dec->state.frame_type==OC_INTRA_FRAME?OC_MODE_INTRA:_dec->state.mb_modes[(sbi<<2)+(quadi>>2)];
+        ogg_uint16_t dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
+        int frag_buf_off = _dec->state.frag_buf_offs[fragip[quadi==12?2:0]];
+        oc_mv *mv;
+
         for (bi = 0; bi < 4; bi++)
         {
           ptrdiff_t fragi;
           int obi;
           if ((bmask & (1 << bi)) == 0) continue;
           fragi = fragip[bi];
-          obi = rasterise[quadi | bi];
+          obi = rasterise[quadi + bi];
           assert(fragi >= 0 && frags[fragi].coded);
+          assert(frags[fragi].mb_mode == mb_mode);
 
           last_zzi[obi] = oc_dec_get_dct_coeffs(dct_coeffs[obi], _dec, _pipe, _pli, frags + fragi);
-          dc_quant[obi] = _pipe->dequant[_pli][0][frags[fragi].mb_mode!=OC_MODE_INTRA][0];
           mask |= 1 << obi;
+          mv = &_dec->state.frag_mvs[fragi]; /* this just captures any valid pointer for the moment */
         }
-        oc_state_mb_recon(&_dec->state,fragip[quadi==12?2:0],_pli,dct_coeffs,last_zzi,dc_quant,mask);
+        if (mb_mode==OC_MODE_INTER_MV_FOUR)
+          oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask,&_dec->state.frag_mvs[fragip[quadi==12?2:0]]);
+        else
+          oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask,OC_FRAME_FOR_MODE(mb_mode),*mv);
       }
       else
         for (bi = 0; bi < 4; bi++)

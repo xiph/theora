@@ -94,25 +94,17 @@ void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
   }
 }
 
-void oc_state_mb_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
+void oc_state_quad_recon_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf_off,
  int _pli,ogg_int16_t _dct_coeffs[][64+8],int _last_zzi[4],
- ogg_uint16_t _dc_quant[4],int _mask){
+ ogg_uint16_t _dc_quant,int _mask,int _ref_frame, oc_mv _mv){
   unsigned char *dst;
-  ptrdiff_t      frag_buf_off;
   int            ystride;
   int            nhfrags;
-  int            mb_mode;
-  int            good_fragi;
   int i;
 
-  frag_buf_off=_state->frag_buf_offs[_fragi];
   ystride=_state->ref_ystride[_pli];
   nhfrags=_state->fplanes[_pli].nhfrags;
-  dst=_state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_SELF]]+frag_buf_off;
-  good_fragi=_fragi;
-  if((_mask&3)==0) good_fragi+=nhfrags+((_mask&4)==0);
-  else             good_fragi+=((_mask&1)==0);
-  mb_mode=_state->frags[good_fragi].mb_mode;
+  dst=_state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_SELF]]+_frag_buf_off;
 
   for (i=0;i<4;i++){
     if ((_mask & 1 << i) == 0)
@@ -125,7 +117,7 @@ void oc_state_mb_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
       ogg_uint16_t p;
       /*We round this dequant product (and not any of the others) because there's
          no iDCT rounding.*/
-      p=(ogg_int16_t)(_dct_coeffs[i][0]*(ogg_int32_t)_dc_quant[i]+15>>5);
+      p=(ogg_int16_t)(_dct_coeffs[i][0]*(ogg_int32_t)_dc_quant+15>>5);
       /*Fill _dct_coeffs[i] with p.*/
       __asm__ __volatile__(
         /*mm0=0000 0000 0000 AAAA*/
@@ -157,83 +149,40 @@ void oc_state_mb_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
     }
     else{
       /*Dequantize the DC coefficient.*/
-      _dct_coeffs[i][0]=(ogg_int16_t)(_dct_coeffs[i][0]*(int)_dc_quant[i]);
+      _dct_coeffs[i][0]=(ogg_int16_t)(_dct_coeffs[i][0]*(int)_dc_quant);
       oc_idct8x8_mmx(_dct_coeffs[i],_last_zzi[i]);
     }
   }
 
   /*Fill in the target buffer.*/
-  if(mb_mode==OC_MODE_INTRA) {
+  if(_ref_frame==OC_FRAME_SELF) {
     if (_mask & 1) oc_frag_recon_intra_mmx(dst+0,ystride,_dct_coeffs[0]);
     if (_mask & 2) oc_frag_recon_intra_mmx(dst+8,ystride,_dct_coeffs[1]);
     dst += 8 * ystride;
     if (_mask & 4) oc_frag_recon_intra_mmx(dst+0,ystride,_dct_coeffs[2]);
     if (_mask & 8) oc_frag_recon_intra_mmx(dst+8,ystride,_dct_coeffs[3]);
   }
-  else if(mb_mode==OC_MODE_INTER_MV_FOUR){
-    const unsigned char *ref;
-    int                  mvoffsets[2];
-    ref=
-     _state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_PREV]]
-     +frag_buf_off;
-    if (_mask & 1) {
-      if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,
-       _state->frag_mvs[_fragi][0],_state->frag_mvs[_fragi][1])>1){
-        oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],ystride,
-         _dct_coeffs[0]);
-      }
-      else oc_frag_recon_inter_mmx(dst+0,ref+0+mvoffsets[0],ystride,_dct_coeffs[0]);
-    }
-    if (_mask & 2) {
-      if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,
-       _state->frag_mvs[_fragi+1][0],_state->frag_mvs[_fragi+1][1])>1){
-        oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],ystride,
-         _dct_coeffs[1]);
-      }
-      else oc_frag_recon_inter_mmx(dst+8,ref+8+mvoffsets[0],ystride,_dct_coeffs[1]);
-    }
-    _fragi+=nhfrags;
-    dst+=ystride*8;
-    ref+=ystride*8;
-    if (_mask & 4) {
-      if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,
-       _state->frag_mvs[_fragi][0],_state->frag_mvs[_fragi][1])>1){
-        oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],ystride,
-         _dct_coeffs[2]);
-      }
-      else oc_frag_recon_inter_mmx(dst+0,ref+0+mvoffsets[0],ystride,_dct_coeffs[2]);
-    }
-    if (_mask & 8) {
-      if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,
-       _state->frag_mvs[_fragi+1][0],_state->frag_mvs[_fragi+1][1])>1){
-        oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],ystride,
-         _dct_coeffs[3]);
-      }
-      else oc_frag_recon_inter_mmx(dst+8,ref+8+mvoffsets[0],ystride,_dct_coeffs[3]);
-    }
-  }
   else{
     const unsigned char *ref;
     int                  mvoffsets[2];
     ref=
-     _state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_FOR_MODE(mb_mode)]]
-     +frag_buf_off;
-    if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,
-         _state->frag_mvs[good_fragi][0],_state->frag_mvs[good_fragi][1])>1){
+     _state->ref_frame_data[_state->ref_frame_idx[_ref_frame]]
+     +_frag_buf_off;
+    if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,_mv[0],_mv[1])>1){
       if (_mask & 1)
-          oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],ystride,
-           _dct_coeffs[0]);
+          oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],
+           ystride,_dct_coeffs[0]);
       if (_mask & 2)
-          oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],ystride,
-           _dct_coeffs[1]);
+          oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],
+           ystride,_dct_coeffs[1]);
       dst+=ystride*8;
       ref+=ystride*8;
       if (_mask & 4)
-          oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],ystride,
-           _dct_coeffs[2]);
+          oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],
+           ystride,_dct_coeffs[2]);
       if (_mask & 8)
-          oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],ystride,
-           _dct_coeffs[3]);
+          oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],
+           ystride,_dct_coeffs[3]);
     }
     else{
       if (_mask & 1)
@@ -247,6 +196,103 @@ void oc_state_mb_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
       if (_mask & 8)
         oc_frag_recon_inter_mmx(dst+8,ref+8+mvoffsets[0],ystride,_dct_coeffs[3]);
     }
+  }
+}
+
+void oc_state_4mv_recon_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf_off,
+ int _pli,ogg_int16_t _dct_coeffs[][64+8],int _last_zzi[4],
+ ogg_uint16_t _dc_quant,int _mask, oc_mv _mvs[4]){
+  unsigned char       *dst;
+  int                  ystride;
+  const unsigned char *ref;
+  int                  mvoffsets[2];
+  int i;
+
+  ystride=_state->ref_ystride[_pli];
+  dst=_state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_SELF]]+_frag_buf_off;
+
+  for (i=0;i<4;i++){
+    if ((_mask & 1 << i) == 0)
+      continue;
+    /*Apply the inverse transform.*/
+    /*Special case only having a DC component.*/
+    if(_last_zzi[i]<2){
+      /*Note that this value must be unsigned, to keep the __asm__ block from
+         sign-extending it when it puts it in a register.*/
+      ogg_uint16_t p;
+      /*We round this dequant product (and not any of the others) because there's
+         no iDCT rounding.*/
+      p=(ogg_int16_t)(_dct_coeffs[i][0]*(ogg_int32_t)_dc_quant+15>>5);
+      /*Fill _dct_coeffs[i] with p.*/
+      __asm__ __volatile__(
+        /*mm0=0000 0000 0000 AAAA*/
+        "movd %[p],%%mm0\n\t"
+        /*mm0=0000 0000 AAAA AAAA*/
+        "punpcklwd %%mm0,%%mm0\n\t"
+        /*mm0=AAAA AAAA AAAA AAAA*/
+        "punpckldq %%mm0,%%mm0\n\t"
+        "movq %%mm0,(%[y])\n\t"
+        "movq %%mm0,8(%[y])\n\t"
+        "movq %%mm0,16(%[y])\n\t"
+        "movq %%mm0,24(%[y])\n\t"
+        "movq %%mm0,32(%[y])\n\t"
+        "movq %%mm0,40(%[y])\n\t"
+        "movq %%mm0,48(%[y])\n\t"
+        "movq %%mm0,56(%[y])\n\t"
+        "movq %%mm0,64(%[y])\n\t"
+        "movq %%mm0,72(%[y])\n\t"
+        "movq %%mm0,80(%[y])\n\t"
+        "movq %%mm0,88(%[y])\n\t"
+        "movq %%mm0,96(%[y])\n\t"
+        "movq %%mm0,104(%[y])\n\t"
+        "movq %%mm0,112(%[y])\n\t"
+        "movq %%mm0,120(%[y])\n\t"
+        :
+        :[y]"r"(_dct_coeffs[i]),[p]"r"((unsigned)p)
+        :"memory"
+      );
+    }
+    else{
+      /*Dequantize the DC coefficient.*/
+      _dct_coeffs[i][0]=(ogg_int16_t)(_dct_coeffs[i][0]*(int)_dc_quant);
+      oc_idct8x8_mmx(_dct_coeffs[i],_last_zzi[i]);
+    }
+  }
+
+  /*Fill in the target buffer.*/
+  ref=
+   _state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_PREV]]
+   +_frag_buf_off;
+  if (_mask & 1){
+    if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,_mvs[0][0],_mvs[0][1])>1){
+      oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],
+       ystride,_dct_coeffs[0]);
+    }
+    else oc_frag_recon_inter_mmx(dst+0,ref+0+mvoffsets[0],ystride,_dct_coeffs[0]);
+  }
+  if (_mask & 2){
+    if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,_mvs[1][0],_mvs[1][1])>1){
+      oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],
+       ystride,_dct_coeffs[1]);
+    }
+    else oc_frag_recon_inter_mmx(dst+8,ref+8+mvoffsets[0],ystride,_dct_coeffs[1]);
+  }
+  /*TODO:fix this*/ _mvs+=_state->fplanes[_pli].nhfrags-2;
+  dst+=ystride*8;
+  ref+=ystride*8;
+  if (_mask & 4){
+    if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,_mvs[2][0],_mvs[2][1])>1){
+      oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],
+       ystride,_dct_coeffs[2]);
+    }
+    else oc_frag_recon_inter_mmx(dst+0,ref+0+mvoffsets[0],ystride,_dct_coeffs[2]);
+  }
+  if (_mask & 8){
+    if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,_mvs[3][0],_mvs[3][1])>1){
+      oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],
+       ystride,_dct_coeffs[3]);
+    }
+    else oc_frag_recon_inter_mmx(dst+8,ref+8+mvoffsets[0],ystride,_dct_coeffs[3]);
   }
 }
 
