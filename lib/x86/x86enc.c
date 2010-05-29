@@ -43,13 +43,10 @@ void oc_enc_vtable_init_x86(oc_enc_ctx *_enc){
   if(cpu_flags&OC_CPU_X86_SSE2){
 # if defined(OC_X86_64_ASM)
     _enc->opt_vtable.fdct8x8=oc_enc_fdct8x8_x86_64sse2;
-    /*These routines work on x86-32, but are actually slower than the MMX ones
-       on my Core Duo, which is probably the most advanced SSE2 engine any
-       32-bit Intel chip had.*/
+# endif
     _enc->opt_vtable.frag_satd=oc_enc_frag_satd_sse2;
     _enc->opt_vtable.frag_satd2=oc_enc_frag_satd2_sse2;
     _enc->opt_vtable.frag_intra_satd=oc_enc_frag_intra_satd_sse2;
-# endif
   }
 }
 #endif

@@ -159,9 +159,18 @@ static ogg_uint32_t oc_cpu_flags_get(void){
   if(ecx==0x6C65746E&&edx==0x49656E69&&ebx==0x756E6547||
    /*      6 8 x M          T e n i          u n e G*/
    ecx==0x3638784D&&edx==0x54656E69&&ebx==0x756E6547){
+    int family;
+    int model;
     /*Intel, Transmeta (tested with Crusoe TM5800):*/
     cpuid(1,eax,ebx,ecx,edx);
     flags=oc_parse_intel_flags(edx,ecx);
+    family=(eax>>8)&0xF;
+    model=(eax>>4)&0xF;
+    /*The SSE unit on the Pentium M and Core Duo is much slower than the MMX
+       unit, so don't use it.*/
+    if(family==6&&(model==9||model==13||model==14)){
+      flags&=~(OC_CPU_X86_SSE2|OC_CPU_X86_PNI);
+    }
   }
   /*              D M A c          i t n e          h t u A*/
   else if(ecx==0x444D4163&&edx==0x69746E65&&ebx==0x68747541||

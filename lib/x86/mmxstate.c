@@ -71,7 +71,7 @@ void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
   else{
     /*Dequantize the DC coefficient.*/
     _dct_coeffs[0]=(ogg_int16_t)(_dct_coeffs[0]*(int)_dc_quant);
-    oc_idct8x8_mmx(_dct_coeffs,_last_zzi);
+    oc_idct8x8(_state,_dct_coeffs,_last_zzi);
   }
   /*Fill in the target buffer.*/
   frag_buf_off=_state->frag_buf_offs[_fragi];
@@ -91,6 +91,57 @@ void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
        _dct_coeffs);
     }
     else oc_frag_recon_inter_mmx(dst,ref+mvoffsets[0],ystride,_dct_coeffs);
+  }
+}
+
+static void oc_int_fragx2_copy2_sse2(unsigned char *_dst,int _dst_ystride,
+ const unsigned char *_src1,const unsigned char *_src2,int _src_ystride){
+  int i;
+  for(i=0;i<2;i++){
+    __asm__ __volatile__(
+      /*Load the first 4 rows.*/
+      "movdqu (%[src1]),%%xmm0\n\t"
+      "movdqu (%[src2]),%%xmm1\n\t"
+      "movdqu (%[src1],%[src_ystride]),%%xmm2\n\t"
+      "lea (%[src1],%[src_ystride],2),%[src1]\n\t"
+      "movdqu (%[src2],%[src_ystride]),%%xmm3\n\t"
+      "lea (%[src2],%[src_ystride],2),%[src2]\n\t"
+      /*xmm7={-1}x16.*/
+      "pcmpeqb %%xmm7,%%xmm7\n\t"
+      "movdqu (%[src1]),%%xmm4\n\t"
+      "movdqu (%[src2]),%%xmm5\n\t"
+      "movdqu (%[src1],%[src_ystride]),%%xmm6\n\t"
+      /*Start averaging %%xmm0 and %%xmm1.*/
+      "pxor %%xmm7,%%xmm0\n\t"
+      "pxor %%xmm7,%%xmm1\n\t"
+      "pavgb %%xmm1,%%xmm0\n\t"
+      "movdqu (%[src2],%[src_ystride]),%%xmm1\n\t"
+      "pxor %%xmm7,%%xmm2\n\t"
+      "pxor %%xmm7,%%xmm3\n\t"
+      "pavgb %%xmm3,%%xmm2\n\t"
+      "pxor %%xmm7,%%xmm4\n\t"
+      "pxor %%xmm7,%%xmm5\n\t"
+      "lea (%[src1],%[src_ystride],2),%[src1]\n\t"
+      "pxor %%xmm7,%%xmm0\n\t"
+      "pxor %%xmm7,%%xmm2\n\t"
+      "pavgb %%xmm5,%%xmm4\n\t"
+      "pxor %%xmm7,%%xmm6\n\t"
+      "pxor %%xmm7,%%xmm1\n\t"
+      "lea (%[src2],%[src_ystride],2),%[src2]\n\t"
+      "pavgb %%xmm1,%%xmm6\n\t"
+      "pxor %%xmm7,%%xmm4\n\t"
+      "pxor %%xmm7,%%xmm6\n\t"
+      "movdqa %%xmm0,(%[dst])\n\t"
+      "movdqa %%xmm2,(%[dst],%[dst_ystride])\n\t"
+      "lea (%[dst],%[dst_ystride],2),%[dst]\n\t"
+      "movdqa %%xmm4,(%[dst])\n\t"
+      "movdqa %%xmm6,(%[dst],%[dst_ystride])\n\t"
+      "lea (%[dst],%[dst_ystride],2),%[dst]\n\t"
+      :[dst]"+r"(_dst),[src1]"+%r"(_src1),[src2]"+r"(_src2)
+      :[dst_ystride]"r"((ptrdiff_t)_dst_ystride),
+       [src_ystride]"r"((ptrdiff_t)_src_ystride)
+      :"memory"
+    );
   }
 }
 
@@ -150,7 +201,7 @@ void oc_state_quad_recon_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf_o
     else{
       /*Dequantize the DC coefficient.*/
       _dct_coeffs[i][0]=(ogg_int16_t)(_dct_coeffs[i][0]*(int)_dc_quant);
-      oc_idct8x8_mmx(_dct_coeffs[i],_last_zzi[i]);
+      oc_idct8x8(_state,_dct_coeffs[i],_last_zzi[i]);
     }
   }
 
@@ -169,20 +220,38 @@ void oc_state_quad_recon_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf_o
      _state->ref_frame_data[_state->ref_frame_idx[_ref_frame]]
      +_frag_buf_off;
     if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,_mv[0],_mv[1])>1){
-      if (_mask & 1)
-          oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],
-           ystride,_dct_coeffs[0]);
-      if (_mask & 2)
-          oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],
-           ystride,_dct_coeffs[1]);
+      if ((_mask&3)==3){
+        oc_int_fragx2_copy2_sse2(dst,ystride,ref+mvoffsets[0],ref+mvoffsets[1],ystride);
+        if (_dct_coeffs[0][0]||_last_zzi[0]>1)
+          oc_frag_recon_inter_mmx(dst+0,dst+0,ystride,_dct_coeffs[0]);
+        if (_dct_coeffs[1][0]||_last_zzi[1]>1)
+          oc_frag_recon_inter_mmx(dst+8,dst+8,ystride,_dct_coeffs[1]);
+      }
+      else{
+        if (_mask & 1)
+            oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],
+             ystride,_dct_coeffs[0]);
+        if (_mask & 2)
+            oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],
+             ystride,_dct_coeffs[1]);
+      }
       dst+=ystride*8;
       ref+=ystride*8;
-      if (_mask & 4)
-          oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],
-           ystride,_dct_coeffs[2]);
-      if (_mask & 8)
-          oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],
-           ystride,_dct_coeffs[3]);
+      if ((_mask&12)==12){
+        oc_int_fragx2_copy2_sse2(dst,ystride,ref+mvoffsets[0],ref+mvoffsets[1],ystride);
+        if (_dct_coeffs[2][0]||_last_zzi[2]>1)
+          oc_frag_recon_inter_mmx(dst+0,dst+0,ystride,_dct_coeffs[2]);
+        if (_dct_coeffs[3][0]||_last_zzi[3]>1)
+          oc_frag_recon_inter_mmx(dst+8,dst+8,ystride,_dct_coeffs[3]);
+      }
+      else{
+        if (_mask & 4)
+            oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],
+             ystride,_dct_coeffs[2]);
+        if (_mask & 8)
+            oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],
+             ystride,_dct_coeffs[3]);
+      }
     }
     else{
       if (_mask & 1)
@@ -255,7 +324,7 @@ void oc_state_4mv_recon_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf_of
     else{
       /*Dequantize the DC coefficient.*/
       _dct_coeffs[i][0]=(ogg_int16_t)(_dct_coeffs[i][0]*(int)_dc_quant);
-      oc_idct8x8_mmx(_dct_coeffs[i],_last_zzi[i]);
+      oc_idct8x8(_state,_dct_coeffs[i],_last_zzi[i]);
     }
   }
 
@@ -372,13 +441,82 @@ void oc_state_loop_filter_frag_rows_mmx(const oc_theora_state *_state,
       if(frags[fragi].coded){
         unsigned char *ref;
         ref=ref_frame_data+frag_buf_offs[fragi];
-        if(fragi>fragi0)OC_LOOP_FILTER_H_MMX(ref,ystride,ll);
-        if(fragi0>fragi_top)OC_LOOP_FILTER_V_MMX(ref,ystride,ll);
+        if(fragi>fragi0){
+          OC_LOOP_FILTER_H(OC_LOOP_FILTER8_MMX,ref,ystride,ll);
+        }
+        if(fragi0>fragi_top){
+          OC_LOOP_FILTER_V(OC_LOOP_FILTER8_MMX,ref,ystride,ll);
+        }
         if(fragi+1<fragi_end&&!frags[fragi+1].coded){
-          OC_LOOP_FILTER_H_MMX(ref+8,ystride,ll);
+          OC_LOOP_FILTER_H(OC_LOOP_FILTER8_MMX,ref+8,ystride,ll);
         }
         if(fragi+nhfrags<fragi_bot&&!frags[fragi+nhfrags].coded){
-          OC_LOOP_FILTER_V_MMX(ref+(ystride<<3),ystride,ll);
+          OC_LOOP_FILTER_V(OC_LOOP_FILTER8_MMX,ref+(ystride<<3),ystride,ll);
+        }
+      }
+      fragi++;
+    }
+    fragi0+=nhfrags;
+  }
+}
+
+/*Apply the loop filter to a given set of fragment rows in the given plane.
+  The filter may be run on the bottom edge, affecting pixels in the next row of
+   fragments, so this row also needs to be available.
+  _bv:        The bounding values array.
+  _refi:      The index of the frame buffer to filter.
+  _pli:       The color plane to filter.
+  _fragy0:    The Y coordinate of the first fragment row to filter.
+  _fragy_end: The Y coordinate of the fragment row to stop filtering at.*/
+void oc_state_loop_filter_frag_rows_mmxext(const oc_theora_state *_state,
+ int _bv[256],int _refi,int _pli,int _fragy0,int _fragy_end){
+  OC_ALIGN8(unsigned char   ll[8]);
+  const oc_fragment_plane *fplane;
+  const oc_fragment       *frags;
+  const ptrdiff_t         *frag_buf_offs;
+  unsigned char           *ref_frame_data;
+  ptrdiff_t                fragi_top;
+  ptrdiff_t                fragi_bot;
+  ptrdiff_t                fragi0;
+  ptrdiff_t                fragi0_end;
+  int                      ystride;
+  int                      nhfrags;
+  memset(ll,~(_state->loop_filter_limits[_state->qis[0]]<<1),sizeof(ll));
+  fplane=_state->fplanes+_pli;
+  nhfrags=fplane->nhfrags;
+  fragi_top=fplane->froffset;
+  fragi_bot=fragi_top+fplane->nfrags;
+  fragi0=fragi_top+_fragy0*(ptrdiff_t)nhfrags;
+  fragi0_end=fragi0+(_fragy_end-_fragy0)*(ptrdiff_t)nhfrags;
+  ystride=_state->ref_ystride[_pli];
+  frags=_state->frags;
+  frag_buf_offs=_state->frag_buf_offs;
+  ref_frame_data=_state->ref_frame_data[_refi];
+  /*The following loops are constructed somewhat non-intuitively on purpose.
+    The main idea is: if a block boundary has at least one coded fragment on
+     it, the filter is applied to it.
+    However, the order that the filters are applied in matters, and VP3 chose
+     the somewhat strange ordering used below.*/
+  while(fragi0<fragi0_end){
+    ptrdiff_t fragi;
+    ptrdiff_t fragi_end;
+    fragi=fragi0;
+    fragi_end=fragi+nhfrags;
+    while(fragi<fragi_end){
+      if(frags[fragi].coded){
+        unsigned char *ref;
+        ref=ref_frame_data+frag_buf_offs[fragi];
+        if(fragi>fragi0){
+          OC_LOOP_FILTER_H(OC_LOOP_FILTER8_MMXEXT,ref,ystride,ll);
+        }
+        if(fragi0>fragi_top){
+          OC_LOOP_FILTER_V(OC_LOOP_FILTER8_MMXEXT,ref,ystride,ll);
+        }
+        if(fragi+1<fragi_end&&!frags[fragi+1].coded){
+          OC_LOOP_FILTER_H(OC_LOOP_FILTER8_MMXEXT,ref+8,ystride,ll);
+        }
+        if(fragi+nhfrags<fragi_bot&&!frags[fragi+nhfrags].coded){
+          OC_LOOP_FILTER_V(OC_LOOP_FILTER8_MMXEXT,ref+(ystride<<3),ystride,ll);
         }
       }
       fragi++;

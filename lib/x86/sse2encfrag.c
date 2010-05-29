@@ -40,7 +40,7 @@
  "lea (%[ref],%[ref_ystride],2),%[ref]\n\t" \
  "psubw %%xmm4,%%xmm0\n\t" \
  "movq (%[src]),%%xmm4\n\t" \
- "movdqa %%xmm0,(%[buf])\n\t" \
+ "movdqa %%xmm0,"OC_MEM_OFFS(0x00,buf)"\n\t" \
  "movq (%[ref]),%%xmm0\n\t" \
  "punpcklbw %%xmm5,%%xmm1\n\t" \
  "punpcklbw %%xmm5,%%xmm5\n\t" \
@@ -75,7 +75,7 @@
  "punpcklbw %%xmm0,%%xmm7\n\t" \
  "punpcklbw %%xmm0,%%xmm0\n\t" \
  "psubw %%xmm0,%%xmm7\n\t" \
- "movdqa (%[buf]),%%xmm0\n\t" \
+ "movdqa "OC_MEM_OFFS(0x00,buf)",%%xmm0\n\t" \
 
 /*Load an 8x8 array of pixel values from %[src] into %%xmm0...%%xmm7.*/
 #define OC_LOAD_8x8 \
@@ -176,8 +176,8 @@
    Even with pabsw, it would be (3+1)*8+7=39 instructions (with no spills). \
    This implementation is only 26 (+4 for spilling registers).*/ \
  "#OC_HADAMARD_C_ABS_ACCUM_A_8x8\n\t" \
- "movdqa %%xmm7,0x10(%[buf])\n\t" \
- "movdqa %%xmm6,(%[buf])\n\t" \
+ "movdqa %%xmm7,"OC_MEM_OFFS(0x10,buf)"\n\t" \
+ "movdqa %%xmm6,"OC_MEM_OFFS(0x00,buf)"\n\t" \
  /*xmm7={0x7FFF}x4 \
    xmm4=max(abs(xmm4),abs(xmm5))-0x7FFF*/ \
  "pcmpeqb %%xmm7,%%xmm7\n\t" \
@@ -194,9 +194,9 @@
  "pmaxsw %%xmm3,%%xmm2\n\t" \
  "pmaxsw %%xmm1,%%xmm0\n\t" \
  "paddw %%xmm3,%%xmm6\n\t" \
- "movdqa 0x10(%[buf]),%%xmm3\n\t" \
+ "movdqa "OC_MEM_OFFS(0x10,buf)",%%xmm3\n\t" \
  "paddw %%xmm5,%%xmm1\n\t" \
- "movdqa (%[buf]),%%xmm5\n\t" \
+ "movdqa "OC_MEM_OFFS(0x00,buf)",%%xmm5\n\t" \
 
 /*Performs the second part of the final stage of the Hadamard transform and
    summing of absolute values.*/
@@ -236,10 +236,8 @@ static unsigned oc_int_frag_satd_sse2(unsigned *_dc,
  const unsigned char *_src,int _src_ystride,
  const unsigned char *_ref,int _ref_ystride){
   OC_ALIGN16(ogg_int16_t buf[16]);
-  ogg_int16_t *bufp;
-  unsigned     ret;
-  unsigned     dc;
-  bufp=buf;
+  unsigned ret;
+  unsigned dc;
   __asm__ __volatile__(
     OC_LOAD_SUB_8x8
     OC_HADAMARD_8x8
@@ -273,15 +271,14 @@ static unsigned oc_int_frag_satd_sse2(unsigned *_dc,
     "sub %[dc],%[ret]\n\t"
     /*Although it looks like we're using 7 registers here, gcc can alias %[ret]
        and %[dc] with some of the inputs, since for once we don't write to
-       them until after we're done using everything but %[buf] (which is also
-       listed as an output to ensure gcc _doesn't_ alias them against it).*/
+       them until after we're done using everything but %[buf].*/
     /*Note that _src_ystride and _ref_ystride must be given non-overlapping
        constraints, otherewise if gcc can prove they're equal it will allocate
        them to the same register (which is bad); _src and _ref face a similar
        problem.
       All four are destructively modified, but if we list them as output
        constraints, gcc can't alias them with other outputs.*/
-    :[ret]"=a"(ret),[dc]"=d"(dc),[buf]"+r"(bufp)
+    :[ret]"=a"(ret),[dc]"=d"(dc),[buf]"=m"(OC_ARRAY_OPERAND(short,buf,16))
     :[src]"S"(_src),[src_ystride]"c"((ptrdiff_t)_src_ystride),
      [ref]"a"(_ref),[ref_ystride]"d"((ptrdiff_t)_ref_ystride)
     /*We have to use neg, so we actually clobber the condition codes for once
@@ -307,10 +304,8 @@ unsigned oc_enc_frag_satd2_sse2(unsigned *_dc,const unsigned char *_src,
 unsigned oc_enc_frag_intra_satd_sse2(unsigned *_dc,
  const unsigned char *_src,int _ystride){
   OC_ALIGN16(ogg_int16_t buf[16]);
-  ogg_int16_t *bufp;
-  unsigned     ret;
-  unsigned     dc;
-  bufp=buf;
+  unsigned ret;
+  unsigned dc;
   __asm__ __volatile__(
     OC_LOAD_8x8
     OC_HADAMARD_8x8
@@ -339,9 +334,8 @@ unsigned oc_enc_frag_intra_satd_sse2(unsigned *_dc,
     "sub %[dc],%[ret]\n\t"
     /*Although it looks like we're using 7 registers here, gcc can alias %[ret]
        and %[dc] with some of the inputs, since for once we don't write to
-       them until after we're done using everything but %[buf] (which is also
-       listed as an output to ensure gcc _doesn't_ alias them against it).*/
-    :[ret]"=a"(ret),[dc]"=r"(dc),[buf]"+r"(bufp)
+       them until after we're done using everything but %[buf].*/
+    :[ret]"=a"(ret),[dc]"=r"(dc),[buf]"=m"(OC_ARRAY_OPERAND(short,buf,16))
     :[src]"r"(_src),[src4]"r"(_src+4*_ystride),
      [ystride]"r"((ptrdiff_t)_ystride),[ystride3]"r"((ptrdiff_t)3*_ystride)
     /*We have to use sub, so we actually clobber the condition codes for once.*/

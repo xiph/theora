@@ -8,6 +8,7 @@ EXTRA_DIST = \
 	x86/mmxfdct.c \
 	x86/sse2encfrag.c \
 	x86/sse2fdct.c \
+	x86/sse2trans.h \
 	x86/x86enc.c \
 	x86/x86enc.h \
 	x86/mmxfrag.c \
@@ -15,6 +16,7 @@ EXTRA_DIST = \
 	x86/mmxidct.c \
 	x86/mmxloop.h \
 	x86/mmxstate.c \
+	x86/sse2idct.c \
 	x86/x86int.h \
 	x86/x86state.c \
 	x86_vc
@@ -41,6 +43,7 @@ encoder_shared_x86_sources = \
 	x86/mmxfrag.c \
 	x86/mmxidct.c \
 	x86/mmxstate.c \
+	x86/sse2idct.c \
 	x86/x86state.c
 
 encoder_shared_x86_64_sources =
@@ -93,6 +96,7 @@ decoder_x86_sources = \
 	x86/mmxidct.c \
 	x86/mmxfrag.c \
 	x86/mmxstate.c \
+	x86/sse2idct.c \
 	x86/x86state.c
 if CPU_x86_64
 decoder_arch_sources = $(decoder_x86_sources)
@@ -137,11 +141,11 @@ noinst_HEADERS = \
 	huffman.h \
 	ocintrin.h \
 	quant.h \
-	x86/x86enc.h \
 	x86/mmxfrag.h \
 	x86/mmxloop.h \
-	x86/x86int.h \
-	x86/sse2trans.h
+	x86/sse2trans.h \
+	x86/x86enc.h \
+	x86/x86int.h
 
 libtheoradec_la_SOURCES = \
 	$(decoder_sources) \

@@ -30,44 +30,21 @@
 
 
 
-/*A table of constants used by the MMX routines.*/
-static const ogg_uint16_t __attribute__((aligned(8),used))
- OC_IDCT_CONSTS[(7+1)*4]={
-  (ogg_uint16_t)OC_C1S7,(ogg_uint16_t)OC_C1S7,
-  (ogg_uint16_t)OC_C1S7,(ogg_uint16_t)OC_C1S7,
-  (ogg_uint16_t)OC_C2S6,(ogg_uint16_t)OC_C2S6,
-  (ogg_uint16_t)OC_C2S6,(ogg_uint16_t)OC_C2S6,
-  (ogg_uint16_t)OC_C3S5,(ogg_uint16_t)OC_C3S5,
-  (ogg_uint16_t)OC_C3S5,(ogg_uint16_t)OC_C3S5,
-  (ogg_uint16_t)OC_C4S4,(ogg_uint16_t)OC_C4S4,
-  (ogg_uint16_t)OC_C4S4,(ogg_uint16_t)OC_C4S4,
-  (ogg_uint16_t)OC_C5S3,(ogg_uint16_t)OC_C5S3,
-  (ogg_uint16_t)OC_C5S3,(ogg_uint16_t)OC_C5S3,
-  (ogg_uint16_t)OC_C6S2,(ogg_uint16_t)OC_C6S2,
-  (ogg_uint16_t)OC_C6S2,(ogg_uint16_t)OC_C6S2,
-  (ogg_uint16_t)OC_C7S1,(ogg_uint16_t)OC_C7S1,
-  (ogg_uint16_t)OC_C7S1,(ogg_uint16_t)OC_C7S1,
-      8,    8,    8,    8
-};
-
-/*Converts the expression in the argument to a string.*/
-#define OC_M2STR(_s) #_s
-
 /*38 cycles*/
 #define OC_IDCT_BEGIN \
   "#OC_IDCT_BEGIN\n\t" \
   "movq "OC_I(3)",%%mm2\n\t" \
-  "movq "OC_C(3)",%%mm6\n\t" \
+  "movq 0x30(%[c]),%%mm6\n\t" \
   "movq %%mm2,%%mm4\n\t" \
   "movq "OC_J(5)",%%mm7\n\t" \
   "pmulhw %%mm6,%%mm4\n\t" \
-  "movq "OC_C(5)",%%mm1\n\t" \
+  "movq 0x50(%[c]),%%mm1\n\t" \
   "pmulhw %%mm7,%%mm6\n\t" \
   "movq %%mm1,%%mm5\n\t" \
   "pmulhw %%mm2,%%mm1\n\t" \
   "movq "OC_I(1)",%%mm3\n\t" \
   "pmulhw %%mm7,%%mm5\n\t" \
-  "movq "OC_C(1)",%%mm0\n\t" \
+  "movq 0x10(%[c]),%%mm0\n\t" \
   "paddw %%mm2,%%mm4\n\t" \
   "paddw %%mm7,%%mm6\n\t" \
   "paddw %%mm1,%%mm2\n\t" \
@@ -77,7 +54,7 @@ static const ogg_uint16_t __attribute__((aligned(8),used))
   "pmulhw %%mm3,%%mm0\n\t" \
   "paddw %%mm7,%%mm4\n\t" \
   "pmulhw %%mm1,%%mm5\n\t" \
-  "movq "OC_C(7)",%%mm7\n\t" \
+  "movq 0x70(%[c]),%%mm7\n\t" \
   "psubw %%mm2,%%mm6\n\t" \
   "paddw %%mm3,%%mm0\n\t" \
   "pmulhw %%mm7,%%mm3\n\t" \
@@ -85,25 +62,25 @@ static const ogg_uint16_t __attribute__((aligned(8),used))
   "pmulhw %%mm1,%%mm7\n\t" \
   "paddw %%mm1,%%mm5\n\t" \
   "movq %%mm2,%%mm1\n\t" \
-  "pmulhw "OC_C(2)",%%mm2\n\t" \
+  "pmulhw 0x20(%[c]),%%mm2\n\t" \
   "psubw %%mm5,%%mm3\n\t" \
   "movq "OC_J(6)",%%mm5\n\t" \
   "paddw %%mm7,%%mm0\n\t" \
   "movq %%mm5,%%mm7\n\t" \
   "psubw %%mm4,%%mm0\n\t" \
-  "pmulhw "OC_C(2)",%%mm5\n\t" \
+  "pmulhw 0x20(%[c]),%%mm5\n\t" \
   "paddw %%mm1,%%mm2\n\t" \
-  "pmulhw "OC_C(6)",%%mm1\n\t" \
+  "pmulhw 0x60(%[c]),%%mm1\n\t" \
   "paddw %%mm4,%%mm4\n\t" \
   "paddw %%mm0,%%mm4\n\t" \
   "psubw %%mm6,%%mm3\n\t" \
   "paddw %%mm7,%%mm5\n\t" \
   "paddw %%mm6,%%mm6\n\t" \
-  "pmulhw "OC_C(6)",%%mm7\n\t" \
+  "pmulhw 0x60(%[c]),%%mm7\n\t" \
   "paddw %%mm3,%%mm6\n\t" \
   "movq %%mm4,"OC_I(1)"\n\t" \
   "psubw %%mm5,%%mm1\n\t" \
-  "movq "OC_C(4)",%%mm4\n\t" \
+  "movq 0x40(%[c]),%%mm4\n\t" \
   "movq %%mm3,%%mm5\n\t" \
   "pmulhw %%mm4,%%mm3\n\t" \
   "paddw %%mm2,%%mm7\n\t" \
@@ -238,7 +215,7 @@ static const ogg_uint16_t __attribute__((aligned(8),used))
 #define OC_COLUMN_IDCT \
   "#OC_COLUMN_IDCT\n" \
   OC_IDCT_BEGIN \
-  "paddw "OC_8",%%mm2\n\t" \
+  "paddw 0x00(%[c]),%%mm2\n\t" \
   /*r1=H'+H'*/ \
   "paddw %%mm1,%%mm1\n\t" \
   /*r1=R1=A''+H'*/ \
@@ -261,7 +238,7 @@ static const ogg_uint16_t __attribute__((aligned(8),used))
   "movq %%mm1,"OC_I(1)"\n\t" \
   /*r4=R4=E'-D'*/ \
   "psubw %%mm3,%%mm4\n\t" \
-  "paddw "OC_8",%%mm4\n\t" \
+  "paddw 0x00(%[c]),%%mm4\n\t" \
   /*r3=D'+D'*/ \
   "paddw %%mm3,%%mm3\n\t" \
   /*r3=R3=E'+D'*/ \
@@ -272,7 +249,7 @@ static const ogg_uint16_t __attribute__((aligned(8),used))
   "psubw %%mm5,%%mm6\n\t" \
   /*r3=NR3*/ \
   "psraw $4,%%mm3\n\t" \
-  "paddw "OC_8",%%mm6\n\t" \
+  "paddw 0x00(%[c]),%%mm6\n\t" \
   /*r5=B''+B''*/ \
   "paddw %%mm5,%%mm5\n\t" \
   /*r5=R5=F'+B''*/ \
@@ -287,7 +264,7 @@ static const ogg_uint16_t __attribute__((aligned(8),used))
   "movq %%mm3,"OC_I(3)"\n\t" \
   /*r7=R7=G'-C'*/ \
   "psubw %%mm0,%%mm7\n\t" \
-  "paddw "OC_8",%%mm7\n\t" \
+  "paddw 0x00(%[c]),%%mm7\n\t" \
   /*r0=C'+C'*/ \
   "paddw %%mm0,%%mm0\n\t" \
   /*r0=R0=G'+C'*/ \
@@ -310,7 +287,7 @@ static const ogg_uint16_t __attribute__((aligned(8),used))
 #define OC_C(_i)      OC_MID(OC_COSINE_OFFSET,_i-1)
 #define OC_8          OC_MID(OC_EIGHT_OFFSET,0)
 
-static void oc_idct8x8_slow(ogg_int16_t _y[64]){
+static void oc_idct8x8_slow_mmx(ogg_int16_t _y[64]){
   /*This routine accepts an 8x8 matrix, but in partially transposed form.
     Every 4x4 block is transposed.*/
   __asm__ __volatile__(
@@ -346,13 +323,13 @@ static void oc_idct8x8_slow(ogg_int16_t _y[64]){
  "#OC_IDCT_BEGIN_10\n\t" \
  "movq "OC_I(3)",%%mm2\n\t" \
  "nop\n\t" \
- "movq "OC_C(3)",%%mm6\n\t" \
+ "movq 0x30(%[c]),%%mm6\n\t" \
  "movq %%mm2,%%mm4\n\t" \
- "movq "OC_C(5)",%%mm1\n\t" \
+ "movq 0x50(%[c]),%%mm1\n\t" \
  "pmulhw %%mm6,%%mm4\n\t" \
  "movq "OC_I(1)",%%mm3\n\t" \
  "pmulhw %%mm2,%%mm1\n\t" \
- "movq "OC_C(1)",%%mm0\n\t" \
+ "movq 0x10(%[c]),%%mm0\n\t" \
  "paddw %%mm2,%%mm4\n\t" \
  "pxor %%mm6,%%mm6\n\t" \
  "paddw %%mm1,%%mm2\n\t" \
@@ -360,19 +337,19 @@ static void oc_idct8x8_slow(ogg_int16_t _y[64]){
  "pmulhw %%mm3,%%mm0\n\t" \
  "movq %%mm5,%%mm1\n\t" \
  "paddw %%mm3,%%mm0\n\t" \
- "pmulhw "OC_C(7)",%%mm3\n\t" \
+ "pmulhw 0x70(%[c]),%%mm3\n\t" \
  "psubw %%mm2,%%mm6\n\t" \
- "pmulhw "OC_C(2)",%%mm5\n\t" \
+ "pmulhw 0x20(%[c]),%%mm5\n\t" \
  "psubw %%mm4,%%mm0\n\t" \
  "movq "OC_I(2)",%%mm7\n\t" \
  "paddw %%mm4,%%mm4\n\t" \
  "paddw %%mm5,%%mm7\n\t" \
  "paddw %%mm0,%%mm4\n\t" \
- "pmulhw "OC_C(6)",%%mm1\n\t" \
+ "pmulhw 0x60(%[c]),%%mm1\n\t" \
  "psubw %%mm6,%%mm3\n\t" \
  "movq %%mm4,"OC_I(1)"\n\t" \
  "paddw %%mm6,%%mm6\n\t" \
- "movq "OC_C(4)",%%mm4\n\t" \
+ "movq 0x40(%[c]),%%mm4\n\t" \
  "paddw %%mm3,%%mm6\n\t" \
  "movq %%mm3,%%mm5\n\t" \
  "pmulhw %%mm4,%%mm3\n\t" \
@@ -435,7 +412,7 @@ static void oc_idct8x8_slow(ogg_int16_t _y[64]){
 #define OC_COLUMN_IDCT_10 \
  "#OC_COLUMN_IDCT_10\n\t" \
  OC_IDCT_BEGIN_10 \
- "paddw "OC_8",%%mm2\n\t" \
+ "paddw 0x00(%[c]),%%mm2\n\t" \
  /*r1=H'+H'*/ \
  "paddw %%mm1,%%mm1\n\t" \
  /*r1=R1=A''+H'*/ \
@@ -458,7 +435,7 @@ static void oc_idct8x8_slow(ogg_int16_t _y[64]){
  "movq %%mm1,"OC_I(1)"\n\t" \
  /*r4=R4=E'-D'*/ \
  "psubw %%mm3,%%mm4\n\t" \
- "paddw "OC_8",%%mm4\n\t" \
+ "paddw 0x00(%[c]),%%mm4\n\t" \
  /*r3=D'+D'*/ \
  "paddw %%mm3,%%mm3\n\t" \
  /*r3=R3=E'+D'*/ \
@@ -469,7 +446,7 @@ static void oc_idct8x8_slow(ogg_int16_t _y[64]){
  "psubw %%mm5,%%mm6\n\t" \
  /*r3=NR3*/ \
  "psraw $4,%%mm3\n\t" \
- "paddw "OC_8",%%mm6\n\t" \
+ "paddw 0x00(%[c]),%%mm6\n\t" \
  /*r5=B''+B''*/ \
  "paddw %%mm5,%%mm5\n\t" \
  /*r5=R5=F'+B''*/ \
@@ -484,7 +461,7 @@ static void oc_idct8x8_slow(ogg_int16_t _y[64]){
  "movq %%mm3,"OC_I(3)"\n\t" \
  /*r7=R7=G'-C'*/ \
  "psubw %%mm0,%%mm7\n\t" \
- "paddw "OC_8",%%mm7\n\t" \
+ "paddw 0x00(%[c]),%%mm7\n\t" \
  /*r0=C'+C'*/ \
  "paddw %%mm0,%%mm0\n\t" \
  /*r0=R0=G'+C'*/ \
@@ -503,7 +480,7 @@ static void oc_idct8x8_slow(ogg_int16_t _y[64]){
  "movq %%mm0,"OC_I(0)"\n\t" \
  "#end OC_COLUMN_IDCT_10\n\t" \
 
-static void oc_idct8x8_10(ogg_int16_t _y[64]){
+static void oc_idct8x8_10_mmx(ogg_int16_t _y[64]){
   __asm__ __volatile__(
 #define OC_I(_k) OC_M2STR((_k*16))"(%[y])"
 #define OC_J(_k) OC_M2STR(((_k-4)*16)+8)"(%[y])"
@@ -557,8 +534,8 @@ void oc_idct8x8_mmx(ogg_int16_t _y[64],int _last_zzi){
      gets.
     Needless to say we inherited this approach from VP3.*/
   /*Then perform the iDCT.*/
-  if(_last_zzi<10)oc_idct8x8_10(_y);
-  else oc_idct8x8_slow(_y);
+  if(_last_zzi<10)oc_idct8x8_10_mmx(_y);
+  else oc_idct8x8_slow_mmx(_y);
 }
 
 #endif

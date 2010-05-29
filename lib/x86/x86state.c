@@ -39,7 +39,28 @@ static const unsigned char OC_FZIG_ZAG_MMX[128]={
   64,64,64,64,64,64,64,64,
   64,64,64,64,64,64,64,64,
   64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64
+};
+
+/*This table has been modified from OC_FZIG_ZAG by baking an 8x8 transpose into
+   the destination.*/
+static const unsigned char OC_FZIG_ZAG_SSE2[128]={
+   0, 8, 1, 2, 9,16,24,17,
+  10, 3, 4,11,18,25,32,40,
+  33,26,19,12, 5, 6,13,20,
+  27,34,41,48,56,49,42,35,
+  28,21,14, 7,15,22,29,36,
+  43,50,57,58,51,44,37,30,
+  23,31,38,45,52,59,60,53,
+  46,39,47,54,61,62,55,63,
   64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64,
+  64,64,64,64,64,64,64,64
 };
 
 void oc_state_vtable_init_x86(oc_theora_state *_state){
@@ -60,5 +81,13 @@ void oc_state_vtable_init_x86(oc_theora_state *_state){
     _state->opt_data.dct_fzig_zag=OC_FZIG_ZAG_MMX;
   }
   else oc_state_vtable_init_c(_state);
+  if(_state->cpu_flags&OC_CPU_X86_MMXEXT){
+    _state->opt_vtable.state_loop_filter_frag_rows=
+     oc_state_loop_filter_frag_rows_mmxext;
+  }
+  if(_state->cpu_flags&OC_CPU_X86_SSE2){
+    _state->opt_vtable.idct8x8=oc_idct8x8_sse2;
+    _state->opt_data.dct_fzig_zag=OC_FZIG_ZAG_SSE2;
+  }
 }
 #endif
