@@ -709,7 +709,6 @@ static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
   int                  mode_scheme;
   ogg_uint16_t        *sb_masks;
   signed char         *rmb_modes[4];
-  signed char         *mb_modes;
   int                  sbx,sby;
   val=oc_pack_read(&_dec->opb,3);
   mode_scheme=(int)val;
@@ -736,17 +735,14 @@ static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
   rmb_modes[1]=rmb_modes[0]+nhmbs;
   rmb_modes[2]=rmb_modes[1]+1;
   rmb_modes[3]=rmb_modes[0]+1;
-  mb_modes=_dec->state.mb_modes;
   for (mbi=sby=0;sby<_dec->state.fplanes[0].nsbs;sby+=nhsbs,mbi+=nhmbs)
     for (sbx=0;sbx<nhsbs;sbx++,mbi+=2){
       int i,mask=sb_masks[sby+sbx];
-      for (i=0;i<4;i++,mask>>=4){
+      for (i=0;i<4;i++,mask>>=4)
         if (rmb_modes[i][mbi]!=OC_MODE_INVALID)
           rmb_modes[i][mbi]=(mask&15)
            ?alphabet[oc_huff_token_decode(&_dec->opb,mode_tree)]
            :OC_MODE_INTER_NOMV;
-        *mb_modes++=rmb_modes[i][mbi];/*legacy*/
-      }
     }
 }
 
@@ -814,17 +810,17 @@ static void oc_mv_unpack(oc_pack_buf *_opb,const ogg_int16_t *_tree,oc_mv _mv){
    block modes and motion vectors to the individual fragments.*/
 static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
   const oc_mb_map        *mb_maps;
-  const signed char      *mb_modes;
+  oc_mv                 (*rmb_mvs[4])[4];
+  signed char            *rmb_modes[4];
   oc_set_chroma_mvs_func  set_chroma_mvs;
   const ogg_int16_t      *mv_comp_tree;
   oc_fragment            *frags;
-  oc_mv                  *frag_mvs;
   const unsigned char    *map_idxs;
   int                     map_nidxs;
   oc_mv                   last_mv[2];
-  oc_mv                   cbmvs[4];
-  size_t                  nmbs;
-  size_t                  mbi;
+  size_t                  nhmbs;
+  int                     sbx,sby;
+  size_t                  old_mbi,mbi,i;
   long                    val;
   set_chroma_mvs=OC_SET_CHROMA_MVS_TABLE[_dec->state.info.pixel_fmt];
   val=oc_pack_read1(&_dec->opb);
@@ -833,89 +829,104 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
   map_nidxs=OC_MB_MAP_NIDXS[_dec->state.info.pixel_fmt];
   memset(last_mv,0,sizeof(last_mv));
   frags=_dec->state.frags;
-  frag_mvs=_dec->state.frag_mvs;
   mb_maps=(const oc_mb_map *)_dec->state.mb_maps;
-  mb_modes=_dec->state.mb_modes;
-  nmbs=_dec->state.nmbs;
-  for(mbi=0;mbi<nmbs;mbi++){
-    int          mb_mode;
-    mb_mode=mb_modes[mbi];
-    if(mb_mode!=OC_MODE_INVALID){
-      oc_mv        mbmv;
-      ptrdiff_t    fragi;
-      int          coded[13];
-      int          codedi;
-      int          ncoded;
-      int          mapi;
-      int          mapii;
-      /*Search for at least one coded fragment.*/
-      ncoded=mapii=0;
-      do{
-        mapi=map_idxs[mapii];
-        fragi=mb_maps[mbi][mapi>>2][mapi&3];
-        if(frags[fragi].coded)coded[ncoded++]=mapi;
-      }
-      while(++mapii<map_nidxs);
-      if(ncoded<=0)continue;
-      switch(mb_mode){
-        case OC_MODE_INTER_MV_FOUR:{
-          oc_mv       lbmvs[4];
-          int         bi;
-          /*Mark the tail of the list, so we don't accidentally go past it.*/
-          coded[ncoded]=-1;
-          for(bi=codedi=0;bi<4;bi++){
-            if(coded[codedi]==bi){
-              codedi++;
-              fragi=mb_maps[mbi][0][bi];
-              frags[fragi].mb_mode=mb_mode;
-              oc_mv_unpack(&_dec->opb,mv_comp_tree,lbmvs[bi]);
-              memcpy(frag_mvs[fragi],lbmvs[bi],sizeof(lbmvs[bi]));
-            }
-            else lbmvs[bi][0]=lbmvs[bi][1]=0;
+  nhmbs=_dec->state.nhmbs;
+  rmb_modes[0]=_dec->state.raster_mb_modes;
+  rmb_modes[1]=rmb_modes[0]+nhmbs;
+  rmb_modes[2]=rmb_modes[1]+1;
+  rmb_modes[3]=rmb_modes[0]+1;
+  rmb_mvs[0]=_dec->state.raster_mb_mvs;
+  rmb_mvs[1]=rmb_mvs[0]+nhmbs;
+  rmb_mvs[2]=rmb_mvs[1]+1;
+  rmb_mvs[3]=rmb_mvs[0]+1;
+  old_mbi=0;
+  for (mbi=sby=0;sby<_dec->state.fplanes[0].nsbs;sby+=_dec->state.fplanes[0].nhsbs,mbi+=nhmbs)
+    for (sbx=0;sbx<_dec->state.fplanes[0].nhsbs;sbx++,mbi+=2){
+//      int mask=_dec->state.sb_masks[sby+sbx];
+//      int umask=_dec->state.sb_masks[_dec->state.fplanes[1].sboffset+sby_uv+(sbx>>XDECI)]&SOMETHINGCLEVER;
+//      int vmask=_dec->state.sb_masks[_dec->state.fplanes[2].sboffset+sby_uv+(sbx>>XDECI)]&SOMETHINGCLEVER;
+      /* TODO: use the superblock masks directly rather than iterating through
+       * frags[].  Also use these bitmaps to update frags[].mb_mode in whatever
+       * order is convenient.  This should be faster (if there's enough
+       * cleverness in the implementation) and it will eliminate use of
+       * mb_maps[].
+       */
+
+      for (i=0;i<4;i++,old_mbi++){
+        int          mb_mode;
+        mb_mode=rmb_modes[i][mbi];
+        if(mb_mode!=OC_MODE_INVALID){
+          oc_mv       *mbmv;
+          ptrdiff_t    fragi;
+          int          coded[13];
+          int          codedi;
+          int          ncoded;
+          int          mapi;
+          int          mapii;
+          /*Search for at least one coded fragment.*/
+          ncoded=mapii=0;
+          do{
+            mapi=map_idxs[mapii];
+            fragi=mb_maps[old_mbi][mapi>>2][mapi&3];
+            if(frags[fragi].coded)coded[ncoded++]=mapi;
           }
-          if(codedi>0){
-            memcpy(last_mv[1],last_mv[0],sizeof(last_mv[1]));
-            memcpy(last_mv[0],lbmvs[coded[codedi-1]],sizeof(last_mv[0]));
+          while(++mapii<map_nidxs);
+          if(ncoded<=0)continue;
+          mbmv=rmb_mvs[i][mbi];
+          switch(mb_mode){
+            case OC_MODE_INTER_MV_FOUR:{
+              int         bi;
+              /*Mark the tail of the list, so we don't accidentally go past it.*/
+              coded[ncoded]=-1;
+              for(bi=codedi=0;bi<4;bi++){
+                if(coded[codedi]==bi){
+                  codedi++;
+                  fragi=mb_maps[old_mbi][0][bi];
+                  frags[fragi].mb_mode=mb_mode;
+                  oc_mv_unpack(&_dec->opb,mv_comp_tree,mbmv[bi]);
+                }
+                else mbmv[bi][0]=mbmv[bi][1]=0;
+              }
+              if(codedi>0){
+                memcpy(last_mv[1],last_mv[0],sizeof(last_mv[1]));
+                memcpy(last_mv[0],mbmv[coded[codedi-1]],sizeof(last_mv[0]));
+              }
+              if(codedi<ncoded){
+                for(;codedi<ncoded;codedi++){
+                  mapi=coded[codedi];
+                  bi=mapi&3;
+                  fragi=mb_maps[old_mbi][mapi>>2][bi];
+                  frags[fragi].mb_mode=mb_mode;
+                }
+              }
+            }break;
+            case OC_MODE_INTER_MV:
+              memcpy(last_mv[1],last_mv[0],sizeof(last_mv[1]));
+              oc_mv_unpack(&_dec->opb,mv_comp_tree,last_mv[0]);
+              /*@FALLTHROUGH@*/
+            case OC_MODE_INTER_MV_LAST:memcpy(*mbmv,last_mv[0],sizeof(*mbmv));break;
+            case OC_MODE_INTER_MV_LAST2:{
+              memcpy(*mbmv,last_mv[1],sizeof(*mbmv));
+              memcpy(last_mv[1],last_mv[0],sizeof(last_mv[1]));
+              memcpy(last_mv[0],*mbmv,sizeof(last_mv[0]));
+            }break;
+            case OC_MODE_GOLDEN_MV:{
+              oc_mv_unpack(&_dec->opb,mv_comp_tree,*mbmv);
+            }break;
+            default:memset(*mbmv,0,sizeof(*mbmv));break;
           }
-          if(codedi<ncoded){
-            (*set_chroma_mvs)(cbmvs,(const oc_mv *)lbmvs);
-            for(;codedi<ncoded;codedi++){
+          /*4MV mode fills in the fragments itself.
+            For all other modes we can use this common code.*/
+          if(mb_mode!=OC_MODE_INTER_MV_FOUR){
+            for(codedi=0;codedi<ncoded;codedi++){
               mapi=coded[codedi];
-              bi=mapi&3;
-              fragi=mb_maps[mbi][mapi>>2][bi];
+              fragi=mb_maps[old_mbi][mapi>>2][mapi&3];
               frags[fragi].mb_mode=mb_mode;
-              memcpy(frag_mvs[fragi],cbmvs[bi],sizeof(cbmvs[bi]));
             }
           }
-        }break;
-        case OC_MODE_INTER_MV:{
-          memcpy(last_mv[1],last_mv[0],sizeof(last_mv[1]));
-          oc_mv_unpack(&_dec->opb,mv_comp_tree,mbmv);
-          memcpy(last_mv[0],mbmv,sizeof(last_mv[0]));
-        }break;
-        case OC_MODE_INTER_MV_LAST:memcpy(mbmv,last_mv[0],sizeof(mbmv));break;
-        case OC_MODE_INTER_MV_LAST2:{
-          memcpy(mbmv,last_mv[1],sizeof(mbmv));
-          memcpy(last_mv[1],last_mv[0],sizeof(last_mv[1]));
-          memcpy(last_mv[0],mbmv,sizeof(last_mv[0]));
-        }break;
-        case OC_MODE_GOLDEN_MV:{
-          oc_mv_unpack(&_dec->opb,mv_comp_tree,mbmv);
-        }break;
-        default:memset(mbmv,0,sizeof(mbmv));break;
-      }
-      /*4MV mode fills in the fragments itself.
-        For all other modes we can use this common code.*/
-      if(mb_mode!=OC_MODE_INTER_MV_FOUR){
-        for(codedi=0;codedi<ncoded;codedi++){
-          mapi=coded[codedi];
-          fragi=mb_maps[mbi][mapi>>2][mapi&3];
-          frags[fragi].mb_mode=mb_mode;
-          memcpy(frag_mvs[fragi],mbmv,sizeof(mbmv));
         }
       }
     }
-  }
 }
 
 static void oc_dec_block_qis_unpack(oc_dec_ctx *_dec){
@@ -1610,8 +1621,15 @@ static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
    counts.*/
 static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
  oc_dec_pipeline_state *_pipe,int _pli){
+  static const char rasterise[16]={
+    0, 1, 3, 2,
+    0, 2, 3, 1,
+    0, 2, 3, 1,
+    3, 2, 0, 1,
+  };
   oc_fragment             *frags;
   ogg_uint16_t            *sb_masks;
+  int                      nhmbs;
   int                      mbi,
                            mb_stepx,
                            mb_stepy;
@@ -1619,31 +1637,36 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
                            sb_end,
                            sb_newline;
   int                      pixel_fmt;
-  int                      mbo[4]={0,_dec->state.nhmbs,_dec->state.nhmbs+1,1};
+  int                      mbo[4];
 
   sb_masks = _dec->state.sb_masks;
   frags=_dec->state.frags;
+  nhmbs=_dec->state.nhmbs;
 
-  pixel_fmt=_pli?TH_PF_NFORMATS/*_dec->state.info.pixel_fmt*/:TH_PF_444;
+  pixel_fmt=_pli?_dec->state.info.pixel_fmt:TH_PF_444;
 
   sbi = _dec->state.fplanes[_pli].sboffset + (_pipe->fragy0[_pli] >> 2) * _dec->state.fplanes[_pli].nhsbs;
   sb_newline=sbi+_dec->state.fplanes[_pli].nhsbs;
   sb_end = _dec->state.fplanes[_pli].sboffset + (_pipe->fragy_end[_pli] + 3 >> 2) * _dec->state.fplanes[_pli].nhsbs;
 
-  mb_stepx=!(pixel_fmt&2)?1:2;
-  mb_stepy=!(pixel_fmt&1)?1:2;
+  mb_stepx=!(pixel_fmt&1)?2:1;
+  mb_stepy=!(pixel_fmt&2)?2:1;
 
-  mbi=(_pipe->fragy0[_pli]>>mb_stepy-1)*_dec->state.nhmbs;
+  mbo[0]=0;
+  mbo[1]=mbo[0]+nhmbs*mb_stepy;
+  mbo[2]=mbo[1]+mb_stepx;
+  mbo[3]=mbo[0]+mb_stepx;
 
-  for ( ; sbi < sb_end; sbi++,mbi+=1<<3-mb_stepx)
+  mbi=(_pipe->fragy0[_pli]>>2-mb_stepy)*nhmbs;
+
+  for ( ; sbi < sb_end; sbi++,mbi+=1<<mb_stepx)
   {
     ptrdiff_t *fragip;
     ogg_uint16_t bmask;
     int quadi;
 
     if(sbi>=sb_newline){
-      mbi-=_dec->state.nhmbs;
-      mbi+=_dec->state.nhmbs<<3-mb_stepy;
+      mbi+=(nhmbs<<mb_stepy)-nhmbs;
       sb_newline+=_dec->state.fplanes[_pli].nhsbs;
     }
 
@@ -1659,62 +1682,133 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
          to protect us from buffer overflow.*/
       OC_ALIGN8(ogg_int16_t dct_coeffs[4][64 + 8]);
       int bi;
+      int last_zzi[4];
+      int mask = 0;
+      int mb_mode;
+      ogg_uint16_t dc_quant;
+      oc_mv *mb_mvs;
+      int frag_buf_off;
+      oc_mv cmv[4];
 
       if ((bmask & 15) == 0)
         continue;
 
+      mb_mode = _dec->state.frame_type==OC_INTRA_FRAME?OC_MODE_INTRA:_dec->state.raster_mb_modes[mbi+mbo[quadi>>2]];
+      dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
+      mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi>>2]];
+      frag_buf_off = _dec->state.frag_buf_offs[fragip[quadi==12?2:0]];
+
+      for (bi = 0; bi < 4; bi++)
+      {
+        ptrdiff_t fragi;
+        int obi;
+        if ((bmask & (1 << bi)) == 0) continue;
+        fragi = fragip[bi];
+        obi = rasterise[quadi + bi];
+
+        last_zzi[obi] = oc_dec_get_dct_coeffs(dct_coeffs[obi], _dec, _pipe, _pli, frags + fragi);
+        mask |= 1 << obi;
+      }
+
       switch (pixel_fmt){
-      case TH_PF_444:{
-        static const char rasterise[16] =
-        {
-          0, 1, 3, 2,
-          0, 2, 3, 1,
-          0, 2, 3, 1,
-          3, 2, 0, 1,
-        };
-        int last_zzi[4];
-        int mask = 0;
-        int mb_mode = _dec->state.frame_type==OC_INTRA_FRAME?OC_MODE_INTRA:_dec->state.mb_modes[(sbi<<2)+(quadi>>2)];
-        ogg_uint16_t dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
-        int frag_buf_off = _dec->state.frag_buf_offs[fragip[quadi==12?2:0]];
-        oc_mv *mv;
-
-        for (bi = 0; bi < 4; bi++)
-        {
-          ptrdiff_t fragi;
-          int obi;
-          if ((bmask & (1 << bi)) == 0) continue;
-          fragi = fragip[bi];
-          obi = rasterise[quadi + bi];
-          assert(fragi >= 0 && frags[fragi].coded);
-          assert(frags[fragi].mb_mode == mb_mode);
-
-          last_zzi[obi] = oc_dec_get_dct_coeffs(dct_coeffs[obi], _dec, _pipe, _pli, frags + fragi);
-          mask |= 1 << obi;
-          mv = &_dec->state.frag_mvs[fragi]; /* this just captures any valid pointer for the moment */
-        }
-
-        assert(_dec->state.frame_type==OC_INTRA_FRAME||mb_mode==_dec->state.raster_mb_modes[mbi+mbo[quadi>>2]]);
+      case TH_PF_444:
         if (mb_mode==OC_MODE_INTER_MV_FOUR)
-          oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask,&_dec->state.frag_mvs[fragip[quadi==12?2:0]]);
-        else{
-//        assert(mv[0]==_dec->state.raster_mvs[mbi][0][0]&&mv[1]==_dec->state.raster_mvs[mbi][0][1]);
-          oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask,OC_FRAME_FOR_MODE(mb_mode),*mv);
-        }
-      }break;
-      default:
-        for (bi = 0; bi < 4; bi++)
-        {
-          ptrdiff_t fragi;
-          int last_zzi;
-          if ((bmask & (1 << bi)) == 0) continue;
-          fragi = fragip[bi];
-          assert(fragi >= 0 && frags[fragi].coded);
+          oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask,mb_mvs);
+        else
+          oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+        break;
 
-          last_zzi = oc_dec_get_dct_coeffs(dct_coeffs[0], _dec, _pipe, _pli, frags + fragi);
-          ogg_uint16_t dc_quant = _pipe->dequant[_pli][0][frags[fragi].mb_mode!=OC_MODE_INTRA][0];
-          oc_state_frag_recon(&_dec->state,fragi,_pli, dct_coeffs[0],last_zzi,dc_quant);
+      case TH_PF_422:
+        /* TODO: code the reference frame index and the motion vector into a
+         * single word and then compare left and right copies -- if they're the
+         * same then do things quickly instead of like this:
+         */
+        if (mask&5){
+          if (mb_mode==OC_MODE_INTER_MV_FOUR){
+            cmv[0][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0],1,1);
+            cmv[0][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1],1,1);
+            cmv[2][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[2][0]+mb_mvs[3][0],1,1);
+            cmv[2][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[2][1]+mb_mvs[3][1],1,1);
+            oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&5,cmv);
+          }
+          else
+            oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&5,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
         }
+
+        mb_mode = _dec->state.frame_type==OC_INTRA_FRAME?OC_MODE_INTRA:_dec->state.raster_mb_modes[mbi+mbo[quadi>>2]+1];
+        dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
+        mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi>>2]+1];
+
+        if (mask&10){
+          if (mb_mode==OC_MODE_INTER_MV_FOUR){
+            cmv[1][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0],1,1);
+            cmv[1][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1],1,1);
+            cmv[3][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[2][0]+mb_mvs[3][0],1,1);
+            cmv[3][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[2][1]+mb_mvs[3][1],1,1);
+            oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&10,cmv);
+          }
+          else
+            oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&10,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+        }
+        break;
+
+      case TH_PF_420:
+        /* TODO: code the reference frame index and the motion vector into a
+         * single word and then compare left and right copies -- if they're the
+         * same then do things quickly instead of like this:
+         */
+        if (mask&1)
+          if (mb_mode==OC_MODE_INTER_MV_FOUR){
+            cmv[0][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
+            cmv[0][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
+            oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&1,cmv);
+          }
+          else
+            oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&1,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+
+        mb_mode = _dec->state.frame_type==OC_INTRA_FRAME?OC_MODE_INTRA:_dec->state.raster_mb_modes[mbi+mbo[quadi>>2]+1];
+        dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
+        mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi>>2]+1];
+
+        if (mask&2)
+          if (mb_mode==OC_MODE_INTER_MV_FOUR){
+            cmv[1][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
+            cmv[1][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
+            oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&2,cmv);
+          }
+          else
+            oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&2,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+
+        mb_mode = _dec->state.frame_type==OC_INTRA_FRAME?OC_MODE_INTRA:_dec->state.raster_mb_modes[mbi+mbo[quadi>>2]+nhmbs];
+        dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
+        mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi>>2]+nhmbs];
+
+        /* TODO: code the reference frame index and the motion vector into a
+         * single word and then compare left and right copies -- if they're the
+         * same then do things quickly instead of like this:
+         */
+        if (mask&4)
+          if (mb_mode==OC_MODE_INTER_MV_FOUR){
+            cmv[2][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
+            cmv[2][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
+            oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&4,cmv);
+          }
+          else
+            oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&4,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+
+        mb_mode = _dec->state.frame_type==OC_INTRA_FRAME?OC_MODE_INTRA:_dec->state.raster_mb_modes[mbi+mbo[quadi>>2]+nhmbs+1];
+        dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
+        mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi>>2]+nhmbs+1];
+
+        if (mask&8)
+          if (mb_mode==OC_MODE_INTER_MV_FOUR){
+            cmv[3][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
+            cmv[3][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
+            oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&8,cmv);
+          }
+          else
+            oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&8,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+        break;
       }
     }
   }
@@ -2479,9 +2573,8 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
     {
       cairo_t           *c;
       const oc_fragment *frags;
-      oc_mv             *frag_mvs;
       const signed char *mb_modes;
-      oc_mb_map         *mb_maps;
+      size_t             nhfrags;
       size_t             nmbs;
       size_t             mbi;
       int                row2;
@@ -2529,9 +2622,8 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
       }
       c=cairo_create(cs);
       frags=_dec->state.frags;
-      frag_mvs=_dec->state.frag_mvs;
-      mb_modes=_dec->state.mb_modes;
-      mb_maps=_dec->state.mb_maps;
+      mb_modes=_dec->state.raster_mb_modes;
+      nhfrags=_dec->state.fplanes[0].nhfrags;
       nmbs=_dec->state.nmbs;
       row2=0;
       col2=0;
@@ -2539,8 +2631,8 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
         float x;
         float y;
         int   bi;
-        y=h-(row2+((col2+1>>1)&1))*16-16;
-        x=(col2>>1)*16;
+        y=h-row2*16-16;
+        x=col2*16;
         cairo_set_line_width(c,1.);
         /*Keyframe (all intra) red box.*/
         if(_dec->state.frame_type==OC_INTRA_FRAME){
@@ -2553,16 +2645,9 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
           }
         }
         else{
-          const signed char *frag_mv;
-          ptrdiff_t          fragi;
-          for(bi=0;bi<4;bi++){
-            fragi=mb_maps[mbi][0][bi];
-            if(fragi>=0&&frags[fragi].coded){
-              frag_mv=frag_mvs[fragi];
-              break;
-            }
-          }
-          if(bi<4){
+          const oc_mv (*mb_mvs)[4]=_dec->state.raster_mb_mvs[mbi];
+          if(_dec->state.sb_masks[(row2>>1)*_dec->state.nhsbs+(col2>>1)]
+           &((row2&1)?0x0ff0:0xf00f)&((col2&1)?0xff00:0x00ff)){
             switch(mb_modes[mbi]){
               case OC_MODE_INTRA:{
                 if(_dec->telemetry_mbmode&0x02){
@@ -2589,13 +2674,13 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
                   cairo_stroke(c);
                 }
                 if(_dec->telemetry_mv&0x04){
-                  cairo_move_to(c,x+8+frag_mv[0],y+8-frag_mv[1]);
+                  cairo_move_to(c,x+8+mb_mvs[0][0],y+8-mb_mvs[0][1]);
                   cairo_set_source_rgba(c,1.,1.,1.,.9);
                   cairo_set_line_width(c,3.);
-                  cairo_line_to(c,x+8+frag_mv[0]*.66,y+8-frag_mv[1]*.66);
+                  cairo_line_to(c,x+8+mb_mvs[0][0]*.66,y+8-mb_mvs[0][1]*.66);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,2.);
-                  cairo_line_to(c,x+8+frag_mv[0]*.33,y+8-frag_mv[1]*.33);
+                  cairo_line_to(c,x+8+mb_mvs[0][0]*.33,y+8-mb_mvs[0][1]*.33);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,1.);
                   cairo_line_to(c,x+8,y+8);
@@ -2612,13 +2697,13 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
                   cairo_stroke(c);
                 }
                 if(_dec->telemetry_mv&0x08){
-                  cairo_move_to(c,x+8+frag_mv[0],y+8-frag_mv[1]);
+                  cairo_move_to(c,x+8+mb_mvs[0][0],y+8-mb_mvs[0][1]);
                   cairo_set_source_rgba(c,1.,1.,1.,.9);
                   cairo_set_line_width(c,3.);
-                  cairo_line_to(c,x+8+frag_mv[0]*.66,y+8-frag_mv[1]*.66);
+                  cairo_line_to(c,x+8+mb_mvs[0][0]*.66,y+8-mb_mvs[0][1]*.66);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,2.);
-                  cairo_line_to(c,x+8+frag_mv[0]*.33,y+8-frag_mv[1]*.33);
+                  cairo_line_to(c,x+8+mb_mvs[0][0]*.33,y+8-mb_mvs[0][1]*.33);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,1.);
                   cairo_line_to(c,x+8,y+8);
@@ -2638,13 +2723,13 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
                   cairo_stroke(c);
                 }
                 if(_dec->telemetry_mv&0x10){
-                  cairo_move_to(c,x+8+frag_mv[0],y+8-frag_mv[1]);
+                  cairo_move_to(c,x+8+mb_mvs[0][0],y+8-mb_mvs[0][1]);
                   cairo_set_source_rgba(c,1.,1.,1.,.9);
                   cairo_set_line_width(c,3.);
-                  cairo_line_to(c,x+8+frag_mv[0]*.66,y+8-frag_mv[1]*.66);
+                  cairo_line_to(c,x+8+mb_mvs[0][0]*.66,y+8-mb_mvs[0][1]*.66);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,2.);
-                  cairo_line_to(c,x+8+frag_mv[0]*.33,y+8-frag_mv[1]*.33);
+                  cairo_line_to(c,x+8+mb_mvs[0][0]*.33,y+8-mb_mvs[0][1]*.33);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,1.);
                   cairo_line_to(c,x+8,y+8);
@@ -2667,13 +2752,13 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
                   cairo_stroke(c);
                 }
                 if(_dec->telemetry_mv&0x40){
-                  cairo_move_to(c,x+8+frag_mv[0],y+8-frag_mv[1]);
+                  cairo_move_to(c,x+8+mb_mvs[0][0],y+8-mb_mvs[0][1]);
                   cairo_set_source_rgba(c,1.,1.,1.,.9);
                   cairo_set_line_width(c,3.);
-                  cairo_line_to(c,x+8+frag_mv[0]*.66,y+8-frag_mv[1]*.66);
+                  cairo_line_to(c,x+8+mb_mvs[0][0]*.66,y+8-mb_mvs[0][1]*.66);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,2.);
-                  cairo_line_to(c,x+8+frag_mv[0]*.33,y+8-frag_mv[1]*.33);
+                  cairo_line_to(c,x+8+mb_mvs[0][0]*.33,y+8-mb_mvs[0][1]*.33);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,1.);
                   cairo_line_to(c,x+8,y+8);
@@ -2690,61 +2775,57 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
                   cairo_stroke(c);
                 }
                 /*4mv is odd, coded in raster order.*/
-                fragi=mb_maps[mbi][0][0];
+                fragi=row2*2*nhfrags+col2*2;
                 if(frags[fragi].coded&&_dec->telemetry_mv&0x80){
-                  frag_mv=frag_mvs[fragi];
-                  cairo_move_to(c,x+4+frag_mv[0],y+12-frag_mv[1]);
+                  cairo_move_to(c,x+4+mb_mvs[0][0],y+12-mb_mvs[0][1]);
                   cairo_set_source_rgba(c,1.,1.,1.,.9);
                   cairo_set_line_width(c,3.);
-                  cairo_line_to(c,x+4+frag_mv[0]*.66,y+12-frag_mv[1]*.66);
+                  cairo_line_to(c,x+4+mb_mvs[0][0]*.66,y+12-mb_mvs[0][1]*.66);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,2.);
-                  cairo_line_to(c,x+4+frag_mv[0]*.33,y+12-frag_mv[1]*.33);
+                  cairo_line_to(c,x+4+mb_mvs[0][0]*.33,y+12-mb_mvs[0][1]*.33);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,1.);
                   cairo_line_to(c,x+4,y+12);
                   cairo_stroke(c);
                 }
-                fragi=mb_maps[mbi][0][1];
+                fragi=row2*2*nhfrags+col2*2+1;
                 if(frags[fragi].coded&&_dec->telemetry_mv&0x80){
-                  frag_mv=frag_mvs[fragi];
-                  cairo_move_to(c,x+12+frag_mv[0],y+12-frag_mv[1]);
+                  cairo_move_to(c,x+12+mb_mvs[1][0],y+12-mb_mvs[1][1]);
                   cairo_set_source_rgba(c,1.,1.,1.,.9);
                   cairo_set_line_width(c,3.);
-                  cairo_line_to(c,x+12+frag_mv[0]*.66,y+12-frag_mv[1]*.66);
+                  cairo_line_to(c,x+12+mb_mvs[1][0]*.66,y+12-mb_mvs[1][1]*.66);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,2.);
-                  cairo_line_to(c,x+12+frag_mv[0]*.33,y+12-frag_mv[1]*.33);
+                  cairo_line_to(c,x+12+mb_mvs[1][0]*.33,y+12-mb_mvs[1][1]*.33);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,1.);
                   cairo_line_to(c,x+12,y+12);
                   cairo_stroke(c);
                 }
-                fragi=mb_maps[mbi][0][2];
+                fragi=(row2*2+1)*nhfrags+col2*2;
                 if(frags[fragi].coded&&_dec->telemetry_mv&0x80){
-                  frag_mv=frag_mvs[fragi];
-                  cairo_move_to(c,x+4+frag_mv[0],y+4-frag_mv[1]);
+                  cairo_move_to(c,x+4+mb_mvs[2][0],y+4-mb_mvs[2][1]);
                   cairo_set_source_rgba(c,1.,1.,1.,.9);
                   cairo_set_line_width(c,3.);
-                  cairo_line_to(c,x+4+frag_mv[0]*.66,y+4-frag_mv[1]*.66);
+                  cairo_line_to(c,x+4+mb_mvs[2][0]*.66,y+4-mb_mvs[2][1]*.66);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,2.);
-                  cairo_line_to(c,x+4+frag_mv[0]*.33,y+4-frag_mv[1]*.33);
+                  cairo_line_to(c,x+4+mb_mvs[2][0]*.33,y+4-mb_mvs[2][1]*.33);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,1.);
                   cairo_line_to(c,x+4,y+4);
                   cairo_stroke(c);
                 }
-                fragi=mb_maps[mbi][0][3];
+                fragi=(row2*2+1)*nhfrags+col2*2+1;
                 if(frags[fragi].coded&&_dec->telemetry_mv&0x80){
-                  frag_mv=frag_mvs[fragi];
-                  cairo_move_to(c,x+12+frag_mv[0],y+4-frag_mv[1]);
+                  cairo_move_to(c,x+12+mb_mvs[3][0],y+4-mb_mvs[3][1]);
                   cairo_set_source_rgba(c,1.,1.,1.,.9);
                   cairo_set_line_width(c,3.);
-                  cairo_line_to(c,x+12+frag_mv[0]*.66,y+4-frag_mv[1]*.66);
+                  cairo_line_to(c,x+12+mb_mvs[3][0]*.66,y+4-mb_mvs[3][1]*.66);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,2.);
-                  cairo_line_to(c,x+12+frag_mv[0]*.33,y+4-frag_mv[1]*.33);
+                  cairo_line_to(c,x+12+mb_mvs[3][0]*.33,y+4-mb_mvs[3][1]*.33);
                   cairo_stroke_preserve(c);
                   cairo_set_line_width(c,1.);
                   cairo_line_to(c,x+12,y+4);
@@ -2764,8 +2845,8 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
             int       yp;
             xp=x+(bi&1)*8;
             yp=y+8-(bi&2)*4;
-            fragi=mb_maps[mbi][0][bi];
-            if(fragi>=0&&frags[fragi].coded){
+            fragi=(row2*2+1)*nhfrags+col2*2+1;
+            if(frags[fragi].coded){
               qiv=qim[frags[fragi].qii];
               cairo_set_line_width(c,3.);
               cairo_set_source_rgba(c,0.,0.,0.,.5);
@@ -2834,9 +2915,9 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
           }
         }
         col2++;
-        if((col2>>1)>=_dec->state.nhmbs){
+        if(col2>=_dec->state.nhmbs){
           col2=0;
-          row2+=2;
+          row2++;
         }
       }
       /*Bit usage indicator[s]:*/

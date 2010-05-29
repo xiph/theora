@@ -435,7 +435,7 @@ static int oc_state_frarray_init(oc_theora_state *_state){
   _state->mb_maps=_ogg_calloc(nmbs,sizeof(*_state->mb_maps));
   _state->mb_modes=_ogg_calloc(nmbs,sizeof(*_state->mb_modes));
   _state->raster_mb_modes=_ogg_calloc(nmbs,sizeof(*_state->raster_mb_modes));
-  _state->raster_mb_mvs=_ogg_calloc(nmbs,sizeof(*_state->raster_mb_modes));
+  _state->raster_mb_mvs=_ogg_calloc(nmbs,sizeof(*_state->raster_mb_mvs));
   _state->coded_fragis=_ogg_malloc(nfrags*sizeof(*_state->coded_fragis));
   if(_state->frags==NULL||_state->frag_mvs==NULL||_state->sb_maps==NULL||
    _state->sb_flags==NULL||_state->sb_masks==NULL||_state->mb_maps==NULL||

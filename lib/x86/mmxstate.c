@@ -346,7 +346,6 @@ void oc_state_4mv_recon_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf_of
     }
     else oc_frag_recon_inter_mmx(dst+8,ref+8+mvoffsets[0],ystride,_dct_coeffs[1]);
   }
-  /*TODO:fix this*/ _mvs+=_state->fplanes[_pli].nhfrags-2;
   dst+=ystride*8;
   ref+=ystride*8;
   if (_mask & 4){
