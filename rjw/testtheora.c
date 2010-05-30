@@ -1219,7 +1219,7 @@ int main(int argc,char *const *argv){
     char *p = argv[2];
     if (p[0] == '-')
     {
-      playback |= Playback_DecodeAudio | Playback_PlayVideo | Playback_PlayAudio | Playback_ShowCRC;
+      playback |= Playback_DecodeAudio | Playback_PlayVideo | Playback_PlayAudio | Playback_CRC | Playback_ShowCRC;
     }
     else if (p[0] == ':')
     {
