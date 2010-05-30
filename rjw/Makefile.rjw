@@ -1,0 +1,74 @@
+# This is a temporary makefile used for testing this branch until the merge
+# completes. It doesn't use the config system etc, so should be considered
+# a poor relation to doing it properly.
+#
+# Use:
+#
+#   make -f Makefile.rjw
+#
+# This relies on ogg/ogg.h, tremolo/codec_internal.h and tremolo/ivorbiscodec.h
+# being available on the VPATH. Personally I copy them into the rjw directory.
+
+VPATH = examples:lib:lib/dec:lib/yuv2rgb:tests:rjw:lib/arm
+
+CC    = arm-none-linux-gnueabi-gcc
+AS    = arm-none-linux-gnueabi-as
+STRIP = arm-none-linux-gnueabi-strip
+
+CFLAGS  = -Iinclude -Iinclude/ogg -I../Tremolo -Irjw
+CFLAGS += -Ilib -Ilib/dec -Ilib/tremolo -Ilib/yuv2rgb 
+CFLAGS += -O3 -mfpu=neon -mcpu=cortex-a8
+CFLAGS += -DOC_LIBOGG2 -D_ARM_ASSEM_
+
+TREMOLOLIB = ../Tremolo/libTremoloL.lib
+
+all: testtheora
+
+clean:
+	rm build/*
+
+# Compilation rule
+build/%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Assembly header rule
+build/ARMoptions.s: lib/arm/ARMoptions.s
+	./arm2gnu.pl < $< > $@
+
+# Structure offset header rule
+build/ARMoffsets.s: lib/arm/ARMoffsets.s
+	./arm2gnu.pl < $< > $@
+
+# Assembly rule
+build/%.o: lib/arm/%.s build/ARMoffsets.s build/ARMoptions.s
+	./arm2gnu.pl < $< > build/$*.S
+	$(CC) -Ibuild $(CFLAGS) -c build/$*.S -o $@
+	$(STRIP) -x $@
+
+theoraobjs = \
+	build/apiwrapper.o \
+	build/ARMbitwise2.o \
+	build/decapiwrapper.o \
+	build/decinfo.o \
+	build/decode.o \
+	build/ARMdecode.o \
+	build/dequant.o \
+	build/ARMfrag.o \
+	build/fragment.o \
+	build/huffdec.o \
+	build/idct.o \
+	build/ARMidct.o \
+	build/info.o \
+	build/internal.o \
+	build/ARMpp.o \
+	build/quant.o \
+	build/state.o \
+	build/ARMstate.o \
+	build/testtheora.o
+
+# Unused files
+#	build/floor1ARM.o \
+#	build/mdctARM.o \
+
+testtheora: $(theoraobjs) $(TREMOLOLIB)
+	$(CC) $^ -o $@ -Wl,-d,-Map,testtheora.map

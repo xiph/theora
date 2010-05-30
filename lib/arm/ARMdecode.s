@@ -12,15 +12,15 @@
 	EXPORT	oc_dec_coded_sb_flags_unpack
 	EXPORT	oc_dec_coded_flags_unpack
 
-	IMPORT	oc_pack_look
-	IMPORT	oc_pack_read1
-	IMPORT	oc_pack_adv
+	IMPORT	theorapackB_lookARM
+	IMPORT	theorapackB_read1ARM
+	IMPORT	oggpack_adv
 
 oc_sb_run_unpack
 	STMFD	r13!,{r0,r4,r14}
 
 	MOV	r1, #18
-	BL	oc_pack_look
+	BL	theorapackB_lookARM
 	MOV	r1, #1		; r1 = adv = 1
 	MVN	r2, #0		; r2 = sub = -1
 	TST	r0, #0x20000	; if (bits&0x20000)
@@ -44,7 +44,7 @@ oc_sb_run_unpack
 	RSB	r4, r1, #18
 	RSB	r4, r2, r0, LSR r4; (r4 = bits>>(18-adv))-sub
 	LDR	r0, [r13],#4
-	BL	oc_pack_adv
+	BL	oggpack_adv
 	MOV	r0, r4
 
 	LDMFD	r13!,{r4,PC}
@@ -53,7 +53,7 @@ oc_block_run_unpack
 	STMFD	r13!,{r0,r4,r14}
 
 	MOV	r1, #9
-	BL	oc_pack_look
+	BL	theorapackB_lookARM
 	MOV	r1, #2		; r1 = adv = 2
 	MVN	r2, #0		; r2 = sub = -1
 	TST	r0, #0x100	; if (bits&0x100)
@@ -74,7 +74,7 @@ oc_block_run_unpack
 	RSB	r4, r1, #9
 	RSB	r4, r2, r0, LSR r4; (r4 = bits>>(9-adv))-sub
 	LDR	r0, [r13],#4
-	BL	oc_pack_adv
+	BL	oggpack_adv
 	SUB	r0, r4, #1
 
 	LDMFD	r13!,{r4,PC}
@@ -94,7 +94,7 @@ oc_dec_partial_sb_flags_unpack
 odpsfu_lp
 	CMP	r7, #0x1000		; if (full_run) (i.e. if >= 0)
 	MOVGE	r0, r11
-	BLGE	oc_pack_read1		; r0 = oc_pack_read1
+	BLGE	theorapackB_read1ARM	; r0 = oc_pack_read1
 	MOV	r6, r0			; r6 = flag
 	MOV	r0, r11
 	BL	oc_sb_run_unpack
@@ -139,7 +139,7 @@ odcsfu_lp
 odcsfu_lp2
 	CMP	r7, #0x1000		; if (full_run) (i.e. if >= 0)
 	MOVGE	r0, r11
-	BLGE	oc_pack_read1		; r0 = oc_pack_read1
+	BLGE	theorapackB_read1ARM	; r0 = oc_pack_read1
 	MOV	r6, r0			; r6 = flag
 	MOV	r0, r11
 	BL	oc_sb_run_unpack
@@ -181,7 +181,7 @@ oc_dec_coded_flags_unpack
 	CMP	r7, #0				; if (npartial>0)
 	MOVLE	r0, #1
 	MOVGT	r0, r5
-	BLGT	oc_pack_read1		;    flag=!oc_pack_read1(opb)
+	BLGT	theorapackB_read1ARM		;    flag=!oc_pack_read1(opb)
 	EOR	r9, r0, #1			; else flag = 0
 	STMFD	r13!,{r4,r5}
 

@@ -2198,7 +2198,7 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
     int                   notstart;
     int                   notdone;
 #ifdef OC_LIBOGG2
-    oc_pack_readinit(&_dec->opb,_op->packet);
+    oggpack_readinit(&_dec->opb,_op->packet);
 #else
     oc_pack_readinit(&_dec->opb,_op->packet,_op->bytes);
 #endif

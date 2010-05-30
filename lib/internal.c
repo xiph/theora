@@ -253,7 +253,7 @@ ogg_uint32_t th_version_number(void){
   Note that this correctly interprets a 0-byte packet as a video data packet.
   Return: 1 for a header packet, 0 for a data packet.*/
 int th_packet_isheader(ogg_packet *_op){
-#ifdef WORK_WITH_TREMOLO
+#ifdef OC_LIBOGG2
     return _op->bytes>0?_op->packet->buffer->data[0]>>7:0;
 #else
     return _op->bytes>0?_op->packet[0]>>7:0;
@@ -265,7 +265,7 @@ int th_packet_isheader(ogg_packet *_op){
   Return: 1 for a key frame, 0 for a delta frame, and -1 for a header
            packet.*/
 int th_packet_iskeyframe(ogg_packet *_op){
-#ifdef WORK_WITH_TREMOLO
+#ifdef OC_LIBOGG2
   return _op->bytes<=0?0:_op->packet->buffer->data[0]&0x80?-1:!(_op->packet->buffer->data[0]&0x40);
 #else
   return _op->bytes<=0?0:_op->packet[0]&0x80?-1:!(_op->packet[0]&0x40);

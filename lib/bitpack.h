@@ -33,7 +33,32 @@ typedef struct oc_pack_buf oc_pack_buf;
 # define OC_LOTS_OF_BITS (0x40000000)
 
 
+#ifdef OC_LIBOGG2
+#define oc_pack_buf oggpack_buffer
 
+#define oc_pack_adv(B,A) theorapackB_adv(B,A)
+#define oc_pack_look(B,A) theorapackB_look(B,A)
+#define oc_pack_readinit(B,R) theorapackB_readinit(B,R)
+#define oc_pack_read(B,L) theorapackB_read((B),(L))
+#define oc_pack_read1(B) theorapackB_read1((B))
+#define oc_pack_bytes_left(B) theorapackB_bytesleft(B)
+
+long theorapackB_lookARM(oggpack_buffer *_b, int bits);
+long theorapackB_readARM(oggpack_buffer *_b,int _bits);
+long theorapackB_read1ARM(oggpack_buffer *_b);
+
+#define theorapackB_look theorapackB_lookARM
+#define theorapackB_read theorapackB_readARM
+#define theorapackB_read1 theorapackB_read1ARM
+#define theorapackB_adv  oggpack_adv
+#define theorapackB_readinit oggpack_readinit
+#define theorapackB_bytes oggpack_bytes
+#define theorapackB_bits oggpack_bits
+#define theorapackB_bytesleft oggpack_bytesleft
+
+#define oggpack_bytesleft(B) (((B)->bitsLeftInSegment+7)>>3)
+
+#else
 struct oc_pack_buf{
   oc_pb_window         window;
   const unsigned char *ptr;
@@ -56,5 +81,6 @@ long oc_pack_bytes_left(oc_pack_buf *_b);
   Here we assume 0<=_bits&&_bits<=32.*/
 long oc_pack_look(oc_pack_buf *_b,int _bits);
 void oc_pack_adv(oc_pack_buf *_b,int _bits);
+#endif
 
 #endif

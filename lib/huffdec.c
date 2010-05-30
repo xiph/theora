@@ -103,7 +103,7 @@ static const unsigned char OC_DCT_TOKEN_MAP[TH_NDCT_TOKENS]={
    they are only used here.
   Declaring local static versions so they can be inlined saves considerable
    function call overhead.*/
-
+#ifndef OC_LIBOGG2
 static oc_pb_window oc_pack_refill(oc_pack_buf *_b,int _bits){
   const unsigned char *ptr;
   const unsigned char *stop;
@@ -152,7 +152,7 @@ void oc_pack_adv(oc_pack_buf *_b,int _bits){
   _b->window<<=_bits;
   _b->bits-=_bits;
 }
-
+#endif
 
 /*The log_2 of the size of a lookup table is allowed to grow to relative to
    the number of unique nodes it contains.
