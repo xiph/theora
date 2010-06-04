@@ -72,8 +72,9 @@ void oc_state_vtable_init_x86(oc_theora_state *_state){
     _state->opt_vtable.frag_recon_inter2=oc_frag_recon_inter2_mmx;
     _state->opt_vtable.idct8x8=oc_idct8x8_mmx;
     _state->opt_vtable.state_frag_recon=oc_state_frag_recon_mmx;
-    _state->opt_vtable.state_quad_recon=oc_state_quad_recon_mmx;
-    _state->opt_vtable.state_4mv_recon=oc_state_4mv_recon_mmx;
+    _state->opt_vtable.state_quad_predict=oc_state_quad_predict_mmx;
+    _state->opt_vtable.state_4mv_predict=oc_state_4mv_predict_mmx;
+    _state->opt_vtable.state_frag_residual=oc_state_frag_residual_mmx;
     _state->opt_vtable.state_frag_copy_list=oc_state_frag_copy_list_mmx;
     _state->opt_vtable.state_loop_filter_frag_rows=
      oc_state_loop_filter_frag_rows_mmx;

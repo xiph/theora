@@ -62,12 +62,12 @@ void oc_idct8x8_mmx(ogg_int16_t _y[64],int _last_zzi);
 void oc_idct8x8_sse2(ogg_int16_t _y[64],int _last_zzi);
 void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
  int _pli,ogg_int16_t _dct_coeffs[64],int _last_zzi,ogg_uint16_t _dc_quant);
-void oc_state_quad_recon_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf_off,
- int _pli,ogg_int16_t _dct_coeffs[][64+8],int _last_zzi[4],
- ogg_uint16_t _dc_quant,int _mask,int _ref_frame,oc_mv _mv);
-void oc_state_4mv_recon_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf_off,
- int _pli,ogg_int16_t _dct_coeffs[][64+8],int _last_zzi[4],
- ogg_uint16_t _dc_quant,int _mask,oc_mv _mvs[4]);
+void oc_state_quad_predict_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf_off,
+ int _pli,int _mask,int _ref_frame,oc_mv _mv);
+void oc_state_4mv_predict_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf_off,
+ int _pli,int _mask,oc_mv _mvs[4]);
+void oc_state_frag_residual_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf_off,
+ int _pli,ogg_int16_t _dct_coeffs[64],int _last_zzi,ogg_uint16_t _dc_quant,int _mb_mode);
 void oc_state_frag_copy_list_mmx(const oc_theora_state *_state,
  const ptrdiff_t *_fragis,ptrdiff_t _nfragis,
  int _dst_frame,int _src_frame,int _pli);

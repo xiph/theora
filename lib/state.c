@@ -608,8 +608,9 @@ void oc_state_vtable_init_c(oc_theora_state *_state){
   _state->opt_vtable.frag_recon_inter2=oc_frag_recon_inter2_c;
   _state->opt_vtable.idct8x8=oc_idct8x8_c;
   _state->opt_vtable.state_frag_recon=oc_state_frag_recon_c;
-  //_state->opt_vtable.state_frag_recon=oc_state_quad_recon_c;
-  //_state->opt_vtable.state_frag_recon=oc_state_4mv_recon_c;
+  //_state->opt_vtable.state_quad_predict=oc_state_quad_predict_c;
+  //_state->opt_vtable.state_4mv_predict=oc_state_4mv_predict_c;
+  //_state->opt_vtable.state_frag_residual=oc_state_frag_residual_c;
   _state->opt_vtable.state_frag_copy_list=oc_state_frag_copy_list_c;
   _state->opt_vtable.state_loop_filter_frag_rows=
    oc_state_loop_filter_frag_rows_c;
@@ -885,18 +886,20 @@ void oc_state_frag_recon(const oc_theora_state *_state,ptrdiff_t _fragi,
    _last_zzi,_dc_quant);
 }
 
-void oc_state_quad_recon(const oc_theora_state *_state,ptrdiff_t _frag_buf_off,
- int _pli,ogg_int16_t _dct_coeffs[][64+8],int _last_zzi[4],
- ogg_uint16_t _dc_quant,int _mask,int _ref_frame,oc_mv _mv){
-  _state->opt_vtable.state_quad_recon(_state,_frag_buf_off,_pli,_dct_coeffs,
-   _last_zzi,_dc_quant,_mask,_ref_frame,_mv);
+void oc_state_quad_predict(const oc_theora_state *_state,ptrdiff_t _frag_buf_off,
+ int _pli,int _mask,int _ref_frame,oc_mv _mv){
+  _state->opt_vtable.state_quad_predict(_state,_frag_buf_off,_pli,_mask,_ref_frame,_mv);
 }
 
-void oc_state_4mv_recon(const oc_theora_state *_state,ptrdiff_t _frag_buf_off,
- int _pli,ogg_int16_t _dct_coeffs[][64+8],int _last_zzi[4],
- ogg_uint16_t _dc_quant,int _mask,oc_mv _mvs[4]){
-  _state->opt_vtable.state_4mv_recon(_state,_frag_buf_off,_pli,_dct_coeffs,
-   _last_zzi,_dc_quant,_mask,_mvs);
+void oc_state_4mv_predict(const oc_theora_state *_state,ptrdiff_t _frag_buf_off,
+ int _pli,int _mask,oc_mv _mvs[4]){
+  _state->opt_vtable.state_4mv_predict(_state,_frag_buf_off,_pli,_mask,_mvs);
+}
+
+void oc_state_frag_residual(const oc_theora_state *_state,ptrdiff_t _frag_buf_off,
+ int _pli,ogg_int16_t _dct_coeffs[64],int _last_zzi,ogg_uint16_t _dc_quant,int _mb_mode){
+   _state->opt_vtable.state_frag_residual(_state,_frag_buf_off,_pli,_dct_coeffs,
+    _last_zzi,_dc_quant,_mb_mode);
 }
 
 void oc_state_frag_recon_c(const oc_theora_state *_state,ptrdiff_t _fragi,

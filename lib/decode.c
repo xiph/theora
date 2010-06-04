@@ -842,63 +842,57 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
   old_mbi=0;
   for (mbi=sby=0;sby<_dec->state.fplanes[0].nsbs;sby+=_dec->state.fplanes[0].nhsbs,mbi+=nhmbs)
     for (sbx=0;sbx<_dec->state.fplanes[0].nhsbs;sbx++,mbi+=2){
-//      int mask=_dec->state.sb_masks[sby+sbx];
-//      int umask=_dec->state.sb_masks[_dec->state.fplanes[1].sboffset+sby_uv+(sbx>>XDECI)]&SOMETHINGCLEVER;
-//      int vmask=_dec->state.sb_masks[_dec->state.fplanes[2].sboffset+sby_uv+(sbx>>XDECI)]&SOMETHINGCLEVER;
+#if 0 /* no genius today */
+       ogg_uint16_t lmask         [4]=  {0x000F,0x00F0,0x0F00,0xF000};
+       ogg_uint16_t cmask444      [4]=  {0x000F,0x00F0,0x0F00,0xF000};
+       ogg_uint16_t cmaskRSV[2]   [4]= {{0x0003,0x000C,0x3000,0xC000},{0x0090,0x0060,0x0600,0x0900}};
+       ogg_uint16_t cmask422   [2][4]= {{0x0009,0x0030,0x00C0,0x0006},{0x6000,0x0300,0x0C00,0x9000}};
+       ogg_uint16_t cmask420[2][2][4]={{{0x0001,0x0008,0x0004,0x0002},{0x4000,0x2000,0x1000,0x8000}},
+                                       {{0x0010,0x0020,0x0040,0x0080},{0x0100,0x0200,0x0400,0x0800}}};
+
+//      int mask=_dec->state.sb_masks[sby+sbx]&lmask[i];
+//      int umask=_dec->state.sb_masks[_dec->state.fplanes[1].sboffset+sby_uv+(sbx>>XDECI)]&cmask[row&YDECI][col&XDECI][i];
+//      int vmask=_dec->state.sb_masks[_dec->state.fplanes[2].sboffset+sby_uv+(sbx>>XDECI)]&cmask[row&YDECI][col&XDECI][i];
       /* TODO: use the superblock masks directly rather than iterating through
        * frags[].  Also use these bitmaps to update frags[].mb_mode in whatever
        * order is convenient.  This should be faster (if there's enough
        * cleverness in the implementation) and it will eliminate use of
        * mb_maps[].
        */
-
+#endif
       for (i=0;i<4;i++,old_mbi++){
         int          mb_mode;
         mb_mode=rmb_modes[i][mbi];
         if(mb_mode!=OC_MODE_INVALID){
           oc_mv       *mbmv;
           ptrdiff_t    fragi;
-          int          coded[13];
-          int          codedi;
-          int          ncoded;
+          int          lastcoded;
+          int          coded;
           int          mapi;
           int          mapii;
           /*Search for at least one coded fragment.*/
-          ncoded=mapii=0;
+          coded=mapii=0;
           do{
             mapi=map_idxs[mapii];
             fragi=mb_maps[old_mbi][mapi>>2][mapi&3];
-            if(frags[fragi].coded)coded[ncoded++]=mapi;
+            if(frags[fragi].coded)
+              frags[fragi].mb_mode=mb_mode,coded|=1<<mapii;
           }
           while(++mapii<map_nidxs);
-          if(ncoded<=0)continue;
+          if(coded==0)continue;
           mbmv=rmb_mvs[i][mbi];
           switch(mb_mode){
             case OC_MODE_INTER_MV_FOUR:{
               int         bi;
-              /*Mark the tail of the list, so we don't accidentally go past it.*/
-              coded[ncoded]=-1;
-              for(bi=codedi=0;bi<4;bi++){
-                if(coded[codedi]==bi){
-                  codedi++;
-                  fragi=mb_maps[old_mbi][0][bi];
-                  frags[fragi].mb_mode=mb_mode;
+              for(bi=lastcoded=0;bi<4;bi++){
+                if(coded&1<<bi){
+                  lastcoded=bi;
                   oc_mv_unpack(&_dec->opb,mv_comp_tree,mbmv[bi]);
                 }
                 else mbmv[bi][0]=mbmv[bi][1]=0;
               }
-              if(codedi>0){
-                memcpy(last_mv[1],last_mv[0],sizeof(last_mv[1]));
-                memcpy(last_mv[0],mbmv[coded[codedi-1]],sizeof(last_mv[0]));
-              }
-              if(codedi<ncoded){
-                for(;codedi<ncoded;codedi++){
-                  mapi=coded[codedi];
-                  bi=mapi&3;
-                  fragi=mb_maps[old_mbi][mapi>>2][bi];
-                  frags[fragi].mb_mode=mb_mode;
-                }
-              }
+              memcpy(last_mv[1],last_mv[0],sizeof(last_mv[1]));
+              memcpy(last_mv[0],mbmv[lastcoded],sizeof(last_mv[0]));
             }break;
             case OC_MODE_INTER_MV:
               memcpy(last_mv[1],last_mv[0],sizeof(last_mv[1]));
@@ -914,15 +908,6 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
               oc_mv_unpack(&_dec->opb,mv_comp_tree,*mbmv);
             }break;
             default:memset(*mbmv,0,sizeof(*mbmv));break;
-          }
-          /*4MV mode fills in the fragments itself.
-            For all other modes we can use this common code.*/
-          if(mb_mode!=OC_MODE_INTER_MV_FOUR){
-            for(codedi=0;codedi<ncoded;codedi++){
-              mapi=coded[codedi];
-              fragi=mb_maps[old_mbi][mapi>>2][mapi&3];
-              frags[fragi].mb_mode=mb_mode;
-            }
           }
         }
       }
@@ -1621,11 +1606,11 @@ static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
    counts.*/
 static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
  oc_dec_pipeline_state *_pipe,int _pli){
-  static const char rasterise[16]={
-    0, 1, 3, 2,
-    0, 2, 3, 1,
-    0, 2, 3, 1,
-    3, 2, 0, 1,
+  static const char bitraster[4][16]={
+    {0, 1, 2, 3, 8, 9, 10, 11, 4, 5, 6, 7, 12, 13, 14, 15, },
+    {0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15, },
+    {0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15, },
+    {0, 8, 4, 12, 1, 9, 5, 13, 2, 10, 6, 14, 3, 11, 7, 15, },
   };
   oc_fragment             *frags;
   ogg_uint16_t            *sb_masks;
@@ -1675,15 +1660,14 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
 
     fragip = _dec->state.sb_maps[sbi][0];
 
-    for (quadi = 0; quadi < 16; quadi += 4, bmask >>= 4, fragip += 4)
+    for (quadi = 0; quadi < 4; quadi++, bmask >>= 4, fragip += 4)
     {
       /*This array is made one element larger because the zig-zag index array
          uses the final element as a dumping ground for out-of-range indices
          to protect us from buffer overflow.*/
       OC_ALIGN8(ogg_int16_t dct_coeffs[4][64 + 8]);
       int bi;
-      int last_zzi[4];
-      int mask = 0;
+      int mask;
       int mb_mode;
       ogg_uint16_t dc_quant;
       oc_mv *mb_mvs;
@@ -1693,122 +1677,128 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
       if ((bmask & 15) == 0)
         continue;
 
-      mb_mode = _dec->state.frame_type==OC_INTRA_FRAME?OC_MODE_INTRA:_dec->state.raster_mb_modes[mbi+mbo[quadi>>2]];
-      dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
-      mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi>>2]];
-      frag_buf_off = _dec->state.frag_buf_offs[fragip[quadi==12?2:0]];
+      mask = bitraster[quadi][bmask&15];
+
+      if (_dec->state.frame_type!=OC_INTRA_FRAME){
+        mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]];
+        dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
+        mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]];
+        frag_buf_off = _dec->state.frag_buf_offs[fragip[quadi==3?2:0]];
+
+        switch (pixel_fmt){
+        case TH_PF_444:
+          if (mb_mode==OC_MODE_INTER_MV_FOUR)
+            oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,mask,mb_mvs);
+          else
+            oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+          break;
+
+        case TH_PF_422:
+          /* TODO: code the reference frame index and the motion vector into a
+           * single word and then compare left and right copies -- if they're the
+           * same then do things quickly instead of like this:
+           */
+          if (mask&5){
+            if (mb_mode==OC_MODE_INTER_MV_FOUR){
+              cmv[0][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0],1,1);
+              cmv[0][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1],1,1);
+              cmv[2][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[2][0]+mb_mvs[3][0],1,1);
+              cmv[2][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[2][1]+mb_mvs[3][1],1,1);
+              oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,mask&5,cmv);
+            }
+            else
+              oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask&5,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+          }
+
+          mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]+1];
+          dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
+          mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]+1];
+
+          if (mask&10){
+            if (mb_mode==OC_MODE_INTER_MV_FOUR){
+              cmv[1][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0],1,1);
+              cmv[1][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1],1,1);
+              cmv[3][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[2][0]+mb_mvs[3][0],1,1);
+              cmv[3][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[2][1]+mb_mvs[3][1],1,1);
+              oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,mask&10,cmv);
+            }
+            else
+              oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask&10,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+          }
+          break;
+
+        case TH_PF_420:
+          /* TODO: code the reference frame index and the motion vector into a
+           * single word and then compare left and right copies -- if they're the
+           * same then do things quickly instead of like this:
+           */
+          if (mask&1)
+            if (mb_mode==OC_MODE_INTER_MV_FOUR){
+              cmv[0][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
+              cmv[0][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
+              oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,mask&1,cmv);
+            }
+            else
+              oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask&1,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+
+          mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]+1];
+          dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
+          mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]+1];
+
+          if (mask&2)
+            if (mb_mode==OC_MODE_INTER_MV_FOUR){
+              cmv[1][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
+              cmv[1][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
+              oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,mask&2,cmv);
+            }
+            else
+              oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask&2,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+
+          mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]+nhmbs];
+          dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
+          mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]+nhmbs];
+
+          /* TODO: code the reference frame index and the motion vector into a
+           * single word and then compare left and right copies -- if they're the
+           * same then do things quickly instead of like this:
+           */
+          if (mask&4)
+            if (mb_mode==OC_MODE_INTER_MV_FOUR){
+              cmv[2][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
+              cmv[2][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
+              oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,mask&4,cmv);
+            }
+            else
+              oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask&4,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+
+          mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]+nhmbs+1];
+          dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
+          mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]+nhmbs+1];
+
+          if (mask&8)
+            if (mb_mode==OC_MODE_INTER_MV_FOUR){
+              cmv[3][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
+              cmv[3][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
+              oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,mask&8,cmv);
+            }
+            else
+              oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask&8,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+          break;
+        }
+      }
 
       for (bi = 0; bi < 4; bi++)
       {
         ptrdiff_t fragi;
-        int obi;
+        int last_zzi;
         if ((bmask & (1 << bi)) == 0) continue;
         fragi = fragip[bi];
-        obi = rasterise[quadi + bi];
-
-        last_zzi[obi] = oc_dec_get_dct_coeffs(dct_coeffs[obi], _dec, _pipe, _pli, frags + fragi);
-        mask |= 1 << obi;
-      }
-
-      switch (pixel_fmt){
-      case TH_PF_444:
-        if (mb_mode==OC_MODE_INTER_MV_FOUR)
-          oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask,mb_mvs);
-        else
-          oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
-        break;
-
-      case TH_PF_422:
-        /* TODO: code the reference frame index and the motion vector into a
-         * single word and then compare left and right copies -- if they're the
-         * same then do things quickly instead of like this:
-         */
-        if (mask&5){
-          if (mb_mode==OC_MODE_INTER_MV_FOUR){
-            cmv[0][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0],1,1);
-            cmv[0][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1],1,1);
-            cmv[2][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[2][0]+mb_mvs[3][0],1,1);
-            cmv[2][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[2][1]+mb_mvs[3][1],1,1);
-            oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&5,cmv);
-          }
-          else
-            oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&5,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
-        }
-
-        mb_mode = _dec->state.frame_type==OC_INTRA_FRAME?OC_MODE_INTRA:_dec->state.raster_mb_modes[mbi+mbo[quadi>>2]+1];
+        mb_mode=frags[fragi].mb_mode;
         dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
-        mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi>>2]+1];
+        frag_buf_off = _dec->state.frag_buf_offs[fragi];
 
-        if (mask&10){
-          if (mb_mode==OC_MODE_INTER_MV_FOUR){
-            cmv[1][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0],1,1);
-            cmv[1][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1],1,1);
-            cmv[3][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[2][0]+mb_mvs[3][0],1,1);
-            cmv[3][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[2][1]+mb_mvs[3][1],1,1);
-            oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&10,cmv);
-          }
-          else
-            oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&10,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
-        }
-        break;
-
-      case TH_PF_420:
-        /* TODO: code the reference frame index and the motion vector into a
-         * single word and then compare left and right copies -- if they're the
-         * same then do things quickly instead of like this:
-         */
-        if (mask&1)
-          if (mb_mode==OC_MODE_INTER_MV_FOUR){
-            cmv[0][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
-            cmv[0][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
-            oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&1,cmv);
-          }
-          else
-            oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&1,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
-
-        mb_mode = _dec->state.frame_type==OC_INTRA_FRAME?OC_MODE_INTRA:_dec->state.raster_mb_modes[mbi+mbo[quadi>>2]+1];
-        dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
-        mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi>>2]+1];
-
-        if (mask&2)
-          if (mb_mode==OC_MODE_INTER_MV_FOUR){
-            cmv[1][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
-            cmv[1][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
-            oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&2,cmv);
-          }
-          else
-            oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&2,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
-
-        mb_mode = _dec->state.frame_type==OC_INTRA_FRAME?OC_MODE_INTRA:_dec->state.raster_mb_modes[mbi+mbo[quadi>>2]+nhmbs];
-        dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
-        mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi>>2]+nhmbs];
-
-        /* TODO: code the reference frame index and the motion vector into a
-         * single word and then compare left and right copies -- if they're the
-         * same then do things quickly instead of like this:
-         */
-        if (mask&4)
-          if (mb_mode==OC_MODE_INTER_MV_FOUR){
-            cmv[2][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
-            cmv[2][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
-            oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&4,cmv);
-          }
-          else
-            oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&4,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
-
-        mb_mode = _dec->state.frame_type==OC_INTRA_FRAME?OC_MODE_INTRA:_dec->state.raster_mb_modes[mbi+mbo[quadi>>2]+nhmbs+1];
-        dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
-        mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi>>2]+nhmbs+1];
-
-        if (mask&8)
-          if (mb_mode==OC_MODE_INTER_MV_FOUR){
-            cmv[3][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
-            cmv[3][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
-            oc_state_4mv_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&8,cmv);
-          }
-          else
-            oc_state_quad_recon(&_dec->state,frag_buf_off,_pli,dct_coeffs,last_zzi,dc_quant,mask&8,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
-        break;
+        last_zzi = oc_dec_get_dct_coeffs(dct_coeffs[bi], _dec, _pipe, _pli, frags + fragi);
+        oc_state_frag_residual(&_dec->state,frag_buf_off,_pli,dct_coeffs[bi],last_zzi,dc_quant,mb_mode);
       }
     }
   }
