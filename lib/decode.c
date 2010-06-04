@@ -1543,8 +1543,6 @@ static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
   ti=_pipe->ti[_pli];
   eob_runs=_pipe->eob_runs[_pli];
 
-  assert(_fragp == _dec->state.frags + *_pipe->coded_fragis[_pli]++); /*XXX:DEBUG*/
-
   for(zzi=0;zzi<64;zzi++)dct_coeffs[zzi]=0;
   qti=_fragp->mb_mode!=OC_MODE_INTRA;
   ac_quant=_pipe->dequant[_pli][_fragp->qii][qti];
@@ -1674,14 +1672,12 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
       int frag_buf_off;
       oc_mv cmv[4];
 
-      if ((bmask & 15) == 0)
-        continue;
+      if ((bmask&15)==0) continue;
 
       mask = bitraster[quadi][bmask&15];
 
       if (_dec->state.frame_type!=OC_INTRA_FRAME){
         mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]];
-        dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
         mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]];
         frag_buf_off = _dec->state.frag_buf_offs[fragip[quadi==3?2:0]];
 
@@ -1689,7 +1685,7 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
         case TH_PF_444:
           if (mb_mode==OC_MODE_INTER_MV_FOUR)
             oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,mask,mb_mvs);
-          else
+          else if (mb_mode!=OC_MODE_INTRA)
             oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
           break;
 
@@ -1706,12 +1702,11 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
               cmv[2][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[2][1]+mb_mvs[3][1],1,1);
               oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,mask&5,cmv);
             }
-            else
+            else if (mb_mode!=OC_MODE_INTRA)
               oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask&5,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
           }
 
           mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]+1];
-          dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
           mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]+1];
 
           if (mask&10){
@@ -1722,7 +1717,7 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
               cmv[3][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[2][1]+mb_mvs[3][1],1,1);
               oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,mask&10,cmv);
             }
-            else
+            else if (mb_mode!=OC_MODE_INTRA)
               oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask&10,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
           }
           break;
@@ -1736,26 +1731,24 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
             if (mb_mode==OC_MODE_INTER_MV_FOUR){
               cmv[0][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
               cmv[0][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
-              oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,mask&1,cmv);
+              oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,1,cmv);
             }
-            else
-              oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask&1,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+            else if (mb_mode!=OC_MODE_INTRA)
+              oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,1,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
 
           mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]+1];
-          dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
           mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]+1];
 
           if (mask&2)
             if (mb_mode==OC_MODE_INTER_MV_FOUR){
               cmv[1][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
               cmv[1][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
-              oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,mask&2,cmv);
+              oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,2,cmv);
             }
-            else
-              oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask&2,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+            else if (mb_mode!=OC_MODE_INTRA)
+              oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,2,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
 
           mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]+nhmbs];
-          dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
           mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]+nhmbs];
 
           /* TODO: code the reference frame index and the motion vector into a
@@ -1766,23 +1759,22 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
             if (mb_mode==OC_MODE_INTER_MV_FOUR){
               cmv[2][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
               cmv[2][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
-              oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,mask&4,cmv);
+              oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,4,cmv);
             }
-            else
-              oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask&4,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+            else if (mb_mode!=OC_MODE_INTRA)
+              oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,4,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
 
           mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]+nhmbs+1];
-          dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
           mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]+nhmbs+1];
 
           if (mask&8)
             if (mb_mode==OC_MODE_INTER_MV_FOUR){
               cmv[3][0]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][0]+mb_mvs[1][0]+mb_mvs[2][0]+mb_mvs[3][0],2,2);
               cmv[3][1]=(signed char)OC_DIV_ROUND_POW2(mb_mvs[0][1]+mb_mvs[1][1]+mb_mvs[2][1]+mb_mvs[3][1],2,2);
-              oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,mask&8,cmv);
+              oc_state_4mv_predict(&_dec->state,frag_buf_off,_pli,8,cmv);
             }
-            else
-              oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask&8,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
+            else if (mb_mode!=OC_MODE_INTRA)
+              oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,8,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
           break;
         }
       }

@@ -149,6 +149,8 @@ static const ogg_int16_t zeroes[64]={0};
 
 void oc_state_quad_predict_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf_off,
  int _pli,int _mask,int _ref_frame, oc_mv _mv){
+  const unsigned char *ref;
+  int                  mvoffsets[2];
   unsigned char *dst;
   int            ystride;
   int            nhfrags;
@@ -158,68 +160,60 @@ void oc_state_quad_predict_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf
   dst=_state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_SELF]]+_frag_buf_off;
 
   /*Fill in the target buffer.*/
-  if(_ref_frame!=OC_FRAME_SELF){
-    const unsigned char *ref;
-    int                  mvoffsets[2];
-    ref=
-     _state->ref_frame_data[_state->ref_frame_idx[_ref_frame]]
-     +_frag_buf_off;
-    if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,_mv[0],_mv[1])>1){
-      switch(_mask&3){
-      case 3:
-        oc_int_fragx2_copy2_sse2(dst,ystride,ref+mvoffsets[0],ref+mvoffsets[1],ystride);
-        break;
-      case 1:
-        oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],
-         ystride,zeroes);
-        break;
-      case 2:
-        oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],
-         ystride,zeroes);
-      }
-      dst+=ystride*8;
-      ref+=ystride*8;
-      switch(_mask>>2){
-      case 3:
-        oc_int_fragx2_copy2_sse2(dst,ystride,ref+mvoffsets[0],ref+mvoffsets[1],ystride);
-        break;
-      case 1:
-        oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],
-         ystride,zeroes);
-        break;
-      case 2:
-        oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],
-         ystride,zeroes);
-      }
+  ref=_state->ref_frame_data[_state->ref_frame_idx[_ref_frame]]+_frag_buf_off;
+  if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,_mv[0],_mv[1])>1){
+    switch(_mask&3){
+    case 3:
+      oc_int_fragx2_copy2_sse2(dst,ystride,ref+mvoffsets[0],ref+mvoffsets[1],ystride);
+      break;
+    case 1:
+      oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],
+       ystride,zeroes);
+      break;
+    case 2:
+      oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],
+       ystride,zeroes);
     }
-    else{
-      switch(_mask&3){
-      case 3:
-        oc_frag_recon_inter_mmx(dst+0,ref+0+mvoffsets[0],ystride,zeroes);
-        oc_frag_recon_inter_mmx(dst+8,ref+8+mvoffsets[0],ystride,zeroes);
-        break;
-      case 1:
-        oc_frag_recon_inter_mmx(dst+0,ref+0+mvoffsets[0],ystride,zeroes);
-        break;
-      case 2:
-        oc_frag_recon_inter_mmx(dst+8,ref+8+mvoffsets[0],ystride,zeroes);
-        break;
-      }
-      dst+=ystride*8;
-      ref+=ystride*8;
-      switch(_mask>>2){
-      case 3:
-        oc_frag_recon_inter_mmx(dst+0,ref+0+mvoffsets[0],ystride,zeroes);
-        oc_frag_recon_inter_mmx(dst+8,ref+8+mvoffsets[0],ystride,zeroes);
-        break;
-      case 1:
-        oc_frag_recon_inter_mmx(dst+0,ref+0+mvoffsets[0],ystride,zeroes);
-        break;
-      case 2:
-        oc_frag_recon_inter_mmx(dst+8,ref+8+mvoffsets[0],ystride,zeroes);
-        break;
-      };
+    dst+=ystride*8;
+    ref+=ystride*8;
+    switch(_mask>>2){
+    case 3:
+      oc_int_fragx2_copy2_sse2(dst,ystride,ref+mvoffsets[0],ref+mvoffsets[1],ystride);
+      break;
+    case 1:
+      oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],
+       ystride,zeroes);
+      break;
+    case 2:
+      oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],
+       ystride,zeroes);
     }
+  }
+  else{
+    switch(_mask&3){
+    case 3:
+      OC_FRAGX2_COPY_SSE2(dst,ref+mvoffsets[0],ystride);
+      break;
+    case 1:
+      OC_FRAG_COPY_MMX(dst+0,ref+0+mvoffsets[0],ystride);
+      break;
+    case 2:
+      OC_FRAG_COPY_MMX(dst+8,ref+8+mvoffsets[0],ystride);
+      break;
+    }
+    dst+=ystride*8;
+    ref+=ystride*8;
+    switch(_mask>>2){
+    case 3:
+      OC_FRAGX2_COPY_SSE2(dst,ref+mvoffsets[0],ystride);
+      break;
+    case 1:
+      OC_FRAG_COPY_MMX(dst+0,ref+0+mvoffsets[0],ystride);
+      break;
+    case 2:
+      OC_FRAG_COPY_MMX(dst+8,ref+8+mvoffsets[0],ystride);
+      break;
+    };
   }
 }
 
@@ -242,14 +236,14 @@ void oc_state_4mv_predict_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf_
       oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],
        ystride,zeroes);
     }
-    else oc_frag_recon_inter_mmx(dst+0,ref+0+mvoffsets[0],ystride,zeroes);
+    else OC_FRAG_COPY_MMX(dst+0,ref+0+mvoffsets[0],ystride);
   }
   if (_mask & 2){
     if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,_mvs[1][0],_mvs[1][1])>1){
       oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],
        ystride,zeroes);
     }
-    else oc_frag_recon_inter_mmx(dst+8,ref+8+mvoffsets[0],ystride,zeroes);
+    else OC_FRAG_COPY_MMX(dst+8,ref+8+mvoffsets[0],ystride);
   }
   dst+=ystride*8;
   ref+=ystride*8;
@@ -258,14 +252,14 @@ void oc_state_4mv_predict_mmx(const oc_theora_state *_state,ptrdiff_t _frag_buf_
       oc_frag_recon_inter2_mmx(dst+0,ref+0+mvoffsets[0],ref+0+mvoffsets[1],
        ystride,zeroes);
     }
-    else oc_frag_recon_inter_mmx(dst+0,ref+0+mvoffsets[0],ystride,zeroes);
+    else OC_FRAG_COPY_MMX(dst+0,ref+0+mvoffsets[0],ystride);
   }
   if (_mask & 8){
     if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,_mvs[3][0],_mvs[3][1])>1){
       oc_frag_recon_inter2_mmx(dst+8,ref+8+mvoffsets[0],ref+8+mvoffsets[1],
        ystride,zeroes);
     }
-    else oc_frag_recon_inter_mmx(dst+8,ref+8+mvoffsets[0],ystride,zeroes);
+    else OC_FRAG_COPY_MMX(dst+8,ref+8+mvoffsets[0],ystride);
   }
 }
 
