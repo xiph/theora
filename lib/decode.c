@@ -1528,8 +1528,12 @@ static void oc_dec_dc_unpredict_mcu_plane(oc_dec_ctx *_dec,
    (fragy_end-fragy0)*(ptrdiff_t)nhfrags-ncoded_fragis;
 }
 
-static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
- oc_dec_ctx *_dec,oc_dec_pipeline_state *_pipe,int _pli, const oc_fragment *_fragp){
+static void oc_dec_get_dct_coeffs(oc_dec_ctx *_dec,oc_dec_pipeline_state *_pipe,
+ int _pli, const oc_fragment *_fragp,ptrdiff_t _frag_buf_off){
+  /*This array is made one element larger because the zig-zag index array
+     uses the final element as a dumping ground for out-of-range indices
+     to protect us from buffer overflow.*/
+  OC_ALIGN16(ogg_int16_t dct_coeffs[64+1]);
   unsigned char       *dct_tokens;
   const unsigned char *dct_fzig_zag;
   ptrdiff_t           *ti;
@@ -1543,7 +1547,24 @@ static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
   ti=_pipe->ti[_pli];
   eob_runs=_pipe->eob_runs[_pli];
 
+#if 0
   for(zzi=0;zzi<64;zzi++)dct_coeffs[zzi]=0;
+#else
+      __asm__ __volatile__(
+        "pxor %%xmm0,%%xmm0\n\t"
+        "movdqa %%xmm0,(%[y])\n\t"
+        "movdqa %%xmm0,16(%[y])\n\t"
+        "movdqa %%xmm0,32(%[y])\n\t"
+        "movdqa %%xmm0,48(%[y])\n\t"
+        "movdqa %%xmm0,64(%[y])\n\t"
+        "movdqa %%xmm0,80(%[y])\n\t"
+        "movdqa %%xmm0,96(%[y])\n\t"
+        "movdqa %%xmm0,112(%[y])\n\t"
+        :
+        :[y]"r"(dct_coeffs)
+        :"memory"
+      );
+#endif
   qti=_fragp->mb_mode!=OC_MODE_INTRA;
   ac_quant=_pipe->dequant[_pli][_fragp->qii][qti];
   /*Decode the AC coefficients.*/
@@ -1590,7 +1611,7 @@ static int oc_dec_get_dct_coeffs(ogg_int16_t dct_coeffs[65],
   dct_coeffs[0]=(ogg_int16_t)_fragp->dc;
   /*last_zzi is always initialized.
     If your compiler thinks otherwise, it is dumb.*/
-  return last_zzi;
+  oc_state_frag_residual(&_dec->state,_frag_buf_off,_pli,dct_coeffs,last_zzi,_pipe->dequant[_pli][0][qti][0],_fragp->mb_mode);
 }
 
 /*Reconstructs all coded fragments in a single MCU (one or two super block
@@ -1613,14 +1634,16 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
   oc_fragment             *frags;
   ogg_uint16_t            *sb_masks;
   int                      nhmbs;
-  int                      mbi,
+  int                      mbsi,
                            mb_stepx,
                            mb_stepy;
   int                      sbi,
                            sb_end,
                            sb_newline;
   int                      pixel_fmt;
-  int                      mbo[4];
+  ptrdiff_t                mbo[4];
+  ptrdiff_t                fbo[4];
+  ptrdiff_t                fbsi;
 
   sb_masks = _dec->state.sb_masks;
   frags=_dec->state.frags;
@@ -1639,18 +1662,25 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
   mbo[1]=mbo[0]+nhmbs*mb_stepy;
   mbo[2]=mbo[1]+mb_stepx;
   mbo[3]=mbo[0]+mb_stepx;
+  fbo[0]=_dec->state.frag_buf_offs[_dec->state.sb_maps[_dec->state.fplanes[_pli].sboffset][0][0]];
+  fbo[1]=_dec->state.frag_buf_offs[_dec->state.sb_maps[_dec->state.fplanes[_pli].sboffset][0][4]];
+  fbo[2]=_dec->state.frag_buf_offs[_dec->state.sb_maps[_dec->state.fplanes[_pli].sboffset][0][8]];
+  fbo[3]=_dec->state.frag_buf_offs[_dec->state.sb_maps[_dec->state.fplanes[_pli].sboffset][0][12+2]];
 
-  mbi=(_pipe->fragy0[_pli]>>2-mb_stepy)*nhmbs;
+  mbsi=(_pipe->fragy0[_pli]>>2-mb_stepy)*nhmbs;
+  fbsi=_pipe->fragy0[_pli]*8*_dec->state.ref_ystride[_pli];
 
-  for ( ; sbi < sb_end; sbi++,mbi+=1<<mb_stepx)
+  for ( ; sbi < sb_end; sbi++,mbsi+=1<<mb_stepx,fbsi+=32)
   {
     ptrdiff_t *fragip;
     ogg_uint16_t bmask;
     int quadi;
 
     if(sbi>=sb_newline){
-      mbi+=(nhmbs<<mb_stepy)-nhmbs;
+      mbsi+=(nhmbs<<mb_stepy)-nhmbs;
       sb_newline+=_dec->state.fplanes[_pli].nhsbs;
+      fbsi-=32*_dec->state.fplanes[_pli].nhsbs;
+      fbsi+=32*_dec->state.ref_ystride[_pli];
     }
 
     bmask = sb_masks[sbi];
@@ -1660,26 +1690,22 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
 
     for (quadi = 0; quadi < 4; quadi++, bmask >>= 4, fragip += 4)
     {
-      /*This array is made one element larger because the zig-zag index array
-         uses the final element as a dumping ground for out-of-range indices
-         to protect us from buffer overflow.*/
-      OC_ALIGN8(ogg_int16_t dct_coeffs[4][64 + 8]);
       int bi;
-      int mask;
-      int mb_mode;
-      ogg_uint16_t dc_quant;
-      oc_mv *mb_mvs;
-      int frag_buf_off;
-      oc_mv cmv[4];
 
       if ((bmask&15)==0) continue;
 
-      mask = bitraster[quadi][bmask&15];
-
       if (_dec->state.frame_type!=OC_INTRA_FRAME){
-        mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]];
-        mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]];
-        frag_buf_off = _dec->state.frag_buf_offs[fragip[quadi==3?2:0]];
+        int mb_mode;
+        ptrdiff_t frag_buf_off;
+        int mask=bitraster[quadi][bmask&15];
+        int mbi=mbsi+mbo[quadi];
+        oc_mv *mb_mvs;
+        oc_mv cmv[4];
+
+        frag_buf_off = fbsi+fbo[quadi];
+
+        mb_mode = _dec->state.raster_mb_modes[mbi];
+        mb_mvs = _dec->state.raster_mb_mvs[mbi];
 
         switch (pixel_fmt){
         case TH_PF_444:
@@ -1706,8 +1732,8 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
               oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,mask&5,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
           }
 
-          mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]+1];
-          mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]+1];
+          mb_mode = _dec->state.raster_mb_modes[mbi+1];
+          mb_mvs = _dec->state.raster_mb_mvs[mbi+1];
 
           if (mask&10){
             if (mb_mode==OC_MODE_INTER_MV_FOUR){
@@ -1736,8 +1762,8 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
             else if (mb_mode!=OC_MODE_INTRA)
               oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,1,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
 
-          mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]+1];
-          mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]+1];
+          mb_mode = _dec->state.raster_mb_modes[mbi+1];
+          mb_mvs = _dec->state.raster_mb_mvs[mbi+1];
 
           if (mask&2)
             if (mb_mode==OC_MODE_INTER_MV_FOUR){
@@ -1748,8 +1774,9 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
             else if (mb_mode!=OC_MODE_INTRA)
               oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,2,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
 
-          mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]+nhmbs];
-          mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]+nhmbs];
+          mbi+=nhmbs;
+          mb_mode = _dec->state.raster_mb_modes[mbi];
+          mb_mvs = _dec->state.raster_mb_mvs[mbi];
 
           /* TODO: code the reference frame index and the motion vector into a
            * single word and then compare left and right copies -- if they're the
@@ -1764,8 +1791,8 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
             else if (mb_mode!=OC_MODE_INTRA)
               oc_state_quad_predict(&_dec->state,frag_buf_off,_pli,4,OC_FRAME_FOR_MODE(mb_mode),mb_mvs[0]);
 
-          mb_mode = _dec->state.raster_mb_modes[mbi+mbo[quadi]+nhmbs+1];
-          mb_mvs = _dec->state.raster_mb_mvs[mbi+mbo[quadi]+nhmbs+1];
+          mb_mode = _dec->state.raster_mb_modes[mbi+1];
+          mb_mvs = _dec->state.raster_mb_mvs[mbi+1];
 
           if (mask&8)
             if (mb_mode==OC_MODE_INTER_MV_FOUR){
@@ -1782,15 +1809,12 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
       for (bi = 0; bi < 4; bi++)
       {
         ptrdiff_t fragi;
-        int last_zzi;
+        int frag_buf_off;
         if ((bmask & (1 << bi)) == 0) continue;
         fragi = fragip[bi];
-        mb_mode=frags[fragi].mb_mode;
-        dc_quant = _pipe->dequant[_pli][0][mb_mode!=OC_MODE_INTRA][0];
         frag_buf_off = _dec->state.frag_buf_offs[fragi];
 
-        last_zzi = oc_dec_get_dct_coeffs(dct_coeffs[bi], _dec, _pipe, _pli, frags + fragi);
-        oc_state_frag_residual(&_dec->state,frag_buf_off,_pli,dct_coeffs[bi],last_zzi,dc_quant,mb_mode);
+        oc_dec_get_dct_coeffs(_dec, _pipe, _pli, frags + fragi,frag_buf_off);
       }
     }
   }

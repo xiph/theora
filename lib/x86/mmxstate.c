@@ -272,7 +272,7 @@ void oc_state_frag_residual_mmx(const oc_theora_state *_state,ptrdiff_t _frag_bu
   if(_last_zzi<2){
     /*Note that this value must be unsigned, to keep the __asm__ block from
        sign-extending it when it puts it in a register.*/
-    if (_dct_coeffs[0]){
+    if (_mb_mode==OC_MODE_INTRA||_dct_coeffs[0]){
       ogg_uint16_t p;
       /*We round this dequant product (and not any of the others) because there's
          no iDCT rounding.*/
