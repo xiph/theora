@@ -490,6 +490,7 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state,int _nrefs){
   int            yheight;
   int            chstride;
   int            cheight;
+  ptrdiff_t      align;
   ptrdiff_t      yoffset;
   ptrdiff_t      coffset;
   ptrdiff_t     *frag_buf_offs;
@@ -505,21 +506,23 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state,int _nrefs){
   vdec=!(info->pixel_fmt&2);
   yhstride=info->frame_width+2*OC_UMV_PADDING;
   yheight=info->frame_height+2*OC_UMV_PADDING;
-  chstride=yhstride>>hdec;
+  /*Require 16-byte aligned rows in the chroma planes.*/
+  chstride=(yhstride>>hdec)+15&~15;
   cheight=yheight>>vdec;
   yplane_sz=yhstride*(size_t)yheight;
   cplane_sz=chstride*(size_t)cheight;
   yoffset=OC_UMV_PADDING+OC_UMV_PADDING*(ptrdiff_t)yhstride;
   coffset=(OC_UMV_PADDING>>hdec)+(OC_UMV_PADDING>>vdec)*(ptrdiff_t)chstride;
-  ref_frame_sz=yplane_sz+2*cplane_sz;
+  ref_frame_sz=yplane_sz+2*cplane_sz+16;
   ref_frame_data_sz=_nrefs*ref_frame_sz;
   /*Check for overflow.
     The same caveats apply as for oc_state_frarray_init().*/
-  if(yplane_sz/yhstride!=yheight||2*cplane_sz<cplane_sz||
+  if(yplane_sz/yhstride!=yheight||2*cplane_sz+16<=cplane_sz||
    ref_frame_sz<yplane_sz||ref_frame_data_sz/_nrefs!=ref_frame_sz){
     return TH_EIMPL;
   }
-  ref_frame_data=_ogg_malloc(ref_frame_data_sz);
+  /*The +15 is safe because ref_frame_data already a multiple of 16.*/
+  ref_frame_data=_ogg_malloc(ref_frame_data_sz+15);
   frag_buf_offs=_state->frag_buf_offs=
    _ogg_malloc(_state->nfrags*sizeof(*frag_buf_offs));
   if(ref_frame_data==NULL||frag_buf_offs==NULL){
@@ -544,8 +547,12 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state,int _nrefs){
   /*Set up the data pointers for the image buffers.*/
   for(rfi=0;rfi<_nrefs;rfi++){
     _state->ref_frame_data[rfi]=ref_frame_data;
+    align=-(ref_frame_data+yoffset-(unsigned char *)0)&15;
+    ref_frame_data+=align;
     _state->ref_frame_bufs[rfi][0].data=ref_frame_data+yoffset;
     ref_frame_data+=yplane_sz;
+    align=-coffset&15;
+    ref_frame_data+=align;
     _state->ref_frame_bufs[rfi][1].data=ref_frame_data+coffset;
     ref_frame_data+=cplane_sz;
     _state->ref_frame_bufs[rfi][2].data=ref_frame_data+coffset;
