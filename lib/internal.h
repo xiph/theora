@@ -367,6 +367,8 @@ struct oc_theora_state{
   th_ycbcr_buffer     ref_frame_bufs[6];
   /*The storage for the reference frame buffers.*/
   unsigned char      *ref_frame_data[6];
+  /*The handle used to allocate the reference frame buffers.*/
+  unsigned char      *ref_frame_handle;
   /*The strides for each plane in the reference frames.*/
   int                 ref_ystride[3];
   /*The number of unique border patterns.*/

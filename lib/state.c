@@ -544,11 +544,12 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state,int _nrefs){
     memcpy(_state->ref_frame_bufs[rfi],_state->ref_frame_bufs[0],
      sizeof(_state->ref_frame_bufs[0]));
   }
+  _state->ref_frame_handle=ref_frame_data;
   /*Set up the data pointers for the image buffers.*/
   for(rfi=0;rfi<_nrefs;rfi++){
-    _state->ref_frame_data[rfi]=ref_frame_data;
     align=-(ref_frame_data+yoffset-(unsigned char *)0)&15;
     ref_frame_data+=align;
+    _state->ref_frame_data[rfi]=ref_frame_data;
     _state->ref_frame_bufs[rfi][0].data=ref_frame_data+yoffset;
     ref_frame_data+=yplane_sz;
     align=-coffset&15;
@@ -604,7 +605,7 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state,int _nrefs){
 
 static void oc_state_ref_bufs_clear(oc_theora_state *_state){
   _ogg_free(_state->frag_buf_offs);
-  _ogg_free(_state->ref_frame_data[0]);
+  _ogg_free(_state->ref_frame_handle);
 }
 
 
