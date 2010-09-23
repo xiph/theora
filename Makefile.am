@@ -1,5 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
+#Old options: these should still work if you don't have automake 1.11 yet.
+#AUTOMAKE_OPTIONS = foreign 1.7 dist-zip dist-bzip2
 AUTOMAKE_OPTIONS = foreign 1.11 dist-zip dist-xz
 
 if THEORA_ENABLE_EXAMPLES
