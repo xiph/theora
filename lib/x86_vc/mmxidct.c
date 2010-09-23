@@ -31,9 +31,8 @@
 
 
 /*A table of constants used by the MMX routines.*/
-static const __declspec(align(16))ogg_uint16_t
- OC_IDCT_CONSTS[(1+7)*4]={
-      8,    8,    8,    8
+static const OC_ALIGN16(ogg_uint16_t) OC_IDCT_CONSTS[(1+7)*4]={
+      8,    8,    8,    8,
   (ogg_uint16_t)OC_C1S7,(ogg_uint16_t)OC_C1S7,
   (ogg_uint16_t)OC_C1S7,(ogg_uint16_t)OC_C1S7,
   (ogg_uint16_t)OC_C2S6,(ogg_uint16_t)OC_C2S6,
@@ -47,7 +46,7 @@ static const __declspec(align(16))ogg_uint16_t
   (ogg_uint16_t)OC_C6S2,(ogg_uint16_t)OC_C6S2,
   (ogg_uint16_t)OC_C6S2,(ogg_uint16_t)OC_C6S2,
   (ogg_uint16_t)OC_C7S1,(ogg_uint16_t)OC_C7S1,
-  (ogg_uint16_t)OC_C7S1,(ogg_uint16_t)OC_C7S1,
+  (ogg_uint16_t)OC_C7S1,(ogg_uint16_t)OC_C7S1
 };
 
 /*38 cycles*/
@@ -314,26 +313,26 @@ static void oc_idct8x8_slow(ogg_int16_t _y[64],ogg_int16_t _x[64]){
     mov CONSTS,offset OC_IDCT_CONSTS
     mov Y,_y
     mov X,_x
-#define OC_I(_k,_y)   [(_y)+_k*16]
-#define OC_J(_k,_y)   [(_y)+(_k-4)*16+8]
-    OC_ROW_IDCT(_y,_x)
-    OC_TRANSPOSE(_y)
+#define OC_I(_k,_y)   [(_y)+(_k)*16]
+#define OC_J(_k,_y)   [(_y)+((_k)-4)*16+8]
+    OC_ROW_IDCT(Y,X)
+    OC_TRANSPOSE(Y)
 #undef  OC_I
 #undef  OC_J
-#define OC_I(_k,_y)   [(_y)+(_k*16)+64]
-#define OC_J(_k,_y)   [(_y)+(_k-4)*16+72]
-    OC_ROW_IDCT(_y,_x)
-    OC_TRANSPOSE(_y)
+#define OC_I(_k,_y)   [(_y)+(_k)*16+64]
+#define OC_J(_k,_y)   [(_y)+((_k)-4)*16+72]
+    OC_ROW_IDCT(Y,X)
+    OC_TRANSPOSE(Y)
 #undef  OC_I
 #undef  OC_J
-#define OC_I(_k,_y)   [(_y)+_k*16]
+#define OC_I(_k,_y)   [(_y)+(_k)*16]
 #define OC_J(_k,_y)   OC_I(_k,_y)
-    OC_COLUMN_IDCT(_y)
+    OC_COLUMN_IDCT(Y)
 #undef  OC_I
 #undef  OC_J
-#define OC_I(_k,_y)   [(_y)+_k*16+8]
+#define OC_I(_k,_y)   [(_y)+(_k)*16+8]
 #define OC_J(_k,_y)   OC_I(_k,_y)
-    OC_COLUMN_IDCT(_y)
+    OC_COLUMN_IDCT(Y)
 #undef  OC_I
 #undef  OC_J
 #undef  CONSTS
@@ -344,9 +343,11 @@ static void oc_idct8x8_slow(ogg_int16_t _y[64],ogg_int16_t _x[64]){
     int i;
     __asm pxor mm0,mm0;
     for(i=0;i<4;i++){
+      ogg_int16_t *x;
+      x=_x+16*i;
 #define X ecx
       __asm{
-        mov X,(_x+16*i)
+        mov X,x
         movq [X+0x00],mm0
         movq [X+0x08],mm0
         movq [X+0x10],mm0
@@ -524,22 +525,22 @@ static void oc_idct8x8_10(ogg_int16_t _y[64],ogg_int16_t _x[64]){
     mov CONSTS,offset OC_IDCT_CONSTS
     mov Y,_y
     mov X,_x
-#define OC_I(_k,_y) [(_y)+_k*16]
-#define OC_J(_k,_y) [(_y)+(_k-4)*16+8]
+#define OC_I(_k,_y) [(_y)+(_k)*16]
+#define OC_J(_k,_y) [(_y)+((_k)-4)*16+8]
     /*Done with dequant, descramble, and partial transpose.
       Now do the iDCT itself.*/
-    OC_ROW_IDCT_10(_y,_x)
-    OC_TRANSPOSE(_y)
+    OC_ROW_IDCT_10(Y,X)
+    OC_TRANSPOSE(Y)
 #undef  OC_I
 #undef  OC_J
-#define OC_I(_k,_y) [(_y)+_k*16]
+#define OC_I(_k,_y) [(_y)+(_k)*16]
 #define OC_J(_k,_y) OC_I(_k,_y)
-    OC_COLUMN_IDCT_10(_y)
+    OC_COLUMN_IDCT_10(Y)
 #undef  OC_I
 #undef  OC_J
-#define OC_I(_k,_y) [(_y)+_k*16+8]
+#define OC_I(_k,_y) [(_y)+(_k)*16+8]
 #define OC_J(_k,_y) OC_I(_k,_y)
-    OC_COLUMN_IDCT_10(_y)
+    OC_COLUMN_IDCT_10(Y)
 #undef  OC_I
 #undef  OC_J
 #undef  CONSTS
@@ -549,8 +550,8 @@ static void oc_idct8x8_10(ogg_int16_t _y[64],ogg_int16_t _x[64]){
   if(_x!=_y){
 #define X ecx
     __asm{
-      mm0,mm0;
-      mov X,(_x+16*i)
+      pxor mm0,mm0;
+      mov X,_x
       movq [X+0x00],mm0
       movq [X+0x10],mm0
       movq [X+0x20],mm0

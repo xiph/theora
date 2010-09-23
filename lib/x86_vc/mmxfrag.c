@@ -102,7 +102,7 @@ void oc_frag_copy_mmx(unsigned char *_dst,
   _frag_buf_offs: The offsets of fragments in the reference frames.*/
 void oc_frag_copy_list_mmx(unsigned char *_dst_frame,
  const unsigned char *_src_frame,int _ystride,
- const ptrdiff_t *_fragis,ptrdiff_t _nfragis,const ptrdiff_t _frag_buf_offs){
+ const ptrdiff_t *_fragis,ptrdiff_t _nfragis,const ptrdiff_t *_frag_buf_offs){
   ptrdiff_t fragii;
   for(fragii=0;fragii<_nfragis;fragii++){
     ptrdiff_t frag_buf_off;

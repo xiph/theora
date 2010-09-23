@@ -287,24 +287,24 @@ static void oc_idct8x8_slow_mmx(ogg_int16_t _y[64],ogg_int16_t _x[64]){
   /*This routine accepts an 8x8 matrix, but in partially transposed form.
     Every 4x4 block is transposed.*/
   __asm__ __volatile__(
-#define OC_I(_k,_y)   OC_MEM_OFFS((_k*16),_y)
-#define OC_J(_k,_y)   OC_MEM_OFFS(((_k-4)*16)+8,_y)
+#define OC_I(_k,_y)   OC_MEM_OFFS((_k)*16,_y)
+#define OC_J(_k,_y)   OC_MEM_OFFS(((_k)-4)*16+8,_y)
     OC_ROW_IDCT(y,x)
     OC_TRANSPOSE(y)
 #undef  OC_I
 #undef  OC_J
-#define OC_I(_k,_y)   OC_MEM_OFFS((_k*16)+64,_y)
-#define OC_J(_k,_y)   OC_MEM_OFFS(((_k-4)*16)+72,_y)
+#define OC_I(_k,_y)   OC_MEM_OFFS((_k)*16+64,_y)
+#define OC_J(_k,_y)   OC_MEM_OFFS(((_k)-4)*16+72,_y)
     OC_ROW_IDCT(y,x)
     OC_TRANSPOSE(y)
 #undef  OC_I
 #undef  OC_J
-#define OC_I(_k,_y)   OC_MEM_OFFS((_k*16),_y)
+#define OC_I(_k,_y)   OC_MEM_OFFS((_k)*16,_y)
 #define OC_J(_k,_y)   OC_I(_k,_y)
     OC_COLUMN_IDCT(y)
 #undef  OC_I
 #undef  OC_J
-#define OC_I(_k,_y)   OC_MEM_OFFS((_k*16)+8,_y)
+#define OC_I(_k,_y)   OC_MEM_OFFS((_k)*16+8,_y)
 #define OC_J(_k,_y)   OC_I(_k,_y)
     OC_COLUMN_IDCT(y)
 #undef  OC_I
@@ -492,20 +492,20 @@ static void oc_idct8x8_slow_mmx(ogg_int16_t _y[64],ogg_int16_t _x[64]){
 
 static void oc_idct8x8_10_mmx(ogg_int16_t _y[64],ogg_int16_t _x[64]){
   __asm__ __volatile__(
-#define OC_I(_k,_y) OC_MEM_OFFS((_k*16),_y)
-#define OC_J(_k,_y) OC_MEM_OFFS(((_k-4)*16)+8,_y)
+#define OC_I(_k,_y) OC_MEM_OFFS((_k)*16,_y)
+#define OC_J(_k,_y) OC_MEM_OFFS(((_k)-4)*16+8,_y)
     /*Done with dequant, descramble, and partial transpose.
       Now do the iDCT itself.*/
     OC_ROW_IDCT_10(y,x)
     OC_TRANSPOSE(y)
 #undef  OC_I
 #undef  OC_J
-#define OC_I(_k,_y) OC_MEM_OFFS((_k*16),_y)
+#define OC_I(_k,_y) OC_MEM_OFFS((_k)*16,_y)
 #define OC_J(_k,_y) OC_I(_k,_y)
     OC_COLUMN_IDCT_10(y)
 #undef  OC_I
 #undef  OC_J
-#define OC_I(_k,_y) OC_MEM_OFFS((_k*16)+8,_y)
+#define OC_I(_k,_y) OC_MEM_OFFS((_k)*16+8,_y)
 #define OC_J(_k,_y) OC_I(_k,_y)
     OC_COLUMN_IDCT_10(y)
 #undef  OC_I
