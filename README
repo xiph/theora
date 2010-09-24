@@ -70,7 +70,7 @@ Windows build support is included in the win32 directory.
 
 Project files for Apple XCode are included in the macosx directory.
 
-There is also an more limited scons build.
+There is also a more limited scons build.
 
 *** How do I use the sample encoder?
 

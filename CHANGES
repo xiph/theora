@@ -7,7 +7,7 @@ libteora 1.2.0alpha1 (2010 September 23)
 - Add ARM optimizations
 - Add TI C64x+ DSP optimizations
 - Other performance improvements
-- Rename speedlevel 2 to 3 and add provide a new speedlevel 2
+- Rename speedlevel 2 to 3 and provide a new speedlevel 2
 - Various minor bug fixes
 
 libtheora 1.1.2 (unreleased snapshot)
