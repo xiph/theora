@@ -1,3 +1,15 @@
+libteora 1.2.0alpha1 (2010 September 23)
+
+- New 'ptalarbvorm' encoder with better rate/distortion optimization
+- New th_encode_ctl option for copying configuration from an existing
+  setup header, useful for splicing streams.
+- Returns TH_DUPFRAME in more cases.
+- Add ARM optimizations
+- Add TI C64x+ DSP optimizations
+- Other performance improvements
+- Rename speedlevel 2 to 3 and add provide a new speedlevel 2
+- Various minor bug fixes
+
 libtheora 1.1.2 (unreleased snapshot)
 
  - Fix Huffman table decoding with OC_HUFF_SLUSH is set to 0
