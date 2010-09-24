@@ -173,6 +173,8 @@ typedef struct oc_theora_state          oc_theora_state;
 # define OC_FRAME_PREV      (1)
 /*The current frame.*/
 # define OC_FRAME_SELF      (2)
+/*Used to mark uncoded fragments (for DC prediction).*/
+# define OC_FRAME_NONE      (3)
 
 /*The input or output buffer.*/
 # define OC_FRAME_IO        (3)
@@ -302,7 +304,9 @@ struct oc_fragment{
     There are no fragments outside the coded frame by construction.*/
   unsigned   invalid:1;
   /*The index of the quality index used for this fragment's AC coefficients.*/
-  unsigned   qii:6;
+  unsigned   qii:4;
+  /*The index of the reference frame this fragment is predicted from.*/
+  unsigned   refi:2;
   /*The mode of the macroblock this fragment belongs to.*/
   unsigned   mb_mode:3;
   /*The index of the associated border information for fragments which lie

@@ -508,6 +508,7 @@ static void oc_dec_mark_all_intra(oc_dec_ctx *_dec){
           fragi=sb_maps[sbi][quadi][bi];
           if(fragi>=0){
             frags[fragi].coded=1;
+            frags[fragi].refi=OC_FRAME_SELF;
             frags[fragi].mb_mode=OC_MODE_INTRA;
             coded_fragis[ncoded_fragis++]=fragi;
           }
@@ -650,6 +651,7 @@ static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
             if(coded)coded_fragis[ncoded_fragis++]=fragi;
             else *(uncoded_fragis-++nuncoded_fragis)=fragi;
             frags[fragi].coded=coded;
+            frags[fragi].refi=OC_FRAME_NONE;
           }
         }
       }
@@ -832,16 +834,17 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
   mb_modes=_dec->state.mb_modes;
   nmbs=_dec->state.nmbs;
   for(mbi=0;mbi<nmbs;mbi++){
-    int          mb_mode;
+    int mb_mode;
     mb_mode=mb_modes[mbi];
     if(mb_mode!=OC_MODE_INVALID){
-      oc_mv        mbmv;
-      ptrdiff_t    fragi;
-      int          coded[13];
-      int          codedi;
-      int          ncoded;
-      int          mapi;
-      int          mapii;
+      oc_mv     mbmv;
+      ptrdiff_t fragi;
+      int       coded[13];
+      int       codedi;
+      int       ncoded;
+      int       mapi;
+      int       mapii;
+      int       refi;
       /*Search for at least one coded fragment.*/
       ncoded=mapii=0;
       do{
@@ -851,6 +854,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
       }
       while(++mapii<map_nidxs);
       if(ncoded<=0)continue;
+      refi=OC_FRAME_FOR_MODE(mb_mode);
       switch(mb_mode){
         case OC_MODE_INTER_MV_FOUR:{
           oc_mv       lbmvs[4];
@@ -861,6 +865,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
             if(coded[codedi]==bi){
               codedi++;
               fragi=mb_maps[mbi][0][bi];
+              frags[fragi].refi=refi;
               frags[fragi].mb_mode=mb_mode;
               lbmvs[bi]=oc_mv_unpack(&_dec->opb,mv_comp_tree);
               frag_mvs[fragi]=lbmvs[bi];
@@ -877,6 +882,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
               mapi=coded[codedi];
               bi=mapi&3;
               fragi=mb_maps[mbi][mapi>>2][bi];
+              frags[fragi].refi=refi;
               frags[fragi].mb_mode=mb_mode;
               frag_mvs[fragi]=cbmvs[bi];
             }
@@ -903,6 +909,7 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
         for(codedi=0;codedi<ncoded;codedi++){
           mapi=coded[codedi];
           fragi=mb_maps[mbi][mapi>>2][mapi&3];
+          frags[fragi].refi=refi;
           frags[fragi].mb_mode=mb_mode;
           frag_mvs[fragi]=mbmv;
         }
@@ -1426,9 +1433,9 @@ void oc_dec_dc_unpredict_mcu_plane_c(oc_dec_ctx *_dec,
          predictor for the same reference frame.*/
       for(fragx=0;fragx<nhfrags;fragx++,fragi++){
         if(frags[fragi].coded){
-          int ref;
-          ref=OC_FRAME_FOR_MODE(frags[fragi].mb_mode);
-          pred_last[ref]=frags[fragi].dc+=pred_last[ref];
+          int refi;
+          refi=frags[fragi].refi;
+          pred_last[refi]=frags[fragi].dc+=pred_last[refi];
           ncoded_fragis++;
         }
       }
@@ -1441,27 +1448,24 @@ void oc_dec_dc_unpredict_mcu_plane_c(oc_dec_ctx *_dec,
       u_frags=frags-nhfrags;
       l_ref=-1;
       ul_ref=-1;
-      u_ref=u_frags[fragi].coded?OC_FRAME_FOR_MODE(u_frags[fragi].mb_mode):-1;
+      u_ref=u_frags[fragi].refi;
       for(fragx=0;fragx<nhfrags;fragx++,fragi++){
         int ur_ref;
         if(fragx+1>=nhfrags)ur_ref=-1;
-        else{
-          ur_ref=u_frags[fragi+1].coded?
-           OC_FRAME_FOR_MODE(u_frags[fragi+1].mb_mode):-1;
-        }
+        else ur_ref=u_frags[fragi+1].refi;
         if(frags[fragi].coded){
           int pred;
-          int ref;
-          ref=OC_FRAME_FOR_MODE(frags[fragi].mb_mode);
+          int refi;
+          refi=frags[fragi].refi;
           /*We break out a separate case based on which of our neighbors use
              the same reference frames.
             This is somewhat faster than trying to make a generic case which
              handles all of them, since it reduces lots of poorly predicted
              jumps to one switch statement, and also lets a number of the
              multiplications be optimized out by strength reduction.*/
-          switch((l_ref==ref)|(ul_ref==ref)<<1|
-           (u_ref==ref)<<2|(ur_ref==ref)<<3){
-            default:pred=pred_last[ref];break;
+          switch((l_ref==refi)|(ul_ref==refi)<<1|
+           (u_ref==refi)<<2|(ur_ref==refi)<<3){
+            default:pred=pred_last[refi];break;
             case  1:
             case  3:pred=frags[fragi-1].dc;break;
             case  2:pred=u_frags[fragi-1].dc;break;
@@ -1495,9 +1499,9 @@ void oc_dec_dc_unpredict_mcu_plane_c(oc_dec_ctx *_dec,
               else if(abs(pred-p1)>128)pred=p1;
             }break;
           }
-          pred_last[ref]=frags[fragi].dc+=pred;
+          pred_last[refi]=frags[fragi].dc+=pred;
           ncoded_fragis++;
-          l_ref=ref;
+          l_ref=refi;
         }
         else l_ref=-1;
         ul_ref=u_ref;

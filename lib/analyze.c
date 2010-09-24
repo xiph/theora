@@ -683,6 +683,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   oc_token_checkpoint    *checkpoint;
   oc_fragment            *frags;
   int                     mb_mode;
+  int                     refi;
   int                     mv_offs[2];
   int                     nmv_offs;
   int                     ac_bits;
@@ -706,6 +707,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
     if(_enc->sp_level>=OC_SP_LEVEL_EARLY_SKIP){
       /*Enable early skip detection.*/
       frags[_fragi].coded=0;
+      frags[_fragi].refi=OC_FRAME_NONE;
       oc_fr_skip_block(_fr);
       return 0;
     }
@@ -714,9 +716,9 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
     qii&=3;
     frags[_fragi].qii=qii;
   }
+  refi=frags[_fragi].refi;
   mb_mode=frags[_fragi].mb_mode;
-  ref=_enc->state.ref_frame_data[
-   _enc->state.ref_frame_idx[OC_FRAME_FOR_MODE(mb_mode)]]+frag_offs;
+  ref=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[refi]]+frag_offs;
   dst=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_SELF]]
    +frag_offs;
   /*Motion compensation:*/
@@ -733,7 +735,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
     }break;
     default:{
       const oc_mv *frag_mvs;
-      frag_mvs=(const oc_mv *)_enc->state.frag_mvs;
+      frag_mvs=_enc->state.frag_mvs;
       nmv_offs=oc_state_get_mv_offsets(&_enc->state,mv_offs,
        _pli,frag_mvs[_fragi]);
       if(nmv_offs>1){
@@ -851,6 +853,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
         oc_enc_tokenlog_rollback(_enc,checkpoint,(*_stack)-checkpoint);
         *_stack=checkpoint;
         frags[_fragi].coded=0;
+        frags[_fragi].refi=OC_FRAME_NONE;
         oc_fr_skip_block(_fr);
         return 0;
       }
@@ -887,6 +890,7 @@ static int oc_enc_mb_transform_quantize_inter_luma(oc_enc_ctx *_enc,
   oc_fr_state          fr_checkpoint;
   oc_qii_state         qs_checkpoint;
   int                  mb_mode;
+  int                  refi;
   int                  ncoded;
   ptrdiff_t            fragi;
   int                  bi;
@@ -900,11 +904,13 @@ static int oc_enc_mb_transform_quantize_inter_luma(oc_enc_ctx *_enc,
   uncoded_fragis=_pipe->uncoded_fragis[0];
   nuncoded_fragis=_pipe->nuncoded_fragis[0];
   mb_mode=mb_modes[_mbi];
+  refi=OC_FRAME_FOR_MODE(mb_mode);
   ncoded=0;
   stackptr=stack;
   memset(&mo,0,sizeof(mo));
   for(bi=0;bi<4;bi++){
     fragi=sb_maps[_mbi>>2][_mbi&3][bi];
+    frags[fragi].refi=refi;
     frags[fragi].mb_mode=mb_mode;
     if(oc_enc_block_transform_quantize(_enc,_pipe,0,fragi,
      _rd_scale[bi],_rd_iscale[bi],&mo,_pipe->fr+0,&stackptr)){
@@ -930,6 +936,7 @@ static int oc_enc_mb_transform_quantize_inter_luma(oc_enc_ctx *_enc,
         if(frags[fragi].coded){
           *(uncoded_fragis-++nuncoded_fragis)=fragi;
           frags[fragi].coded=0;
+          frags[fragi].refi=OC_FRAME_NONE;
         }
         oc_fr_skip_block(_pipe->fr+0);
       }
@@ -1541,7 +1548,6 @@ static void oc_enc_mb_transform_quantize_intra_luma(oc_enc_ctx *_enc,
   oc_fragment         *frags;
   ptrdiff_t           *coded_fragis;
   ptrdiff_t            ncoded_fragis;
-  int                  mb_mode;
   ptrdiff_t            fragi;
   int                  bi;
   sb_maps=(const oc_sb_map *)_enc->state.sb_maps;
@@ -1549,11 +1555,11 @@ static void oc_enc_mb_transform_quantize_intra_luma(oc_enc_ctx *_enc,
   frags=_enc->state.frags;
   coded_fragis=_pipe->coded_fragis[0];
   ncoded_fragis=_pipe->ncoded_fragis[0];
-  mb_mode=mb_modes[_mbi];
   stackptr=stack;
   for(bi=0;bi<4;bi++){
     fragi=sb_maps[_mbi>>2][_mbi&3][bi];
-    frags[fragi].mb_mode=mb_mode;
+    frags[fragi].refi=OC_FRAME_SELF;
+    frags[fragi].mb_mode=OC_MODE_INTRA;
     oc_enc_block_transform_quantize(_enc,_pipe,0,fragi,
      _rd_scale[bi],_rd_iscale[bi],NULL,NULL,&stackptr);
     coded_fragis[ncoded_fragis++]=fragi;
@@ -1701,6 +1707,7 @@ void oc_enc_analyze_intra(oc_enc_ctx *_enc,int _recode){
           pli=mapi>>2;
           bi=mapi&3;
           fragi=mb_maps[mbi][pli][bi];
+          frags[fragi].refi=OC_FRAME_SELF;
           frags[fragi].mb_mode=OC_MODE_INTRA;
         }
         /*Save masking scale factors for chroma blocks.*/
@@ -2320,6 +2327,7 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
         int            mb_gmv_bits_0;
         int            inter_mv_pref;
         int            mb_mode;
+        int            refi;
         int            mv;
         unsigned       mbi;
         int            mapii;
@@ -2505,6 +2513,7 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
           int orig_mb_mode;
           orig_mb_mode=mb_mode;
           mb_mode=mb_modes[mbi];
+          refi=OC_FRAME_FOR_MODE(mb_mode);
           switch(mb_mode){
             case OC_MODE_INTER_MV:{
               prior_mv=last_mv;
@@ -2557,8 +2566,9 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
                 pli=mapi>>2;
                 bi=mapi&3;
                 fragi=mb_maps[mbi][pli][bi];
-                frags[fragi].mb_mode=mb_mode;
                 frags[fragi].qii=modes[OC_MODE_INTER_MV_FOUR].qii[mapii];
+                frags[fragi].refi=refi;
+                frags[fragi].mb_mode=mb_mode;
                 frag_mvs[fragi]=cbmvs[bi];
               }
             }break;
@@ -2570,6 +2580,7 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
         else{
           *(uncoded_mbis-++nuncoded_mbis)=mbi;
           mb_mode=OC_MODE_INTER_NOMV;
+          refi=OC_FRAME_PREV;
           mv=0;
         }
         /*Propagate final MB mode and MVs to the chroma blocks.
@@ -2581,11 +2592,12 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
             pli=mapi>>2;
             bi=mapi&3;
             fragi=mb_maps[mbi][pli][bi];
-            frags[fragi].mb_mode=mb_mode;
             /*If we switched from 4MV mode to INTER_MV mode, then the qii
                values won't have been chosen with the right MV, but it's
                probaby not worth re-estimating them.*/
             frags[fragi].qii=modes[mb_mode].qii[mapii];
+            frags[fragi].refi=refi;
+            frags[fragi].mb_mode=mb_mode;
             frag_mvs[fragi]=mv;
           }
         }

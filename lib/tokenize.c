@@ -1003,10 +1003,10 @@ void oc_enc_pred_dc_frag_rows(oc_enc_ctx *_enc,
          predictor for the same reference frame.*/
       for(fragx=0;fragx<nhfrags;fragx++,fragi++){
         if(frags[fragi].coded){
-          int ref;
-          ref=OC_FRAME_FOR_MODE(frags[fragi].mb_mode);
-          frag_dc[fragi]=(ogg_int16_t)(frags[fragi].dc-pred_last[ref]);
-          pred_last[ref]=frags[fragi].dc;
+          int refi;
+          refi=frags[fragi].refi;
+          frag_dc[fragi]=(ogg_int16_t)(frags[fragi].dc-pred_last[refi]);
+          pred_last[refi]=frags[fragi].dc;
         }
       }
     }
@@ -1018,27 +1018,24 @@ void oc_enc_pred_dc_frag_rows(oc_enc_ctx *_enc,
       u_frags=frags-nhfrags;
       l_ref=-1;
       ul_ref=-1;
-      u_ref=u_frags[fragi].coded?OC_FRAME_FOR_MODE(u_frags[fragi].mb_mode):-1;
+      u_ref=u_frags[fragi].refi;
       for(fragx=0;fragx<nhfrags;fragx++,fragi++){
         int ur_ref;
         if(fragx+1>=nhfrags)ur_ref=-1;
-        else{
-          ur_ref=u_frags[fragi+1].coded?
-           OC_FRAME_FOR_MODE(u_frags[fragi+1].mb_mode):-1;
-        }
+        else ur_ref=u_frags[fragi+1].refi;
         if(frags[fragi].coded){
           int pred;
-          int ref;
-          ref=OC_FRAME_FOR_MODE(frags[fragi].mb_mode);
+          int refi;
+          refi=frags[fragi].refi;
           /*We break out a separate case based on which of our neighbors use
              the same reference frames.
             This is somewhat faster than trying to make a generic case which
              handles all of them, since it reduces lots of poorly predicted
              jumps to one switch statement, and also lets a number of the
              multiplications be optimized out by strength reduction.*/
-          switch((l_ref==ref)|(ul_ref==ref)<<1|
-           (u_ref==ref)<<2|(ur_ref==ref)<<3){
-            default:pred=pred_last[ref];break;
+          switch((l_ref==refi)|(ul_ref==refi)<<1|
+           (u_ref==refi)<<2|(ur_ref==refi)<<3){
+            default:pred=pred_last[refi];break;
             case  1:
             case  3:pred=frags[fragi-1].dc;break;
             case  2:pred=u_frags[fragi-1].dc;break;
@@ -1072,8 +1069,8 @@ void oc_enc_pred_dc_frag_rows(oc_enc_ctx *_enc,
             }break;
           }
           frag_dc[fragi]=(ogg_int16_t)(frags[fragi].dc-pred);
-          pred_last[ref]=frags[fragi].dc;
-          l_ref=ref;
+          pred_last[refi]=frags[fragi].dc;
+          l_ref=refi;
         }
         else l_ref=-1;
         ul_ref=u_ref;

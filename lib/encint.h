@@ -676,7 +676,7 @@ struct th_enc_ctx{
   /*The offset of the first DCT token for each coefficient for each plane.*/
   unsigned char            dct_token_offs[3][64];
   /*The last DC coefficient for each plane and reference frame.*/
-  int                      dc_pred_last[3][3];
+  int                      dc_pred_last[3][4];
 #if defined(OC_COLLECT_METRICS)
   /*Fragment SATD statistics for MB mode estimation metrics.*/
   unsigned                *frag_satd;

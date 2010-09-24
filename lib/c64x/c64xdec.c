@@ -57,7 +57,7 @@ void oc_dec_dc_unpredict_mcu_plane_c64x(oc_dec_ctx *_dec,
          predictor for the same reference frame.*/
       for(fragx=0;fragx<nhfrags;fragx++,fragi++){
         int coded;
-        int ref;
+        int refi;
         /*The TI compiler refuses to pipeline this if we put it in an if(coded)
            block.
           We can do the loads unconditionally, which helps move them earlier.
@@ -68,9 +68,9 @@ void oc_dec_dc_unpredict_mcu_plane_c64x(oc_dec_ctx *_dec,
           However, these loads are "free" in the cache sense, since reading the
            coded flag brings in all four bytes anyway, and starting the loads
            before we know the coded flag saves 6 cycles.*/
-        ref=OC_FRAME_FOR_MODE(frags[fragi].mb_mode);
+        refi=frags[fragi].refi;
         coded=frags[fragi].coded;
-        frags[fragi].dc=pred_last[ref]+=frags[fragi].dc&-coded;
+        frags[fragi].dc=pred_last[refi]+=frags[fragi].dc&-coded;
         ncoded_fragis+=coded;
       }
     }
@@ -82,16 +82,13 @@ void oc_dec_dc_unpredict_mcu_plane_c64x(oc_dec_ctx *_dec,
       u_frags=frags-nhfrags;
       l_ref=-1;
       ul_ref=-1;
-      u_ref=u_frags[fragi].coded?OC_FRAME_FOR_MODE(u_frags[fragi].mb_mode):-1;
+      u_ref=u_frags[fragi].refi;
       for(fragx=0;fragx<nhfrags;fragx++,fragi++){
         int ur_ref;
-        int ref;
+        int refi;
         if(fragx+1>=nhfrags)ur_ref=-1;
-        else{
-          ur_ref=u_frags[fragi+1].coded?
-           OC_FRAME_FOR_MODE(u_frags[fragi+1].mb_mode):-1;
-        }
-        ref=OC_FRAME_FOR_MODE(frags[fragi].mb_mode);
+        else ur_ref=u_frags[fragi+1].refi;
+        refi=frags[fragi].refi;
         if(frags[fragi].coded){
           static const int OC_PRED_SCALE[16][2]={
             {0x00000000,0x00000000},
@@ -126,8 +123,8 @@ void oc_dec_dc_unpredict_mcu_plane_c64x(oc_dec_ctx *_dec,
           p2=u_frags[fragi+1].dc;
           p3=frags[fragi-1].dc;
           pflags=_cmpeq4(_packl4(_pack2(ur_ref,u_ref),_pack2(ul_ref,l_ref)),
-           _packl4(_pack2(ref,ref),_pack2(ref,ref)));
-          if(pflags==0)pred=pred_last[ref];
+           _packl4(_pack2(refi,refi),_pack2(refi,refi)));
+          if(pflags==0)pred=pred_last[refi];
           else{
             pred=(_dotp2(_pack2(p0,p1),OC_PRED_SCALE[pflags][0])
              +_dotp2(_pack2(p2,p3),OC_PRED_SCALE[pflags][1]))/128;
@@ -137,9 +134,9 @@ void oc_dec_dc_unpredict_mcu_plane_c64x(oc_dec_ctx *_dec,
               else if(abs(pred-p0)>128)pred=p0;
             }
           }
-          pred_last[ref]=frags[fragi].dc+=pred;
+          pred_last[refi]=frags[fragi].dc+=pred;
           ncoded_fragis++;
-          l_ref=ref;
+          l_ref=refi;
         }
         else l_ref=-1;
         ul_ref=u_ref;
