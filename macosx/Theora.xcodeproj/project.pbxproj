@@ -95,6 +95,22 @@
 		084C32AE0FE4E84A00117FC9 /* quant.c in Sources */ = {isa = PBXBuildFile; fileRef = 084C31EC0FE4E5BD00117FC9 /* quant.c */; };
 		084C32AF0FE4E84C00117FC9 /* ocintrin.h in Headers */ = {isa = PBXBuildFile; fileRef = 084C31EB0FE4E5BD00117FC9 /* ocintrin.h */; };
 		084C32B00FE4E84F00117FC9 /* state.c in Sources */ = {isa = PBXBuildFile; fileRef = 084C31EE0FE4E5BD00117FC9 /* state.c */; };
+		08D99AEC12526E77005A6116 /* mmxencfrag.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E45537124A6B6D00721BF7 /* mmxencfrag.c */; };
+		08D99AED12526E7A005A6116 /* mmxfdct.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E45538124A6B6D00721BF7 /* mmxfdct.c */; };
+		08D99AEE12526E87005A6116 /* mmxfrag.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E45539124A6B6D00721BF7 /* mmxfrag.c */; };
+		08D99AEF12526E89005A6116 /* mmxidct.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E4553A124A6B6D00721BF7 /* mmxidct.c */; };
+		08D99AF012526E90005A6116 /* mmxstate.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E4553C124A6B6D00721BF7 /* mmxstate.c */; };
+		08D99AF112526E99005A6116 /* sse2encfrag.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E4553D124A6B6D00721BF7 /* sse2encfrag.c */; };
+		08D99AF212526EA2005A6116 /* sse2idct.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E4553F124A6B6D00721BF7 /* sse2idct.c */; };
+		08D99AF312526EAA005A6116 /* x86cpu.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E45541124A6B6D00721BF7 /* x86cpu.c */; };
+		08D99AF412526EB0005A6116 /* x86enc.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E45543124A6B6D00721BF7 /* x86enc.c */; };
+		08D99AF512526EB2005A6116 /* x86enquant.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E45545124A6B6D00721BF7 /* x86enquant.c */; };
+		08D99AF612526EF8005A6116 /* x86state.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E45547124A6B6D00721BF7 /* x86state.c */; };
+		08D99AFC12526F06005A6116 /* x86cpu.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E45541124A6B6D00721BF7 /* x86cpu.c */; };
+		08D99AFD12526F14005A6116 /* sse2idct.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E4553F124A6B6D00721BF7 /* sse2idct.c */; };
+		08D99AFE12526F2C005A6116 /* mmxstate.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E4553C124A6B6D00721BF7 /* mmxstate.c */; };
+		08D99AFF12526F32005A6116 /* mmxidct.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E4553A124A6B6D00721BF7 /* mmxidct.c */; };
+		08D99B0012526F33005A6116 /* mmxfrag.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E45539124A6B6D00721BF7 /* mmxfrag.c */; };
 		08E45548124A6B6D00721BF7 /* mmxencfrag.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E45537124A6B6D00721BF7 /* mmxencfrag.c */; };
 		08E45549124A6B6D00721BF7 /* mmxfdct.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E45538124A6B6D00721BF7 /* mmxfdct.c */; };
 		08E4554A124A6B6D00721BF7 /* mmxfrag.c in Sources */ = {isa = PBXBuildFile; fileRef = 08E45539124A6B6D00721BF7 /* mmxfrag.c */; };
@@ -536,6 +552,12 @@
 				084C32320FE4E5BD00117FC9 /* internal.c in Sources */,
 				084C32340FE4E5BD00117FC9 /* quant.c in Sources */,
 				084C32360FE4E5BD00117FC9 /* state.c in Sources */,
+				08D99AF612526EF8005A6116 /* x86state.c in Sources */,
+				08D99AFC12526F06005A6116 /* x86cpu.c in Sources */,
+				08D99AFD12526F14005A6116 /* sse2idct.c in Sources */,
+				08D99AFE12526F2C005A6116 /* mmxstate.c in Sources */,
+				08D99AFF12526F32005A6116 /* mmxidct.c in Sources */,
+				08D99B0012526F33005A6116 /* mmxfrag.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -561,6 +583,16 @@
 				084C32AC0FE4E83600117FC9 /* fragment.c in Sources */,
 				084C32AE0FE4E84A00117FC9 /* quant.c in Sources */,
 				084C32B00FE4E84F00117FC9 /* state.c in Sources */,
+				08D99AEC12526E77005A6116 /* mmxencfrag.c in Sources */,
+				08D99AED12526E7A005A6116 /* mmxfdct.c in Sources */,
+				08D99AEE12526E87005A6116 /* mmxfrag.c in Sources */,
+				08D99AEF12526E89005A6116 /* mmxidct.c in Sources */,
+				08D99AF012526E90005A6116 /* mmxstate.c in Sources */,
+				08D99AF112526E99005A6116 /* sse2encfrag.c in Sources */,
+				08D99AF212526EA2005A6116 /* sse2idct.c in Sources */,
+				08D99AF312526EAA005A6116 /* x86cpu.c in Sources */,
+				08D99AF412526EB0005A6116 /* x86enc.c in Sources */,
+				08D99AF512526EB2005A6116 /* x86enquant.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
