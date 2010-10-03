@@ -600,6 +600,7 @@ static void oc_dec_coded_sb_flags_unpack(oc_dec_ctx *_dec){
 static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
   const oc_sb_map   *sb_maps;
   const oc_sb_flags *sb_flags;
+  signed char       *mb_modes;
   oc_fragment       *frags;
   unsigned           nsbs;
   unsigned           sbi;
@@ -622,6 +623,7 @@ static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
   else flag=0;
   sb_maps=(const oc_sb_map *)_dec->state.sb_maps;
   sb_flags=_dec->state.sb_flags;
+  mb_modes=_dec->state.mb_modes;
   frags=_dec->state.frags;
   sbi=nsbs=run_count=0;
   coded_fragis=_dec->state.coded_fragis;
@@ -632,7 +634,9 @@ static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
     for(;sbi<nsbs;sbi++){
       int quadi;
       for(quadi=0;quadi<4;quadi++)if(sb_flags[sbi].quad_valid&1<<quadi){
+        int quad_coded;
         int bi;
+        quad_coded=0;
         for(bi=0;bi<4;bi++){
           ptrdiff_t fragi;
           fragi=sb_maps[sbi][quadi][bi];
@@ -650,10 +654,13 @@ static void oc_dec_coded_flags_unpack(oc_dec_ctx *_dec){
             }
             if(coded)coded_fragis[ncoded_fragis++]=fragi;
             else *(uncoded_fragis-++nuncoded_fragis)=fragi;
+            quad_coded|=coded;
             frags[fragi].coded=coded;
             frags[fragi].refi=OC_FRAME_NONE;
           }
         }
+        /*Remember if there's a coded luma block in this macro block.*/
+        if(!pli)mb_modes[sbi<<2|quadi]=quad_coded;
       }
     }
     _dec->state.ncoded_fragis[pli]=ncoded_fragis-prev_ncoded_fragis;
@@ -694,9 +701,7 @@ static const ogg_int16_t OC_CLC_MODE_TREE[9]={
 
 /*Unpacks the list of macro block modes for INTER frames.*/
 static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
-  const oc_mb_map     *mb_maps;
   signed char         *mb_modes;
-  const oc_fragment   *frags;
   const unsigned char *alphabet;
   unsigned char        scheme0_alphabet[8];
   const ogg_int16_t   *mode_tree;
@@ -723,22 +728,14 @@ static void oc_dec_mb_modes_unpack(oc_dec_ctx *_dec){
   else alphabet=OC_MODE_ALPHABETS[mode_scheme-1];
   mode_tree=mode_scheme==7?OC_CLC_MODE_TREE:OC_VLC_MODE_TREE;
   mb_modes=_dec->state.mb_modes;
-  mb_maps=(const oc_mb_map *)_dec->state.mb_maps;
   nmbs=_dec->state.nmbs;
-  frags=_dec->state.frags;
   for(mbi=0;mbi<nmbs;mbi++){
-    if(mb_modes[mbi]!=OC_MODE_INVALID){
-      /*Check for a coded luma block in this macro block.*/
-      if(frags[mb_maps[mbi][0][0]].coded
-       ||frags[mb_maps[mbi][0][1]].coded
-       ||frags[mb_maps[mbi][0][2]].coded
-       ||frags[mb_maps[mbi][0][3]].coded){
-        /*We found one, decode a mode.*/
-        mb_modes[mbi]=alphabet[oc_huff_token_decode(&_dec->opb,mode_tree)];
-      }
-      /*There were none: INTER_NOMV is forced.*/
-      else mb_modes[mbi]=OC_MODE_INTER_NOMV;
+    if(mb_modes[mbi]>0){
+      /*We have a coded luma block; decode a mode.*/
+      mb_modes[mbi]=alphabet[oc_huff_token_decode(&_dec->opb,mode_tree)];
     }
+    /*For other valid macro blocks, INTER_NOMV is forced, but we rely on the
+       fact that OC_MODE_INTER_NOMV is already 0.*/
   }
 }
 
@@ -839,80 +836,65 @@ static void oc_dec_mv_unpack_and_frag_modes_fill(oc_dec_ctx *_dec){
     if(mb_mode!=OC_MODE_INVALID){
       oc_mv     mbmv;
       ptrdiff_t fragi;
-      int       coded[13];
-      int       codedi;
-      int       ncoded;
       int       mapi;
       int       mapii;
       int       refi;
-      /*Search for at least one coded fragment.*/
-      ncoded=mapii=0;
-      do{
-        mapi=map_idxs[mapii];
-        fragi=mb_maps[mbi][mapi>>2][mapi&3];
-        if(frags[fragi].coded)coded[ncoded++]=mapi;
-      }
-      while(++mapii<map_nidxs);
-      if(ncoded<=0)continue;
-      refi=OC_FRAME_FOR_MODE(mb_mode);
-      switch(mb_mode){
-        case OC_MODE_INTER_MV_FOUR:{
-          oc_mv       lbmvs[4];
-          int         bi;
-          /*Mark the tail of the list, so we don't accidentally go past it.*/
-          coded[ncoded]=-1;
-          for(bi=codedi=0;bi<4;bi++){
-            if(coded[codedi]==bi){
-              codedi++;
-              fragi=mb_maps[mbi][0][bi];
-              frags[fragi].refi=refi;
-              frags[fragi].mb_mode=mb_mode;
-              lbmvs[bi]=oc_mv_unpack(&_dec->opb,mv_comp_tree);
-              frag_mvs[fragi]=lbmvs[bi];
-            }
-            else lbmvs[bi]=0;
+      if(mb_mode==OC_MODE_INTER_MV_FOUR){
+        oc_mv lbmvs[4];
+        int   bi;
+        prior_mv=last_mv;
+        for(bi=0;bi<4;bi++){
+          fragi=mb_maps[mbi][0][bi];
+          if(frags[fragi].coded){
+            frags[fragi].refi=OC_FRAME_PREV;
+            frags[fragi].mb_mode=OC_MODE_INTER_MV_FOUR;
+            lbmvs[bi]=last_mv=oc_mv_unpack(&_dec->opb,mv_comp_tree);
+            frag_mvs[fragi]=lbmvs[bi];
           }
-          if(codedi>0){
-            prior_mv=last_mv;
-            last_mv=lbmvs[coded[codedi-1]];
-          }
-          if(codedi<ncoded){
-            (*set_chroma_mvs)(cbmvs,lbmvs);
-            for(;codedi<ncoded;codedi++){
-              mapi=coded[codedi];
-              bi=mapi&3;
-              fragi=mb_maps[mbi][mapi>>2][bi];
-              frags[fragi].refi=refi;
-              frags[fragi].mb_mode=mb_mode;
-              frag_mvs[fragi]=cbmvs[bi];
-            }
-          }
-        }break;
-        case OC_MODE_INTER_MV:{
-          prior_mv=last_mv;
-          last_mv=mbmv=oc_mv_unpack(&_dec->opb,mv_comp_tree);
-        }break;
-        case OC_MODE_INTER_MV_LAST:mbmv=last_mv;break;
-        case OC_MODE_INTER_MV_LAST2:{
-          mbmv=prior_mv;
-          prior_mv=last_mv;
-          last_mv=mbmv;
-        }break;
-        case OC_MODE_GOLDEN_MV:{
-          mbmv=oc_mv_unpack(&_dec->opb,mv_comp_tree);
-        }break;
-        default:mbmv=0;break;
-      }
-      /*4MV mode fills in the fragments itself.
-        For all other modes we can use this common code.*/
-      if(mb_mode!=OC_MODE_INTER_MV_FOUR){
-        for(codedi=0;codedi<ncoded;codedi++){
-          mapi=coded[codedi];
-          fragi=mb_maps[mbi][mapi>>2][mapi&3];
-          frags[fragi].refi=refi;
-          frags[fragi].mb_mode=mb_mode;
-          frag_mvs[fragi]=mbmv;
+          else lbmvs[bi]=0;
         }
+        (*set_chroma_mvs)(cbmvs,lbmvs);
+        for(mapii=4;mapii<map_nidxs;mapii++){
+          mapi=map_idxs[mapii];
+          bi=mapi&3;
+          fragi=mb_maps[mbi][mapi>>2][bi];
+          if(frags[fragi].coded){
+            frags[fragi].refi=OC_FRAME_PREV;
+            frags[fragi].mb_mode=OC_MODE_INTER_MV_FOUR;
+            frag_mvs[fragi]=cbmvs[bi];
+          }
+        }
+      }
+      else{
+        switch(mb_mode){
+          case OC_MODE_INTER_MV:{
+            prior_mv=last_mv;
+            last_mv=mbmv=oc_mv_unpack(&_dec->opb,mv_comp_tree);
+          }break;
+          case OC_MODE_INTER_MV_LAST:mbmv=last_mv;break;
+          case OC_MODE_INTER_MV_LAST2:{
+            mbmv=prior_mv;
+            prior_mv=last_mv;
+            last_mv=mbmv;
+          }break;
+          case OC_MODE_GOLDEN_MV:{
+            mbmv=oc_mv_unpack(&_dec->opb,mv_comp_tree);
+          }break;
+          default:mbmv=0;break;
+        }
+        /*Fill in the MVs for the fragments.*/
+        refi=OC_FRAME_FOR_MODE(mb_mode);
+        mapii=0;
+        do{
+          mapi=map_idxs[mapii];
+          fragi=mb_maps[mbi][mapi>>2][mapi&3];
+          if(frags[fragi].coded){
+            frags[fragi].refi=refi;
+            frags[fragi].mb_mode=mb_mode;
+            frag_mvs[fragi]=mbmv;
+          }
+        }
+        while(++mapii<map_nidxs);
       }
     }
   }

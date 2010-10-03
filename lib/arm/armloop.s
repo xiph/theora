@@ -25,7 +25,7 @@
 OC_FRAG_CODED_FLAG	*	1
 
 	; Vanilla ARM v4 version
-loop_filter_h_arm
+loop_filter_h_arm PROC
 	; r0 = unsigned char *_pix
 	; r1 = int            _ystride
 	; r2 = int           *_bv
@@ -58,8 +58,9 @@ lfh_arm_lp
 	BGT	lfh_arm_lp
 	SUB	r0, r0, r1, LSL #3
 	LDMFD	r13!,{r3-r6,PC}
+	ENDP
 
-loop_filter_v_arm
+loop_filter_v_arm PROC
 	; r0 = unsigned char *_pix
 	; r1 = int            _ystride
 	; r2 = int           *_bv
@@ -92,8 +93,9 @@ lfv_arm_lp
 	BGT	lfv_arm_lp
 	SUB	r0, r0, #8
 	LDMFD	r13!,{r3-r6,PC}
+	ENDP
 
-oc_loop_filter_frag_rows_arm
+oc_loop_filter_frag_rows_arm PROC
 	; r0 = _ref_frame_data
 	; r1 = _ystride
 	; r2 = _bv
@@ -158,12 +160,13 @@ oslffri_arm_uncoded
 	CMP	r4, r5
 	BLT	oslffri_arm_lp1
 	LDMFD	r13!,{r0,r4-r11,PC}
+	ENDP
 
  [ OC_ARM_ASM_MEDIA
 	EXPORT	oc_loop_filter_init_v6
 	EXPORT	oc_loop_filter_frag_rows_v6
 
-oc_loop_filter_init_v6
+oc_loop_filter_init_v6 PROC
 	; r0 = _bv
 	; r1 = _flimit (=L from the spec)
 	MVN	r1, r1, LSL #1		; r1 = <0xFFFFFF|255-2*L>
@@ -172,6 +175,7 @@ oc_loop_filter_init_v6
 	PKHBT	r1, r1, r1, LSL #16	; r1 = <ll|ll|ll|ll>
 	STR	r1, [r0]
 	MOV	PC,r14
+	ENDP
 
 ; We could use the same strategy as the v filter below, but that would require
 ;  40 instructions to load the data and transpose it into columns and another
@@ -184,7 +188,7 @@ oc_loop_filter_init_v6
 ;  http://lists.mplayerhq.hu/pipermail/ffmpeg-devel/2010-February/083141.html
 ; His is a lot less code, though, because it only does two rows at once instead
 ;  of four.
-loop_filter_h_v6
+loop_filter_h_v6 PROC
 	; r0 = unsigned char *_pix
 	; r1 = int            _ystride
 	; r2 = int            _ll
@@ -196,8 +200,9 @@ loop_filter_h_v6
 	BL loop_filter_h_core_v6
 	SUB	r0, r0, r1, LSL #2
 	LDMFD	r13!,{r4-r11,PC}
+	ENDP
 
-loop_filter_h_core_v6
+loop_filter_h_core_v6 PROC
 	; r0 = unsigned char *_pix
 	; r1 = int            _ystride
 	; r2 = int            _ll
@@ -278,6 +283,7 @@ loop_filter_h_core_v6
 	; Single issue
 	STRB	r8, [r0,#-1]
 	MOV	PC,r14
+	ENDP
 
 ; This uses the same strategy as the MMXEXT version for x86, except that UHADD8
 ;  computes (a+b>>1) instead of (a+b+1>>1) like PAVGB.
@@ -294,7 +300,7 @@ loop_filter_h_core_v6
 ; It executes about 2/3 the number of instructions of David Conrad's approach,
 ;  but requires more code, because it does all eight columns at once, instead
 ;  of four at a time.
-loop_filter_v_v6
+loop_filter_v_v6 PROC
 	; r0 = unsigned char *_pix
 	; r1 = int            _ystride
 	; r2 = int            _ll
@@ -370,8 +376,9 @@ loop_filter_v_v6
 	UQADD8	r9, r9, r5		; r9 = p6-lflim(R_i,L)
 	STRD	r8, [r0]		; [p6:p2] = [r9: r8]
 	LDMFD	r13!,{r4-r11,PC}
+	ENDP
 
-oc_loop_filter_frag_rows_v6
+oc_loop_filter_frag_rows_v6 PROC
 	; r0 = _ref_frame_data
 	; r1 = _ystride
 	; r2 = _bv
@@ -436,21 +443,23 @@ oslffri_v6_uncoded
 	CMP	r4, r5
 	BLT	oslffri_v6_lp1
 	LDMFD	r13!,{r0,r4-r11,PC}
+	ENDP
  ]
 
  [ OC_ARM_ASM_NEON
 	EXPORT	oc_loop_filter_init_neon
 	EXPORT	oc_loop_filter_frag_rows_neon
 
-oc_loop_filter_init_neon
+oc_loop_filter_init_neon PROC
 	; r0 = _bv
 	; r1 = _flimit (=L from the spec)
 	MOV		r1, r1, LSL #1  ; r1 = 2*L
 	VDUP.S16	Q15, r1		; Q15= 2L in U16s
 	VST1.64		{D30,D31}, [r0@128]
 	MOV	PC,r14
+	ENDP
 
-loop_filter_h_neon
+loop_filter_h_neon PROC
 	; r0 = unsigned char *_pix
 	; r1 = int            _ystride
 	; r2 = int           *_bv
@@ -536,8 +545,9 @@ loop_filter_h_neon
 	VST1.16	{D4[3]}, [r12], r1
 	VST1.16	{D2[3]}, [r12], r1
 	MOV	PC,r14
+	ENDP
 
-loop_filter_v_neon
+loop_filter_v_neon PROC
 	; r0 = unsigned char *_pix
 	; r1 = int            _ystride
 	; r2 = int           *_bv
@@ -593,8 +603,9 @@ loop_filter_v_neon
 	VST1.64	{D2}, [r12@64], r1
 	VST1.64	{D4}, [r12@64], r1
 	MOV	PC,r14
+	ENDP
 
-oc_loop_filter_frag_rows_neon
+oc_loop_filter_frag_rows_neon PROC
 	; r0 = _ref_frame_data
 	; r1 = _ystride
 	; r2 = _bv
@@ -659,6 +670,7 @@ oslffri_neon_uncoded
 	CMP	r4, r5
 	BLT	oslffri_neon_lp1
 	LDMFD	r13!,{r0,r4-r11,PC}
+	ENDP
  ]
 
 	END

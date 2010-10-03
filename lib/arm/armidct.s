@@ -21,7 +21,7 @@
 	EXPORT	oc_idct8x8_1_arm
 	EXPORT	oc_idct8x8_arm
 
-oc_idct8x8_1_arm
+oc_idct8x8_1_arm PROC
 	; r0 = ogg_int16_t  *_y
 	; r1 = ogg_uint16_t  _dc
 	ORR	r1, r1, r1, LSL #16
@@ -37,8 +37,9 @@ oc_idct8x8_1_arm
 	STMIA	r0!,{r1,r2,r3,r12}
 	STMIA	r0!,{r1,r2,r3,r12}
 	MOV	PC, r14
+	ENDP
 
-oc_idct8x8_arm
+oc_idct8x8_arm PROC
 	; r0 = ogg_int16_t *_y
 	; r1 = ogg_int16_t *_x
 	; r2 = int          _last_zzi
@@ -92,8 +93,9 @@ oc_idct8x8_slow_arm_cols
 	BL	idct8core_down_arm
 	ADD	r13,r13,#64*2
 	LDMFD	r13!,{r4-r11,PC}
+	ENDP
 
-oc_idct8x8_10_arm
+oc_idct8x8_10_arm PROC
 	STMFD	r13!,{r4-r11,r14}
 	SUB	r13,r13,#64*2
 ; Row transforms
@@ -128,8 +130,9 @@ oc_idct8x8_10_arm_cols
 	BL	idct4core_down_arm
 	ADD	r13,r13,#64*2
 	LDMFD	r13!,{r4-r11,PC}
+	ENDP
 
-oc_idct8x8_6_arm
+oc_idct8x8_6_arm PROC
 	STMFD	r13!,{r4-r7,r9-r11,r14}
 	SUB	r13,r13,#64*2
 ; Row transforms
@@ -161,8 +164,9 @@ oc_idct8x8_6_arm_cols
 	BL	idct3core_down_arm
 	ADD	r13,r13,#64*2
 	LDMFD	r13!,{r4-r7,r9-r11,PC}
+	ENDP
 
-oc_idct8x8_3_arm
+oc_idct8x8_3_arm PROC
 	STMFD	r13!,{r4-r7,r9-r11,r14}
 	SUB	r13,r13,#64*2
 ; Row transforms
@@ -189,8 +193,9 @@ oc_idct8x8_3_arm
 	BL	idct2core_down_arm
 	ADD	r13,r13,#64*2
 	LDMFD	r13!,{r4-r7,r9-r11,PC}
+	ENDP
 
-idct1core_arm
+idct1core_arm PROC
 	; r0 =       ogg_int16_t *_y (destination)
 	; r1 = const ogg_int16_t *_x (source)
 	LDRSH	r3, [r1], #16
@@ -208,8 +213,9 @@ idct1core_arm
 	STRH	r3, [r0, #94]
 	STRH	r3, [r0, #110]
 	MOV	PC,R14
+	ENDP
 
-idct2core_arm
+idct2core_arm PROC
 	; r0 =       ogg_int16_t *_y (destination)
 	; r1 = const ogg_int16_t *_x (source)
 	LDRSH	r9, [r1], #16		; r9 = x[0]
@@ -244,8 +250,9 @@ idct2core_arm
 	STRH	r12,[r0, #94]		; y[6] = t[0]-t[6]
 	STRH	r11,[r0, #110]		; y[7] = t[0]-t[7]
 	MOV	PC,r14
+	ENDP
 
-idct2core_down_arm
+idct2core_down_arm PROC
 	; r0 =       ogg_int16_t *_y (destination)
 	; r1 = const ogg_int16_t *_x (source)
 	LDRSH	r9, [r1], #16		; r9 = x[0]
@@ -292,8 +299,9 @@ idct2core_down_arm
 	STRH	r12,[r0, #94]		; y[6] = t[0]-t[6]
 	STRH	r11,[r0, #110]		; y[7] = t[0]-t[7]
 	MOV	PC,r14
+	ENDP
 
-idct3core_arm
+idct3core_arm PROC
 	LDRSH	r9, [r1], #16		; r9 = x[0]
 	LDR	r12,OC_C4S4		; r12= OC_C4S4
 	LDRSH	r3, [r1, #-12]		; r3 = x[2]
@@ -337,8 +345,9 @@ idct3core_arm
 	STRH	r5, [r0, #94]		; y[6] = t[1]-t2[6]
 	STRH	r11,[r0, #110]		; y[7] = t2[0]-t[7]
 	MOV	PC,R14
+	ENDP
 
-idct3core_down_arm
+idct3core_down_arm PROC
 	LDRSH	r9, [r1], #16		; r9 = x[0]
 	LDR	r12,OC_C4S4		; r12= OC_C4S4
 	LDRSH	r3, [r1, #-12]		; r3 = x[2]
@@ -394,8 +403,9 @@ idct3core_down_arm
 	STRH	r10,[r0, #94]		; y[6] = t[1]-t2[6]
 	STRH	r3, [r0, #110]		; y[7] = t2[0]-t[7]
 	MOV	PC,R14
+	ENDP
 
-idct4core_arm
+idct4core_arm PROC
 	; r0 =       ogg_int16_t *_y (destination)
 	; r1 = const ogg_int16_t *_x (source)
 	LDRSH	r9, [r1], #16		; r9 = x[0]
@@ -451,8 +461,9 @@ idct4core_arm
 	STRH	r6, [r0, #94]		; y[6] = t[1]-t2[6]
 	STRH	r11, [r0, #110]		; y[7] = t2[0]-t[7]
 	MOV	PC,r14
+	ENDP
 
-idct4core_down_arm
+idct4core_down_arm PROC
 	; r0 =       ogg_int16_t *_y (destination)
 	; r1 = const ogg_int16_t *_x (source)
 	LDRSH	r9, [r1], #16		; r9 = x[0]
@@ -520,8 +531,9 @@ idct4core_down_arm
 	STRH	r6, [r0, #94]		; y[6] = t[1]-t2[6]
 	STRH	r11,[r0, #110]		; y[7] = t2[0]-t[7]
 	MOV	PC,r14
+	ENDP
 
-idct8core_arm
+idct8core_arm PROC
 	; r0 =       ogg_int16_t *_y (destination)
 	; r1 = const ogg_int16_t *_x (source)
 	LDRSH	r2, [r1],#16		; r2 = x[0]
@@ -621,8 +633,9 @@ idct8core_arm
 	STRH	r10,[r0, #94]		; y[6] = t[1]-t[6]
 	STRH	r8, [r0, #110]		; y[7] = t[0]-t[7]
 	LDMFD	r13!,{r1,PC}
+	ENDP
 
-idct8core_down_arm
+idct8core_down_arm PROC
 	; r0 =       ogg_int16_t *_y (destination)
 	; r1 = const ogg_int16_t *_x (source)
 	LDRSH	r2, [r1],#16		; r2 = x[0]
@@ -735,12 +748,13 @@ idct8core_down_arm
 	STRH	r10,[r0, #94]		; y[6] = t[1]-t[6]
 	STRH	r8, [r0, #110]		; y[7] = t[0]-t[7]
 	LDMFD	r13!,{r1,PC}
+	ENDP
 
  [ OC_ARM_ASM_MEDIA
 	EXPORT	oc_idct8x8_1_v6
 	EXPORT	oc_idct8x8_v6
 
-oc_idct8x8_1_v6
+oc_idct8x8_1_v6 PROC
 	; r0 = ogg_int16_t  *_y
 	; r1 = ogg_uint16_t  _dc
 	ORR	r2, r1, r1, LSL #16
@@ -762,8 +776,9 @@ oc_idct8x8_1_v6
 	STRD	r2, [r0], #8
 	STRD	r2, [r0], #8
 	MOV	PC, r14
+	ENDP
 
-oc_idct8x8_v6
+oc_idct8x8_v6 PROC
 	; r0 = ogg_int16_t *_y
 	; r1 = ogg_int16_t *_x
 	; r2 = int          _last_zzi
@@ -815,8 +830,9 @@ oc_idct8x8_slow_v6_cols
 	BL	idct8_8core_down_v6
 	ADD	r13,r13,#64*2
 	LDMFD	r13!,{r4-r11,PC}
+	ENDP
 
-oc_idct8x8_10_v6
+oc_idct8x8_10_v6 PROC
 	STMFD	r13!,{r4-r11,r14}
 	SUB	r13,r13,#64*2+4
 ; Row transforms
@@ -847,8 +863,9 @@ oc_idct8x8_10_v6_cols
 	BL	idct4_4core_down_v6
 	ADD	r13,r13,#64*2+4
 	LDMFD	r13!,{r4-r11,PC}
+	ENDP
 
-oc_idct8x8_3_v6
+oc_idct8x8_3_v6 PROC
 	STMFD	r13!,{r4-r8,r14}
 	SUB	r13,r13,#64*2
 ; Row transforms
@@ -870,8 +887,9 @@ oc_idct8x8_3_v6
 	BL	idct2_2core_down_v6
 	ADD	r13,r13,#64*2
 	LDMFD	r13!,{r4-r8,PC}
+	ENDP
 
-idct2_1core_v6
+idct2_1core_v6 PROC
 	; r0 =       ogg_int16_t *_y (destination)
 	; r1 = const ogg_int16_t *_x (source)
 ; Stage 1:
@@ -912,6 +930,7 @@ idct2_1core_v6
 	SSUB16	r7, r12,r7		; r7 = t[0]-t[7]
 	STR	r7, [r0, #108]		; y[7<<3] = t[0]-t[7]
 	MOV	PC,r14
+	ENDP
  ]
 
 	ALIGN 8
@@ -931,7 +950,7 @@ OC_C4S4
 	DCD	46341 ; B505
 
  [ OC_ARM_ASM_MEDIA
-idct2_2core_down_v6
+idct2_2core_down_v6 PROC
 	; r0 =       ogg_int16_t *_y (destination)
 	; r1 = const ogg_int16_t *_x (source)
 ; Stage 1:
@@ -1000,13 +1019,14 @@ idct2_2core_down_v6
 	PKHTB	r3, r3, r7, ASR #20	; r3 = t[0]-t[7]+8>>4
 	STR	r3, [r0, #108]		; y[7<<3] = t[0]-t[7]+8>>4
 	MOV	PC,r14
+	ENDP
 
 ; In theory this should save ~75 cycles over oc_idct8x8_10, more than enough to
 ;  pay for increased branch mis-prediction to get here, but in practice it
 ;  doesn't seem to slow anything down to take it out, and it's less code this
 ;  way.
  [ 0
-oc_idct8x8_6_v6
+oc_idct8x8_6_v6 PROC
 	STMFD	r13!,{r4-r8,r10,r11,r14}
 	SUB	r13,r13,#64*2+4
 ; Row transforms
@@ -1035,8 +1055,9 @@ oc_idct8x8_6_v6_cols
 	BL	idct3_3core_down_v6
 	ADD	r13,r13,#64*2+4
 	LDMFD	r13!,{r4-r8,r10,r11,PC}
+	ENDP
 
-idct1core_v6
+idct1core_v6 PROC
 	; r0 =       ogg_int16_t *_y (destination)
 	; r1 = const ogg_int16_t *_x (source)
 	LDRSH	r3, [r1], #16
@@ -1051,8 +1072,9 @@ idct1core_v6
 	STRH	r3, [r0, #62]
 	STRH	r3, [r0, #94]
 	MOV	PC,R14
+	ENDP
 
-idct3_2core_v6
+idct3_2core_v6 PROC
 	; r0 =       ogg_int16_t *_y (destination)
 	; r1 = const ogg_int16_t *_x (source)
 ; Stage 1:
@@ -1083,6 +1105,7 @@ idct3_2core_v6
 	SMULWT	r10,r11,r4		; r10= t[1,5]=OC_C4S4*t[1,4]>>16
 ; Stage 3:
 	B	idct4_3core_stage3_v6
+	ENDP
 
 ; Another copy so the LDRD offsets are less than +/- 255.
 	ALIGN 8
@@ -1095,7 +1118,7 @@ OC_C6S2_3_v6
 OC_C2S6_3_v6
 	DCD	60547 ; EC83
 
-idct3_3core_down_v6
+idct3_3core_down_v6 PROC
 	; r0 =       ogg_int16_t *_y (destination)
 	; r1 = const ogg_int16_t *_x (source)
 ; Stage 1:
@@ -1127,9 +1150,10 @@ idct3_3core_down_v6
 	SMULWT	r10,r11,r4		; r10= t[1,5]=OC_C4S4*t[1,4]>>16
 ; Stage 3:
 	B	idct4_4core_down_stage3_v6
+	ENDP
  ]
 
-idct4_3core_v6
+idct4_3core_v6 PROC
 	; r0 =       ogg_int16_t *_y (destination)
 	; r1 = const ogg_int16_t *_x (source)
 ; Stage 1:
@@ -1196,6 +1220,7 @@ idct4_3core_stage3_5_v6
 	SSUB16	r7, r10,r7		; r7 = t[0]-t[7]
 	STR	r7, [r0, #108]		; y[7<<3] = t[0]-t[7]
 	MOV	PC,r14
+	ENDP
 
 ; Another copy so the LDRD offsets are less than +/- 255.
 	ALIGN 8
@@ -1212,7 +1237,7 @@ OC_C5S3_4_v6
 OC_C3S5_4_v6
 	DCD	54491 ; D4DB
 
-idct4_4core_down_v6
+idct4_4core_down_v6 PROC
 	; r0 =       ogg_int16_t *_y (destination)
 	; r1 = const ogg_int16_t *_x (source)
 ; Stage 1:
@@ -1259,8 +1284,9 @@ idct4_4core_down_stage3_v6
 	PKHBT	r10,r5, r10,LSL #16	; r10= <t[1,5]|t[0,5]>
 	SSUB16	r2, r12,r2		; r2 = t[2]+8=t[0]-t[2]+8
 	B	idct8_8core_down_stage3_5_v6
+	ENDP
 
-idct8_8core_v6
+idct8_8core_v6 PROC
 	STMFD	r13!,{r0,r14}
 ; Stage 1:
 	;5-6 rotation by 3pi/16
@@ -1342,6 +1368,7 @@ idct8_8core_v6
 	SSUB16	r2, r8, r2		; r2 = t[2]=t[1]-t[2]
 	LDMFD	r13!,{r0,r14}
 	B	idct4_3core_stage3_5_v6
+	ENDP
 
 ; Another copy so the LDRD offsets are less than +/- 255.
 	ALIGN 8
@@ -1358,7 +1385,7 @@ OC_C5S3_8_v6
 OC_C3S5_8_v6
 	DCD	54491 ; D4DB
 
-idct8_8core_down_v6
+idct8_8core_down_v6 PROC
 	STMFD	r13!,{r0,r14}
 ; Stage 1:
 	;5-6 rotation by 3pi/16
@@ -1487,6 +1514,7 @@ idct8_8core_down_stage3_5_v6
 	PKHTB	r10,r10,r7, ASR #20	; r10= t[0]-t[7]+8>>4
 	STR	r10,[r0, #108]		; y[7<<3] = t[0]-t[7]+8>>4
 	MOV	PC,r14
+	ENDP
  ]
 
  [ OC_ARM_ASM_NEON
@@ -1504,7 +1532,7 @@ OC_IDCT_CONSTS_NEON
 	DCW	25080 ; 30FC (C6S2)
 	DCW	12785 ; 31F1 (C7S1)
 
-oc_idct8x8_1_neon
+oc_idct8x8_1_neon PROC
 	; r0 = ogg_int16_t  *_y
 	; r1 = ogg_uint16_t  _dc
 	VDUP.S16	Q0, r1
@@ -1514,8 +1542,9 @@ oc_idct8x8_1_neon
 	VST1.64		{D0, D1, D2, D3}, [r0@128]!
 	VST1.64		{D0, D1, D2, D3}, [r0@128]
 	MOV	PC, r14
+	ENDP
 
-oc_idct8x8_neon
+oc_idct8x8_neon PROC
 	; r0 = ogg_int16_t *_y
 	; r1 = ogg_int16_t *_x
 	; r2 = int          _last_zzi
@@ -1606,8 +1635,9 @@ oc_idct8x8_slow_neon_noclear
 	VRSHR.S16	Q15,Q15,#4	; Q15 = y[7]+8>>4
 	VSTMIA		r0, {D16-D31}
 	MOV	PC, r14
+	ENDP
 
-oc_idct8x8_stage123_neon
+oc_idct8x8_stage123_neon PROC
 ; Stages 1 & 2
 	VMULL.S16	Q4, D18,D1[3]
 	VMULL.S16	Q5, D19,D1[3]
@@ -1703,8 +1733,9 @@ oc_idct8x8_stage123_neon
 	VSUB.S16	Q10,Q1, Q2	; Q10 = t[2]''=t[1]-t[2]
 	VSUB.S16	Q5, Q6, Q5	; Q5  = t[5]''=t[6]'-t[5]'
 	MOV	PC, r14
+	ENDP
 
-oc_idct8x8_10_neon
+oc_idct8x8_10_neon PROC
 	ADR	r3, OC_IDCT_CONSTS_NEON
 	VLD1.64		{D0,D1},          [r3@128]
 	MOV	r2, r1
@@ -1871,6 +1902,7 @@ oc_idct8x8_10_neon_noclear
 	VRSHR.S16	Q15,Q15,#4	; Q15 = y[7]+8>>4
 	VSTMIA		r0, {D16-D31}
 	MOV	PC, r14
+	ENDP
  ]
 
 	END

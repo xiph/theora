@@ -24,7 +24,7 @@
 	EXPORT	oc_frag_recon_inter_arm
 	EXPORT	oc_frag_recon_inter2_arm
 
-oc_frag_copy_list_arm
+oc_frag_copy_list_arm PROC
 	; r0 = _dst_frame
 	; r1 = _src_frame
 	; r2 = _ystride
@@ -132,8 +132,9 @@ ofrintra_lp_arm
 	SUBS	r14,r14,#1
 	BGT	ofrintra_lp_arm
 	LDMFD	r13!,{r4,r5,PC}
+	ENDP
 
-oc_frag_recon_inter_arm
+oc_frag_recon_inter_arm PROC
 	; r0 =       unsigned char *dst
 	; r1 = const unsigned char *src
 	; r2 =       int            ystride
@@ -194,8 +195,9 @@ ofrinter_lp_arm
 	SUBS	r9, r9, #1
 	BGT	ofrinter_lp_arm
 	LDMFD	r13!,{r5,r9-r11,PC}
+	ENDP
 
-oc_frag_recon_inter2_arm
+oc_frag_recon_inter2_arm PROC
 	; r0 =       unsigned char *dst
 	; r1 = const unsigned char *src1
 	; r2 = const unsigned char *src2
@@ -274,11 +276,12 @@ ofrinter2_lp_arm
 	SUBS	r14,r14,#1
 	BGT	ofrinter2_lp_arm
 	LDMFD	r13!,{r4-r8,PC}
+	ENDP
 
  [ OC_ARM_ASM_EDSP
 	EXPORT	oc_frag_copy_list_edsp
 
-oc_frag_copy_list_edsp
+oc_frag_copy_list_edsp PROC
 	; r0 = _dst_frame
 	; r1 = _src_frame
 	; r2 = _ystride
@@ -320,6 +323,7 @@ ofcl_edsp_lp
 	BGE	ofcl_edsp_lp
 ofcl_edsp_end
 	LDMFD	r13!,{r4-r11,PC}
+	ENDP
  ]
 
  [ OC_ARM_ASM_MEDIA
@@ -327,7 +331,7 @@ ofcl_edsp_end
 	EXPORT	oc_frag_recon_inter_v6
 	EXPORT	oc_frag_recon_inter2_v6
 
-oc_frag_recon_intra_v6
+oc_frag_recon_intra_v6 PROC
 	; r0 =       unsigned char *_dst
 	; r1 =       int            _ystride
 	; r2 = const ogg_int16_t    _residue[64]
@@ -356,8 +360,9 @@ ofrintra_v6_lp
 	STRD	r2, [r0], r1
 	BGT	ofrintra_v6_lp
 	LDMFD	r13!,{r4-r6,PC}
+	ENDP
 
-oc_frag_recon_inter_v6
+oc_frag_recon_inter_v6 PROC
 	; r0 =       unsigned char *_dst
 	; r1 = const unsigned char *_src
 	; r2 =       int            _ystride
@@ -395,8 +400,9 @@ ofrinter_v6_lp
 	STRD	r4, [r0], r2
 	BGT	ofrinter_v6_lp
 	LDMFD	r13!,{r4-r7,PC}
+	ENDP
 
-oc_frag_recon_inter2_v6
+oc_frag_recon_inter2_v6 PROC
 	; r0 =       unsigned char *_dst
 	; r1 = const unsigned char *_src1
 	; r2 = const unsigned char *_src2
@@ -436,6 +442,7 @@ ofrinter2_v6_lp
 	STRD	r8, [r0], r3
 	BGT	ofrinter2_v6_lp
 	LDMFD	r13!,{r4-r9,PC}
+	ENDP
  ]
 
  [ OC_ARM_ASM_NEON
@@ -444,7 +451,7 @@ ofrinter2_v6_lp
 	EXPORT	oc_frag_recon_inter_neon
 	EXPORT	oc_frag_recon_inter2_neon
 
-oc_frag_copy_list_neon
+oc_frag_copy_list_neon PROC
 	; r0 = _dst_frame
 	; r1 = _src_frame
 	; r2 = _ystride
@@ -497,8 +504,9 @@ ofcl_neon_lp
 	BGT	ofcl_neon_lp
 ofcl_neon_end
 	LDMFD	r13!,{r4-r7,PC}
+	ENDP
 
-oc_frag_recon_intra_neon
+oc_frag_recon_intra_neon PROC
 	; r0 =       unsigned char *_dst
 	; r1 =       int            _ystride
 	; r2 = const ogg_int16_t    _residue[64]
@@ -530,8 +538,9 @@ oc_frag_recon_intra_neon
 	VST1.64	{D22},[r0@64], r1
 	VST1.64	{D23},[r0@64], r1
 	MOV	PC,R14
+	ENDP
 
-oc_frag_recon_inter_neon
+oc_frag_recon_inter_neon PROC
 	; r0 =       unsigned char *_dst
 	; r1 = const unsigned char *_src
 	; r2 =       int            _ystride
@@ -578,8 +587,9 @@ oc_frag_recon_inter_neon
 	VST1.64	{D22},[r0@64], r2
 	VST1.64	{D23},[r0@64], r2
 	MOV	PC,R14
+	ENDP
 
-oc_frag_recon_inter2_neon
+oc_frag_recon_inter2_neon PROC
 	; r0 =       unsigned char *_dst
 	; r1 = const unsigned char *_src1
 	; r2 = const unsigned char *_src2
@@ -640,6 +650,7 @@ oc_frag_recon_inter2_neon
 	VST1.64	{D22},[r0@64], r3
 	VST1.64	{D23},[r0@64], r3
 	MOV	PC,R14
+	ENDP
  ]
 
 	END

@@ -21,7 +21,22 @@
 	EXPORT oc_pack_read1_arm
 	EXPORT oc_huff_token_decode_arm
 
-oc_pack_read_arm
+oc_pack_read1_arm PROC
+	; r0 = oc_pack_buf *_b
+	ADD r12,r0,#8
+	LDMIA r12,{r2,r3}      ; r2 = window
+	; Stall...             ; r3 = available
+	; Stall...
+	SUBS r3,r3,#1          ; r3 = available-1, available<1 => LT
+	BLT oc_pack_read1_refill
+	MOV r0,r2,LSR #31      ; r0 = window>>31
+	MOV r2,r2,LSL #1       ; r2 = window<<=1
+	STMIA r12,{r2,r3}      ; window = r2
+	                       ; available = r3
+	MOV PC,r14
+	ENDP
+
+oc_pack_read_arm PROC
 	; r0 = oc_pack_buf *_b
 	; r1 = int          _bits
 	ADD r12,r0,#8
@@ -33,20 +48,6 @@ oc_pack_read_arm
 	RSB r0,r1,#32          ; r0 = 32-_bits
 	MOV r0,r2,LSR r0       ; r0 = window>>32-_bits
 	MOV r2,r2,LSL r1       ; r2 = window<<=_bits
-	STMIA r12,{r2,r3}      ; window = r2
-	                       ; available = r3
-	MOV PC,r14
-
-oc_pack_read1_arm
-	; r0 = oc_pack_buf *_b
-	ADD r12,r0,#8
-	LDMIA r12,{r2,r3}      ; r2 = window
-	; Stall...             ; r3 = available
-	; Stall...
-	SUBS r3,r3,#1          ; r3 = available-1, available<1 => LT
-	BLT oc_pack_read1_refill
-	MOV r0,r2,LSR #31      ; r0 = window>>31
-	MOV r2,r2,LSL #1       ; r2 = window<<=1
 	STMIA r12,{r2,r3}      ; window = r2
 	                       ; available = r3
 	MOV PC,r14
@@ -117,10 +118,11 @@ oc_pack_read_refill_last
 	STMIA r12,{r2,r3}      ; window = r2
 	                       ; available = r3
 	LDMFD r13!,{r10,r11,PC}
+	ENDP
 
 
 
-oc_huff_token_decode_arm
+oc_huff_token_decode_arm PROC
 	; r0 = oc_pack_buf       *_b
 	; r1 = const ogg_int16_t *_tree
 	STMFD r13!,{r4,r5,r10,r14}
@@ -223,5 +225,6 @@ oc_huff_token_decode_refill
 	                       ; available = r5
 	AND r0,r14,#255        ; r0 = node&255
 	LDMFD r13!,{r4,r5,r10,pc}
+	ENDP
 
 	END
