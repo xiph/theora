@@ -1251,7 +1251,6 @@ static int parse_time(long *_sec,long *_usec,const char *_optarg){
   }
   else pos=_optarg;
   secf=strtod(pos,&end);
-  printf("%G %G\n",secf,secf-floor(secf));
   if(err||*end!='\0')return -1;
   *_sec=secl+(long)floor(secf);
   *_usec=(long)((secf-floor(secf))*1E6+0.5);
