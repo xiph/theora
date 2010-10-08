@@ -1501,7 +1501,7 @@ int main(int argc,char *argv[]){
 
   /* Set up Ogg output stream */
   srand(time(NULL));
-  ogg_stream_init(&to,rand()); /* oops, add one ot the above */
+  ogg_stream_init(&to,rand()); /* oops, add one to the above */
 
   /* initialize Vorbis assuming we have audio to compress. */
   if(audio && twopass!=1){
