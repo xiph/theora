@@ -475,7 +475,7 @@ void oc_huff_trees_clear(ogg_int16_t *_nodes[TH_NHUFFMAN_TABLES]){
   _opb:  The buffer to unpack the token from.
   _node: The tree to unpack the token with.
   Return: The token value.*/
-int oc_huff_token_decode(oc_pack_buf *_opb,const ogg_int16_t *_tree){
+int oc_huff_token_decode_c(oc_pack_buf *_opb,const ogg_int16_t *_tree){
   const unsigned char *ptr;
   const unsigned char *stop;
   oc_pb_window         window;
