@@ -18,6 +18,7 @@
 # define _bitpack_H (1)
 # include <stddef.h>
 # include <limits.h>
+# include "internal.h"
 
 
 
