@@ -99,7 +99,7 @@ int oc_ilog(unsigned _v){
 
 void *oc_aligned_malloc(size_t _sz,size_t _align){
   unsigned char *p;
-  if(_align>UCHAR_MAX||(_align&_align-1)||_sz>~(size_t)0-_align)return NULL;
+  if(_align-1>UCHAR_MAX||(_align&_align-1)||_sz>~(size_t)0-_align)return NULL;
   p=(unsigned char *)_ogg_malloc(_sz+_align);
   if(p!=NULL){
     int offs;

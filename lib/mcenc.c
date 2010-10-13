@@ -88,7 +88,7 @@ static const int OC_SQUARE_SITES[11][8]={
 };
 
 
-static void oc_mcenc_find_candidates(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
+static void oc_mcenc_find_candidates_a(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
  oc_mv _accum,int _mbi,int _frame){
   oc_mb_enc_info *embs;
   int             accum_x;
@@ -115,8 +115,8 @@ static void oc_mcenc_find_candidates(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
   accum_y=OC_MV_Y(_accum);
   /*Add a few additional vectors to set A: the vectors used in the previous
      frames and the (0,0) vector.*/
-  _mcenc->candidates[ncandidates][0]=OC_CLAMPI(-31,accum_x,31);
-  _mcenc->candidates[ncandidates][1]=OC_CLAMPI(-31,accum_y,31);
+  _mcenc->candidates[ncandidates][0]=accum_x;
+  _mcenc->candidates[ncandidates][1]=accum_y;
   ncandidates++;
   _mcenc->candidates[ncandidates][0]=OC_CLAMPI(-31,
    OC_MV_X(embs[_mbi].analysis_mv[1][_frame])+accum_x,31);
@@ -137,8 +137,22 @@ static void oc_mcenc_find_candidates(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
   OC_SORT2I(a[0][1],a[1][1]);
   _mcenc->candidates[0][0]=a[1][0];
   _mcenc->candidates[0][1]=a[1][1];
-  /*Fill in set B: accelerated predictors for this and adjacent macro blocks.*/
   _mcenc->setb0=ncandidates;
+}
+
+static void oc_mcenc_find_candidates_b(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
+ oc_mv _accum,int _mbi,int _frame){
+  oc_mb_enc_info *embs;
+  int             accum_x;
+  int             accum_y;
+  int             ncandidates;
+  unsigned        nmbi;
+  int             i;
+  embs=_enc->mb_info;
+  accum_x=OC_MV_X(_accum);
+  accum_y=OC_MV_Y(_accum);
+  /*Fill in set B: accelerated predictors for this and adjacent macro blocks.*/
+  ncandidates=_mcenc->setb0;
   /*The first time through the loop use the current macro block.*/
   nmbi=_mbi;
   for(i=0;;i++){
@@ -151,11 +165,6 @@ static void oc_mcenc_find_candidates(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
     ncandidates++;
     if(i>=embs[_mbi].npneighbors)break;
     nmbi=embs[_mbi].pneighbors[i];
-  }
-  /*Truncate to full-pel positions.*/
-  for(i=0;i<ncandidates;i++){
-    _mcenc->candidates[i][0]=OC_DIV2(_mcenc->candidates[i][0]);
-    _mcenc->candidates[i][1]=OC_DIV2(_mcenc->candidates[i][1]);
   }
   _mcenc->ncandidates=ncandidates;
 }
@@ -295,12 +304,12 @@ void oc_mcenc_search_frame(oc_enc_ctx *_enc,oc_mv _accum,int _mbi,int _frame,
   int                  bi;
   embs=_enc->mb_info;
   /*Find some candidate motion vectors.*/
-  oc_mcenc_find_candidates(_enc,&mcenc,_accum,_mbi,_frame);
+  oc_mcenc_find_candidates_a(_enc,&mcenc,_accum,_mbi,_frame);
   /*Clear the cache of locations we've examined.*/
   memset(hit_cache,0,sizeof(hit_cache));
   /*Start with the median predictor.*/
-  candx=mcenc.candidates[0][0];
-  candy=mcenc.candidates[0][1];
+  candx=OC_DIV2(mcenc.candidates[0][0]);
+  candy=OC_DIV2(mcenc.candidates[0][1]);
   hit_cache[candy+15]|=(ogg_int32_t)1<<candx+15;
   frag_buf_offs=_enc->state.frag_buf_offs;
   fragis=_enc->state.mb_maps[_mbi][0];
@@ -335,8 +344,8 @@ void oc_mcenc_search_frame(oc_enc_ctx *_enc,oc_mv _accum,int _mbi,int _frame,
     t2+=(t2>>OC_YSAD_THRESH2_SCALE_BITS)+OC_YSAD_THRESH2_OFFSET;
     /*Examine the candidates in set A.*/
     for(ci=1;ci<mcenc.setb0;ci++){
-      candx=mcenc.candidates[ci][0];
-      candy=mcenc.candidates[ci][1];
+      candx=OC_DIV2(mcenc.candidates[ci][0]);
+      candy=OC_DIV2(mcenc.candidates[ci][1]);
       /*If we've already examined this vector, then we would be using it if it
          was better than what we are using.*/
       hitbit=(ogg_int32_t)1<<candx+15;
@@ -358,10 +367,11 @@ void oc_mcenc_search_frame(oc_enc_ctx *_enc,oc_mv _accum,int _mbi,int _frame,
       }
     }
     if(best_err>t2){
+      oc_mcenc_find_candidates_b(_enc,&mcenc,_accum,_mbi,_frame);
       /*Examine the candidates in set B.*/
       for(;ci<mcenc.ncandidates;ci++){
-        candx=mcenc.candidates[ci][0];
-        candy=mcenc.candidates[ci][1];
+        candx=OC_DIV2(mcenc.candidates[ci][0]);
+        candy=OC_DIV2(mcenc.candidates[ci][1]);
         hitbit=(ogg_int32_t)1<<candx+15;
         if(hit_cache[candy+15]&hitbit)continue;
         hit_cache[candy+15]|=hitbit;
