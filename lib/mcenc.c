@@ -146,26 +146,21 @@ static void oc_mcenc_find_candidates_b(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
   int             accum_x;
   int             accum_y;
   int             ncandidates;
-  unsigned        nmbi;
-  int             i;
   embs=_enc->mb_info;
   accum_x=OC_MV_X(_accum);
   accum_y=OC_MV_Y(_accum);
   /*Fill in set B: accelerated predictors for this and adjacent macro blocks.*/
   ncandidates=_mcenc->setb0;
-  /*The first time through the loop use the current macro block.*/
-  nmbi=_mbi;
-  for(i=0;;i++){
-    _mcenc->candidates[ncandidates][0]=OC_CLAMPI(-31,
-     2*OC_MV_X(embs[_mbi].analysis_mv[1][_frame])
-     -OC_MV_X(embs[_mbi].analysis_mv[2][_frame])+accum_x,31);
-    _mcenc->candidates[ncandidates][1]=OC_CLAMPI(-31,
-     2*OC_MV_Y(embs[_mbi].analysis_mv[1][_frame])
-     -OC_MV_Y(embs[_mbi].analysis_mv[2][_frame])+accum_y,31);
-    ncandidates++;
-    if(i>=embs[_mbi].npneighbors)break;
-    nmbi=embs[_mbi].pneighbors[i];
-  }
+  /*Use only the current block. Using more did not appear to be helpful
+    with the current selection logic due to escaping the local search too
+    quickly.*/
+  _mcenc->candidates[ncandidates][0]=OC_CLAMPI(-31,
+   2*OC_MV_X(embs[_mbi].analysis_mv[1][_frame])
+   -OC_MV_X(embs[_mbi].analysis_mv[2][_frame])+accum_x,31);
+  _mcenc->candidates[ncandidates][1]=OC_CLAMPI(-31,
+   2*OC_MV_Y(embs[_mbi].analysis_mv[1][_frame])
+   -OC_MV_Y(embs[_mbi].analysis_mv[2][_frame])+accum_y,31);
+  ncandidates++;
   _mcenc->ncandidates=ncandidates;
 }
 
@@ -505,7 +500,7 @@ void oc_mcenc_search_frame(oc_enc_ctx *_enc,oc_mv _accum,int _mbi,int _frame,
   embs[_mbi].satd[_frame]=oc_mcenc_ysatd_check_mbcandidate_fullpel(_enc,
    frag_buf_offs,fragis,candx,candy,src,satd_ref,ystride);
   embs[_mbi].analysis_mv[0][_frame]=OC_MV(candx<<1,candy<<1);
-  if(_frame==OC_FRAME_PREV){
+  if(_frame==OC_FRAME_PREV&&_enc->sp_level<OC_SP_LEVEL_FAST_ANALYSIS){
     for(bi=0;bi<4;bi++){
       candx=best_block_vec[bi][0];
       candy=best_block_vec[bi][1];
