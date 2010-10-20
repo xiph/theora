@@ -15,10 +15,10 @@
 			Name="x64"
 		/>
 		<Platform
-			Name="Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+			Name="Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 		/>
 		<Platform
-			Name="Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+			Name="Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 		/>
 		<Platform
 			Name="Windows Mobile 6 Professional SDK (ARMV4I)"
@@ -588,7 +588,7 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+			Name="Debug|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
@@ -661,7 +661,7 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+			Name="Debug|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
@@ -807,7 +807,7 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+			Name="Release|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
@@ -888,7 +888,7 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+			Name="Release|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
@@ -1050,7 +1050,7 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+			Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
@@ -1131,7 +1131,7 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+			Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
@@ -1293,7 +1293,7 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+			Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
@@ -1374,7 +1374,7 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+			Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
@@ -1673,7 +1673,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Debug|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -1681,7 +1681,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Debug|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -1697,7 +1697,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -1705,7 +1705,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -1721,7 +1721,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -1729,7 +1729,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -1745,7 +1745,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -1753,7 +1753,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -1873,7 +1873,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Debug|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
 						<Tool
@@ -1881,7 +1881,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Debug|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
 						<Tool
@@ -1897,7 +1897,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
 						<Tool
@@ -1905,7 +1905,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
 						<Tool
@@ -1921,7 +1921,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
 						<Tool
@@ -1929,7 +1929,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
 						<Tool
@@ -1945,7 +1945,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
 						<Tool
@@ -1953,7 +1953,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
 						<Tool
@@ -2149,7 +2149,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Debug|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2157,7 +2157,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Debug|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2173,7 +2173,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2181,7 +2181,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2197,7 +2197,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2205,7 +2205,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2221,7 +2221,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2229,7 +2229,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2385,7 +2385,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Debug|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2393,7 +2393,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Debug|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2409,7 +2409,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2417,7 +2417,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2433,7 +2433,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2441,7 +2441,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2457,7 +2457,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2465,7 +2465,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2609,7 +2609,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Debug|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2617,7 +2617,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Debug|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2633,7 +2633,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2641,7 +2641,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2657,7 +2657,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release_SSE|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2665,7 +2665,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release_SSE|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2681,7 +2681,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK 2 (ARMV4I)"
+						Name="Release_SSE2|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2689,7 +2689,7 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK 2 (ARMV4I)"
+						Name="Release_SSE2|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
