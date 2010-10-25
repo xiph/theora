@@ -80,12 +80,12 @@ void oc_state_frag_recon_mmx(const oc_theora_state *_state,ptrdiff_t _fragi,
   frag_buf_off=_state->frag_buf_offs[_fragi];
   refi=_state->frags[_fragi].refi;
   ystride=_state->ref_ystride[_pli];
-  dst=_state->ref_frame_data[_state->ref_frame_idx[OC_FRAME_SELF]]+frag_buf_off;
+  dst=_state->ref_frame_data[OC_FRAME_SELF]+frag_buf_off;
   if(refi==OC_FRAME_SELF)oc_frag_recon_intra_mmx(dst,ystride,_dct_coeffs+64);
   else{
     const unsigned char *ref;
     int                  mvoffsets[2];
-    ref=_state->ref_frame_data[_state->ref_frame_idx[refi]]+frag_buf_off;
+    ref=_state->ref_frame_data[refi]+frag_buf_off;
     if(oc_state_get_mv_offsets(_state,mvoffsets,_pli,
      _state->frag_mvs[_fragi])>1){
       oc_frag_recon_inter2_mmx(dst,ref+mvoffsets[0],ref+mvoffsets[1],ystride,

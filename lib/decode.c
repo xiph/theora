@@ -1597,8 +1597,8 @@ static void oc_dec_frags_recon_mcu_plane(oc_dec_ctx *_dec,
   if(_pipe->nuncoded_fragis[_pli]>0){
     _pipe->uncoded_fragis[_pli]-=_pipe->nuncoded_fragis[_pli];
     oc_frag_copy_list(&_dec->state,
-     _dec->state.ref_frame_data[_dec->state.ref_frame_idx[OC_FRAME_SELF]],
-     _dec->state.ref_frame_data[_dec->state.ref_frame_idx[OC_FRAME_PREV]],
+     _dec->state.ref_frame_data[OC_FRAME_SELF],
+     _dec->state.ref_frame_data[OC_FRAME_PREV],
      _dec->state.ref_ystride[_pli],_pipe->uncoded_fragis[_pli],
      _pipe->nuncoded_fragis[_pli],_dec->state.frag_buf_offs);
   }
@@ -2053,26 +2053,33 @@ int th_decode_ctl(th_dec_ctx *_dec,int _req,void *_buf,
    buffers (i.e., decoding did not start on a key frame).
   We initialize them to a solid gray here.*/
 static void oc_dec_init_dummy_frame(th_dec_ctx *_dec){
-  th_info *info;
-  size_t   yplane_sz;
-  size_t   cplane_sz;
-  int      yhstride;
-  int      yheight;
-  int      chstride;
-  int      cheight;
+  th_info   *info;
+  size_t     yplane_sz;
+  size_t     cplane_sz;
+  ptrdiff_t  yoffset;
+  int        yhstride;
+  int        yheight;
+  int        chstride;
+  int        cheight;
   _dec->state.ref_frame_idx[OC_FRAME_GOLD]=0;
   _dec->state.ref_frame_idx[OC_FRAME_PREV]=0;
   _dec->state.ref_frame_idx[OC_FRAME_SELF]=0;
+  _dec->state.ref_frame_data[OC_FRAME_GOLD]=
+   _dec->state.ref_frame_data[OC_FRAME_PREV]=
+   _dec->state.ref_frame_data[OC_FRAME_SELF]=
+   _dec->state.ref_frame_bufs[0][0].data;
   memcpy(_dec->pp_frame_buf,_dec->state.ref_frame_bufs[0],
    sizeof(_dec->pp_frame_buf[0])*3);
   info=&_dec->state.info;
-  yhstride=info->frame_width+2*OC_UMV_PADDING;
+  yhstride=abs(_dec->state.ref_ystride[0]);
   yheight=info->frame_height+2*OC_UMV_PADDING;
-  chstride=yhstride>>!(info->pixel_fmt&1);
+  chstride=abs(_dec->state.ref_ystride[1]);
   cheight=yheight>>!(info->pixel_fmt&2);
-  yplane_sz=yhstride*(size_t)yheight;
+  yplane_sz=yhstride*(size_t)yheight+16;
   cplane_sz=chstride*(size_t)cheight;
-  memset(_dec->state.ref_frame_data[0],0x80,yplane_sz+2*cplane_sz);
+  yoffset=_dec->state.ref_ystride[0]*(yheight-1)-
+   (OC_UMV_PADDING+OC_UMV_PADDING*(ptrdiff_t)yhstride);
+  memset(_dec->state.ref_frame_data[0]-yoffset,0x80,yplane_sz+2*cplane_sz);
 }
 
 int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
@@ -2119,6 +2126,8 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
     for(refi=0;refi==_dec->state.ref_frame_idx[OC_FRAME_GOLD]||
      refi==_dec->state.ref_frame_idx[OC_FRAME_PREV];refi++);
     _dec->state.ref_frame_idx[OC_FRAME_SELF]=refi;
+    _dec->state.ref_frame_data[OC_FRAME_SELF]=
+     _dec->state.ref_frame_bufs[refi][0].data;
 #if defined(HAVE_CAIRO)
     _dec->telemetry_frame_bytes=_op->bytes;
 #endif
@@ -2207,7 +2216,7 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
           sdelay+=notstart;
           edelay+=notdone;
           oc_state_loop_filter_frag_rows(&_dec->state,
-           _dec->pipe.bounding_values,refi,pli,
+           _dec->pipe.bounding_values,OC_FRAME_SELF,pli,
            _dec->pipe.fragy0[pli]-sdelay,_dec->pipe.fragy_end[pli]-edelay);
         }
         /*To fill the borders, we have an additional two pixel delay, since a
@@ -2272,11 +2281,16 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
       _dec->state.ref_frame_idx[OC_FRAME_GOLD]=
        _dec->state.ref_frame_idx[OC_FRAME_PREV]=
        _dec->state.ref_frame_idx[OC_FRAME_SELF];
+      _dec->state.ref_frame_data[OC_FRAME_GOLD]=
+       _dec->state.ref_frame_data[OC_FRAME_PREV]=
+       _dec->state.ref_frame_data[OC_FRAME_SELF];
     }
     else{
       /*Otherwise, just replace the previous reference frame.*/
       _dec->state.ref_frame_idx[OC_FRAME_PREV]=
        _dec->state.ref_frame_idx[OC_FRAME_SELF];
+      _dec->state.ref_frame_data[OC_FRAME_PREV]=
+       _dec->state.ref_frame_data[OC_FRAME_SELF];
     }
     /*Restore the FPU before dump_frame, since that _does_ use the FPU (for PNG
        gamma values, if nothing else).*/

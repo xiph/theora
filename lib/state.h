@@ -427,12 +427,16 @@ struct oc_theora_state{
   ptrdiff_t           ncoded_fragis[3];
   /*The total number of coded fragments.*/
   ptrdiff_t           ntotal_coded_fragis;
-  /*The index of the buffers being used for each OC_FRAME_* reference frame.*/
-  int                 ref_frame_idx[6];
   /*The actual buffers used for the reference frames.*/
   th_ycbcr_buffer     ref_frame_bufs[6];
-  /*The storage for the reference frame buffers.*/
+  /*The index of the buffers being used for each OC_FRAME_* reference frame.*/
+  int                 ref_frame_idx[6];
+  /*The storage for the reference frame buffers.
+    This is just ref_frame_bufs[ref_frame_idx[i]][0].data, but is cached here
+     for faster look-up.*/
   unsigned char      *ref_frame_data[6];
+  /*The handle used to allocate the reference frame buffers.*/
+  unsigned char      *ref_frame_handle;
   /*The strides for each plane in the reference frames.*/
   int                 ref_ystride[3];
   /*The number of unique border patterns.*/

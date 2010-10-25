@@ -308,9 +308,9 @@ void oc_mcenc_search_frame(oc_enc_ctx *_enc,oc_mv _accum,int _mbi,int _frame,
   hit_cache[candy+15]|=(ogg_int32_t)1<<candx+15;
   frag_buf_offs=_enc->state.frag_buf_offs;
   fragis=_enc->state.mb_maps[_mbi][0];
-  src=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_IO]];
-  ref=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[_frame_full]];
-  satd_ref=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[_frame]];
+  src=_enc->state.ref_frame_data[OC_FRAME_IO];
+  ref=_enc->state.ref_frame_data[_frame_full];
+  satd_ref=_enc->state.ref_frame_data[_frame];
   ystride=_enc->state.ref_ystride[0];
   /*TODO: customize error function for speed/(quality+size) tradeoff.*/
   best_err=oc_mcenc_ysad_check_mbcandidate_fullpel(_enc,
@@ -557,8 +557,8 @@ static int oc_mcenc_ysad_halfpel_mbrefine(const oc_enc_ctx *_enc,int _mbi,
   int                  best_site;
   int                  sitei;
   int                  err;
-  src=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_IO]];
-  ref=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[_framei]];
+  src=_enc->state.ref_frame_data[OC_FRAME_IO];
+  ref=_enc->state.ref_frame_data[_framei];
   frag_buf_offs=_enc->state.frag_buf_offs;
   fragis=_enc->state.mb_maps[_mbi][0];
   ystride=_enc->state.ref_ystride[0];
@@ -612,8 +612,8 @@ static unsigned oc_mcenc_ysatd_halfpel_mbrefine(const oc_enc_ctx *_enc,
   int                  best_site;
   int                  sitei;
   int                  err;
-  src=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_IO]];
-  ref=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[_frame]];
+  src=_enc->state.ref_frame_data[OC_FRAME_IO];
+  ref=_enc->state.ref_frame_data[_frame];
   frag_buf_offs=_enc->state.frag_buf_offs;
   fragis=_enc->state.mb_maps[_mbi][0];
   ystride=_enc->state.ref_ystride[0];
@@ -763,8 +763,8 @@ void oc_mcenc_refine4mv(oc_enc_ctx *_enc,int _mbi){
   ystride=_enc->state.ref_ystride[0];
   frag_buf_offs=_enc->state.frag_buf_offs;
   fragis=_enc->state.mb_maps[_mbi][0];
-  src=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_IO]];
-  ref=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_PREV]];
+  src=_enc->state.ref_frame_data[OC_FRAME_IO];
+  ref=_enc->state.ref_frame_data[OC_FRAME_PREV];
   offset_y[0]=offset_y[1]=offset_y[2]=-ystride;
   offset_y[3]=offset_y[5]=0;
   offset_y[6]=offset_y[7]=offset_y[8]=ystride;

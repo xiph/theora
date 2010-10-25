@@ -1255,6 +1255,8 @@ static void oc_enc_drop_frame(th_enc_ctx *_enc){
   /*Use the previous frame's reconstruction.*/
   _enc->state.ref_frame_idx[OC_FRAME_SELF]=
    _enc->state.ref_frame_idx[OC_FRAME_PREV];
+  _enc->state.ref_frame_data[OC_FRAME_SELF]=
+   _enc->state.ref_frame_data[OC_FRAME_PREV];
   /*Flag motion vector analysis about the frame drop.*/
   _enc->prevframe_dropped=1;
   /*Zero the packet.*/
@@ -1690,27 +1692,37 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
   if(_enc->state.ref_frame_idx[OC_FRAME_SELF]>=0){
     _enc->state.ref_frame_idx[OC_FRAME_PREV]=
      _enc->state.ref_frame_idx[OC_FRAME_SELF];
+    _enc->state.ref_frame_data[OC_FRAME_PREV]=
+     _enc->state.ref_frame_data[OC_FRAME_SELF];
     if(_enc->state.frame_type==OC_INTRA_FRAME){
       /*The new frame becomes both the previous and gold reference frames.*/
       _enc->state.keyframe_num=_enc->state.curframe_num;
       _enc->state.ref_frame_idx[OC_FRAME_GOLD]=
        _enc->state.ref_frame_idx[OC_FRAME_SELF];
+      _enc->state.ref_frame_data[OC_FRAME_GOLD]=
+       _enc->state.ref_frame_data[OC_FRAME_SELF];
     }
   }
   if(_enc->state.ref_frame_idx[OC_FRAME_IO]>=0&&_enc->prevframe_dropped==0){
     _enc->state.ref_frame_idx[OC_FRAME_PREV_ORIG]=
      _enc->state.ref_frame_idx[OC_FRAME_IO];
+    _enc->state.ref_frame_data[OC_FRAME_PREV_ORIG]=
+     _enc->state.ref_frame_data[OC_FRAME_IO];
     if(_enc->state.frame_type==OC_INTRA_FRAME){
       /*The new input frame becomes both the previous and gold
          original-reference frames.*/
       _enc->state.ref_frame_idx[OC_FRAME_GOLD_ORIG]=
        _enc->state.ref_frame_idx[OC_FRAME_IO];
+      _enc->state.ref_frame_data[OC_FRAME_GOLD_ORIG]=
+       _enc->state.ref_frame_data[OC_FRAME_IO];
     }
   }
   /*Select a free buffer to use for the incoming frame*/
   for(refi=3;refi==_enc->state.ref_frame_idx[OC_FRAME_GOLD_ORIG]||
    refi==_enc->state.ref_frame_idx[OC_FRAME_PREV_ORIG];refi++);
   _enc->state.ref_frame_idx[OC_FRAME_IO]=refi;
+  _enc->state.ref_frame_data[OC_FRAME_IO]=
+   _enc->state.ref_frame_bufs[refi][0].data;
   /*Step 3: Copy the input to our internal buffer.
     This lets us add padding, so we don't have to worry about dereferencing
      possibly invalid addresses, and allows us to use the same strides and
@@ -1729,6 +1741,8 @@ int th_encode_ycbcr_in(th_enc_ctx *_enc,th_ycbcr_buffer _img){
   for(refi=0;refi==_enc->state.ref_frame_idx[OC_FRAME_GOLD]||
    refi==_enc->state.ref_frame_idx[OC_FRAME_PREV];refi++);
   _enc->state.ref_frame_idx[OC_FRAME_SELF]=refi;
+  _enc->state.ref_frame_data[OC_FRAME_SELF]=
+   _enc->state.ref_frame_bufs[refi][0].data;
   _enc->state.curframe_num+=_enc->prev_dup_count+1;
   /*Step 4: Compress the frame.*/
   /*Start with a keyframe, and don't allow the generation of invalid files that

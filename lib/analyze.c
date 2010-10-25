@@ -610,14 +610,13 @@ static int oc_enc_pipeline_set_stripe(oc_enc_ctx *_enc,
 
 static void oc_enc_pipeline_finish_mcu_plane(oc_enc_ctx *_enc,
  oc_enc_pipeline_state *_pipe,int _pli,int _sdelay,int _edelay){
-  int refi;
   /*Copy over all the uncoded fragments from this plane and advance the uncoded
      fragment list.*/
   if(_pipe->nuncoded_fragis[_pli]>0){
     _pipe->uncoded_fragis[_pli]-=_pipe->nuncoded_fragis[_pli];
     oc_frag_copy_list(&_enc->state,
-     _enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_SELF]],
-     _enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_PREV]],
+     _enc->state.ref_frame_data[OC_FRAME_SELF],
+     _enc->state.ref_frame_data[OC_FRAME_PREV],
      _enc->state.ref_ystride[_pli],_pipe->uncoded_fragis[_pli],
      _pipe->nuncoded_fragis[_pli],_enc->state.frag_buf_offs);
     _pipe->nuncoded_fragis[_pli]=0;
@@ -636,17 +635,18 @@ static void oc_enc_pipeline_finish_mcu_plane(oc_enc_ctx *_enc,
   _pipe->coded_fragis[_pli]+=_pipe->ncoded_fragis[_pli];
   _pipe->ncoded_fragis[_pli]=0;
   /*Apply the loop filter if necessary.*/
-  refi=_enc->state.ref_frame_idx[OC_FRAME_SELF];
   if(_pipe->loop_filter){
-    oc_state_loop_filter_frag_rows(&_enc->state,_pipe->bounding_values,
-     refi,_pli,_pipe->fragy0[_pli]-_sdelay,_pipe->fragy_end[_pli]-_edelay);
+    oc_state_loop_filter_frag_rows(&_enc->state,
+     _pipe->bounding_values,OC_FRAME_SELF,_pli,
+     _pipe->fragy0[_pli]-_sdelay,_pipe->fragy_end[_pli]-_edelay);
   }
   else _sdelay=_edelay=0;
   /*To fill borders, we have an additional two pixel delay, since a fragment
      in the next row could filter its top edge, using two pixels from a
      fragment in this row.
     But there's no reason to delay a full fragment between the two.*/
-  oc_state_borders_fill_rows(&_enc->state,refi,_pli,
+  oc_state_borders_fill_rows(&_enc->state,
+   _enc->state.ref_frame_idx[OC_FRAME_SELF],_pli,
    (_pipe->fragy0[_pli]-_sdelay<<3)-(_sdelay<<1),
    (_pipe->fragy_end[_pli]-_edelay<<3)-(_edelay<<1));
 }
@@ -696,8 +696,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   frags=_enc->state.frags;
   frag_offs=_enc->state.frag_buf_offs[_fragi];
   ystride=_enc->state.ref_ystride[_pli];
-  src=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_IO]]
-   +frag_offs;
+  src=_enc->state.ref_frame_data[OC_FRAME_IO]+frag_offs;
   borderi=frags[_fragi].borderi;
   qii=frags[_fragi].qii;
   data=_enc->pipe.dct_data;
@@ -718,9 +717,8 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   }
   refi=frags[_fragi].refi;
   mb_mode=frags[_fragi].mb_mode;
-  ref=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[refi]]+frag_offs;
-  dst=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_SELF]]
-   +frag_offs;
+  ref=_enc->state.ref_frame_data[refi]+frag_offs;
+  dst=_enc->state.ref_frame_data[OC_FRAME_SELF]+frag_offs;
   /*Motion compensation:*/
   switch(mb_mode){
     case OC_MODE_INTRA:{
@@ -1146,7 +1144,7 @@ static unsigned oc_mb_activity(oc_enc_ctx *_enc,unsigned _mbi,
   int                    bi;
   frag_buf_offs=_enc->state.frag_buf_offs;
   sb_map=_enc->state.sb_maps[_mbi>>2][_mbi&3];
-  src=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_IO]];
+  src=_enc->state.ref_frame_data[OC_FRAME_IO];
   ystride=_enc->state.ref_ystride[0];
   luma=0;
   for(bi=0;bi<4;bi++){
@@ -1363,7 +1361,7 @@ static void oc_mb_intra_satd(oc_enc_ctx *_enc,unsigned _mbi,
   unsigned               dc;
   frag_buf_offs=_enc->state.frag_buf_offs;
   sb_map=_enc->state.sb_maps[_mbi>>2][_mbi&3];
-  src=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_IO]];
+  src=_enc->state.ref_frame_data[OC_FRAME_IO];
   ystride=_enc->state.ref_ystride[0];
   for(bi=0;bi<4;bi++){
     fragi=sb_map[bi];
@@ -1412,7 +1410,7 @@ static unsigned oc_analyze_intra_mb_luma(oc_enc_ctx *_enc,
   int                  bi;
   frag_buf_offs=_enc->state.frag_buf_offs;
   sb_maps=(const oc_sb_map *)_enc->state.sb_maps;
-  src=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_IO]];
+  src=_enc->state.ref_frame_data[OC_FRAME_IO];
   ystride=_enc->state.ref_ystride[0];
   fragi=sb_maps[_mbi>>2][_mbi&3][0];
   frag_offs=frag_buf_offs[fragi];
@@ -1501,7 +1499,7 @@ static unsigned oc_analyze_intra_chroma_block(oc_enc_ctx *_enc,
   int                  lambda;
   int                  ystride;
   int                  nqis;
-  src=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_IO]];
+  src=_enc->state.ref_frame_data[OC_FRAME_IO];
   ystride=_enc->state.ref_ystride[_pli];
   frag_offs=_enc->state.frag_buf_offs[_fragi];
   satd=oc_enc_frag_intra_satd(_enc,&dc,src+frag_offs,ystride);
@@ -1956,8 +1954,8 @@ static void oc_skip_cost(oc_enc_ctx *_enc,oc_enc_pipeline_state *_pipe,
   ptrdiff_t              fragi;
   ptrdiff_t              frag_offs;
   int                    borderi;
-  src=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_IO]];
-  ref=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_PREV]];
+  src=_enc->state.ref_frame_data[OC_FRAME_IO];
+  ref=_enc->state.ref_frame_data[OC_FRAME_PREV];
   ystride=_enc->state.ref_ystride[0];
   frags=_enc->state.frags;
   frag_buf_offs=_enc->state.frag_buf_offs;
@@ -2051,9 +2049,8 @@ static void oc_cost_inter(oc_enc_ctx *_enc,oc_mode_choice *_modec,
   ptrdiff_t              fragi;
   ptrdiff_t              frag_offs;
   unsigned               dc;
-  src=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_IO]];
-  ref=_enc->state.ref_frame_data[
-   _enc->state.ref_frame_idx[OC_FRAME_FOR_MODE(_mb_mode)]];
+  src=_enc->state.ref_frame_data[OC_FRAME_IO];
+  ref=_enc->state.ref_frame_data[OC_FRAME_FOR_MODE(_mb_mode)];
   ystride=_enc->state.ref_ystride[0];
   frag_buf_offs=_enc->state.frag_buf_offs;
   sb_map=_enc->state.sb_maps[_mbi>>2][_mbi&3];
@@ -2163,8 +2160,8 @@ static void oc_cost_inter4mv(oc_enc_ctx *_enc,oc_mode_choice *_modec,
   int                    bits1;
   unsigned               satd;
   unsigned               dc;
-  src=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_IO]];
-  ref=_enc->state.ref_frame_data[_enc->state.ref_frame_idx[OC_FRAME_PREV]];
+  src=_enc->state.ref_frame_data[OC_FRAME_IO];
+  ref=_enc->state.ref_frame_data[OC_FRAME_PREV];
   ystride=_enc->state.ref_ystride[0];
   frag_buf_offs=_enc->state.frag_buf_offs;
   frag_mvs=_enc->state.frag_mvs;
