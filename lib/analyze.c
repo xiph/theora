@@ -1542,14 +1542,12 @@ static void oc_enc_mb_transform_quantize_intra_luma(oc_enc_ctx *_enc,
   oc_token_checkpoint  stack[64*4];
   oc_token_checkpoint *stackptr;
   const oc_sb_map     *sb_maps;
-  signed char         *mb_modes;
   oc_fragment         *frags;
   ptrdiff_t           *coded_fragis;
   ptrdiff_t            ncoded_fragis;
   ptrdiff_t            fragi;
   int                  bi;
   sb_maps=(const oc_sb_map *)_enc->state.sb_maps;
-  mb_modes=_enc->state.mb_modes;
   frags=_enc->state.frags;
   coded_fragis=_pipe->coded_fragis[0];
   ncoded_fragis=_pipe->ncoded_fragis[0];

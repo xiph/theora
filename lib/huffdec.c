@@ -497,7 +497,7 @@ int oc_huff_token_decode_c(oc_pack_buf *_opb,const ogg_int16_t *_tree){
         /*We don't bother setting eof because we won't check for it after we've
            started decoding DCT tokens.*/
         if(ptr>=stop){
-          shift=-OC_LOTS_OF_BITS;
+          shift=(unsigned)-OC_LOTS_OF_BITS;
           break;
         }
         shift-=8;
