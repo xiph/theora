@@ -377,12 +377,12 @@ static size_t oc_huff_tree_collapse(ogg_int16_t *_tree,
    representation.
   _opb:   The buffer to unpack the trees from.
   _nodes: The table to fill with the Huffman trees.
-  Return: 0 on success, or a negative value on error.*/
+  Return: 0 on success, or a negative value on error.
+          The caller is responsible for cleaning up any partially initialized
+           _nodes on failure.*/
 int oc_huff_trees_unpack(oc_pack_buf *_opb,
  ogg_int16_t *_nodes[TH_NHUFFMAN_TABLES]){
-  int ret;
   int i;
-  ret=0;
   for(i=0;i<TH_NHUFFMAN_TABLES;i++){
     unsigned char  tokens[256][2];
     int            ntokens;
@@ -390,29 +390,19 @@ int oc_huff_trees_unpack(oc_pack_buf *_opb,
     size_t         size;
     /*Unpack the full tree into a temporary buffer.*/
     ntokens=oc_huff_tree_unpack(_opb,tokens);
-    if(ntokens<0){
-      ret=ntokens;
-      break;
-    }
+    if(ntokens<0)return ntokens;
     /*Figure out how big the collapsed tree will be and allocate space for it.*/
     size=oc_huff_tree_collapse(NULL,tokens,ntokens);
-    if(size>32767){
-      /*This should never happen; if it does it means you set OC_HUFF_SLUSH or
-         OC_ROOT_HUFF_SLUSH too large.*/
-      ret=TH_EIMPL;
-      break;
-    }
+    /*This should never happen; if it does it means you set OC_HUFF_SLUSH or
+       OC_ROOT_HUFF_SLUSH too large.*/
+    if(size>32767)return TH_EIMPL;
     tree=(ogg_int16_t *)_ogg_malloc(size*sizeof(*tree));
-    if(tree==NULL){
-      ret=TH_EFAULT;
-      break;
-    }
+    if(tree==NULL)return TH_EFAULT;
     /*Construct the collapsed the tree.*/
     oc_huff_tree_collapse(tree,tokens,ntokens);
     _nodes[i]=tree;
   }
-  if(ret<0)while(i-->0)_ogg_free(_nodes[i]);
-  return ret;
+  return 0;
 }
 
 /*Determines the size in words of a Huffman subtree.
