@@ -23,7 +23,7 @@
 #if defined(OC_X86_ASM)
 
 /*A table of constants used by the MMX routines.*/
-const short __attribute__((aligned(16),used)) OC_IDCT_CONSTS[64]={
+const unsigned short __attribute__((aligned(16),used)) OC_IDCT_CONSTS[64]={
         8,      8,      8,      8,      8,      8,      8,      8,
   OC_C1S7,OC_C1S7,OC_C1S7,OC_C1S7,OC_C1S7,OC_C1S7,OC_C1S7,OC_C1S7,
   OC_C2S6,OC_C2S6,OC_C2S6,OC_C2S6,OC_C2S6,OC_C2S6,OC_C2S6,OC_C2S6,

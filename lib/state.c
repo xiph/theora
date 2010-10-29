@@ -579,7 +579,7 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state,int _nrefs){
   ref_frame_data_sz=_nrefs*ref_frame_sz;
   /*Check for overflow.
     The same caveats apply as for oc_state_frarray_init().*/
-  if(yplane_sz/yhstride!=yheight||2*cplane_sz+16<cplane_sz||
+  if(yplane_sz/yhstride!=(size_t)yheight||2*cplane_sz+16<cplane_sz||
    ref_frame_sz<yplane_sz||ref_frame_data_sz/_nrefs!=ref_frame_sz){
     return TH_EIMPL;
   }

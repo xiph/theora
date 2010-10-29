@@ -94,7 +94,7 @@
     array_addr__; \
   }))
 
-extern const short __attribute__((aligned(16))) OC_IDCT_CONSTS[64];
+extern const unsigned short __attribute__((aligned(16))) OC_IDCT_CONSTS[64];
 
 void oc_state_accel_init_x86(oc_theora_state *_state);
 

@@ -118,7 +118,7 @@ static const unsigned char OC_INTERNAL_DCT_TOKEN_EXTRA_BITS[15]={
 
 /*Whether or not an internal token needs any additional extra bits.*/
 #define OC_DCT_TOKEN_NEEDS_MORE(token) \
- (token<(sizeof(OC_INTERNAL_DCT_TOKEN_EXTRA_BITS)/ \
+ (token<(int)(sizeof(OC_INTERNAL_DCT_TOKEN_EXTRA_BITS)/ \
   sizeof(*OC_INTERNAL_DCT_TOKEN_EXTRA_BITS)))
 
 /*This token (OC_DCT_REPEAT_RUN3_TOKEN) requires more than 8 extra bits.*/
