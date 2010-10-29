@@ -59,11 +59,9 @@
 
 /*Memory operands do not always include an offset.
   To avoid warnings, we force an offset with %H (which adds 8).*/
-# if defined(__GNUC_PREREQ)
-#  if __GNUC_PREREQ(4,0)
-#   define OC_MEM_OFFS(_offs,_name) \
+# if __GNUC_PREREQ(4,0)
+#  define OC_MEM_OFFS(_offs,_name) \
   OC_M2STR(_offs-8+%H[_name])
-#  endif
 # endif
 /*If your gcc version does't support %H, then you get to suffer the warnings.
   Note that Apple's gas breaks on things like _offs+(%esp): it throws away the

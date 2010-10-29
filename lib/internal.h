@@ -25,6 +25,15 @@
 # include "theora/theora.h"
 # include "ocintrin.h"
 
+# if !defined(__GNUC_PREREQ)
+#  if defined(__GNUC__)&&defined(__GNUC_MINOR__)
+#   define __GNUC_PREREQ(_maj,_min) \
+ ((__GNUC__<<16)+__GNUC_MINOR__>=((_maj)<<16)+(_min))
+#  else
+#   define __GNUC_PREREQ(_maj,_min) 0
+#  endif
+# endif
+
 # if defined(_MSC_VER)
 /*Disable missing EMMS warnings.*/
 #  pragma warning(disable:4799)
@@ -32,10 +41,8 @@
 #  pragma warning(disable:4554)
 # endif
 /*You, too, gcc.*/
-# if defined(__GNUC_PREREQ)
-#  if __GNUC_PREREQ(4,2)
-#   pragma GCC diagnostic ignored "-Wparentheses"
-#  endif
+# if __GNUC_PREREQ(4,2)
+#  pragma GCC diagnostic ignored "-Wparentheses"
 # endif
 
 /*Some assembly constructs require aligned operands.
