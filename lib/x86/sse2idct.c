@@ -16,7 +16,7 @@
  ********************************************************************/
 
 /*SSE2 acceleration of Theora's iDCT.*/
-#include "x86enc.h"
+#include "x86int.h"
 #include "sse2trans.h"
 #include "../dct.h"
 

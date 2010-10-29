@@ -556,7 +556,7 @@ void oc_mode_metrics_update(int _niters_min,int _reweight){
        samples in each bin to overcome the constant OC_ZWEIGHT factor.
       This encourages sampling under-populated bins and prevents a single large
        sample early on from discouraging coding in that bin ever again.*/
-    for(pli=0;pli<3;pli++){ 
+    for(pli=0;pli<3;pli++){
       for(qti=0;qti<2;qti++){
         for(qi=0;qi<OC_LOGQ_BINS;qi++){
           for(si=0;si<OC_SAD_BINS;si++){
