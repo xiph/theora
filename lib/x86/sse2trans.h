@@ -17,8 +17,7 @@
 
 #if !defined(_x86_sse2trans_H)
 # define _x86_sse2trans_H (1)
-# include "../encint.h"
-# include "x86enc.h"
+# include "x86int.h"
 
 # if defined(OC_X86_64_ASM)
 /*On x86-64 we can transpose in-place without spilling registers.
