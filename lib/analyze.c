@@ -713,7 +713,6 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
 #endif
     /*Try and code this block anyway.*/
     qii&=3;
-    frags[_fragi].qii=qii;
   }
   refi=frags[_fragi].refi;
   mb_mode=frags[_fragi].mb_mode;
@@ -802,6 +801,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
     data[0]=dc*dequant_dc;
     oc_idct8x8(&_enc->state,data,data,nonzero+1);
   }
+  frags[_fragi].qii=qii;
   if(nqis>1){
     oc_qii_state_advance(&qs,_pipe->qs+_pli,qii);
     ac_bits+=qs.bits-_pipe->qs[_pli].bits;
