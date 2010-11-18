@@ -1043,7 +1043,7 @@ static void video_input_close(video_input *_vid){
 
 static void usage(char *_argv[]){
   fprintf(stderr,"Usage: %s [options] <video1> <video2>\n"
-   "    <video1> and <video1> may be either YUV4MPEG or Ogg Theora files.\n\n"
+   "    <video1> and <video2> may be either YUV4MPEG or Ogg Theora files.\n\n"
    "    Options:\n\n"
    "      -f --frame-type Show frame type and QI value for each Theora frame.\n"
    "      -s --summary    Only output the summary line.\n"
