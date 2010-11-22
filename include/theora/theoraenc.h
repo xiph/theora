@@ -441,8 +441,8 @@ typedef struct th_enc_ctx    th_enc_ctx;
  *    packets.
  * - For each uncompressed frame:
  *   - Submit the uncompressed frame via th_encode_ycbcr_in()
- *   - Repeatedly call th_encode_packetout() to retrieve any video data packets
- *      that are ready.
+ *   - Repeatedly call th_encode_packetout() to retrieve any video
+ *      data packets that are ready.
  * - Call th_encode_free() to release all encoder memory.*/
 /*@{*/
 /**Allocates an encoder instance.
@@ -457,7 +457,10 @@ extern th_enc_ctx *th_encode_alloc(const th_info *_info);
  *                See \ref encctlcodes "the list of available control codes"
  *                 for details.
  * \param _buf    The parameters for this control code.
- * \param _buf_sz The size of the parameter buffer.*/
+ * \param _buf_sz The size of the parameter buffer.
+ * \return Possible return values depend on the control code used.
+ *          See \ref encctlcodes "the list of control codes" for
+ *          specific values. Generally 0 indicates success.*/
 extern int th_encode_ctl(th_enc_ctx *_enc,int _req,void *_buf,size_t _buf_sz);
 /**Outputs the next header packet.
  * This should be called repeatedly after encoder initialization until it
