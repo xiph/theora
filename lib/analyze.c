@@ -1082,7 +1082,7 @@ static void oc_enc_mode_rd_init(oc_enc_ctx *_enc){
         dx=OC_MODE_LOGQ[modeline][pli][qti]-log_plq;
         dq=OC_MODE_LOGQ[modeline][pli][qti]-OC_MODE_LOGQ[modeline+1][pli][qti];
         if(dq==0)dq=1;
-        for(bin=0;bin<OC_SAD_BINS;bin++){
+        for(bin=0;bin<OC_COMP_BINS;bin++){
           int y0;
           int z0;
           int dy;
@@ -1115,15 +1115,15 @@ static unsigned oc_dct_cost2(oc_enc_ctx *_enc,unsigned *_ssd,
   /*SATD metrics for chroma planes vary much less than luma, so we scale them
      by 4 to distribute them into the mode decision bins more evenly.*/
   _satd<<=_pli+1&2;
-  bin=OC_MINI(_satd>>OC_SAD_SHIFT,OC_SAD_BINS-2);
-  dx=_satd-(bin<<OC_SAD_SHIFT);
+  bin=OC_MINI(_satd>>OC_SATD_SHIFT,OC_COMP_BINS-2);
+  dx=_satd-(bin<<OC_SATD_SHIFT);
   y0=_enc->mode_rd[_qii][_pli][_qti][bin].rate;
   z0=_enc->mode_rd[_qii][_pli][_qti][bin].rmse;
   dy=_enc->mode_rd[_qii][_pli][_qti][bin+1].rate-y0;
   dz=_enc->mode_rd[_qii][_pli][_qti][bin+1].rmse-z0;
-  rmse=OC_MAXI(z0+(dz*dx>>OC_SAD_SHIFT),0);
+  rmse=OC_MAXI(z0+(dz*dx>>OC_SATD_SHIFT),0);
   *_ssd=rmse*rmse>>2*OC_RMSE_SCALE-OC_BIT_SCALE;
-  return OC_MAXI(y0+(dy*dx>>OC_SAD_SHIFT),0);
+  return OC_MAXI(y0+(dy*dx>>OC_SATD_SHIFT),0);
 }
 
 /*activity_avg must be positive, or flat regions could get a zero weight, which

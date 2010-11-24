@@ -12,10 +12,10 @@
 
 
 ogg_int16_t     OC_MODE_LOGQ_TMP[OC_LOGQ_BINS][3][2];
-oc_mode_metrics OC_MODE_METRICS_TMP[OC_LOGQ_BINS-1][3][2][OC_SAD_BINS];
+oc_mode_metrics OC_MODE_METRICS_TMP[OC_LOGQ_BINS-1][3][2][OC_COMP_BINS];
 
 ogg_int16_t     OC_MODE_LOGQ_BASE[OC_LOGQ_BINS][3][2];
-oc_mode_metrics OC_MODE_METRICS_BASE[OC_LOGQ_BINS-1][3][2][OC_SAD_BINS];
+oc_mode_metrics OC_MODE_METRICS_BASE[OC_LOGQ_BINS-1][3][2][OC_COMP_BINS];
 
 
 
@@ -129,7 +129,7 @@ int main(int _argc,const char **_argv){
                _argv[i]);
               return EXIT_FAILURE;
             }
-            for(si=0;si<OC_SAD_BINS;si++){
+            for(si=0;si<OC_COMP_BINS;si++){
               oc_mode_metrics m[3];
               *(m+0)=*(OC_MODE_METRICS[qi][pli][qti]+si);
               *(m+1)=*(OC_MODE_METRICS_TMP[qi][pli][qti]+si);

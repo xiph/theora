@@ -79,10 +79,10 @@ struct oc_mode_metrics{
    out the contributions from AC and DC into separate tables.*/
 
 extern ogg_int16_t OC_MODE_LOGQ[OC_LOGQ_BINS][3][2];
-extern oc_mode_rd  OC_MODE_RD[OC_LOGQ_BINS][3][2][OC_SAD_BINS];
+extern oc_mode_rd  OC_MODE_RD[OC_LOGQ_BINS][3][2][OC_COMP_BINS];
 
 extern int              OC_HAS_MODE_METRICS;
-extern oc_mode_metrics  OC_MODE_METRICS[OC_LOGQ_BINS-1][3][2][OC_SAD_BINS];
+extern oc_mode_metrics  OC_MODE_METRICS[OC_LOGQ_BINS-1][3][2][OC_COMP_BINS];
 extern const char      *OC_MODE_METRICS_FILENAME;
 
 void oc_mode_metrics_dump();

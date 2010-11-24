@@ -26,7 +26,7 @@ ogg_int16_t OC_MODE_LOGQ[OC_LOGQ_BINS][3][2]={
 # if !defined(OC_COLLECT_METRICS)
 static const
 # endif
-oc_mode_rd OC_MODE_RD[OC_LOGQ_BINS][3][2][OC_SAD_BINS]={
+oc_mode_rd OC_MODE_RD[OC_LOGQ_BINS][3][2][OC_COMP_BINS]={
   {
     {
       /*Y'  qi=0  INTRA*/

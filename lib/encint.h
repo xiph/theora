@@ -222,12 +222,12 @@ typedef struct oc_token_checkpoint    oc_token_checkpoint;
 # define OC_RMSE_SCALE (5)
 /*The number of quantizer bins to partition statistics into.*/
 # define OC_LOGQ_BINS  (8)
-/*The number of SATD bins to partition statistics into.*/
-# define OC_SAD_BINS   (24)
-/*The number of bits of precision to drop from SAD scores to assign them to a
-   bin.*/
-# define OC_SAD_SHIFT  (9)
-
+/*The number of SAD/SATD bins to partition statistics into.*/
+# define OC_COMP_BINS   (24)
+/*The number of bits of precision to drop from SAD and SATD scores
+   to assign them to a bin.*/
+# define OC_SAD_SHIFT  (6)
+# define OC_SATD_SHIFT (9)
 
 /*Masking is applied by scaling the D used in R-D optimization (via rd_scale)
    or the lambda parameter (via rd_iscale).
@@ -721,7 +721,7 @@ struct th_enc_ctx{
   ogg_uint16_t             chroma_rd_scale[2][64][2];
   /*The interpolated mode decision R-D lookup tables for the current
      quantizers, color plane, and quantization type.*/
-  oc_mode_rd               mode_rd[3][3][2][OC_SAD_BINS];
+  oc_mode_rd               mode_rd[3][3][2][OC_COMP_BINS];
   /*The buffer state used to drive rate control.*/
   oc_rc_state              rc;
 # if defined(OC_ENC_USE_VTABLE)
