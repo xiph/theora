@@ -1220,7 +1220,7 @@ static unsigned oc_mb_activity(oc_enc_ctx *_enc,unsigned _mbi,
 }
 
 static unsigned oc_mb_activity_fast(oc_enc_ctx *_enc,unsigned _mbi,
- unsigned _activity[4], unsigned _intra_satd[12]){
+ unsigned _activity[4],const unsigned _intra_satd[12]){
   int bi;
   for(bi=0;bi<4;bi++){
     unsigned act;
