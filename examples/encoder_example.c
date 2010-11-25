@@ -66,7 +66,7 @@ static double rint(double x)
 # define TH_ENCCTL_SET_METRICS_FILE (0x8000)
 #endif
 
-const char *optstring = "b:e:o:a:A:v:V:s:S:f:F:ck:d:z:\1\2\3\4"
+const char *optstring = "b:e:o:a:A:v:V:s:S:f:F:qck:d:z:\1\2\3\4"
 #if defined(OC_COLLECT_METRICS)
  "m:"
 #endif
@@ -83,6 +83,7 @@ struct option options [] = {
   {"aspect-denominator",required_argument,NULL,'S'},
   {"framerate-numerator",required_argument,NULL,'f'},
   {"framerate-denominator",required_argument,NULL,'F'},
+  {"quiet",no_argument,NULL,'q'},
   {"vp3-compatible",no_argument,NULL,'c'},
   {"speed",required_argument,NULL,'z'},
   {"soft-target",no_argument,NULL,'\1'},
@@ -108,6 +109,8 @@ int audio_hz=0;
 float audio_q=.1f;
 int audio_r=-1;
 int vp3_compatible=0;
+
+int quiet=0;
 
 int frame_w=0;
 int frame_h=0;
@@ -221,12 +224,13 @@ static void usage(void){
           "                                  --soft-target is used) and infinite for\n"
           "                                  two-pass encoding.\n"
           "   -b --begin-time <h:m:s.d>      Begin encoding at offset into input\n"
-          "   -e --end-time <h:m:s.d>        End encoding at offset into input\n"
+          "   -e --end-time <h:m:s.d>        End encoding at offset into input\n\n"
+          "   -q --quiet                     Don't print progress information.\n\n"
 #if defined(OC_COLLECT_METRICS)
           "   -m --metrics-filename          File in which to accumulate mode decision\n"
           "                                  metrics. Statistics from the current\n"
           "                                  encode will be merged with those already\n"
-          "                                  in the file if it exists.\n"
+          "                                  in the file if it exists.\n\n"
 #endif
           "encoder_example accepts only uncompressed RIFF WAV format audio and\n"
           "YUV4MPEG2 uncompressed video.\n\n");
@@ -945,6 +949,9 @@ static void id_file(char *f){
 int spinner=0;
 char *spinascii="|/-\\";
 void spinnit(void){
+  if(quiet){
+    return;
+  }
   spinner++;
   if(spinner==4)spinner=0;
   fprintf(stderr,"\r%c",spinascii[spinner]);
@@ -1369,6 +1376,10 @@ int main(int argc,char *argv[]){
       video_fps_d=(int)rint(atof(optarg));
       break;
 
+    case 'q':
+      quiet=1;
+      break;
+
     case 'c':
       vp3_compatible=1;
       break;
@@ -1754,6 +1765,7 @@ int main(int argc,char *argv[]){
       }
     }
     /* setup complete.  Raw processing loop */
+    if(!quiet){
       switch(passno){
       case 0: case 2:
         fprintf(stderr,"\rCompressing....                                          \n");
@@ -1762,6 +1774,7 @@ int main(int argc,char *argv[]){
         fprintf(stderr,"\rScanning first pass....                                  \n");
         break;
       }
+    }
     for(;;){
       int audio_or_video=-1;
       if(passno==1){
@@ -1812,7 +1825,7 @@ int main(int argc,char *argv[]){
           timebase=audiotime;
         }
       }
-      if(timebase > 0){
+      if(!quiet&&timebase>0){
         int hundredths=(int)(timebase*100-(long)timebase*100);
         int seconds=(long)timebase%60;
         int minutes=((long)timebase/60)%60;
@@ -1845,7 +1858,9 @@ int main(int argc,char *argv[]){
   if(outfile && outfile!=stdout)fclose(outfile);
   if(twopass_file)fclose(twopass_file);
 
-  fprintf(stderr,"\r   \ndone.\n\n");
+  if(!quiet){
+    fprintf(stderr,"\r   \ndone.\n\n");
+  }
 
   return(0);
 
