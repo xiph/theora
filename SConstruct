@@ -46,6 +46,12 @@ env = Environment()
 if env['CC'] == 'gcc':
   env.Append(CCFLAGS=["-g", "-O2", "-Wall", "-Wno-parentheses"])
 
+# pass collect_metrics=1 on the scons command line
+# to enable metrics collection for mode training.
+collect_metrics = ARGUMENTS.get('collect_metrics', 0)
+if int(collect_metrics):
+  env.Append(CPPDEFINES=['OC_COLLECT_METRICS'])
+
 def CheckPKGConfig(context, version): 
   context.Message( 'Checking for pkg-config... ' ) 
   ret = context.TryAction('pkg-config --atleast-pkgconfig-version=%s' % version)[0] 
