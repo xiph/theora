@@ -213,6 +213,15 @@ dump_psnr.Append(LIBS='m')
 dump_psnr_Sources = Split("""dump_psnr.c ../lib/libtheoradec.a""")
 dump_psnr.Program('examples/dump_psnr', path('examples', dump_psnr_Sources))
 
+libtheora_info = env.Clone()
+libtheora_info_Sources = Split("""
+        libtheora_info.c
+        ../lib/libtheoraenc.a
+        ../lib/libtheoradec.a
+  """)
+libtheora_info.Program('examples/libtheora_info',
+                       path('examples', libtheora_info_Sources))
+
 if have_vorbis:
   encex = dump_video.Clone()
   encex.ParseConfig('pkg-config --cflags --libs vorbisenc vorbis')
