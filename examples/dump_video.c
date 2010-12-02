@@ -10,7 +10,7 @@
  *                                                                  *
  ********************************************************************
 
-  function: example dumpvid application; dumps  Theora streams
+  function: example dumpvid application; dumps Theora streams
   last mod: $Id: dump_video.c,v 1.2 2004/03/24 19:12:42 derf Exp $
 
  ********************************************************************/
