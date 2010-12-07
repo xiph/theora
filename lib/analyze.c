@@ -667,8 +667,9 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
  oc_enc_pipeline_state *_pipe,int _pli,ptrdiff_t _fragi,
  unsigned _rd_scale,unsigned _rd_iscale,oc_rd_metric *_mo,
  oc_fr_state *_fr,oc_token_checkpoint **_stack){
-  ogg_int16_t            *dct;
   ogg_int16_t            *data;
+  ogg_int16_t            *dct;
+  ogg_int16_t            *idct;
   oc_qii_state            qs;
   const ogg_uint16_t     *dequant;
   ogg_uint16_t            dequant_dc;
@@ -701,6 +702,7 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   qii=frags[_fragi].qii;
   data=_enc->pipe.dct_data;
   dct=data+64;
+  idct=data+128;
   if(qii&~3){
 #if !defined(OC_COLLECT_METRICS)
     if(_enc->sp_level>=OC_SP_LEVEL_EARLY_SKIP){
@@ -771,12 +773,12 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
   /*Tokenize.*/
   checkpoint=*_stack;
   if(_enc->sp_level<OC_SP_LEVEL_FAST_ANALYSIS){
-    ac_bits=oc_enc_tokenize_ac(_enc,_pli,_fragi,data,dequant,dct,nonzero+1,
-     _stack,OC_RD_ISCALE(_enc->lambda,_rd_iscale),qti?0:3);
+    ac_bits=oc_enc_tokenize_ac(_enc,_pli,_fragi,idct,data,dequant,dct,
+     nonzero+1,_stack,OC_RD_ISCALE(_enc->lambda,_rd_iscale),qti?0:3);
   }
   else{
-    ac_bits=oc_enc_tokenize_ac_fast(_enc,_pli,_fragi,data,dequant,dct,nonzero+1,
-     _stack,OC_RD_ISCALE(_enc->lambda,_rd_iscale),qti?0:3);
+    ac_bits=oc_enc_tokenize_ac_fast(_enc,_pli,_fragi,idct,data,dequant,dct,
+     nonzero+1,_stack,OC_RD_ISCALE(_enc->lambda,_rd_iscale),qti?0:3);
   }
   /*Reconstruct.
     TODO: nonzero may need to be adjusted after tokenization.*/
@@ -798,8 +800,9 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
     else if(qi01>=0)qii=0;
   }
   else{
-    data[0]=dc*dequant_dc;
-    oc_idct8x8(&_enc->state,data,data,nonzero+1);
+    idct[0]=dc*dequant_dc;
+    /*Note: This clears idct[] back to zero for the next block.*/
+    oc_idct8x8(&_enc->state,data,idct,nonzero+1);
   }
   frags[_fragi].qii=qii;
   if(nqis>1){

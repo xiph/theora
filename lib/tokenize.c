@@ -454,9 +454,10 @@ struct oc_quant_token{
 
 /*Tokenizes the AC coefficients, possibly adjusting the quantization, and then
    dequantizes and de-zig-zags the result.
-  The DC coefficient is not preserved; it should be restored by the caller.*/
+  The AC coefficients of _idct must be pre-initialized to zero.*/
 int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
- ogg_int16_t *_qdct,const ogg_uint16_t *_dequant,const ogg_int16_t *_dct,
+ ogg_int16_t *_idct,const ogg_int16_t *_qdct,
+ const ogg_uint16_t *_dequant,const ogg_int16_t *_dct,
  int _zzi,oc_token_checkpoint **_stack,int _lambda,int _acmin){
   oc_token_checkpoint *stack;
   ogg_int64_t          zflags;
@@ -501,7 +502,7 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
     qc=_qdct[zzi];
     s=-(qc<0);
     qc_m=qc+s^s;
-    c=_dct[OC_FZIG_ZAG[zzi]];
+    c=_dct[zzi];
     /*The hard case: try a zero run.*/
     if(qc_m<=1){
       ogg_uint32_t sum_d2;
@@ -565,7 +566,7 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
               /*Try a +/- 1 combo token.*/
               token=OC_DCT_RUN_CAT1_TOKEN[nzeros-1];
               eb=OC_DCT_RUN_CAT1_EB[nzeros-1][-val_s];
-              e=_dct[OC_FZIG_ZAG[zzj]]-(_dequant[zzj]+val_s^val_s);
+              e=_dct[zzj]-(_dequant[zzj]+val_s^val_s);
               d2=e*(ogg_int32_t)e+sum_d2-d2_accum[zzj];
               bits=oc_token_bits(_enc,huffi,zzi,token);
               cost=d2+_lambda*bits+tokens[zzk][tk].cost;
@@ -585,7 +586,7 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
               bits=oc_token_bits(_enc,huffi,zzi,token);
               val=2+(val>2);
               sval=val+val_s^val_s;
-              e=_dct[OC_FZIG_ZAG[zzj]]-_dequant[zzj]*sval;
+              e=_dct[zzj]-_dequant[zzj]*sval;
               d2=e*(ogg_int32_t)e+sum_d2-d2_accum[zzj];
               cost=d2+_lambda*bits+tokens[zzk][tk].cost;
               if(cost<=best_cost){
@@ -701,9 +702,6 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
   }
   /*Emit the tokens from the best path through the trellis.*/
   stack=*_stack;
-  /*We blow away the first entry here so that things vectorize better.
-    The DC coefficient is not actually stored in the array yet.*/
-  for(zzi=0;zzi<64;zzi++)_qdct[zzi]=0;
   dct_fzig_zag=_enc->state.opt_data.dct_fzig_zag;
   zzi=1;
   ti=best_flags>>1&1;
@@ -737,7 +735,7 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
     zzj=(next>>1)-1&63;
     /*TODO: It may be worth saving the dequantized coefficient in the trellis
        above; we had to compute it to measure the error anyway.*/
-    _qdct[dct_fzig_zag[zzj]]=(ogg_int16_t)(qc*(int)_dequant[zzj]);
+    _idct[dct_fzig_zag[zzj]]=(ogg_int16_t)(qc*(int)_dequant[zzj]);
     zzi=next>>1;
     ti=next&1;
   }
@@ -747,16 +745,15 @@ int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
 }
 
 /*Simplistic R/D tokenizer.
+  The AC coefficients of _idct must be pre-initialized to zero.
   This could be made more accurate by using more sophisticated
    rate predictions for zeros.
   It could be made faster by switching from R/D decisions to static
    lambda-derived rounding biases.*/
 int oc_enc_tokenize_ac_fast(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
- ogg_int16_t *_qdct,const ogg_uint16_t *_dequant,const ogg_int16_t *_dct,
+ ogg_int16_t *_idct,const ogg_int16_t *_qdct,
+ const ogg_uint16_t *_dequant,const ogg_int16_t *_dct,
  int _zzi,oc_token_checkpoint **_stack,int _lambda,int _acmin){
-  /*Note that gcc will not always respect this alignment.
-    In this case it doesn't matter terribly much.*/
-  OC_ALIGN16(ogg_int16_t  coef[64]);
   const unsigned char *dct_fzig_zag;
   ogg_uint16_t        *eob_run;
   oc_token_checkpoint *stack;
@@ -779,9 +776,7 @@ int oc_enc_tokenize_ac_fast(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
   eob_run=_enc->eob_run[_pli];
   dct_fzig_zag=_enc->state.opt_data.dct_fzig_zag;
   huffi=_enc->huff_idxs[_enc->state.frame_type][1][_pli+1>>1];
-  memcpy(coef,_qdct,_zzi*sizeof(*coef));
-  for(zzj=0;zzj<64;zzj++)_qdct[zzj]=0;
-  for(zzj=zzi=1;zzj<_zzi&&!coef[zzj];zzj++);
+  for(zzj=zzi=1;zzj<_zzi&&!_qdct[zzj];zzj++);
   while(zzj<_zzi){
     int v;
     int d0;
@@ -797,10 +792,10 @@ int oc_enc_tokenize_ac_fast(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
     int eob_bits;
     int dct_fzig_zzj;
     dct_fzig_zzj=dct_fzig_zag[zzj];
-    v=_dct[OC_FZIG_ZAG[zzj]];
-    d0=coef[zzj];
+    v=_dct[zzj];
+    d0=_qdct[zzj];
     eob=eob_run[zzi];
-    for(zzk=zzj+1;zzk<_zzi&&!coef[zzk];zzk++);
+    for(zzk=zzj+1;zzk<_zzi&&!_qdct[zzk];zzk++);
     next_zero=zzk-zzj+62>>6;
     dq0=d0*_dequant[zzj];
     dd0=dq0-v;
@@ -840,7 +835,7 @@ int oc_enc_tokenize_ac_fast(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
         cost=dd1+zr[next_zero];
       }
       if((dd0+(best_bits+eob_bits)*_lambda)>cost){
-        _qdct[dct_fzig_zzj]=dq1;
+        _idct[dct_fzig_zzj]=dq1;
         if(d1==0){
           zzj=zzk;
           continue;
@@ -851,7 +846,7 @@ int oc_enc_tokenize_ac_fast(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
       }
       else{
         best_eb=*(OC_DCT_VALUE_EB_PTR+d0);
-        _qdct[dct_fzig_zzj]=dq0;
+        _idct[dct_fzig_zzj]=dq0;
       }
       oc_enc_tokenlog_checkpoint(_enc,stack++,_pli,zzi);
       if(eob>0){
@@ -927,7 +922,6 @@ int oc_enc_tokenize_ac_fast(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
       }
       best_cost=dd0+(best_bits+eob_bits)*_lambda;
       if(d1==0&&(dd1+zr[2+next_zero])<=best_cost){
-        _qdct[dct_fzig_zzj]=0;
         zzj=zzk;
         continue;
       }
@@ -936,9 +930,9 @@ int oc_enc_tokenize_ac_fast(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
         best_token=best_token1;
         best_eb=best_eb1;
         d=d1;
-        _qdct[dct_fzig_zzj]=dq1;
+        _idct[dct_fzig_zzj]=dq1;
       }
-      else _qdct[dct_fzig_zzj]=dq0;
+      else _idct[dct_fzig_zzj]=dq0;
       oc_enc_tokenlog_checkpoint(_enc,stack++,_pli,zzi);
       if(eob){
         oc_enc_eob_log(_enc,_pli,zzi,eob);

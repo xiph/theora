@@ -13,6 +13,7 @@
 /*$Id: fdct_ses2.c 14579 2008-03-12 06:42:40Z xiphmont $*/
 #include <stddef.h>
 #include "x86enc.h"
+#include "x86zigzag.h"
 #include "sse2trans.h"
 
 #if defined(OC_X86_64_ASM)
@@ -412,8 +413,6 @@ void oc_enc_fdct8x8_x86_64sse2(ogg_int16_t _y[64],const ogg_int16_t _x[64]){
     /*Transform rows.*/
     OC_TRANSPOSE_8x8
     OC_FDCT_8x8
-    /*TODO: zig-zag ordering?*/
-    OC_TRANSPOSE_8x8
     /*xmm14={-2,-2,-2,-2,-2,-2,-2,-2}*/
     "paddw %%xmm14,%%xmm14\n\t"
     "psubw %%xmm14,%%xmm0\n\t"
@@ -432,15 +431,19 @@ void oc_enc_fdct8x8_x86_64sse2(ogg_int16_t _y[64],const ogg_int16_t _x[64]){
     "psubw %%xmm14,%%xmm7\n\t"
     "psraw $2,%%xmm6\n\t"
     "psraw $2,%%xmm7\n\t"
-    /*Store the result.*/
-    "movdqa %%xmm0,0x00(%[y])\n\t"
-    "movdqa %%xmm1,0x10(%[y])\n\t"
-    "movdqa %%xmm2,0x20(%[y])\n\t"
-    "movdqa %%xmm3,0x30(%[y])\n\t"
-    "movdqa %%xmm4,0x40(%[y])\n\t"
-    "movdqa %%xmm5,0x50(%[y])\n\t"
-    "movdqa %%xmm6,0x60(%[y])\n\t"
-    "movdqa %%xmm7,0x70(%[y])\n\t"
+    /*Transpose, zig-zag, and store the result.*/
+    /*We could probably do better using SSSE3's palignr, but re-using MMXEXT
+       version will do for now.*/
+#define OC_ZZ_LOAD_ROW_LO(_row,_reg) \
+    "movdq2q %%xmm"_row","_reg"\n\t" \
+
+#define OC_ZZ_LOAD_ROW_HI(_row,_reg) \
+    "punpckhqdq %%xmm"_row",%%xmm"_row"\n\t" \
+    "movdq2q %%xmm"_row","_reg"\n\t" \
+
+    OC_TRANSPOSE_ZIG_ZAG_MMXEXT
+#undef OC_ZZ_LOAD_ROW_LO
+#undef OC_ZZ_LOAD_ROW_HI
     :[a]"=&r"(a)
     :[y]"r"(_y),[x]"r"(_x)
     :"memory"

@@ -444,7 +444,7 @@ struct oc_enc_pipeline_state{
     This is kept off the stack because a) gcc can't align things on the stack
      reliably on ARM, and b) it avoids (unintentional) data hazards between
      ARM and NEON code.*/
-  OC_ALIGN16(ogg_int16_t dct_data[128]);
+  OC_ALIGN16(ogg_int16_t dct_data[64*3]);
   OC_ALIGN16(signed char bounding_values[256]);
   oc_fr_state         fr[3];
   oc_qii_state        qs[3];
@@ -765,10 +765,12 @@ struct oc_token_checkpoint{
 
 void oc_enc_tokenize_start(oc_enc_ctx *_enc);
 int oc_enc_tokenize_ac(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
- ogg_int16_t *_qdct,const ogg_uint16_t *_dequant,const ogg_int16_t *_dct,
+ ogg_int16_t *_qdct_out,const ogg_int16_t *_qdct_in,
+ const ogg_uint16_t *_dequant,const ogg_int16_t *_dct,
  int _zzi,oc_token_checkpoint **_stack,int _lambda,int _acmin);
 int oc_enc_tokenize_ac_fast(oc_enc_ctx *_enc,int _pli,ptrdiff_t _fragi,
- ogg_int16_t *_qdct,const ogg_uint16_t *_dequant,const ogg_int16_t *_dct,
+ ogg_int16_t *_qdct_out,const ogg_int16_t *_qdct_in,
+ const ogg_uint16_t *_dequant,const ogg_int16_t *_dct,
  int _zzi,oc_token_checkpoint **_stack,int _lambda,int _acmin);
 void oc_enc_tokenlog_rollback(oc_enc_ctx *_enc,
  const oc_token_checkpoint *_stack,int _n);

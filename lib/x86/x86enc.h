@@ -105,7 +105,7 @@ void oc_enc_enquant_table_init_x86(void *_enquant,
 void oc_enc_enquant_table_fixup_x86(void *_enquant[3][3][2],int _nqis);
 int oc_enc_quantize_sse2(ogg_int16_t _qdct[64],const ogg_int16_t _dct[64],
  const ogg_uint16_t _dequant[64],const void *_enquant);
-void oc_enc_fdct8x8_mmx(ogg_int16_t _y[64],const ogg_int16_t _x[64]);
+void oc_enc_fdct8x8_mmxext(ogg_int16_t _y[64],const ogg_int16_t _x[64]);
 
 # if defined(OC_X86_64_ASM)
 void oc_enc_fdct8x8_x86_64sse2(ogg_int16_t _y[64],const ogg_int16_t _x[64]);

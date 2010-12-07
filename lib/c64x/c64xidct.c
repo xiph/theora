@@ -319,12 +319,10 @@ static void oc_idct8x8_slow_c64x(ogg_int16_t _y[64],ogg_int16_t _x[64]){
   /*Transform rows of x into columns of w.*/
   for(i=0;i<8;i+=2){
     OC_IDCT8x2_LOAD8(_x+i*8);
-    if(_x!=_y){
-      _amem8(_x+i*8)=0LL;
-      _amem8(_x+i*8+4)=0LL;
-      _amem8(_x+i*8+8)=0LL;
-      _amem8(_x+i*8+12)=0LL;
-    }
+    _amem8(_x+i*8)=0LL;
+    _amem8(_x+i*8+4)=0LL;
+    _amem8(_x+i*8+8)=0LL;
+    _amem8(_x+i*8+12)=0LL;
     OC_IDCT8x2();
     OC_IDCT8x2_STORET(w+i);
   }
@@ -357,12 +355,10 @@ static void oc_idct8x8_10_c64x(ogg_int16_t _y[64],ogg_int16_t _x[64]){
   OC_IDCT8x2_4();
   OC_IDCT8x2_STORET(w);
   OC_IDCT8x2_LOAD2(_x+16);
-  if(_x!=_y){
-    _amem8(_x)=0LL;
-    _amem8(_x+8)=0LL;
-    _amem4(_x+16)=0;
-    _amem4(_x+24)=0;
-  }
+  _amem8(_x)=0LL;
+  _amem8(_x+8)=0LL;
+  _amem4(_x+16)=0;
+  _amem4(_x+24)=0;
   OC_IDCT8x2_2();
   OC_IDCT8x2_STORET(w+2);
   /*Transform rows of w into columns of y.*/
@@ -398,10 +394,8 @@ static inline void oc_idct8x8_3_c64x(ogg_int16_t _y[64],ogg_int16_t _x[64]){
     OC_IDCT8x2_2();
     OC_IDCT8x2_STORE(w+i*8);
   }
-  if(_x!=_y){
-    _amem4(_x)=0;
-    _amem4(_x+8)=0;
-  }
+  _amem4(_x)=0;
+  _amem4(_x+8)=0;
   /*Transform columns of w into columns of y.*/
   for(i=0;i<8;i+=2){
     OC_IDCT8x2_LOAD2T(w+i);

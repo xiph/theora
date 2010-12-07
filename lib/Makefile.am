@@ -13,7 +13,14 @@ EXTRA_DIST = \
 	arm/arm2gnu.pl \
 	c64x/c64xint.h \
 	c64x/c64xdec.h \
+	x86/mmxfrag.c \
+	x86/mmxidct.c \
+	x86/mmxloop.h \
+	x86/mmxstate.c \
+	x86/sse2idct.c \
 	x86/x86cpu.c \
+	x86/x86int.h \
+	x86/x86state.c \
 	x86/mmxencfrag.c \
 	x86/mmxfdct.c \
 	x86/sse2encfrag.c \
@@ -22,13 +29,7 @@ EXTRA_DIST = \
 	x86/x86enc.c \
 	x86/x86enc.h \
 	x86/x86enquant.c \
-	x86/mmxfrag.c \
-	x86/mmxidct.c \
-	x86/mmxloop.h \
-	x86/mmxstate.c \
-	x86/sse2idct.c \
-	x86/x86int.h \
-	x86/x86state.c \
+	x86/x86zigzag.h \
 	x86_vc
 
 lib_LTLIBRARIES = libtheoradec.la libtheoraenc.la libtheora.la
@@ -215,11 +216,12 @@ noinst_HEADERS = \
 	arm/armcpu.h \
 	c64x/c64xdec.h \
 	c64x/c64xint.h \
-	x86/x86cpu.h \
 	x86/mmxloop.h \
 	x86/sse2trans.h \
+	x86/x86cpu.h \
 	x86/x86enc.h \
-	x86/x86int.h
+	x86/x86int.h \
+	x86/x86zigzag.h
 
 libtheoradec_la_SOURCES = \
 	$(decoder_sources) \
