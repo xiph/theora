@@ -463,7 +463,7 @@
 }
 
 /*MMX implementation of the fDCT.*/
-void oc_enc_fdct8x8_mmx(ogg_int16_t _y[64],const ogg_int16_t _x[64]){
+void oc_enc_fdct8x8_mmxext(ogg_int16_t _y[64],const ogg_int16_t _x[64]){
   OC_ALIGN8(ogg_int16_t buf[64]);
   ptrdiff_t a;
   __asm{
