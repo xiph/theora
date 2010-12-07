@@ -788,7 +788,7 @@ unsigned oc_enc_frag_intra_satd_mmxext(unsigned *_dc,const unsigned char *_src,
     because the input to the INTRA transform was not a difference).*/
     movzx DC,DC_WORD
     add RET,RET
-    sub DC,RET
+    sub RET, DC
     movq mm4,mm0
     punpckhdq mm0,mm0
     paddd mm4,mm0
