@@ -572,6 +572,8 @@ static void oc_enc_pipeline_init(oc_enc_ctx *_enc,oc_enc_pipeline_state *_pipe){
   flimit=_enc->state.loop_filter_limits[_enc->state.qis[0]];
   _pipe->loop_filter=flimit!=0;
   if(flimit!=0)oc_loop_filter_init(&_enc->state,_pipe->bounding_values,flimit);
+  /*Clear the temporary DCT scratch space.*/
+  memset(_pipe->dct_data,0,sizeof(_pipe->dct_data));
 }
 
 /*Sets the current MCU stripe to super block row _sby.
