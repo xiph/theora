@@ -435,11 +435,11 @@ void oc_enc_fdct8x8_x86_64sse2(ogg_int16_t _y[64],const ogg_int16_t _x[64]){
     /*We could probably do better using SSSE3's palignr, but re-using MMXEXT
        version will do for now.*/
 #define OC_ZZ_LOAD_ROW_LO(_row,_reg) \
-    "movdq2q %%xmm"_row","_reg"\n\t" \
+    "movdq2q %%xmm"#_row","_reg"\n\t" \
 
 #define OC_ZZ_LOAD_ROW_HI(_row,_reg) \
-    "punpckhqdq %%xmm"_row",%%xmm"_row"\n\t" \
-    "movdq2q %%xmm"_row","_reg"\n\t" \
+    "punpckhqdq %%xmm"#_row",%%xmm"#_row"\n\t" \
+    "movdq2q %%xmm"#_row","_reg"\n\t" \
 
     OC_TRANSPOSE_ZIG_ZAG_MMXEXT
 #undef OC_ZZ_LOAD_ROW_LO

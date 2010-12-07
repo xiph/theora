@@ -45,7 +45,7 @@ void oc_enc_frag_sub_128_mmx(ogg_int16_t _diff[64],
  const unsigned char *_x,int _stride);
 void oc_enc_frag_copy2_mmxext(unsigned char *_dst,
  const unsigned char *_src1,const unsigned char *_src2,int _ystride);
-void oc_enc_fdct8x8_mmx(ogg_int16_t _y[64],const ogg_int16_t _x[64]);
+void oc_enc_fdct8x8_mmxext(ogg_int16_t _y[64],const ogg_int16_t _x[64]);
 void oc_enc_fdct8x8_x86_64sse2(ogg_int16_t _y[64],const ogg_int16_t _x[64]);
 
 #endif

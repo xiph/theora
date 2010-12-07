@@ -464,7 +464,7 @@
 
 /*MMX implementation of the fDCT.*/
 void oc_enc_fdct8x8_mmxext(ogg_int16_t _y[64],const ogg_int16_t _x[64]){
-  ogg_int16_t buf[64] __attribute__((aligned(8)));
+  OC_ALIGN8(ogg_int16_t buf[64]);
   ptrdiff_t   a;
   __asm__ __volatile__(
     /*Add two extra bits of working precision to improve accuracy; any more and
@@ -597,27 +597,27 @@ void oc_enc_fdct8x8_mmxext(ogg_int16_t _y[64],const ogg_int16_t _x[64]){
     "psubw %%mm2,%%mm6\n\t"
     "psraw $2,%%mm4\n\t"
     "psubw %%mm2,%%mm0\n\t"
-    "movq %%mm4,0x00(%[buf])\n\t"
+    "movq %%mm4,"OC_MEM_OFFS(0x00,buf)"\n\t"
     "movq 0x30(%[y]),%%mm4\n\t"
     "psraw $2,%%mm6\n\t"
     "psubw %%mm2,%%mm5\n\t"
-    "movq %%mm6,0x20(%[buf])\n\t"
+    "movq %%mm6,"OC_MEM_OFFS(0x20,buf)"\n\t"
     "psraw $2,%%mm0\n\t"
     "psubw %%mm2,%%mm3\n\t"
-    "movq %%mm0,0x40(%[buf])\n\t"
+    "movq %%mm0,"OC_MEM_OFFS(0x40,buf)"\n\t"
     "psraw $2,%%mm5\n\t"
     "psubw %%mm2,%%mm1\n\t"
-    "movq %%mm5,0x50(%[buf])\n\t"
+    "movq %%mm5,"OC_MEM_OFFS(0x50,buf)"\n\t"
     "psraw $2,%%mm3\n\t"
     "psubw %%mm2,%%mm7\n\t"
-    "movq %%mm3,0x60(%[buf])\n\t"
+    "movq %%mm3,"OC_MEM_OFFS(0x60,buf)"\n\t"
     "psraw $2,%%mm1\n\t"
     "psubw %%mm2,%%mm4\n\t"
-    "movq %%mm1,0x70(%[buf])\n\t"
+    "movq %%mm1,"OC_MEM_OFFS(0x70,buf)"\n\t"
     "psraw $2,%%mm7\n\t"
-    "movq %%mm7,0x10(%[buf])\n\t"
+    "movq %%mm7,"OC_MEM_OFFS(0x10,buf)"\n\t"
     "psraw $2,%%mm4\n\t"
-    "movq %%mm4,0x30(%[buf])\n\t"
+    "movq %%mm4,"OC_MEM_OFFS(0x30,buf)"\n\t"
     /*Load the next block.*/
     "movq 0x40(%[y]),%%mm0\n\t"
     "movq 0x78(%[y]),%%mm7\n\t"
@@ -638,39 +638,39 @@ void oc_enc_fdct8x8_mmxext(ogg_int16_t _y[64],const ogg_int16_t _x[64]){
     "psubw %%mm2,%%mm6\n\t"
     "psraw $2,%%mm4\n\t"
     "psubw %%mm2,%%mm0\n\t"
-    "movq %%mm4,0x08(%[buf])\n\t"
+    "movq %%mm4,"OC_MEM_OFFS(0x08,buf)"\n\t"
     "movq 0x70(%[y]),%%mm4\n\t"
     "psraw $2,%%mm6\n\t"
     "psubw %%mm2,%%mm5\n\t"
-    "movq %%mm6,0x28(%[buf])\n\t"
+    "movq %%mm6,"OC_MEM_OFFS(0x28,buf)"\n\t"
     "psraw $2,%%mm0\n\t"
     "psubw %%mm2,%%mm3\n\t"
-    "movq %%mm0,0x48(%[buf])\n\t"
+    "movq %%mm0,"OC_MEM_OFFS(0x48,buf)"\n\t"
     "psraw $2,%%mm5\n\t"
     "psubw %%mm2,%%mm1\n\t"
-    "movq %%mm5,0x58(%[buf])\n\t"
+    "movq %%mm5,"OC_MEM_OFFS(0x58,buf)"\n\t"
     "psraw $2,%%mm3\n\t"
     "psubw %%mm2,%%mm7\n\t"
-    "movq %%mm3,0x68(%[buf])\n\t"
+    "movq %%mm3,"OC_MEM_OFFS(0x68,buf)"\n\t"
     "psraw $2,%%mm1\n\t"
     "psubw %%mm2,%%mm4\n\t"
-    "movq %%mm1,0x78(%[buf])\n\t"
+    "movq %%mm1,"OC_MEM_OFFS(0x78,buf)"\n\t"
     "psraw $2,%%mm7\n\t"
-    "movq %%mm7,0x18(%[buf])\n\t"
+    "movq %%mm7,"OC_MEM_OFFS(0x18,buf)"\n\t"
     "psraw $2,%%mm4\n\t"
-    "movq %%mm4,0x38(%[buf])\n\t"
+    "movq %%mm4,"OC_MEM_OFFS(0x38,buf)"\n\t"
     /*Final transpose and zig-zag.*/
 #define OC_ZZ_LOAD_ROW_LO(_row,_reg) \
-    "movq 0x"_row"0(%[buf]),"_reg"\n\t" \
+    "movq "OC_MEM_OFFS(16*_row,buf)","_reg"\n\t" \
 
 #define OC_ZZ_LOAD_ROW_HI(_row,_reg) \
-    "movq 0x"_row"8(%[buf]),"_reg"\n\t" \
+    "movq "OC_MEM_OFFS(16*_row+8,buf)","_reg"\n\t" \
 
     OC_TRANSPOSE_ZIG_ZAG_MMXEXT
 #undef OC_ZZ_LOAD_ROW_LO
 #undef OC_ZZ_LOAD_ROW_HI
-    :[a]"=&r"(a)
-    :[y]"r"(_y),[x]"r"(_x),[buf]"r"(buf)
+    :[a]"=&r"(a),[buf]"=m"(OC_ARRAY_OPERAND(ogg_int16_t,buf,64))
+    :[y]"r"(_y),[x]"r"(_x)
     :"memory"
   );
 }

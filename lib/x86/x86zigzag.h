@@ -23,9 +23,9 @@
 /*Converts DCT coefficients from transposed order into zig-zag scan order and
    stores them in %[y].
   This relies on two macros to load the contents of each row:
-   OC_ZZ_LOAD_ROW_LO(row,reg) and OC_ZZ_LOAD_ROW_HI(row,reg), which load the
-   first four and second four entries of each row into the specified register,
-   respectively.
+   OC_ZZ_LOAD_ROW_LO(row,"reg") and OC_ZZ_LOAD_ROW_HI(row,"reg"), which load
+   the first four and second four entries of each row into the specified
+   register, respectively.
   OC_ZZ_LOAD_ROW_LO must be called before OC_ZZ_LOAD_ROW_HI for the same row
    (because when the rows are already in SSE2 registers, loading the high half
    destructively modifies the register).
@@ -43,13 +43,13 @@
   The order of the coefficients within each tuple is reversed in the comments
    below to reflect the usual MSB to LSB notation.*/
 #define OC_TRANSPOSE_ZIG_ZAG_MMXEXT \
-  OC_ZZ_LOAD_ROW_LO("0","%%mm0") /*mm0=03 02 01 00*/ \
-  OC_ZZ_LOAD_ROW_LO("1","%%mm1") /*mm1=11 10 09 08*/ \
-  OC_ZZ_LOAD_ROW_LO("2","%%mm2") /*mm2=19 18 17 16*/ \
-  OC_ZZ_LOAD_ROW_LO("3","%%mm3") /*mm3=27 26 25 24*/ \
-  OC_ZZ_LOAD_ROW_HI("0","%%mm4") /*mm4=07 06 05 04*/ \
-  OC_ZZ_LOAD_ROW_HI("1","%%mm5") /*mm5=15 14 13 12*/ \
-  OC_ZZ_LOAD_ROW_HI("2","%%mm6") /*mm6=23 22 21 20*/ \
+  OC_ZZ_LOAD_ROW_LO(0,"%%mm0")   /*mm0=03 02 01 00*/ \
+  OC_ZZ_LOAD_ROW_LO(1,"%%mm1")   /*mm1=11 10 09 08*/ \
+  OC_ZZ_LOAD_ROW_LO(2,"%%mm2")   /*mm2=19 18 17 16*/ \
+  OC_ZZ_LOAD_ROW_LO(3,"%%mm3")   /*mm3=27 26 25 24*/ \
+  OC_ZZ_LOAD_ROW_HI(0,"%%mm4")   /*mm4=07 06 05 04*/ \
+  OC_ZZ_LOAD_ROW_HI(1,"%%mm5")   /*mm5=15 14 13 12*/ \
+  OC_ZZ_LOAD_ROW_HI(2,"%%mm6")   /*mm6=23 22 21 20*/ \
   "movq %%mm0,%%mm7\n\t"         /*mm7=03 02 01 00*/ \
   "punpckhdq %%mm1,%%mm0\n\t"    /*mm0=11 10 03 02*/ \
   "pshufw $0x39,%%mm4,%%mm4\n\t" /*mm4=04 07 06 05*/ \
@@ -64,9 +64,9 @@
   "punpcklwd %%mm3,%%mm1\n\t"    /*mm1=25 07 24 09*/ \
   "punpcklwd %%mm6,%%mm5\n\t"    /*mm5=21 14 20 13*/ \
   "punpcklwd %%mm2,%%mm1\n\t"    /*mm1=17 24 16 09 *B*/ \
-  OC_ZZ_LOAD_ROW_LO("4","%%mm2") /*mm2=35 34 33 32*/ \
+  OC_ZZ_LOAD_ROW_LO(4,"%%mm2")   /*mm2=35 34 33 32*/ \
   "movq %%mm1,0x08(%[y])\n\t" \
-  OC_ZZ_LOAD_ROW_LO("5","%%mm1") /*mm1=43 42 41 40*/ \
+  OC_ZZ_LOAD_ROW_LO(5,"%%mm1")   /*mm1=43 42 41 40*/ \
   "pshufw $0x78,%%mm0,%%mm0\n\t" /*mm0=11 04 03 10 *C*/ \
   "movq %%mm0,0x10(%[y])\n\t" \
   "punpckhdq %%mm4,%%mm6\n\t"    /*mm6=?? 07 23 22*/ \
@@ -80,10 +80,10 @@
   "punpckhwd %%mm1,%%mm3\n\t"    /*mm3=43 .. 42 27*/ \
   "punpckldq %%mm2,%%mm4\n\t"    /*mm4=25 32 40 18*/ \
   "punpcklwd %%mm0,%%mm3\n\t"    /*mm3=35 42 34 27*/ \
-  OC_ZZ_LOAD_ROW_LO("6","%%mm0") /*mm0=51 50 49 48*/ \
+  OC_ZZ_LOAD_ROW_LO(6,"%%mm0")   /*mm0=51 50 49 48*/ \
   "pshufw $0x6C,%%mm4,%%mm4\n\t" /*mm4=40 32 25 18 *E*/ \
   "movq %%mm4,0x18(%[y])\n\t" \
-  OC_ZZ_LOAD_ROW_LO("7","%%mm4") /*mm4=59 58 57 56*/ \
+  OC_ZZ_LOAD_ROW_LO(7,"%%mm4")   /*mm4=59 58 57 56*/ \
   "punpckhdq %%mm7,%%mm2\n\t"    /*mm2=12 19 26 33 *F*/ \
   "movq %%mm2,0x20(%[y])\n\t" \
   "pshufw $0xD0,%%mm1,%%mm1\n\t" /*mm1=43 41 ?? ??*/ \
@@ -95,26 +95,26 @@
   "movq %%mm3,0x30(%[y])\n\t" \
   "punpckhdq %%mm4,%%mm1\n\t"    /*mm1=58 57 50 43 *H*/ \
   "movq %%mm1,0x50(%[y])\n\t" \
-  OC_ZZ_LOAD_ROW_HI("7","%%mm1") /*mm1=63 62 61 60*/ \
+  OC_ZZ_LOAD_ROW_HI(7,"%%mm1")   /*mm1=63 62 61 60*/ \
   "punpcklwd %%mm0,%%mm4\n\t"    /*mm4=49 56 51 59*/ \
-  OC_ZZ_LOAD_ROW_HI("6","%%mm0") /*mm0=55 54 53 52*/ \
+  OC_ZZ_LOAD_ROW_HI(6,"%%mm0")   /*mm0=55 54 53 52*/ \
   "psllq $16,%%mm6\n\t"          /*mm6=07 23 22 ..*/ \
   "movq %%mm4,%%mm3\n\t"         /*mm3=49 56 51 59*/ \
   "punpckhdq %%mm2,%%mm4\n\t"    /*mm4=35 42 49 56 *I*/ \
-  OC_ZZ_LOAD_ROW_HI("3","%%mm2") /*mm2=31 30 29 28*/ \
+  OC_ZZ_LOAD_ROW_HI(3,"%%mm2")   /*mm2=31 30 29 28*/ \
   "movq %%mm4,0x38(%[y])\n\t" \
   "punpcklwd %%mm1,%%mm3\n\t"    /*mm3=61 51 60 59*/ \
   "punpcklwd %%mm6,%%mm7\n\t"    /*mm7=22 15 .. ??*/ \
   "movq %%mm3,%%mm4\n\t"         /*mm4=61 51 60 59*/ \
   "punpcklwd %%mm0,%%mm3\n\t"    /*mm3=53 60 52 59*/ \
   "punpckhwd %%mm0,%%mm4\n\t"    /*mm4=55 61 54 51*/ \
-  OC_ZZ_LOAD_ROW_HI("4","%%mm0") /*mm0=39 38 37 36*/ \
+  OC_ZZ_LOAD_ROW_HI(4,"%%mm0")   /*mm0=39 38 37 36*/ \
   "pshufw $0xE1,%%mm3,%%mm3\n\t" /*mm3=53 60 59 52 *J*/ \
   "movq %%mm3,0x68(%[y])\n\t" \
   "movq %%mm4,%%mm3\n\t"         /*mm3=?? ?? 54 51*/ \
   "pshufw $0x39,%%mm2,%%mm2\n\t" /*mm2=28 31 30 29*/ \
   "punpckhwd %%mm1,%%mm4\n\t"    /*mm4=63 55 62 61 *K*/ \
-  OC_ZZ_LOAD_ROW_HI("5","%%mm1") /*mm1=47 46 45 44*/ \
+  OC_ZZ_LOAD_ROW_HI(5,"%%mm1")   /*mm1=47 46 45 44*/ \
   "movq %%mm4,0x78(%[y])\n\t" \
   "punpckhwd %%mm2,%%mm6\n\t"    /*mm6=28 07 31 23*/ \
   "punpcklwd %%mm0,%%mm2\n\t"    /*mm2=37 30 36 29*/ \
