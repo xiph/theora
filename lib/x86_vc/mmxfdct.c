@@ -465,7 +465,8 @@
 /*MMX implementation of the fDCT.*/
 void oc_enc_fdct8x8_mmxext(ogg_int16_t _y[64],const ogg_int16_t _x[64]){
   OC_ALIGN8(ogg_int16_t buf[64]);
-  ptrdiff_t a;
+  ogg_int16_t *bufp;
+  bufp=buf;
   __asm{
 #define X edx
 #define Y eax
@@ -477,6 +478,7 @@ void oc_enc_fdct8x8_mmxext(ogg_int16_t _y[64],const ogg_int16_t _x[64]){
        the full fDCT->iDCT round trip.*/
     mov X, _x
     mov Y, _y
+	mov BUF, bufp
     movq mm0,[0x00+X]
     movq mm1,[0x10+X]
     movq mm2,[0x20+X]
