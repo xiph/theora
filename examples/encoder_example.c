@@ -793,8 +793,10 @@ static void id_file(char *f){
               ret=fread(buffer,1,4,test);
               if(ret<4)goto riff_err;
 
-              fprintf(stderr,"File %s is 16 bit %d channel %d Hz RIFF WAV audio.\n",
-                      f,audio_ch,audio_hz);
+              if(!quiet){
+                fprintf(stderr,"File %s is 16 bit %d channel %d Hz RIFF WAV audio.\n",
+                        f,audio_ch,audio_hz);
+              }
 
               return;
             }
@@ -928,8 +930,10 @@ static void id_file(char *f){
 
       video=test;
 
-      fprintf(stderr,"File %s is %dx%d %.02f fps %s video.\n",
-              f,pic_w,pic_h,(double)video_fps_n/video_fps_d,chroma_type);
+      if(!quiet){
+        fprintf(stderr,"File %s is %dx%d %.02f fps %s video.\n",
+                f,pic_w,pic_h,(double)video_fps_n/video_fps_d,chroma_type);
+      }
 
       return;
     }
