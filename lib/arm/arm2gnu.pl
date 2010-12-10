@@ -20,6 +20,7 @@ $\ = "\n";      # automatically add newline on print
 $n=0;
 
 $thumb = 0;     # ARM mode by default, not Thumb.
+@proc_stack = ();
 
 LINE:
 while (<>) {
@@ -99,12 +100,21 @@ while (<>) {
     s/\bCODE16\b/.code 16/ && do {$thumb = 1};
     if (/\bPROC\b/)
     {
+        $proc = $_;
+        $proc =~ s/\s*\b(\w*)\b\s*\bPROC\b\s*/$1/;
+        printf("\t.type\t%s, %%function\n",$proc) if ($proc);
+        push(@proc_stack, $proc);
         print "    .thumb_func" if ($thumb);
         s/\bPROC\b/@ $&/;
     }
     s/^(\s*)(S|Q|SH|U|UQ|UH)ASX\b/$1$2ADDSUBX/;
     s/^(\s*)(S|Q|SH|U|UQ|UH)SAX\b/$1$2SUBADDX/;
-    s/\bENDP\b/@ $&/;
+    if (/\bENDP\b/)
+    {
+        $proc = pop(@proc_stack);
+        print ".size $proc, .-$proc" if ($proc);
+        s/\bENDP\b/@ $&/;
+    }
     s/\bSUBT\b/@ $&/;
     s/\bDATA\b/@ $&/;   # DATA directive is deprecated -- Asm guide, p.7-25
     s/\bKEEP\b/@ $&/;
