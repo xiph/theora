@@ -100,20 +100,29 @@ while (<>) {
     s/\bCODE16\b/.code 16/ && do {$thumb = 1};
     if (/\bPROC\b/)
     {
-        $proc = $_;
-        $proc =~ s/\s*\b(\w*)\b\s*\bPROC\b\s*/$1/;
-        printf("\t.type\t%s, %%function\n",$proc) if ($proc);
-        push(@proc_stack, $proc);
-        print "    .thumb_func" if ($thumb);
+        my $prefix;
+        my $proc;
+        /^([A-Za-z_\.]\w+)\b/;
+        $proc = $1;
+        $prefix = "";
+        if ($proc)
+        {
+            $prefix = $prefix.sprintf("\t.type\t%s, %%function; ",$proc);
+            push(@proc_stack, $proc);
+            s/^[A-Za-z_\.]\w+/$&:/;
+        }
+        $prefix = $prefix."\t.thumb_func; " if ($thumb);
         s/\bPROC\b/@ $&/;
+        $_ = $prefix.$_;
     }
     s/^(\s*)(S|Q|SH|U|UQ|UH)ASX\b/$1$2ADDSUBX/;
     s/^(\s*)(S|Q|SH|U|UQ|UH)SAX\b/$1$2SUBADDX/;
     if (/\bENDP\b/)
     {
-        $proc = pop(@proc_stack);
-        print ".size $proc, .-$proc" if ($proc);
+        my $proc;
         s/\bENDP\b/@ $&/;
+        $proc = pop(@proc_stack);
+        $_ = "\t.size $proc, .-$proc".$_ if ($proc);
     }
     s/\bSUBT\b/@ $&/;
     s/\bDATA\b/@ $&/;   # DATA directive is deprecated -- Asm guide, p.7-25
@@ -227,6 +236,7 @@ while (<>) {
     {
         my $cmd=$_;
         my $value;
+        my $prefix;
         my $w1;
         my $w2;
         my $w3;
@@ -245,24 +255,21 @@ while (<>) {
         if( $bigend ne "")
         {
             # big endian
-
-            print "        .byte      0x".$w1;
-            print "        .byte      0x".$w2;
-            print "        .byte      0x".$w3;
-            print "        .byte      0x".$w4;
+            $prefix = "\t.byte\t0x".$w1.";".
+                      "\t.byte\t0x".$w2.";".
+                      "\t.byte\t0x".$w3.";".
+                      "\t.byte\t0x".$w4."; ";
         }
         else
         {
             # little endian
-
-            print "        .byte      0x".$w4;
-            print "        .byte      0x".$w3;
-            print "        .byte      0x".$w2;
-            print "        .byte      0x".$w1;
+            $prefix = "\t.byte\t0x".$w4.";".
+                      "\t.byte\t0x".$w3.";".
+                      "\t.byte\t0x".$w2.";".
+                      "\t.byte\t0x".$w1."; ";
         }
-
+        $_=$prefix.$_;
     }
-
 
     if ( /\badrl\b/i )
     {
