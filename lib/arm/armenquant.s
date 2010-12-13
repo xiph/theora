@@ -63,17 +63,17 @@ oeetf_neon_lp2
 	LDR	r2, [r0]
 	SUBS	r14,r14,#1
 	LDRH	r3, [r2]
-	LDRH	r12,[r2,#32]
+	LDRH	r12,[r2,#16]
 	LDR	r2, [r0,#8]
 	STRH	r3, [r2]
-	STRH	r12,[r2,#32]
+	STRH	r12,[r2,#16]
 	LDR	r2, [r0,#4]
 	LDRH	r3, [r2]
-	LDRH	r12,[r2,#32]
+	LDRH	r12,[r2,#16]
 	LDR	r2, [r0,#12]
 	ADD	r0, r0, #24
 	STRH	r3, [r2]
-	STRH	r12,[r2,#32]
+	STRH	r12,[r2,#16]
 	BNE	oeetf_neon_lp2
 	SUB	r0, r0, #64
 	B	oeetf_neon_lp1
@@ -147,9 +147,9 @@ oeq_neon_lp
 	BLT	oeq_neon_lp
 	; Start with the low half while the NEON register transfers.
 	PKHBT	r0, r14,r12             ; r0 =B|A
-	MVN	r0, r0
-	CLZ	r0, r0
-	RSB	r0, r0, #31
+	MVNS	r0, r0
+	CLZNE	r0, r0
+	RSBNE	r0, r0, #31
 	; Stall 8-10 more cycles waiting for the last transfer.
 	ORR	r4, r5, LSL #2          ; r4 =.F.D.B.9.7.5.3.1.E.C.A.8.6.4.2.0
 	ORR	r4, r4, LSR #15         ; r4 =.F.D.B.9.7.5.3.1FEDCBA9876543210
