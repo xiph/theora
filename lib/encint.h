@@ -51,6 +51,9 @@ typedef struct oc_token_checkpoint    oc_token_checkpoint;
 #   include "x86/x86enc.h"
 #  endif
 # endif
+# if defined(OC_ARM_ASM)
+#  include "arm/armenc.h"
+# endif
 
 # if !defined(oc_enc_accel_init)
 #  define oc_enc_accel_init oc_enc_accel_init_c

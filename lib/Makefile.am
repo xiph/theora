@@ -3,14 +3,16 @@ AM_CFLAGS = $(OGG_CFLAGS) $(CAIRO_CFLAGS)
 
 EXTRA_DIST = \
 	encoder_disabled.c \
+	arm/arm2gnu.pl \
+	arm/armopts.s.in \
 	arm/armcpu.c \
 	arm/armbits.h \
 	arm/armbits.s \
 	arm/armfrag.s \
 	arm/armidct.s \
 	arm/armint.h \
-	arm/armopts.s.in \
-	arm/arm2gnu.pl \
+	arm/armenc.h \
+	arm/armenquant.s \
 	c64x/c64xint.h \
 	c64x/c64xdec.h \
 	x86/mmxfrag.c \
@@ -61,7 +63,9 @@ encoder_shared_x86_sources = \
 
 encoder_shared_x86_64_sources =
 
-encoder_uniq_arm_sources =
+encoder_uniq_arm_sources = \
+	armenquant-gnu.S \
+	arm/armenc.c
 
 if CPU_arm
 BUILT_SOURCES = \
@@ -268,12 +272,14 @@ CLEANFILES = \
 	armfrag-gnu.S \
 	armidct-gnu.S \
 	armloop-gnu.S \
-	armopts-gnu.S
+	armopts-gnu.S \
+	armenquant-gnu.S
 
 # automake doesn't do dependency tracking for asm files, that I can tell
 armfrag-gnu.S: armopts-gnu.S
 armidct-gnu.S: armopts-gnu.S
 armloop-gnu.S: armopts-gnu.S
+armenquant-gnu.S: armopts-gnu.S
 
 # convert ARM asm to GNU as format
 %-gnu.S: $(srcdir)/arm/%.s
