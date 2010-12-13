@@ -51,6 +51,7 @@ if env['CC'] == 'gcc':
 collect_metrics = ARGUMENTS.get('collect_metrics', 0)
 if int(collect_metrics):
   env.Append(CPPDEFINES=['OC_COLLECT_METRICS'])
+  env.Append(LIBS=['m'])
 
 def CheckPKGConfig(context, version): 
   context.Message( 'Checking for pkg-config... ' ) 
