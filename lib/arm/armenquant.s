@@ -54,7 +54,7 @@ oeeti_neon_lp
 oc_enc_enquant_table_fixup_neon PROC
 	; r0 = void *_enquant[3][3][2]
 	; r1 = int   _nqis
-	STR	r14, [r13,#-4]!
+	STR	r14,[r13,#-4]!
 oeetf_neon_lp1
 	SUBS	r1, r1, #1
 	BEQ	oeetf_neon_end1
@@ -87,7 +87,7 @@ oc_enc_quantize_neon PROC
 	; r2 = const ogg_int16_t  _dequant[64]
 	; r3 = const void        *_enquant
 	STMFD	r13!,{r4,r5,r14}
-	; The loop counter goes in the high half of r14
+	; The loop counter goes in the high half of r14.
 	MOV	r14,#0xFFFCFFFF
 oeq_neon_lp
 	; Load the next two rows of the data and the quant matrices.
@@ -121,10 +121,10 @@ oeq_neon_lp
 	VSUB.S16	Q9, Q9, Q1
 	VST1.64		{D16,D17,D18,D19},[r0@128]!
 	; Now pull out a bitfield marking the non-zero coefficients.
-	; Sadly, NEON has no PMOVMSKB; emulating it requires 7 instructions.
 	VQMOVN.S16	D16,Q8
 	VQMOVN.S16	D17,Q9
 	VCEQ.S8		Q8, #0
+	; Sadly, NEON has no PMOVMSKB; emulating it requires 6 instructions.
 	VNEG.S8		Q8, Q8          ; D16=.......3.......2.......1.......0
 	                                ;     .......7.......6.......5.......4
 	                                ; D17=.......B.......A.......9.......8
@@ -133,14 +133,12 @@ oeq_neon_lp
 	                                ;     .......B.......3.......A.......2
 	                                ; D17=.......D.......5.......C.......4
 	                                ;     .......F.......7.......E.......6
-	VSHL.U8		D17,D17,#4      ; D17=...D.......5.......C.......4....
-	                                ;     ...F.......7.......E.......6....
-	VORR		D16,D16,D17     ; D16=...D...9...5...1...C...8...4...0
+	VSLI.8		D16,D17,#4      ; D16=...D...9...5...1...C...8...4...0
 	                                ;     ...F...B...7...3...E...A...6...2
 	; Shift over the bitfields from previous iterations and
 	;  finish compacting the bitfield from the last iteration.
-	ORR	r4, r5, LSL #2          ; r4 =.F.D.B.9.7.5.3.1.E.C.A.8.6.4.2.0
-	ORR	r4, r4, LSR #15         ; r4 =.F.D.B.9.7.5.3.1FEDCBA9876543210
+	ORR	r4, r4, r5, LSL #2      ; r4 =.F.D.B.9.7.5.3.1.E.C.A.8.6.4.2.0
+	ORR	r4, r4, r4, LSR #15     ; r4 =.F.D.B.9.7.5.3.1FEDCBA9876543210
 	PKHTB	r14,r14,r12,ASR #16     ; r14=i|A
 	PKHBT	r12,r4, r12,LSL #16     ; r12=B|C
 	VMOV		r4, r5, D16
@@ -151,8 +149,8 @@ oeq_neon_lp
 	CLZNE	r0, r0
 	RSBNE	r0, r0, #31
 	; Stall 8-10 more cycles waiting for the last transfer.
-	ORR	r4, r5, LSL #2          ; r4 =.F.D.B.9.7.5.3.1.E.C.A.8.6.4.2.0
-	ORR	r4, r4, LSR #15         ; r4 =.F.D.B.9.7.5.3.1FEDCBA9876543210
+	ORR	r4, r4, r5, LSL #2      ; r4 =.F.D.B.9.7.5.3.1.E.C.A.8.6.4.2.0
+	ORR	r4, r4, r4, LSR #15     ; r4 =.F.D.B.9.7.5.3.1FEDCBA9876543210
 	PKHBT	r1, r12,r4, LSL #16     ; r1 = D|C
 	MVNS	r1, r1
 	CLZNE	r1, r1
