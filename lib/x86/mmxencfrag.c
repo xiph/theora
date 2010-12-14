@@ -449,13 +449,13 @@ unsigned oc_enc_frag_sad2_thresh_mmxext(const unsigned char *_src,
    mm6 = d2 c2 b2 a2 \
    mm7 = d3 c3 b3 a3*/ \
 
-static unsigned oc_int_frag_satd_mmxext(unsigned *_dc,
+static unsigned oc_int_frag_satd_mmxext(int *_dc,
  const unsigned char *_src,int _src_ystride,
  const unsigned char *_ref,int _ref_ystride){
   OC_ALIGN8(ogg_int16_t buf[64]);
   unsigned ret;
   unsigned ret2;
-  unsigned dc;
+  int      dc;
   __asm__ __volatile__(
     OC_LOAD_SUB_8x4(0x00)
     OC_HADAMARD_8x4
@@ -500,22 +500,22 @@ static unsigned oc_int_frag_satd_mmxext(unsigned *_dc,
     "movq "OC_MEM_OFFS(0x70,buf)",%%mm3\n\t"
     "movd %%mm4,%[ret2]\n\t"
     "movq "OC_MEM_OFFS(0x78,buf)",%%mm7\n\t"
-    /*The sums produced by OC_HADAMARD_ABS_ACCUM_8x4 each have an extra 4
-       added to them, and a factor of two removed; correct the final sum here.*/
     "movq "OC_MEM_OFFS(0x40,buf)",%%mm0\n\t"
     "movq "OC_MEM_OFFS(0x48,buf)",%%mm4\n\t"
     OC_HADAMARD_ABS_ACCUM_8x4(0x68,0x78)
     "pmaddwd %%mm7,%%mm0\n\t"
-    /*Compute abs(dc).*/
-    "movsx %w[dc],%[ret]\n\t"
+    /*Subtract abs(dc) from 2*ret2.*/
+    "movsx %w[dc],%[dc]\n\t"
     "cdq\n\t"
-    "add %[ret2],%[ret2]\n\t"
-    "add %[dc],%[ret]\n\t"
+    "lea (%[ret],%[ret2],2),%[ret2]\n\t"
     "movq %%mm0,%%mm4\n\t"
     "punpckhdq %%mm0,%%mm0\n\t"
-    "xor %[ret],%[dc]\n\t"
+    "xor %[dc],%[ret]\n\t"
     "paddd %%mm0,%%mm4\n\t"
-    "sub %[dc],%[ret2]\n\t"
+    /*The sums produced by OC_HADAMARD_ABS_ACCUM_8x4 each have an extra 4
+       added to them, a factor of two removed, and the DC value included;
+       correct the final sum here.*/
+    "sub %[ret],%[ret2]\n\t"
     "movd %%mm4,%[ret]\n\t"
     "lea -64(%[ret2],%[ret],2),%[ret]\n\t"
     /*Although it looks like we're using 8 registers here, gcc can alias %[ret]
@@ -525,7 +525,7 @@ static unsigned oc_int_frag_satd_mmxext(unsigned *_dc,
        constraints, otherewise if gcc can prove they're equal it will allocate
        them to the same register (which is bad); _src and _ref face a similar
        problem, though those are never actually the same.*/
-    :[ret]"=a"(ret),[ret2]"=r"(ret2),[dc]"=d"(dc),
+    :[ret]"=d"(ret),[ret2]"=r"(ret2),[dc]"=a"(dc),
      [buf]"=m"(OC_ARRAY_OPERAND(ogg_int16_t,buf,64))
     :[src]"r"(_src),[src_ystride]"c"((ptrdiff_t)_src_ystride),
      [ref]"r"(_ref),[ref_ystride]"d"((ptrdiff_t)_ref_ystride)
@@ -537,7 +537,7 @@ static unsigned oc_int_frag_satd_mmxext(unsigned *_dc,
   return ret;
 }
 
-unsigned oc_enc_frag_satd_mmxext(unsigned *_dc,const unsigned char *_src,
+unsigned oc_enc_frag_satd_mmxext(int *_dc,const unsigned char *_src,
  const unsigned char *_ref,int _ystride){
   return oc_int_frag_satd_mmxext(_dc,_src,_ystride,_ref,_ystride);
 }
@@ -660,19 +660,19 @@ void oc_int_frag_copy2_mmxext(unsigned char *_dst,int _dst_ystride,
   );
 }
 
-unsigned oc_enc_frag_satd2_mmxext(unsigned *_dc,const unsigned char *_src,
+unsigned oc_enc_frag_satd2_mmxext(int *_dc,const unsigned char *_src,
  const unsigned char *_ref1,const unsigned char *_ref2,int _ystride){
   OC_ALIGN8(unsigned char ref[64]);
   oc_int_frag_copy2_mmxext(ref,8,_ref1,_ref2,_ystride);
   return oc_int_frag_satd_mmxext(_dc,_src,_ystride,ref,8);
 }
 
-unsigned oc_enc_frag_intra_satd_mmxext(unsigned *_dc,
+unsigned oc_enc_frag_intra_satd_mmxext(int *_dc,
  const unsigned char *_src,int _ystride){
   OC_ALIGN8(ogg_int16_t buf[64]);
   unsigned ret;
   unsigned ret2;
-  unsigned dc;
+  int      dc;
   __asm__ __volatile__(
     OC_LOAD_8x4(0x00)
     OC_HADAMARD_8x4

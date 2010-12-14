@@ -750,16 +750,15 @@ static int oc_enc_block_transform_quantize(oc_enc_ctx *_enc,
 #if defined(OC_COLLECT_METRICS)
   {
     unsigned satd;
-    unsigned dc;
     switch(nmv_offs){
       case 0:satd=oc_enc_frag_intra_satd(_enc,&dc,src,ystride);break;
       case 1:{
         satd=oc_enc_frag_satd(_enc,&dc,src,ref+mv_offs[0],ystride);
-        satd+=dc;
+        satd+=abs(dc);
       }break;
       default:{
         satd=oc_enc_frag_satd(_enc,&dc,src,dst,ystride);
-        satd+=dc;
+        satd+=abs(dc);
       }break;
     }
     _enc->frag_satd[_fragi]=satd;
@@ -1139,14 +1138,14 @@ static unsigned oc_dct_cost2(oc_enc_ctx *_enc,unsigned *_ssd,
 
 static unsigned oc_mb_activity(oc_enc_ctx *_enc,unsigned _mbi,
  unsigned _activity[4]){
-  const unsigned char   *src;
-  const ptrdiff_t       *frag_buf_offs;
-  const ptrdiff_t       *sb_map;
-  unsigned               luma;
-  int                    ystride;
-  ptrdiff_t              frag_offs;
-  ptrdiff_t              fragi;
-  int                    bi;
+  const unsigned char *src;
+  const ptrdiff_t     *frag_buf_offs;
+  const ptrdiff_t     *sb_map;
+  unsigned             luma;
+  int                  ystride;
+  ptrdiff_t            frag_offs;
+  ptrdiff_t            fragi;
+  int                  bi;
   frag_buf_offs=_enc->state.frag_buf_offs;
   sb_map=_enc->state.sb_maps[_mbi>>2][_mbi&3];
   src=_enc->state.ref_frame_data[OC_FRAME_IO];
@@ -1224,7 +1223,7 @@ static unsigned oc_mb_activity(oc_enc_ctx *_enc,unsigned _mbi,
   return luma;
 }
 
-static unsigned oc_mb_activity_fast(oc_enc_ctx *_enc,unsigned _mbi,
+static void oc_mb_activity_fast(oc_enc_ctx *_enc,unsigned _mbi,
  unsigned _activity[4],const unsigned _intra_satd[12]){
   int bi;
   for(bi=0;bi<4;bi++){
@@ -1236,9 +1235,6 @@ static unsigned oc_mb_activity_fast(oc_enc_ctx *_enc,unsigned _mbi,
     }
     _activity[bi]=act;
   }
-  /*TODO: Once frag_intra_satd returns the signed DC value instead
-     of the absolute value, this should pass it through.*/
-  return 1;
 }
 
 /*Compute the masking scales for the blocks in a macro block.
@@ -1348,7 +1344,7 @@ static unsigned oc_mb_masking(unsigned _rd_scale[5],unsigned _rd_iscale[5],
   return activity_sum;
 }
 
-static void oc_mb_intra_satd(oc_enc_ctx *_enc,unsigned _mbi,
+static int oc_mb_intra_satd(oc_enc_ctx *_enc,unsigned _mbi,
  unsigned _frag_satd[12]){
   const unsigned char   *src;
   const ptrdiff_t       *frag_buf_offs;
@@ -1363,15 +1359,18 @@ static void oc_mb_intra_satd(oc_enc_ctx *_enc,unsigned _mbi,
   int                    bi;
   ptrdiff_t              fragi;
   ptrdiff_t              frag_offs;
-  unsigned               dc;
+  unsigned               luma;
+  int                    dc;
   frag_buf_offs=_enc->state.frag_buf_offs;
   sb_map=_enc->state.sb_maps[_mbi>>2][_mbi&3];
   src=_enc->state.ref_frame_data[OC_FRAME_IO];
   ystride=_enc->state.ref_ystride[0];
+  luma=0;
   for(bi=0;bi<4;bi++){
     fragi=sb_map[bi];
     frag_offs=frag_buf_offs[fragi];
     _frag_satd[bi]=oc_enc_frag_intra_satd(_enc,&dc,src+frag_offs,ystride);
+    luma+=dc;
   }
   mb_map=(const oc_mb_map_plane *)_enc->state.mb_maps[_mbi];
   map_idxs=OC_MB_MAP_IDXS[_enc->state.info.pixel_fmt];
@@ -1386,6 +1385,7 @@ static void oc_mb_intra_satd(oc_enc_ctx *_enc,unsigned _mbi,
     frag_offs=frag_buf_offs[fragi];
     _frag_satd[mapii]=oc_enc_frag_intra_satd(_enc,&dc,src+frag_offs,ystride);
   }
+  return luma;
 }
 
 /*Select luma block-level quantizers for a MB in an INTRA frame.*/
@@ -1403,7 +1403,7 @@ static unsigned oc_analyze_intra_mb_luma(oc_enc_ctx *_enc,
   unsigned             rate[4][3];
   int                  prev[3][3];
   unsigned             satd;
-  unsigned             dc;
+  int                  dc;
   unsigned             best_cost;
   unsigned             best_ssd;
   unsigned             best_rate;
@@ -1497,7 +1497,7 @@ static unsigned oc_analyze_intra_chroma_block(oc_enc_ctx *_enc,
   oc_qii_state         qt[3];
   unsigned             cost[3];
   unsigned             satd;
-  unsigned             dc;
+  int                  dc;
   unsigned             best_cost;
   int                  best_qii;
   int                  qii;
@@ -1682,8 +1682,8 @@ void oc_enc_analyze_intra(oc_enc_ctx *_enc,int _recode){
         }
         else{
           unsigned intra_satd[12];
-          oc_mb_intra_satd(_enc,mbi,intra_satd);
-          luma=oc_mb_activity_fast(_enc,mbi,activity,intra_satd);
+          luma=oc_mb_intra_satd(_enc,mbi,intra_satd);
+          oc_mb_activity_fast(_enc,mbi,activity,intra_satd);
           for(bi=0;bi<4;bi++)frags[sb_maps[mbi>>2][mbi&3][bi]].qii=0;
         }
         activity_sum+=oc_mb_masking(rd_scale,rd_iscale,
@@ -2051,7 +2051,7 @@ static void oc_cost_inter(oc_enc_ctx *_enc,oc_mode_choice *_modec,
   int                    bi;
   ptrdiff_t              fragi;
   ptrdiff_t              frag_offs;
-  unsigned               dc;
+  int                    dc;
   src=_enc->state.ref_frame_data[OC_FRAME_IO];
   ref=_enc->state.ref_frame_data[OC_FRAME_FOR_MODE(_mb_mode)];
   ystride=_enc->state.ref_ystride[0];
@@ -2064,7 +2064,7 @@ static void oc_cost_inter(oc_enc_ctx *_enc,oc_mode_choice *_modec,
       frag_offs=frag_buf_offs[fragi];
       frag_satd[bi]=oc_enc_frag_satd2(_enc,&dc,src+frag_offs,
        ref+frag_offs+mv_offs[0],ref+frag_offs+mv_offs[1],ystride);
-      frag_satd[bi]+=dc;
+      frag_satd[bi]+=abs(dc);
     }
   }
   else{
@@ -2073,7 +2073,7 @@ static void oc_cost_inter(oc_enc_ctx *_enc,oc_mode_choice *_modec,
       frag_offs=frag_buf_offs[fragi];
       frag_satd[bi]=oc_enc_frag_satd(_enc,&dc,src+frag_offs,
        ref+frag_offs+mv_offs[0],ystride);
-      frag_satd[bi]+=dc;
+      frag_satd[bi]+=abs(dc);
     }
   }
   mb_map=(const oc_mb_map_plane *)_enc->state.mb_maps[_mbi];
@@ -2090,7 +2090,7 @@ static void oc_cost_inter(oc_enc_ctx *_enc,oc_mode_choice *_modec,
       frag_offs=frag_buf_offs[fragi];
       frag_satd[mapii]=oc_enc_frag_satd2(_enc,&dc,src+frag_offs,
        ref+frag_offs+mv_offs[0],ref+frag_offs+mv_offs[1],ystride);
-      frag_satd[mapii]+=dc;
+      frag_satd[mapii]+=abs(dc);
     }
   }
   else{
@@ -2102,7 +2102,7 @@ static void oc_cost_inter(oc_enc_ctx *_enc,oc_mode_choice *_modec,
       frag_offs=frag_buf_offs[fragi];
       frag_satd[mapii]=oc_enc_frag_satd(_enc,&dc,src+frag_offs,
        ref+frag_offs+mv_offs[0],ystride);
-      frag_satd[mapii]+=dc;
+      frag_satd[mapii]+=abs(dc);
     }
   }
   oc_analyze_mb_mode_luma(_enc,_modec,_fr,_qs,frag_satd,_skip_ssd,_rd_scale,1);
@@ -2162,7 +2162,7 @@ static void oc_cost_inter4mv(oc_enc_ctx *_enc,oc_mode_choice *_modec,
   int                    bits0;
   int                    bits1;
   unsigned               satd;
-  unsigned               dc;
+  int                    dc;
   src=_enc->state.ref_frame_data[OC_FRAME_IO];
   ref=_enc->state.ref_frame_data[OC_FRAME_PREV];
   ystride=_enc->state.ref_ystride[0];
@@ -2184,7 +2184,7 @@ static void oc_cost_inter4mv(oc_enc_ctx *_enc,oc_mode_choice *_modec,
       satd=oc_enc_frag_satd(_enc,&dc,src+frag_offs,
        ref+frag_offs+mv_offs[0],ystride);
     }
-    frag_satd[OC_MB_PHASE[_mbi&3][bi]]=satd+dc;
+    frag_satd[OC_MB_PHASE[_mbi&3][bi]]=satd+abs(dc);
   }
   oc_analyze_mb_mode_luma(_enc,_modec,_fr,_qs,frag_satd,
    _enc->vp3_compatible?OC_NOSKIP:_skip_ssd,_rd_scale,1);
@@ -2222,7 +2222,7 @@ static void oc_cost_inter4mv(oc_enc_ctx *_enc,oc_mode_choice *_modec,
       satd=oc_enc_frag_satd(_enc,&dc,src+frag_offs,
        ref+frag_offs+mv_offs[0],ystride);
     }
-    frag_satd[mapii]=satd+dc;
+    frag_satd[mapii]=satd+abs(dc);
   }
   oc_analyze_mb_mode_chroma(_enc,_modec,_fr,_qs,
    frag_satd,_skip_ssd,_rd_scale[4],1);
@@ -2335,14 +2335,12 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
         int            bi;
         ptrdiff_t      fragi;
         mbi=sbi<<2|quadi;
-        oc_mb_intra_satd(_enc,mbi,intra_satd);
+        luma=oc_mb_intra_satd(_enc,mbi,intra_satd);
         /*Activity masking.*/
         if(sp_level<OC_SP_LEVEL_FAST_ANALYSIS){
-          luma=oc_mb_activity(_enc,mbi,activity);
+          oc_mb_activity(_enc,mbi,activity);
         }
-        else{
-          luma=oc_mb_activity_fast(_enc,mbi,activity,intra_satd);
-        }
+        else oc_mb_activity_fast(_enc,mbi,activity,intra_satd);
         luma_sum+=luma;
         activity_sum+=oc_mb_masking(rd_scale,rd_iscale,
          chroma_rd_scale,activity,activity_avg,luma,luma_avg);

@@ -80,17 +80,17 @@ unsigned oc_enc_frag_sad_thresh_mmxext(const unsigned char *_src,
 unsigned oc_enc_frag_sad2_thresh_mmxext(const unsigned char *_src,
  const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
  unsigned _thresh);
-unsigned oc_enc_frag_satd_mmxext(unsigned *_dc,const unsigned char *_src,
+unsigned oc_enc_frag_satd_mmxext(int *_dc,const unsigned char *_src,
  const unsigned char *_ref,int _ystride);
-unsigned oc_enc_frag_satd_sse2(unsigned *_dc,const unsigned char *_src,
+unsigned oc_enc_frag_satd_sse2(int *_dc,const unsigned char *_src,
  const unsigned char *_ref,int _ystride);
-unsigned oc_enc_frag_satd2_mmxext(unsigned *_dc,const unsigned char *_src,
+unsigned oc_enc_frag_satd2_mmxext(int *_dc,const unsigned char *_src,
  const unsigned char *_ref1,const unsigned char *_ref2,int _ystride);
-unsigned oc_enc_frag_satd2_sse2(unsigned *_dc,const unsigned char *_src,
+unsigned oc_enc_frag_satd2_sse2(int *_dc,const unsigned char *_src,
  const unsigned char *_ref1,const unsigned char *_ref2,int _ystride);
-unsigned oc_enc_frag_intra_satd_mmxext(unsigned *_dc,
+unsigned oc_enc_frag_intra_satd_mmxext(int *_dc,
  const unsigned char *_src,int _ystride);
-unsigned oc_enc_frag_intra_satd_sse2(unsigned *_dc,
+unsigned oc_enc_frag_intra_satd_sse2(int *_dc,
  const unsigned char *_src,int _ystride);
 unsigned oc_enc_frag_ssd_sse2(const unsigned char *_src,
  const unsigned char *_ref,int _ystride);

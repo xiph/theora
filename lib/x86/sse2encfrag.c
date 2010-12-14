@@ -382,12 +382,13 @@ unsigned oc_enc_frag_border_ssd_sse2(const unsigned char *_src,
  OC_HADAMARD_AB_8x8 \
  OC_HADAMARD_C_ABS_ACCUM_8x8
 
-static unsigned oc_int_frag_satd_sse2(unsigned *_dc,
+static unsigned oc_int_frag_satd_sse2(int *_dc,
  const unsigned char *_src,int _src_ystride,
  const unsigned char *_ref,int _ref_ystride){
   OC_ALIGN16(ogg_int16_t buf[16]);
   unsigned ret;
-  unsigned dc;
+  unsigned ret2;
+  int      dc;
   __asm__ __volatile__(
     OC_LOAD_SUB_8x8
     OC_HADAMARD_8x8
@@ -403,22 +404,22 @@ static unsigned oc_int_frag_satd_sse2(unsigned *_dc,
        for the factor of two we dropped + 3 for the vertical accumulation).
       Now we finally have to promote things to dwords.
       We break this part out of OC_HADAMARD_ABS_ACCUM_8x8 to hide the long
-       latency of pmaddwd by computing abs(dc) here.*/
+       latency of pmaddwd by starting to compute abs(dc) here.*/
     "pmaddwd %%xmm7,%%xmm0\n\t"
-    "movsx %w[dc],%[ret]\n\t"
+    "movsx %w[dc],%[dc]\n\t"
     "cdq\n\t"
     "movdqa %%xmm0,%%xmm1\n\t"
     "punpckhqdq %%xmm0,%%xmm0\n\t"
-    "add %[dc],%[ret]\n\t"
     "paddd %%xmm1,%%xmm0\n\t"
-    "pshufd $1,%%xmm0,%%xmm1\n\t"
-    "xor %[ret],%[dc]\n\t"
+    "pshuflw $0xE,%%xmm0,%%xmm1\n\t"
     "paddd %%xmm1,%%xmm0\n\t"
     "movd %%xmm0,%[ret]\n\t"
     /*The sums produced by OC_HADAMARD_ABS_ACCUM_8x8 each have an extra 4
-       added to them, and a factor of two removed; correct the final sum here.*/
-    "lea -64(%[ret],%[ret]),%[ret]\n\t"
-    "sub %[dc],%[ret]\n\t"
+       added to them, a factor of two removed, and the DC value included;
+       correct the final sum here.*/
+    "lea -64(%[ret2],%[ret],2),%[ret]\n\t"
+    "xor %[dc],%[ret2]\n\t"
+    "sub %[ret2],%[ret]\n\t"
     /*Although it looks like we're using 7 registers here, gcc can alias %[ret]
        and %[dc] with some of the inputs, since for once we don't write to
        them until after we're done using everything but %[buf].*/
@@ -428,7 +429,8 @@ static unsigned oc_int_frag_satd_sse2(unsigned *_dc,
        problem.
       All four are destructively modified, but if we list them as output
        constraints, gcc can't alias them with other outputs.*/
-    :[ret]"=a"(ret),[dc]"=d"(dc),[buf]"=m"(OC_ARRAY_OPERAND(short,buf,16))
+    :[ret]"=r"(ret),[ret2]"=d"(ret2),[dc]"=a"(dc),
+     [buf]"=m"(OC_ARRAY_OPERAND(ogg_int16_t,buf,16))
     :[src]"S"(_src),[src_ystride]"c"((ptrdiff_t)_src_ystride),
      [ref]"a"(_ref),[ref_ystride]"d"((ptrdiff_t)_ref_ystride)
     /*We have to use neg, so we actually clobber the condition codes for once
@@ -439,23 +441,23 @@ static unsigned oc_int_frag_satd_sse2(unsigned *_dc,
   return ret;
 }
 
-unsigned oc_enc_frag_satd_sse2(unsigned *_dc,const unsigned char *_src,
+unsigned oc_enc_frag_satd_sse2(int *_dc,const unsigned char *_src,
  const unsigned char *_ref,int _ystride){
   return oc_int_frag_satd_sse2(_dc,_src,_ystride,_ref,_ystride);
 }
 
-unsigned oc_enc_frag_satd2_sse2(unsigned *_dc,const unsigned char *_src,
+unsigned oc_enc_frag_satd2_sse2(int *_dc,const unsigned char *_src,
  const unsigned char *_ref1,const unsigned char *_ref2,int _ystride){
   OC_ALIGN8(unsigned char ref[64]);
   oc_int_frag_copy2_mmxext(ref,8,_ref1,_ref2,_ystride);
   return oc_int_frag_satd_sse2(_dc,_src,_ystride,ref,8);
 }
 
-unsigned oc_enc_frag_intra_satd_sse2(unsigned *_dc,
+unsigned oc_enc_frag_intra_satd_sse2(int *_dc,
  const unsigned char *_src,int _ystride){
   OC_ALIGN16(ogg_int16_t buf[16]);
   unsigned ret;
-  unsigned dc;
+  int      dc;
   __asm__ __volatile__(
     OC_LOAD_8x8
     OC_HADAMARD_8x8
@@ -477,7 +479,7 @@ unsigned oc_enc_frag_intra_satd_sse2(unsigned *_dc,
     "movdqa %%xmm0,%%xmm1\n\t"
     "punpckhqdq %%xmm0,%%xmm0\n\t"
     "paddd %%xmm1,%%xmm0\n\t"
-    "pshufd $1,%%xmm0,%%xmm1\n\t"
+    "pshuflw $0xE,%%xmm0,%%xmm1\n\t"
     "paddd %%xmm1,%%xmm0\n\t"
     "movd %%xmm0,%[ret]\n\t"
     "lea -64(%[ret],%[ret]),%[ret]\n\t"
@@ -485,7 +487,8 @@ unsigned oc_enc_frag_intra_satd_sse2(unsigned *_dc,
     /*Although it looks like we're using 7 registers here, gcc can alias %[ret]
        and %[dc] with some of the inputs, since for once we don't write to
        them until after we're done using everything but %[buf].*/
-    :[ret]"=a"(ret),[dc]"=r"(dc),[buf]"=m"(OC_ARRAY_OPERAND(short,buf,16))
+    :[ret]"=a"(ret),[dc]"=r"(dc),
+     [buf]"=m"(OC_ARRAY_OPERAND(ogg_int16_t,buf,16))
     :[src]"r"(_src),[src4]"r"(_src+4*_ystride),
      [ystride]"r"((ptrdiff_t)_ystride),[ystride3]"r"((ptrdiff_t)3*_ystride)
     /*We have to use sub, so we actually clobber the condition codes for once.*/

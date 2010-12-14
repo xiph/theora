@@ -187,7 +187,7 @@ static unsigned oc_satd16_halfpel(const oc_enc_ctx *_enc,
  int _mvoffset0,int _mvoffset1,const unsigned char *_src,
  const unsigned char *_ref,int _ystride,unsigned _best_err){
   unsigned err;
-  unsigned dc;
+  int      dc;
   int      bi;
   err=0;
   for(bi=0;bi<4;bi++){
@@ -195,7 +195,7 @@ static unsigned oc_satd16_halfpel(const oc_enc_ctx *_enc,
     frag_offs=_frag_buf_offs[_fragis[bi]];
     err+=oc_enc_frag_satd2(_enc,&dc,_src+frag_offs,
      _ref+frag_offs+_mvoffset0,_ref+frag_offs+_mvoffset1,_ystride);
-    err+=dc;
+    err+=abs(dc);
   }
   return err;
 }
@@ -231,11 +231,11 @@ static int oc_mcenc_ysatd_check_mbcandidate_fullpel(const oc_enc_ctx *_enc,
   err=0;
   for(bi=0;bi<4;bi++){
     ptrdiff_t frag_offs;
-    unsigned  dc;
+    int       dc;
     frag_offs=_frag_buf_offs[_fragis[bi]];
     err+=oc_enc_frag_satd(_enc,&dc,
      _src+frag_offs,_ref+frag_offs+mvoffset,_ystride);
-    err+=dc;
+    err+=abs(dc);
   }
   return err;
 }
@@ -244,10 +244,10 @@ static unsigned oc_mcenc_ysatd_check_bcandidate_fullpel(const oc_enc_ctx *_enc,
  ptrdiff_t _frag_offs,int _dx,int _dy,
  const unsigned char *_src,const unsigned char *_ref,int _ystride){
   unsigned err;
-  unsigned dc;
+  int      dc;
   err=oc_enc_frag_satd(_enc,&dc,
    _src+_frag_offs,_ref+_frag_offs+_dx+_dy*_ystride,_ystride);
-  return err+dc;
+  return err+abs(dc);
 }
 
 /*Perform a motion vector search for this macro block against a single
@@ -718,7 +718,7 @@ static unsigned oc_mcenc_ysatd_halfpel_brefine(const oc_enc_ctx *_enc,
   best_site=4;
   for(sitei=0;sitei<8;sitei++){
     unsigned err;
-    unsigned dc;
+    int      dc;
     int      site;
     int      xmask;
     int      ymask;
@@ -740,7 +740,7 @@ static unsigned oc_mcenc_ysatd_halfpel_brefine(const oc_enc_ctx *_enc,
     mvoffset1=mvoffset_base+(dx&~xmask)+(_offset_y[site]&~ymask);
     err=oc_enc_frag_satd2(_enc,&dc,_src,
      _ref+mvoffset0,_ref+mvoffset1,_ystride);
-    err+=dc;
+    err+=abs(dc);
     if(err<_best_err){
       _best_err=err;
       best_site=site;

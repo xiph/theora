@@ -292,12 +292,11 @@ struct oc_enc_opt_vtable{
   unsigned (*frag_sad2_thresh)(const unsigned char *_src,
    const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
    unsigned _thresh);
-  unsigned (*frag_satd)(unsigned *_dc,const unsigned char *_src,
+  unsigned (*frag_satd)(int *_dc,const unsigned char *_src,
    const unsigned char *_ref,int _ystride);
-  unsigned (*frag_satd2)(unsigned *_dc,const unsigned char *_src,
+  unsigned (*frag_satd2)(int *_dc,const unsigned char *_src,
    const unsigned char *_ref1,const unsigned char *_ref2,int _ystride);
-  unsigned (*frag_intra_satd)(unsigned *_dc,const unsigned char *_src,
-   int _ystride);
+  unsigned (*frag_intra_satd)(int *_dc,const unsigned char *_src,int _ystride);
   unsigned (*frag_ssd)(const unsigned char *_src,
    const unsigned char *_ref,int _ystride);
   unsigned (*frag_border_ssd)(const unsigned char *_src,
@@ -808,12 +807,12 @@ unsigned oc_enc_frag_sad_thresh_c(const unsigned char *_src,
 unsigned oc_enc_frag_sad2_thresh_c(const unsigned char *_src,
  const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
  unsigned _thresh);
-unsigned oc_enc_frag_satd_c(unsigned *_dc,const unsigned char *_src,
+unsigned oc_enc_frag_satd_c(int *_dc,const unsigned char *_src,
  const unsigned char *_ref,int _ystride);
-unsigned oc_enc_frag_satd2_c(unsigned *_dc,const unsigned char *_src,
+unsigned oc_enc_frag_satd2_c(int *_dc,const unsigned char *_src,
  const unsigned char *_ref1,const unsigned char *_ref2,int _ystride);
-unsigned oc_enc_frag_intra_satd_c(unsigned *_dc,const unsigned char *_src,
- int _ystride);
+unsigned oc_enc_frag_intra_satd_c(int *_dc,
+ const unsigned char *_src,int _ystride);
 unsigned oc_enc_frag_ssd_c(const unsigned char *_src,
  const unsigned char *_ref,int _ystride);
 unsigned oc_enc_frag_border_ssd_c(const unsigned char *_src,

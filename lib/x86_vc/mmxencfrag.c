@@ -468,14 +468,14 @@ unsigned oc_enc_frag_sad2_thresh_mmxext(const unsigned char *_src,
     mm7 = d3 c3 b3 a3*/ \
 }
 
-static unsigned oc_int_frag_satd_mmxext(unsigned *_dc,
+static unsigned oc_int_frag_satd_mmxext(int *_dc,
  const unsigned char *_src,int _src_ystride,
  const unsigned char *_ref,int _ref_ystride){
   OC_ALIGN8(ogg_int16_t buf[64]);
   ogg_int16_t *bufp;
-  unsigned     ret1;
+  unsigned     ret;
   unsigned     ret2;
-  unsigned     dc;
+  int          dc;
   bufp=buf;
   __asm{
 #define SRC esi
@@ -483,10 +483,10 @@ static unsigned oc_int_frag_satd_mmxext(unsigned *_dc,
 #define SRC_YSTRIDE ecx
 #define REF_YSTRIDE edx
 #define BUF edi
-#define RET eax
+#define RET edx
 #define RET2 ecx
-#define DC edx
-#define DC_WORD dx
+#define DC eax
+#define DC_WORD ax
     mov SRC,_src
     mov SRC_YSTRIDE,_src_ystride
     mov REF,_ref
@@ -535,26 +535,25 @@ static unsigned oc_int_frag_satd_mmxext(unsigned *_dc,
     movq mm3,[0x70+BUF]
     movd RET2,mm4
     movq mm7,[0x78+BUF]
-    /*The sums produced by OC_HADAMARD_ABS_ACCUM_8x4 each have an extra 4
-       added to them, and a factor of two removed; correct the final sum here.*/
-    lea RET,[RET+RET-32]
     movq mm0,[0x40+BUF]
     movq mm4,[0x48+BUF]
     OC_HADAMARD_ABS_ACCUM_8x4(0x68,0x78)
     pmaddwd mm0,mm7
-    /*Compute abs(dc).*/
-    movsx RET,DC_WORD
+    /*Subtract abs(dc) from 2*ret2.*/
+    movsx DC,DC_WORD
     cdq
-    add RET2,RET2
-    add RET,DC
+    lea RET2,[RET+RET2*2]
     movq mm4,mm0
     punpckhdq mm0,mm0
-    xor DC,RET
+    xor RET,DC
     paddd mm4,mm0
-    sub RET2,DC
+    /*The sums produced by OC_HADAMARD_ABS_ACCUM_8x4 each have an extra 4
+       added to them, a factor of two removed, and the DC value included;
+       correct the final sum here.*/
+    sub RET2,RET
     movd RET,mm4
     lea RET,[RET2+RET*2-64]
-    mov ret1,RET
+    mov ret,RET
     mov dc,DC
 #undef SRC
 #undef REF
@@ -567,10 +566,10 @@ static unsigned oc_int_frag_satd_mmxext(unsigned *_dc,
 #undef DC_WORD
   }
   *_dc=dc;
-  return ret1;
+  return ret;
 }
 
-unsigned oc_enc_frag_satd_mmxext(unsigned *_dc,const unsigned char *_src,
+unsigned oc_enc_frag_satd_mmxext(int *_dc,const unsigned char *_src,
  const unsigned char *_ref,int _ystride){
   return oc_int_frag_satd_mmxext(_dc,_src,_ystride,_ref,_ystride);
 }
@@ -705,20 +704,20 @@ static void oc_int_frag_copy2_mmxext(unsigned char *_dst,int _dst_ystride,
   }
 }
 
-unsigned oc_enc_frag_satd2_mmxext(unsigned *_dc,const unsigned char *_src,
+unsigned oc_enc_frag_satd2_mmxext(int *_dc,const unsigned char *_src,
  const unsigned char *_ref1,const unsigned char *_ref2,int _ystride){
   OC_ALIGN8(unsigned char ref[64]);
   oc_int_frag_copy2_mmxext(ref,8,_ref1,_ref2,_ystride);
   return oc_int_frag_satd_mmxext(_dc,_src,_ystride,ref,8);
 }
 
-unsigned oc_enc_frag_intra_satd_mmxext(unsigned *_dc,const unsigned char *_src,
+unsigned oc_enc_frag_intra_satd_mmxext(int *_dc,const unsigned char *_src,
  int _ystride){
   OC_ALIGN8(ogg_int16_t buf[64]);
   ogg_int16_t *bufp;
   unsigned     ret1;
   unsigned     ret2;
-  unsigned     dc;
+  int          dc;
   bufp=buf;
   __asm{
 #define SRC eax
@@ -788,7 +787,7 @@ unsigned oc_enc_frag_intra_satd_mmxext(unsigned *_dc,const unsigned char *_src,
     because the input to the INTRA transform was not a difference).*/
     movzx DC,DC_WORD
     add RET,RET
-    sub RET, DC
+    sub RET,DC
     movq mm4,mm0
     punpckhdq mm0,mm0
     paddd mm4,mm0
