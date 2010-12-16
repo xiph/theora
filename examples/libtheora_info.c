@@ -66,6 +66,8 @@ th_enc_ctx *dummy_encode_ctx(void)
     th_info_init(&info);
     info.frame_width=320;
     info.frame_height=240;
+    info.fps_numerator=1;
+    info.fps_denominator=1;
 
     /* allocate and initialize a context object */
     ctx = th_encode_alloc(&info);
