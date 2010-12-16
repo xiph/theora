@@ -702,7 +702,8 @@ int oc_state_init(oc_theora_state *_state,const th_info *_info,int _nrefs){
      how it is specified in the bitstream, because the Y axis is flipped in
      the bitstream.
     The displayable frame must fit inside the encoded frame.
-    The color space must be one known by the encoder.*/
+    The color space must be one known by the encoder.
+    The framerate ratio must not contain a zero value.*/
   if((_info->frame_width&0xF)||(_info->frame_height&0xF)||
    _info->frame_width<=0||_info->frame_width>=0x100000||
    _info->frame_height<=0||_info->frame_height>=0x100000||
@@ -715,7 +716,8 @@ int oc_state_init(oc_theora_state *_state,const th_info *_info,int _nrefs){
       but there are a number of compilers which will mis-optimize this.
      It's better to live with the spurious warnings.*/
    _info->colorspace<0||_info->colorspace>=TH_CS_NSPACES||
-   _info->pixel_fmt<0||_info->pixel_fmt>=TH_PF_NFORMATS){
+   _info->pixel_fmt<0||_info->pixel_fmt>=TH_PF_NFORMATS||
+   _info->fps_numerator<1||_info->fps_denominator<1){
     return TH_EINVAL;
   }
   memset(_state,0,sizeof(*_state));

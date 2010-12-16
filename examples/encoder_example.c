@@ -1577,6 +1577,11 @@ int main(int argc,char *argv[]){
     else ti.pixel_fmt=TH_PF_444;
     td=th_encode_alloc(&ti);
     th_info_clear(&ti);
+    if(td==NULL){
+      fprintf(stderr,"Error: Could not create an encoder instance.\n");
+      fprintf(stderr,"Check that video parameters are valid.\n");
+      exit(1);
+    }
     /* setting just the granule shift only allows power-of-two keyframe
        spacing.  Set the actual requested spacing. */
     ret=th_encode_ctl(td,TH_ENCCTL_SET_KEYFRAME_FREQUENCY_FORCE,
