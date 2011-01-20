@@ -58,7 +58,7 @@ extern "C" {
  *
  * \param[in] _buf #th_quant_info
  * \retval TH_EFAULT \a _enc is <tt>NULL</tt>.
- * \retval TH_EINVAL Encoding has already begun, \a _buf is 
+ * \retval TH_EINVAL Encoding has already begun, \a _buf is
  *                    <tt>NULL</tt> and \a _buf_sz is not zero,
  *                    or \a _buf is non-<tt>NULL</tt> and
  *                    \a _buf_sz is not <tt>sizeof(#th_quant_info)</tt>.
@@ -495,7 +495,7 @@ extern int th_encode_flushheader(th_enc_ctx *_enc,
  *                picture offsets may require an unexpected chroma plane size,
  *                and their use is generally discouraged, as they will not be
  *                well-supported by players and other media frameworks.
- *               See Section 4.4 of 
+ *               See Section 4.4 of
  *                <a href="http://www.theora.org/doc/Theora.pdf">the Theora
  *                specification</a> for details if you wish to use them anyway.
  * \retval 0         Success.
