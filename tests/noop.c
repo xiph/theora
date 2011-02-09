@@ -66,6 +66,10 @@ noop_test_encode ()
   ti.frame_width = 16;
   ti.frame_height = 16;
 
+  INFO ("+ Setting a 1:1 frame rate");
+  ti.fps_numerator = 1;
+  ti.fps_denominator = 1;
+
   INFO ("+ Allocating encoder context");
   te = th_encode_alloc(&ti);
   if (te == NULL)

@@ -32,6 +32,10 @@ noop_test_encode ()
   ti.width = 16;
   ti.height = 16;
 
+  INFO ("+ Setting a 1:1 frame rate");
+  ti.fps_numerator = 1;
+  ti.fps_denominator = 1;
+
   INFO ("+ Initializing theora_state for encoding");
   if (theora_encode_init (&th, &ti) != OC_DISABLED) {
     INFO ("+ Clearing theora_state");
