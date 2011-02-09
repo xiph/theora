@@ -164,7 +164,6 @@ static void oc_mcenc_find_candidates_b(oc_enc_ctx *_enc,oc_mcenc_ctx *_mcenc,
   _mcenc->ncandidates=ncandidates;
 }
 
-#if 0
 static unsigned oc_sad16_halfpel(const oc_enc_ctx *_enc,
  const ptrdiff_t *_frag_buf_offs,const ptrdiff_t _fragis[4],
  int _mvoffset0,int _mvoffset1,const unsigned char *_src,
@@ -180,7 +179,6 @@ static unsigned oc_sad16_halfpel(const oc_enc_ctx *_enc,
   }
   return err;
 }
-#endif
 
 static unsigned oc_satd16_halfpel(const oc_enc_ctx *_enc,
  const ptrdiff_t *_frag_buf_offs,const ptrdiff_t _fragis[4],
@@ -233,9 +231,15 @@ static int oc_mcenc_ysatd_check_mbcandidate_fullpel(const oc_enc_ctx *_enc,
     ptrdiff_t frag_offs;
     int       dc;
     frag_offs=_frag_buf_offs[_fragis[bi]];
-    err+=oc_enc_frag_satd(_enc,&dc,
-     _src+frag_offs,_ref+frag_offs+mvoffset,_ystride);
-    err+=abs(dc);
+    if(_enc->sp_level<OC_SP_LEVEL_NOSATD){
+      err+=oc_enc_frag_satd(_enc,&dc,
+       _src+frag_offs,_ref+frag_offs+mvoffset,_ystride);
+      err+=abs(dc);
+    }
+    else{
+      err+=oc_enc_frag_sad(_enc,
+       _src+frag_offs,_ref+frag_offs+mvoffset,_ystride);
+    }
   }
   return err;
 }
@@ -642,8 +646,14 @@ static unsigned oc_mcenc_ysatd_halfpel_mbrefine(const oc_enc_ctx *_enc,
     ymask=OC_SIGNMASK(((_vec[1]<<1)+dy)^dy);
     mvoffset0=mvoffset_base+(dx&xmask)+(offset_y[site]&ymask);
     mvoffset1=mvoffset_base+(dx&~xmask)+(offset_y[site]&~ymask);
-    err=oc_satd16_halfpel(_enc,frag_buf_offs,fragis,
-     mvoffset0,mvoffset1,src,ref,ystride,_best_err);
+    if(_enc->sp_level<OC_SP_LEVEL_NOSATD){
+      err=oc_satd16_halfpel(_enc,frag_buf_offs,fragis,
+       mvoffset0,mvoffset1,src,ref,ystride,_best_err);
+    }
+    else{
+      err=oc_sad16_halfpel(_enc,frag_buf_offs,fragis,
+           mvoffset0,mvoffset1,src,ref,ystride,_best_err);
+    }
     if(err<_best_err){
       _best_err=err;
       best_site=site;

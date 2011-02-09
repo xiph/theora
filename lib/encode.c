@@ -942,6 +942,7 @@ void oc_enc_accel_init_c(oc_enc_ctx *_enc){
   _enc->opt_vtable.frag_sad=oc_enc_frag_sad_c;
   _enc->opt_vtable.frag_sad_thresh=oc_enc_frag_sad_thresh_c;
   _enc->opt_vtable.frag_sad2_thresh=oc_enc_frag_sad2_thresh_c;
+  _enc->opt_vtable.frag_intra_sad=oc_enc_frag_intra_sad_c;
   _enc->opt_vtable.frag_satd=oc_enc_frag_satd_c;
   _enc->opt_vtable.frag_satd2=oc_enc_frag_satd2_c;
   _enc->opt_vtable.frag_intra_satd=oc_enc_frag_intra_satd_c;
@@ -1180,6 +1181,7 @@ static int oc_enc_init(oc_enc_ctx *_enc,const th_info *_info){
      _enc->state.fplanes[pli].nfrags,sizeof(**_enc->extra_bits));
   }
 #if defined(OC_COLLECT_METRICS)
+  _enc->frag_sad=_ogg_calloc(_enc->state.nfrags,sizeof(*_enc->frag_sad));
   _enc->frag_satd=_ogg_calloc(_enc->state.nfrags,sizeof(*_enc->frag_satd));
   _enc->frag_ssd=_ogg_calloc(_enc->state.nfrags,sizeof(*_enc->frag_ssd));
 #endif
@@ -1212,7 +1214,7 @@ static int oc_enc_init(oc_enc_ctx *_enc,const th_info *_info){
    ||_enc->extra_bits[0]==NULL||_enc->extra_bits[1]==NULL
    ||_enc->extra_bits[2]==NULL
 #if defined(OC_COLLECT_METRICS)
-   ||_enc->frag_satd==NULL||_enc->frag_ssd==NULL
+   ||_enc->frag_sad==NULL||_enc->frag_satd==NULL||_enc->frag_ssd==NULL
 #endif
    ||oc_enc_set_quant_params(_enc,NULL)<0){
     oc_enc_clear(_enc);
@@ -1237,6 +1239,7 @@ static void oc_enc_clear(oc_enc_ctx *_enc){
   oc_mode_metrics_dump();
   _ogg_free(_enc->frag_ssd);
   _ogg_free(_enc->frag_satd);
+  _ogg_free(_enc->frag_sad);
 #endif
   for(pli=3;pli-->0;){
     oc_free_2d(_enc->extra_bits[pli]);

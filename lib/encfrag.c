@@ -86,6 +86,27 @@ unsigned oc_enc_frag_sad2_thresh_c(const unsigned char *_src,
   return sad;
 }
 
+unsigned oc_enc_frag_intra_sad_c(const unsigned char *_src, int _ystride){
+  const unsigned char *src = _src;
+  unsigned dc;
+  unsigned sad;
+  int      i;
+  dc=0;
+  for(i=8;i-->0;){
+    int j;
+    for(j=0;j<8;j++)dc+=src[j];
+    src+=_ystride;
+  }
+  dc=dc+32>>6;
+  sad=0;
+  for(i=8;i-->0;){
+    int j;
+    for(j=0;j<8;j++)sad+=abs(_src[j]-dc);
+    _src+=_ystride;
+  }
+  return sad;
+}
+
 static void oc_diff_hadamard(ogg_int16_t _buf[64],const unsigned char *_src,
  const unsigned char *_ref,int _ystride){
   int i;

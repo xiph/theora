@@ -79,6 +79,10 @@ typedef struct oc_token_checkpoint    oc_token_checkpoint;
 #   define oc_enc_frag_sad2_thresh(_enc,_src,_ref1,_ref2,_ystride,_thresh) \
   ((*(_enc)->opt_vtable.frag_sad2_thresh)(_src,_ref1,_ref2,_ystride,_thresh))
 #  endif
+#  if !defined(oc_enc_frag_intra_sad)
+#   define oc_enc_frag_intra_sad(_enc,_src,_ystride) \
+  ((*(_enc)->opt_vtable.frag_intra_sad)(_src,_ystride))
+#  endif
 #  if !defined(oc_enc_frag_satd)
 #   define oc_enc_frag_satd(_enc,_dc,_src,_ref,_ystride) \
   ((*(_enc)->opt_vtable.frag_satd)(_dc,_src,_ref,_ystride))
@@ -148,6 +152,10 @@ typedef struct oc_token_checkpoint    oc_token_checkpoint;
 #   define oc_enc_frag_sad2_thresh(_enc,_src,_ref1,_ref2,_ystride,_thresh) \
   oc_enc_frag_sad2_thresh_c(_src,_ref1,_ref2,_ystride,_thresh)
 #  endif
+#  if !defined(oc_enc_frag_intra_sad)
+#   define oc_enc_frag_intra_sad(_enc,_src,_ystride) \
+  oc_enc_frag_intra_sad_c(_src,_ystride)
+#  endif
 #  if !defined(oc_enc_frag_satd)
 #   define oc_enc_frag_satd(_enc,_dc,_src,_ref,_ystride) \
   oc_enc_frag_satd_c(_dc,_src,_ref,_ystride)
@@ -212,10 +220,12 @@ typedef struct oc_token_checkpoint    oc_token_checkpoint;
 #define OC_SP_LEVEL_EARLY_SKIP    (1)
 /*Use analysis shortcuts, single quantizer, and faster tokenization.*/
 #define OC_SP_LEVEL_FAST_ANALYSIS (2)
+/*Use SAD instead of SATD*/
+#define OC_SP_LEVEL_NOSATD        (3)
 /*Disable motion compensation.*/
-#define OC_SP_LEVEL_NOMC          (3)
+#define OC_SP_LEVEL_NOMC          (4)
 /*Maximum valid speed level.*/
-#define OC_SP_LEVEL_MAX           (3)
+#define OC_SP_LEVEL_MAX           (4)
 
 
 /*The number of extra bits of precision at which to store rate metrics.*/
@@ -292,6 +302,7 @@ struct oc_enc_opt_vtable{
   unsigned (*frag_sad2_thresh)(const unsigned char *_src,
    const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
    unsigned _thresh);
+  unsigned (*frag_intra_sad)(const unsigned char *_src,int _ystride);
   unsigned (*frag_satd)(int *_dc,const unsigned char *_src,
    const unsigned char *_ref,int _ystride);
   unsigned (*frag_satd2)(int *_dc,const unsigned char *_src,
@@ -680,6 +691,8 @@ struct th_enc_ctx{
   /*The last DC coefficient for each plane and reference frame.*/
   int                      dc_pred_last[3][4];
 #if defined(OC_COLLECT_METRICS)
+  /*Fragment SAD statistics for MB mode estimation metrics.*/
+  unsigned                *frag_sad;
   /*Fragment SATD statistics for MB mode estimation metrics.*/
   unsigned                *frag_satd;
   /*Fragment SSD statistics for MB mode estimation metrics.*/
@@ -807,6 +820,7 @@ unsigned oc_enc_frag_sad_thresh_c(const unsigned char *_src,
 unsigned oc_enc_frag_sad2_thresh_c(const unsigned char *_src,
  const unsigned char *_ref1,const unsigned char *_ref2,int _ystride,
  unsigned _thresh);
+unsigned oc_enc_frag_intra_sad_c(const unsigned char *_src, int _ystride);
 unsigned oc_enc_frag_satd_c(int *_dc,const unsigned char *_src,
  const unsigned char *_ref,int _ystride);
 unsigned oc_enc_frag_satd2_c(int *_dc,const unsigned char *_src,
