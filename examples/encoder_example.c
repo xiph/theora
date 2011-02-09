@@ -1307,6 +1307,10 @@ int main(int argc,char *argv[]){
   int twopass=0;
   int passno;
 
+  clock_t clock_start=clock();
+  clock_t clock_end;
+  double elapsed;
+
 #ifdef _WIN32 /* We need to set stdin/stdout to binary mode. Damn windows. */
   /* if we were reading/writing a file, it would also need to in
      binary mode, eg, fopen("file.wav","wb"); */
@@ -1867,8 +1871,17 @@ int main(int argc,char *argv[]){
   if(outfile && outfile!=stdout)fclose(outfile);
   if(twopass_file)fclose(twopass_file);
 
+  clock_end=clock();
+  elapsed=(clock_end-clock_start)/(double)CLOCKS_PER_SEC;
+
   if(!quiet){
-    fprintf(stderr,"\r   \ndone.\n\n");
+    fprintf(stderr,"\r   \n");
+    fprintf(stderr,"      %lld frames in %.3lf seconds: %.3lf Mpixel/s",
+      (long long)frames,elapsed,
+      (double)1e-6*frames*frame_w*frame_h/elapsed);
+    fprintf(stderr," %.2lfx",
+      (double)frames*video_fps_d/(elapsed*video_fps_n));
+    fprintf(stderr,"\ndone.\n\n");
   }
 
   return(0);
