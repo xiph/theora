@@ -142,9 +142,9 @@ encoder_sources = \
 	$(encoder_shared_arch_sources) \
 	$(encoder_uniq_sources)
 
-nodist_encoder_arch_sources =
+nodist_encoder_arch_sources = \
 	$(nodist_encoder_shared_arch_sources) \
-	$(nodist_encoder_uniq_sources)
+	$(nodist_encoder_uniq_arch_sources)
 
 endif
 
@@ -265,7 +265,7 @@ libtheora_la_SOURCES = \
 	$(encoder_uniq_sources) \
 	Version_script theora.exp
 nodist_libtheora_la_SOURCES = \
-	$(nodist_decoder_arch_sources)
+	$(nodist_decoder_arch_sources) \
 	$(nodist_encoder_uniq_arch_sources)
 libtheora_la_LDFLAGS = \
   -version-info @TH_LIB_CURRENT@:@TH_LIB_REVISION@:@TH_LIB_AGE@ \
