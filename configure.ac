@@ -72,7 +72,7 @@ AC_SUBST(ACLOCAL_AMFLAGS, "-I m4")
 
 dnl Check for doxygen
 AC_ARG_ENABLE([doc],
-	AS_HELP_STRING([--enable-doc], [Build API documentation]),
+	AS_HELP_STRING([--disable-doc], [Do not build API documentation]),
 	[ac_enable_doc=$enableval], [ac_enable_doc=auto])
 
 if test "x$ac_enable_doc" != "xno"; then
