@@ -19,8 +19,9 @@
  *
  * \section intro Introduction
  *
- * This is the documentation for <tt>libtheora</tt> C API.
- * The current reference
+ * This is the documentation for the <tt>libtheora</tt> C API.
+ *
+ * The \c libtheora package is the current reference
  * implementation for <a href="http://www.theora.org/">Theora</a>, a free,
  * patent-unencumbered video codec.
  * Theora is derived from On2's VP3 codec with additional features and
@@ -30,29 +31,31 @@
  * <a href="http://www.theora.org/doc/Theora.pdf">the Theora
  *  specification</a>.
  *
- * \subsection Organization
+ * \section Organization
  *
- * The functions documented here are actually subdivided into three
+ * The functions documented here are divided between two
  * separate libraries:
- * - <tt>libtheoraenc</tt> contains the encoder interface,
+ * - \c libtheoraenc contains the encoder interface,
  *   described in \ref encfuncs.
- * - <tt>libtheoradec</tt> contains the decoder interface and
- *   routines shared with the encoder.
- *   You must also link to this if you link to <tt>libtheoraenc</tt>.
- *   The routines in this library are described in \ref decfuncs and
- *   \ref basefuncs.
- * - <tt>libtheora</tt> contains the \ref oldfuncs.
+ * - \c libtheoradec contains the decoder interface,
+ *   described in \ref decfuncs, \n
+ *   and additional \ref basefuncs.
  *
- * New code should link to <tt>libtheoradec</tt> and, if using encoder
- * features, <tt>libtheoraenc</tt>. Together these two export both
- * the standard and the legacy API, so this is all that is needed by
- * any code. The older <tt>libtheora</tt> library is provided just for
- * compatibility with older build configurations.
+ * New code should link to \c libtheoradec. If using encoder
+ * features, it must also link to \c libtheoraenc.
  *
- * In general the recommended 1.x API symbols can be distinguished
- * by their <tt>th_</tt> or <tt>TH_</tt> namespace prefix.
- * The older, legacy API uses <tt>theora_</tt> or <tt>OC_</tt>
- * prefixes instead.
+ * During initial development, prior to the 1.0 release,
+ * \c libtheora exported a different \ref oldfuncs which
+ * combined both encode and decode functions.
+ * In general, legacy API symbols can be indentified
+ * by their \c theora_ or \c OC_ namespace prefixes.
+ * The current API uses \c th_ or \c TH_ instead.
+ *
+ * While deprecated, \c libtheoraenc and \c libtheoradec
+ * together export the legacy api as well at the one documented above.
+ * Likewise, the legacy \c libtheora included with this package
+ * exports the new 1.x API. Older code and build scripts can therefore
+ * but updated independently to the current scheme.
  */
 
 /**\file
@@ -448,7 +451,13 @@ typedef struct{
 
 /**\defgroup basefuncs Functions Shared by Encode and Decode*/
 /*@{*/
-/**\name Basic shared functions*/
+/**\name Basic shared functions
+ * These functions return information about the library itself,
+ * or provide high-level information about codec state
+ * and packet type.
+ *
+ * You must link to \c libtheoradec if you use any of the
+ * functions in this section.*/
 /*@{*/
 /**Retrieves a human-readable string to identify the library vendor and
  *  version.
@@ -510,7 +519,12 @@ extern int th_packet_iskeyframe(ogg_packet *_op);
 /*@}*/
 
 
-/**\name Functions for manipulating header data*/
+/**\name Functions for manipulating header data
+ * These functions manipulate the #th_info and #th_comment structures
+ * which describe video parameters and key-value metadata, respectively.
+ *
+ * You must link to \c libtheoradec if you use any of the
+ * functions in this section.*/
 /*@{*/
 /**Initializes a th_info structure.
  * This should be called on a freshly allocated #th_info structure before
