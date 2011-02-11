@@ -8,7 +8,7 @@ static_docs = vp3-format.txt color.html \
 
 doc_DATA = $(static_docs) doxygen-build.stamp
 
-EXTRA_DIST = $(static_docs) Doxyfile.in doxygen-build.stamp
+EXTRA_DIST = $(static_docs) Doxyfile.in
 
 if HAVE_DOXYGEN
 doxygen-build.stamp: Doxyfile $(top_srcdir)/include/theora/*.h
@@ -66,7 +66,7 @@ install-data-local: doxygen-build.stamp
 uninstall-local:
 	rm -rf $(DESTDIR)$(docdir)
 
-maintainer-clean-local:
+clean-local:
 	if test -d libtheora; then rm -rf libtheora; fi
 	if test -f doxygen-build.stamp; then rm -f doxygen-build.stamp; fi
 
