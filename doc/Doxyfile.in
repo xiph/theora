@@ -801,9 +801,10 @@ HTML_HEADER            =
 HTML_FOOTER            =
 
 # If the HTML_TIMESTAMP tag is set to YES then the generated HTML
-# documentation will contain the timesstamp.
+# documentation will contain the date when the page was generated.
+# Setting this to NO can help when comparing the output of multiple runs.
 
-HTML_TIMESTAMP         = NO
+HTML_TIMESTAMP         = YES
 
 # The HTML_STYLESHEET tag can be used to specify a user-defined cascading
 # style sheet that is used by each HTML page. It can be used to
@@ -838,12 +839,6 @@ HTML_COLORSTYLE_SAT    = 100
 # and 100 does not change the gamma.
 
 HTML_COLORSTYLE_GAMMA  = 80
-
-# If the HTML_TIMESTAMP tag is set to YES then the footer of each generated HTML
-# page will contain the date and time when the page was generated. Setting
-# this to NO can help when comparing the output of multiple runs.
-
-HTML_TIMESTAMP         = YES
 
 # If the HTML_ALIGN_MEMBERS tag is set to YES, the members of classes,
 # files or namespaces will be aligned in HTML using tables. If set to
