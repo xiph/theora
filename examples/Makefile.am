@@ -6,7 +6,7 @@ noinst_PROGRAMS = dump_video dump_psnr libtheora_info \
 	$(BUILDABLE_EXAMPLES)
 
 # possible contents of BUILDABLE_EXAMPLES:
-EXTRA_PROGRAMS = player_example encoder_example png2theora
+EXTRA_PROGRAMS = player_example encoder_example png2theora tiff2theora
 
 AM_CFLAGS = $(OGG_CFLAGS)
 LDADD = ../lib/libtheora.la $(OGG_LIBS)
@@ -36,6 +36,10 @@ encoder_example_LDADD = $(GETOPT_OBJS) $(LDADDENC) $(VORBIS_LIBS) $(VORBISENC_LI
 png2theora_SOURCES = png2theora.c
 png2theora_CFLAGS = $(OGG_CFLAGS) $(PNG_CFLAGS)
 png2theora_LDADD = $(GETOPT_OBJS) $(LDADDENC) $(PNG_LIBS) -lm
+
+tiff2theora_SOURCES = tiff2theora.c
+tiff2theora_CFLAGS = $(OGG_CFLAGS) $(TIFF_CFLAGS)
+tiff2theora_LDADD = $(GETOPT_OBJS) $(LDADDENC) $(TIFF_LIBS) -lm
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@"

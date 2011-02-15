@@ -253,3 +253,10 @@ png2theora.ParseConfig('pkg-config --cflags --libs libpng')
 png2theora.Append(LIBS=['m'])
 png2theora.Program('examples/png2theora', path('examples', png2theora_Sources))
 
+tiff2theora = env.Clone()
+tiff2theora_Sources = Split("""tiff2theora.c
+        ../lib/libtheoraenc.a
+        ../lib/libtheoradec.a
+""")
+tiff2theora.Append(LIBS=['tiff', 'm'])
+tiff2theora.Program('examples/tiff2theora', path('examples', tiff2theora_Sources))

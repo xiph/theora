@@ -469,6 +469,20 @@ fi
 AC_SUBST(PNG_CFLAGS)
 AC_SUBST(PNG_LIBS)
 
+dnl check for libtiff
+HAVE_TIFF=no
+TIFF_CFLAGS=''
+TIFF_LIBS=''
+AC_CHECK_LIB([tiff], [TIFFReadRGBAImage], [
+  TIFF_LIBS='-ltiff'
+  AC_CHECK_HEADER([tiffio.h], [
+    HAVE_TIFF=yes
+  ])
+])
+AC_SUBST(HAVE_TIFF)
+AC_SUBST(TIFF_CFLAGS)
+AC_SUBST(TIFF_LIBS)
+
 dnl check for libcairo
 HAVE_CAIRO=no
 AC_ARG_ENABLE(telemetry,
@@ -562,6 +576,9 @@ if test x$HAVE_SDL = xyes -a x$HAVE_OSS = xyes -a x$HAVE_VORBIS = xyes; then
 fi
 if test x$HAVE_PNG = xyes; then
   BUILDABLE_EXAMPLES="$BUILDABLE_EXAMPLES png2theora\$(EXEEXT)"
+fi
+if test x$HAVE_TIFF = xyes; then
+  BUILDABLE_EXAMPLES="$BUILDABLE_EXAMPLE tiff2theora\$(EXEEXT)"
 fi
 AC_SUBST(BUILDABLE_EXAMPLES)
 
