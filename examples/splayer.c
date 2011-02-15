@@ -378,7 +378,7 @@ PaError CloseAudioStream( PASTREAMIO_Stream *aStream );
  * Allocates PASTREAMIO_Stream structure.
  *
  * flags parameter can be an ORed combination of:
- *    PABLIO_WRITE, 
+ *    PABLIO_WRITE,
  *    and either PABLIO_MONO or PABLIO_STEREO
  */
 PaError OpenAudioStream( PASTREAMIO_Stream **rwblPtr, double sampleRate,
@@ -424,7 +424,7 @@ PaError OpenAudioStream( PASTREAMIO_Stream **rwblPtr, double sampleRate,
     {
         err = PASTREAMIO_InitFIFO( &aStream->outFIFO, numFrames, aStream->bytesPerFrame );
         if( err != paNoError ) goto error;
-        /* Make Write FIFO appear full initially. 
+        /* Make Write FIFO appear full initially.
         numBytes = RingBuffer_GetWriteAvailable( &aStream->outFIFO );
         RingBuffer_AdvanceWriteIndex( &aStream->outFIFO, numBytes );*/
     }
@@ -642,7 +642,7 @@ static void open_video(void){
     printf("Unable to initialize SDL: %s\n", SDL_GetError());
     exit(1);
   }
-  
+
   screen = SDL_SetVideoMode(ti.frame_width, ti.frame_height, 0, SDL_SWSURFACE);
   if ( screen == NULL ) {
     printf("Unable to set %dx%d video mode: %s\n",

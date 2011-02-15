@@ -60,9 +60,9 @@ static  int passno;
 
 static FILE *ogg_fp = NULL;
 static ogg_stream_state ogg_os;
-static ogg_packet op;   
+static ogg_packet op;
 static ogg_page og;
-    
+
 static th_enc_ctx      *td;
 static th_info          ti;
 
@@ -85,8 +85,8 @@ struct option options [] = {
  {"keyframe-freq",required_argument,NULL,'k'},
  {"buf-delay",required_argument,NULL,'d'},
  {"two-pass",no_argument,NULL,'\2'},
- {"first-pass",required_argument,NULL,'\3'}, 
- {"second-pass",required_argument,NULL,'\4'},  
+ {"first-pass",required_argument,NULL,'\3'},
+ {"second-pass",required_argument,NULL,'\4'},
  {NULL,0,NULL,0}
 };
 
@@ -131,7 +131,7 @@ static void usage(void){
           "                                  two-pass encoding.\n"
           "  --chroma-444                    Use 4:4:4 chroma subsampling\n"
           "  --chroma-422                    Use 4:2:2 chroma subsampling\n"
-          "                                  (4:2:0 is default)\n\n" 
+          "                                  (4:2:0 is default)\n\n"
           "  -s --aspect-numerator <n>       Aspect ratio numerator, default is 0\n"
           "  -S --aspect-denominator <n>     Aspect ratio denominator, default is 0\n"
           "  -f --framerate-numerator <n>    Frame rate numerator\n"
@@ -182,7 +182,7 @@ scandir (const char *dir, struct dirent ***namelist,
   if (i == 0) return(-1);
   if (compar != NULL)
     qsort((void *)(*namelist), (size_t)i, sizeof(struct dirent *), compar);
-    
+
   return(i);
 }
 #endif
@@ -256,13 +256,13 @@ theora_write_frame(th_ycbcr_buffer ycbcr, int last)
     return 1;
   }
 
-  if (passno!=1) { 
+  if (passno!=1) {
     ogg_stream_packetin(&ogg_os, &op);
     while(ogg_stream_pageout(&ogg_os, &og)) {
       fwrite(og.header, og.header_len, 1, ogg_fp);
       fwrite(og.body, og.body_len, 1, ogg_fp);
     }
-  }  
+  }
 
   return 0;
 }
@@ -303,14 +303,14 @@ rgb_to_yuv(png_bytep *png,
   yuv_y = ycbcr[0].data;
   yuv_u = ycbcr[1].data;
   yuv_v = ycbcr[2].data;
-  
+
   /*This ignores gamma and RGB primary/whitepoint differences.
     It also isn't terribly fast (though a decent compiler will
     strength-reduce the division to a multiplication).*/
 
   if (chroma_format == TH_PF_420) {
     for(y = 0; y < h; y += 2) {
-      y1=y+(y+1<h);      
+      y1=y+(y+1<h);
       for(x = 0; x < w; x += 2) {
         x1=x+(x+1<w);
         png_byte r0 = png[y][3 * x + 0];
@@ -325,12 +325,12 @@ rgb_to_yuv(png_bytep *png,
         png_byte r3 = png[y1][3 * x1 + 0];
         png_byte g3 = png[y1][3 * x1 + 1];
         png_byte b3 = png[y1][3 * x1 + 2];
-        
+
         yuv_y[x  + y * yuv_w]  = clamp((65481*r0+128553*g0+24966*b0+4207500)/255000);
         yuv_y[x1 + y * yuv_w]  = clamp((65481*r1+128553*g1+24966*b1+4207500)/255000);
         yuv_y[x  + y1 * yuv_w] = clamp((65481*r2+128553*g2+24966*b2+4207500)/255000);
         yuv_y[x1 + y1 * yuv_w] = clamp((65481*r3+128553*g3+24966*b3+4207500)/255000);
-        
+
         yuv_u[(x >> 1) + (y >> 1) * ycbcr[1].stride] =
           clamp( ((-33488*r0-65744*g0+99232*b0+29032005)/4 +
                   (-33488*r0-65744*g0+99232*b0+29032005)/4 +
@@ -365,10 +365,10 @@ rgb_to_yuv(png_bytep *png,
         png_byte r1 = png[y][3 * x1 + 0];
         png_byte g1 = png[y][3 * x1 + 1];
         png_byte b1 = png[y][3 * x1 + 2];
-        
+
         yuv_y[x  + y * yuv_w] = clamp((65481*r0+128553*g0+24966*b0+4207500)/255000);
         yuv_y[x1 + y * yuv_w] = clamp((65481*r1+128553*g1+24966*b1+4207500)/255000);
-        
+
         yuv_u[(x >> 1) + y * ycbcr[1].stride] =
           clamp( ((-33488*r0-65744*g0+99232*b0+29032005)/2 +
                   (-33488*r1-65744*g1+99232*b1+29032005)/2)/225930);
@@ -376,7 +376,7 @@ rgb_to_yuv(png_bytep *png,
           clamp( ((157024*r0-131488*g0-25536*b0+45940035)/2 +
                   (157024*r1-131488*g1-25536*b1+45940035)/2)/357510);
       }
-    }    
+    }
   }
 
 }
@@ -497,7 +497,7 @@ png_read(const char *pathname, unsigned int *w, unsigned int *h, th_ycbcr_buffer
   } else {
     if ((ycbcr[0].width != yuv_w) || (ycbcr[0].height != yuv_h)){
       fprintf(stderr, "Input size %lux%lu does not match %dx%d\n", yuv_w,yuv_h,ycbcr[0].width,ycbcr[0].height);
-      exit(1);            
+      exit(1);
     }
   }
 
@@ -525,7 +525,7 @@ static int ilog(unsigned _v){
   for(ret=0;_v;ret++)_v>>=1;
   return ret;
 }
-      
+
 int
 main(int argc, char *argv[])
 {
@@ -538,7 +538,7 @@ main(int argc, char *argv[])
   struct dirent **png_files;
   int soft_target=0;
   int ret;
-      
+
   while(1) {
 
     c=getopt_long(argc,argv,optstring,options,&long_option_index);
@@ -714,7 +714,7 @@ main(int argc, char *argv[])
       exit(1);
     }
 
-    if (passno!=2) fprintf(stderr,"%d frames, %dx%d\n",n,w,h);    
+    if (passno!=2) fprintf(stderr,"%d frames, %dx%d\n",n,w,h);
 
     /* setup complete.  Raw processing loop */
     switch(passno){
@@ -726,9 +726,9 @@ main(int argc, char *argv[])
       break;
     }
 
-    fprintf(stderr, "%s\n", input_png); 
+    fprintf(stderr, "%s\n", input_png);
 
-    th_info_init(&ti);    
+    th_info_init(&ti);
     ti.frame_width = ((w + 15) >>4)<<4;
     ti.frame_height = ((h + 15)>>4)<<4;
     ti.pic_width = w;
@@ -745,7 +745,7 @@ main(int argc, char *argv[])
     ti.quality = video_quality;
     ti.keyframe_granule_shift=ilog(keyframe_frequency-1);
 
-    td=th_encode_alloc(&ti);  
+    td=th_encode_alloc(&ti);
     th_info_clear(&ti);
     /* setting just the granule shift only allows power-of-two keyframe
        spacing.  Set the actual requested spacing. */
@@ -838,7 +838,7 @@ main(int argc, char *argv[])
     /* first packet will get its own page automatically */
     if(th_encode_flushheader(td,&tc,&op)<=0){
       fprintf(stderr,"Internal Theora library error.\n");
-      exit(1); 
+      exit(1);
     }
     th_comment_clear(&tc);
     if(passno!=1){
@@ -893,7 +893,7 @@ main(int argc, char *argv[])
           exit(1);
         }
        fprintf(stderr, "%s\n", input_png);
-      }      
+      }
     } while (!last);
 
     if(passno==1){
@@ -923,13 +923,13 @@ main(int argc, char *argv[])
   if(ogg_stream_flush(&ogg_os, &og)) {
     fwrite(og.header, og.header_len, 1, ogg_fp);
     fwrite(og.body, og.body_len, 1, ogg_fp);
-  }            
+  }
 
   free(input_directory);
   free(input_filter);
 
   while (n--) free(png_files[n]);
-  free(png_files);  
+  free(png_files);
 
   if(ogg_fp){
     fflush(ogg_fp);
