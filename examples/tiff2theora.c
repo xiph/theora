@@ -410,7 +410,7 @@ tiff_read(const char *pathname,
     TIFFClose(tiff);
     return 1;
   }
-  if(!TIFFReadRGBAImage(tiff, width, height, raster, 0)) {
+  if(!TIFFReadRGBAImage(tiff, width, height, raster, 1)) {
     fprintf(stderr, "%s: error: couldn't read tiff data.\n", pathname);
     free(raster);
     TIFFClose(tiff);
