@@ -510,8 +510,7 @@ oc_frag_recon_intra_neon PROC
 	; r0 =       unsigned char *_dst
 	; r1 =       int            _ystride
 	; r2 = const ogg_int16_t    _residue[64]
-	MOV	r3, #128
-	VDUP.S16	Q0, r3
+	VMOV.I16	Q0, #128
 	VLDMIA	r2,  {D16-D31}	; D16= 3333222211110000 etc	; 9(8) cycles
 	VQADD.S16	Q8, Q8, Q0
 	VQADD.S16	Q9, Q9, Q0

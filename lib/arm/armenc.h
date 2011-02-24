@@ -31,6 +31,13 @@ void oc_enc_accel_init_arm(oc_enc_ctx *_enc);
 #  if defined(OC_ARM_ASM_EDSP)
 #   if defined(OC_ARM_ASM_MEDIA)
 #    if defined(OC_ARM_ASM_NEON)
+unsigned oc_enc_frag_satd_neon(int *_dc,const unsigned char *_src,
+ const unsigned char *_ref,int _ystride);
+unsigned oc_enc_frag_satd2_neon(int *_dc,const unsigned char *_src,
+ const unsigned char *_ref1,const unsigned char *_ref2,int _ystride);
+unsigned oc_enc_frag_intra_satd_neon(int *_dc,
+ const unsigned char *_src,int _ystride);
+
 void oc_enc_enquant_table_init_neon(void *_enquant,
  const ogg_uint16_t _dequant[64]);
 void oc_enc_enquant_table_fixup_neon(void *_enquant[3][3][2],int _nqis);

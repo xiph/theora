@@ -12,6 +12,7 @@ EXTRA_DIST = \
 	arm/armidct.s \
 	arm/armint.h \
 	arm/armenc.h \
+	arm/armencfrag.s \
 	arm/armenquant.s \
 	c64x/c64xint.h \
 	c64x/c64xdec.h \
@@ -64,6 +65,7 @@ encoder_shared_x86_sources = \
 encoder_shared_x86_64_sources =
 
 encoder_uniq_arm_sources = \
+	armencfrag-gnu.S \
 	armenquant-gnu.S \
 	arm/armenc.c
 
@@ -288,12 +290,14 @@ CLEANFILES = \
 	armidct-gnu.S \
 	armloop-gnu.S \
 	armopts-gnu.S \
+	armencfrag-gnu.S
 	armenquant-gnu.S
 
 # automake doesn't do dependency tracking for asm files, that I can tell
 armfrag-gnu.S: armopts-gnu.S
 armidct-gnu.S: armopts-gnu.S
 armloop-gnu.S: armopts-gnu.S
+armencfrag-gnu.S: armopts-gnu.S
 armenquant-gnu.S: armopts-gnu.S
 
 # convert ARM asm to GNU as format

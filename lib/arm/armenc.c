@@ -40,6 +40,9 @@ void oc_enc_accel_init_arm(oc_enc_ctx *_enc){
 #   if defined(OC_ARM_ASM_NEON)
   if(cpu_flags&OC_CPU_ARM_NEON){
 #    if defined(OC_STATE_USE_VTABLE)
+    _enc->opt_vtable.frag_satd=oc_enc_frag_satd_neon;
+    _enc->opt_vtable.frag_satd2=oc_enc_frag_satd2_neon;
+    _enc->opt_vtable.frag_intra_satd=oc_enc_frag_intra_satd_neon;
     _enc->opt_vtable.enquant_table_init=oc_enc_enquant_table_init_neon;
     _enc->opt_vtable.enquant_table_fixup=oc_enc_enquant_table_fixup_neon;
     _enc->opt_vtable.quantize=oc_enc_quantize_neon;
