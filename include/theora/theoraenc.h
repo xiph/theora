@@ -382,7 +382,8 @@ extern "C" {
 /*@{*/
 /**Drop frames to keep within bitrate buffer constraints.
  * This can have a severe impact on quality, but is the only way to ensure that
- *  bitrate targets are met at low rates during sudden bursts of activity.*/
+ *  bitrate targets are met at low rates during sudden bursts of activity.
+ * It is enabled by default.*/
 #define TH_RATECTL_DROP_FRAMES   (0x1)
 /**Ignore bitrate buffer overflows.
  * If the encoder uses so few bits that the reservoir of available bits
@@ -390,14 +391,14 @@ extern "C" {
  * The encoder will not try to use these extra bits in future frames.
  * At high rates this may cause the result to be undersized, but allows a
  *  client to play the stream using a finite buffer; it should normally be
- *  enabled.*/
+ *  enabled, which is the default.*/
 #define TH_RATECTL_CAP_OVERFLOW  (0x2)
 /**Ignore bitrate buffer underflows.
  * If the encoder uses so many bits that the reservoir of available bits
  *  underflows, ignore the deficit.
  * The encoder will not try to make up these extra bits in future frames.
  * At low rates this may cause the result to be oversized; it should normally
- *  be disabled.*/
+ *  be disabled, which is the default.*/
 #define TH_RATECTL_CAP_UNDERFLOW (0x4)
 /*@}*/
 
