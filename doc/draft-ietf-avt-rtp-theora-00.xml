@@ -3,7 +3,7 @@
 <?rfc toc="yes" ?>
 <?rfc compact='yes'?>
 
-<rfc ipr="full3978" docName="RTP Payload Format for Theora Encoded Video">
+<rfc ipr="trust200902" docName="RTP Payload Format for Theora Encoded Video">
 
 <front>
 <title>draft-ietf-avt-rtp-theora-00</title>
@@ -16,7 +16,7 @@
 </address>
 </author>
 
-<date day="21" month="July" year="2006" /> 
+<date day="21" month="July" year="2006" />
 <area>General</area>
 <workgroup>AVT Working Group</workgroup>
 <keyword>I-D</keyword>
@@ -70,7 +70,7 @@ Theora is similar to the Vorbis audio <xref target="vorbisrtp"></xref> in that t
 <section anchor="Terminology" title="Terminology">
 
 <t>
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", 
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY",
 and "OPTIONAL" in this document are to be interpreted as described in RFC 2119 <xref target="rfc2119"></xref>.
 </t>
 
@@ -90,7 +90,7 @@ For RTP based transport of Theora encoded video the standard RTP header is follo
 <section anchor="RTP Header" title="RTP Header">
 
 <t>
-The format of the RTP header is specified in <xref target="rfc3550"></xref> and shown in Figure 1. This payload format uses the fields of the header in a manner consistent with that specification. 
+The format of the RTP header is specified in <xref target="rfc3550"></xref> and shown in Figure 1. This payload format uses the fields of the header in a manner consistent with that specification.
 </t>
 
 <figure anchor="RTP Header Figure" title="RTP Header">
@@ -172,9 +172,9 @@ The 4 octets following the RTP Header section represent the Payload Header. This
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |               Configuration Ident             | F |TDT|# pkts.| 
+   |               Configuration Ident             | F |TDT|# pkts.|
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   
+
    +-+-+-+-+-+-+-+-+
 ]]></artwork>
 </figure>
@@ -203,7 +203,7 @@ This field is set according to the following list
 <t>
 Theora Data Type (TDT): 2 bits</t>
 <t>
-This field sets the packet payload type for the Theora data.  There are currently three Theora payload types currently used and one reserved for future use. 
+This field sets the packet payload type for the Theora data.  There are currently three Theora payload types currently used and one reserved for future use.
 </t>
 
 <vspace blankLines="1" />
@@ -386,7 +386,7 @@ A Theora Packed Configuration is identified by a payload type field of 1. Of the
 This section, as stated above, does not cover all the possible out-of-band delivery methods since they rely on different protocols and are linked to specific applications. The following packet definition SHOULD be used in out-of-band delivery and MUST be used when Configuration is inlined in the SDP.
 </t>
 
-<section anchor="Packed Headers" title="Packed Headers"> 
+<section anchor="Packed Headers" title="Packed Headers">
 
 <t>
 As mentioned above, the recommended delivery vector for Theora configuration data is via a retrieval method that can be performed using a reliable transport protocol. As the RTP headers are not required for this method of delivery the structure of the configuration data is slightly different. The packed header starts with a 32 bit count field which details the number of packed headers that are contained in the bundle. Next is the Packed header payload for each setup id.
@@ -430,7 +430,7 @@ Since the Configuration Ident and the Identification Header are fixed length the
 <t>The key difference from the in-band format is that there is no need for the payload header octet.
 </t>
 
-<section anchor="Packed Headers IANA Considerations" title="Packed Headers IANA Considerations"> 
+<section anchor="Packed Headers IANA Considerations" title="Packed Headers IANA Considerations">
 
 <t>
 The following IANA considerations MUST only be applied to the packed headers.
@@ -497,7 +497,7 @@ Theora encoded video, configuration data.
 
 <vspace blankLines="1" />
 
-<t hangText="Additional information:"> 
+<t hangText="Additional information:">
 <vspace blankLines="1" />
 None
 </t>
@@ -542,7 +542,7 @@ IETF AVT Working Group</t>
 
 </section>
 
-<section anchor="Loss of Configuration Headers" title="Loss of Configuration Headers"> 
+<section anchor="Loss of Configuration Headers" title="Loss of Configuration Headers">
 
 <t>
 Unlike the loss of raw Theora payload data, the loss of a configuration header can lead to a situation where it will not be possible to successfully decode the stream.
@@ -720,7 +720,7 @@ Loss of any of the Configuration fragment will result in the loss of the full Co
 </section>
 </section>
 
-<section anchor="IANA Considerations" title="IANA Considerations"> 
+<section anchor="IANA Considerations" title="IANA Considerations">
 
 <vspace blankLines="1" />
 
@@ -744,7 +744,7 @@ Loss of any of the Configuration fragment will result in the loss of the full Co
 
 <vspace blankLines="1" />
 
-<t hangText="width:"> Determines the number of pixels per line. This is an integer between 1 and 1048561 and MUST be in multiples of 16. 
+<t hangText="width:"> Determines the number of pixels per line. This is an integer between 1 and 1048561 and MUST be in multiples of 16.
 </t>
 
 <vspace blankLines="1" />
@@ -855,7 +855,7 @@ This media type depends on RTP framing, and hence is only defined for transfer v
 
 </list>
 
-<section anchor="Mapping MIME Parameters into SDP" title="Mapping MIME Parameters into SDP"> 
+<section anchor="Mapping MIME Parameters into SDP" title="Mapping MIME Parameters into SDP">
 
 <t>
 The information carried in the MIME media type specification has a specific mapping to fields in the Session Description Protocol (SDP) <xref target="rfc2327"></xref>, which is commonly used to describe RTP sessions.  When SDP is used to specify sessions the mapping are as follows:
@@ -950,14 +950,14 @@ The following examples are common usage patterns that MAY be applied in such sit
 
 </section>
 
-<section anchor="Security Considerations" title="Security Considerations"> 
+<section anchor="Security Considerations" title="Security Considerations">
 <t>
 RTP packets using this payload format are subject to the security considerations discussed in the RTP specification <xref target="rfc3550"></xref>. This implies that the confidentiality of the media stream is achieved by using encryption. Because the data compression used with this payload format is applied end-to-end, encryption may be performed on the compressed data. Where the size of a data block is set care MUST be taken to prevent buffer overflows in the client applications.
 </t>
 
-</section> 
+</section>
 
-<section anchor="Acknowledgments" title="Acknowledgments"> 
+<section anchor="Acknowledgments" title="Acknowledgments">
 
 <t>This document is a continuation of draft-kerr-avt-theora-rtp-00.txt</t>
 
@@ -965,7 +965,7 @@ RTP packets using this payload format are subject to the security considerations
 Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike Smith, Phil Kerr, Timothy Terriberry, Stefan Ehmann, Alessandro Salvatori, Politecnico di Torino (LS)³/IMG Group in particular Federico Ridolfo, Francesco Varano, Giampaolo Mancini, Juan Carlos De Martin.
 </t>
 
-</section> 
+</section>
 
 </middle>
 
@@ -987,7 +987,7 @@ Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike
 <author initials="S." surname="Bradner" fullname="Scott Bradner"></author>
 </front>
 <seriesInfo name="RFC" value="2119" />
-</reference> 
+</reference>
 
 <reference anchor="rfc3550">
 <front>
@@ -998,7 +998,7 @@ Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike
 <author initials="V." surname="Jacobson" fullname=""></author>
 </front>
 <seriesInfo name="RFC" value="3550" />
-</reference> 
+</reference>
 
 <reference anchor="rfc3551">
 <front>
@@ -1008,7 +1008,7 @@ Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike
 </front>
 <date month="July" year="2003" />
 <seriesInfo name="RFC" value="3551" />
-</reference> 
+</reference>
 
 <reference anchor="rfc3264">
 <front>
@@ -1017,7 +1017,7 @@ Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike
 <author initials="H." surname="Schulzrinne" fullname="Henning Schulzrinne"></author>
 </front>
 <seriesInfo name="RFC" value="3264" />
-</reference> 
+</reference>
 
 <reference anchor="rfc2327">
 <front>
@@ -1034,7 +1034,7 @@ Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike
 <author initials="J." surname="Mogul et al." fullname="J. Mogul et al."></author>
 </front>
 <seriesInfo name="RFC" value="1063" />
-</reference> 
+</reference>
 
 <reference anchor="rfc1981">
 <front>
@@ -1042,7 +1042,7 @@ Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike
 <author initials="J." surname="McCann et al." fullname="J. McCann et al."></author>
 </front>
 <seriesInfo name="RFC" value="1981" />
-</reference> 
+</reference>
 
 <reference anchor="rtcp-feedback">
 <front>
@@ -1054,7 +1054,7 @@ Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike
 <author initials="J." surname="Rey" fullname="Jose Rey"></author>
 </front>
 <seriesInfo name="Internet Draft" value="(draft-ietf-avt-rtcp-feedback-11: Work in progress)" />
-</reference> 
+</reference>
 
 <reference anchor="vorbisrtp">
 <front>
@@ -1062,7 +1062,7 @@ Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike
 <author initials="L." surname="Barbato" fullname="Luca Barbato"></author>
 </front>
 <seriesInfo name="Internet Draft" value="(Work in progress)" />
-</reference> 
+</reference>
 
 <reference anchor="rfc3548">
 <front>
@@ -1110,7 +1110,7 @@ Thanks to the AVT, Ogg Theora Communities / Xiph.org, Fluendo, Ralph Giles, Mike
 <front>
 <title>Theora I specification:  Codec setup and packet decode.  http://www.xiph.org/theora/doc/Theora_I_spec.pdf</title>
 </front>
-</reference> 
+</reference>
 
 <reference anchor='rfc3611'>
 
