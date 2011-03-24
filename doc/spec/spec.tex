@@ -115,7 +115,7 @@ The prefix \bin{} indicates that the following value is to be interpreted as a
 {\bf Example:} The value \bin{1110100} is equal to the decimal value 116.
 \end{verse}
 
-The prefix \hex{} indicates the the following value is to be interpreted as a
+The prefix \hex{} indicates the following value is to be interpreted as a
  hexadecimal number (base 16).
 \begin{verse}
 {\bf Example:} The value \hex{74} is equal to the decimal value 116.
@@ -5410,13 +5410,13 @@ Those \qi\ values are applied only to the AC coefficients.
 \locvar{W}        & \multicolumn{1}{p{40pt}}{Integer Array} &
                                7 & Yes & A 4-element array of the weights to
  apply to each neighboring DC value. \\
-\locvar{PDIV}     & Integer &  8 & No  & The valud to divide the weighted sum
+\locvar{PDIV}     & Integer &  8 & No  & The value to divide the weighted sum
  by. \\
 \locvar{\bj}      & Integer & 36 & No  & The index of a neighboring block in
  coded order. \\
 \locvar{\mbi}     & Integer & 32 & No  & The index of the macro block
  containing block \bitvar{\bi}. \\
-\locvar{\mbi}     & Integer & 32 & No  & The index of the macro block
+\locvar{\mbj}     & Integer & 32 & No  & The index of the macro block
  containing block \locvar{\bj}. \\
 \locvar{\rfi}     & Integer &  2 & No  & The index of the reference frame
  indicated by the coding mode for macro block \locvar{\mbi}. \\
@@ -5528,7 +5528,7 @@ Otherwise, assign $\locvar{P}[1]$ the value zero.
 Otherwise, assign $\locvar{P}[1]$ the value zero.
 
 \item
-If block \bitvar{\bi} is not along the the bottom edge of the coded frame:
+If block \bitvar{\bi} is not along the bottom edge of the coded frame:
 \begin{enumerate}
 \item
 Assign \locvar{\bj} the coded-order index of block \bitvar{\bi}'s lower
@@ -5607,7 +5607,7 @@ Assign the array \locvar{W} and the variable \locvar{PDIV} the values from the
 \multicolumn{1}{p{25pt}}{\centering$\locvar{P}[1]$ (DL)} &
 \multicolumn{1}{p{25pt}}{\centering$\locvar{P}[2]$ (D)} &
 \multicolumn{1}{p{25pt}}{\centering$\locvar{P}[3]$ (DR)} &
-\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[3]$ (L)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[0]$ (L)} &
 \multicolumn{1}{p{25pt}}{\centering$\locvar{W}[1]$ (DL)} &
 \multicolumn{1}{p{25pt}}{\centering$\locvar{W}[2]$ (D)} &
 \multicolumn{1}{p{25pt}}{\centering$\locvar{W}[3]$ (DR)} &
