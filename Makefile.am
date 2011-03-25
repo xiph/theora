@@ -13,10 +13,6 @@ endif
 SUBDIRS = lib include doc tests m4 $(EXAMPLES_DIR)
 
 
-# we include the whole debian/ dir in EXTRA_DIST because there's a problem
-# with autotools and HFS+ MacOSX file systems that caused debian/Makefile.am
-# to pick up on the lowercase changelog file and add ChangeLog to DIST_COMMON
-# because of it, breaking make dist.  This works just as well.
 EXTRA_DIST = \
 	README CHANGES COPYING LICENSE \
 	autogen.sh win32 macosx symbian SConstruct \
