@@ -670,9 +670,7 @@ extern ogg_int64_t theora_granule_frame(theora_state *th,ogg_int64_t granulepos)
  *          This is the "end time" for the frame, or the latest time it should
  *           be displayed.
  *          It is not the presentation time.
- * \retval -1. The given granulepos is undefined (i.e. negative), or
- * \retval -1. The function has been disabled because floating
- *              point support is not available.
+ * \retval -1. The given granulepos is undefined (i.e. negative).
  */
 extern double theora_granule_time(theora_state *th,ogg_int64_t granulepos);
 
