@@ -330,7 +330,11 @@ extern "C" {
  * \retval 0             Success.
  * \retval TH_EFAULT     \a _enc or \a _buf is <tt>NULL</tt>.
  * \retval TH_EINVAL     The target bitrate was not positive.
- * \retval TH_EIMPL       Not supported by this implementation.*/
+ *                       A future version of this library may allow passing 0
+ *                        to disabled rate-controlled mode and return to a
+ *                        quality-based mode, in which case this function will
+ *                        not return an error for that value.
+ * \retval TH_EIMPL      Not supported by this implementation.*/
 #define TH_ENCCTL_SET_BITRATE (30)
 /**Sets the configuration to be compatible with that from the given setup
  *  header.
