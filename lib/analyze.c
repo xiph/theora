@@ -1866,7 +1866,7 @@ static void oc_analyze_mb_mode_luma(oc_enc_ctx *_enc,
         best_qii=qii;
       }
     }
-    if(_skip_ssd[bi]<(UINT_MAX>>OC_BIT_SCALE)&&nskipped<3){
+    if(_skip_ssd[bi]<(UINT_MAX>>OC_BIT_SCALE+2)&&nskipped<3){
       *(ft+1)=*&fr;
       oc_fr_skip_block(ft+1);
       cur_overhead=ft[1].bits-fr.bits<<OC_BIT_SCALE;
@@ -1947,7 +1947,7 @@ static void oc_analyze_mb_mode_chroma(oc_enc_ctx *_enc,
           best_qii=qii;
         }
       }
-      if(_skip_ssd[bi]<(UINT_MAX>>OC_BIT_SCALE)){
+      if(_skip_ssd[bi]<(UINT_MAX>>OC_BIT_SCALE+2)){
         cur_ssd=_skip_ssd[bi]<<OC_BIT_SCALE;
         cur_cost=OC_MODE_RD_COST(ssd+cur_ssd,rate,lambda);
         if(cur_cost<=best_cost){
