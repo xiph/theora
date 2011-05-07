@@ -337,7 +337,7 @@ static void open_video(void){
     yuv_overlay = SDL_CreateYUVOverlay(w, h,
                                      SDL_YV12_OVERLAY,
                                      screen);
-  
+
   if ( (yuv_overlay == NULL && px_fmt!=TH_PF_444) || (screen == NULL && px_fmt==TH_PF_444) ) {
     fprintf(stderr, "SDL: xCouldn't create SDL_yuv_overlay: %s\n",
             SDL_GetError());
@@ -373,7 +373,7 @@ static void video_write(void){
 
   if (px_fmt==TH_PF_422) {
     uv_offset=(ti.pic_x/2)+(yuv[1].stride)*(ti.pic_y);
-    /* SDL doesn't have a planar 4:2:2 */ 
+    /* SDL doesn't have a planar 4:2:2 */
     for(i=0;i<yuv_overlay->h;i++) {
       int j;
       char *in_y  = (char *)yuv[0].data+y_offset+yuv[0].stride*i;
@@ -404,7 +404,7 @@ static void video_write(void){
         out[4*j+0]=OC_CLAMP255(b);
         out[4*j+1]=OC_CLAMP255(g);
         out[4*j+2]=OC_CLAMP255(r);
-      }  
+      }
       output=SDL_CreateRGBSurfaceFrom(RGBbuffer,screen->w,screen->h,32,4*screen->w,0,0,0,0);
       SDL_BlitSurface(output,NULL,screen,NULL);
     }
@@ -432,7 +432,7 @@ static void video_write(void){
     SDL_UnlockYUVOverlay(yuv_overlay);
     /* Show, baby, show! */
     SDL_DisplayYUVOverlay(yuv_overlay, &rect);
-  } else { 
+  } else {
     SDL_Flip(screen);
   }
 }
@@ -667,9 +667,9 @@ int main(int argc,char *const *argv){
     th_info_clear(&ti);
     th_comment_clear(&tc);
   }
-  
+
   th_setup_free(ts);
-  
+
   if(vorbis_p){
     vorbis_synthesis_init(&vd,&vi);
     vorbis_block_init(&vd,&vb);
