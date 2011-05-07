@@ -58,6 +58,16 @@
 \numberwithin{figure}{chapter}
 \numberwithin{table}{chapter}
 
+%Provide section numbering for \paragraph.
+\makeatletter
+\renewcommand{\paragraph}{\@startsection{paragraph}{4}{0ex}%
+ {-3.25ex plus -1ex minus -0.2ex}%
+ {1.5ex plus 0.2ex}%
+ {\normalfont\normalsize\bfseries}}
+\makeatother
+\stepcounter{secnumdepth}
+\stepcounter{tocdepth}
+
 \keepXColumns
 
 \pagestyle{headings}
@@ -105,7 +115,7 @@ The prefix \bin{} indicates that the following value is to be interpreted as a
 {\bf Example:} The value \bin{1110100} is equal to the decimal value 116.
 \end{verse}
 
-The prefix \hex{} indicates the the following value is to be interpreted as a
+The prefix \hex{} indicates the following value is to be interpreted as a
  hexadecimal number (base 16).
 \begin{verse}
 {\bf Example:} The value \hex{74} is equal to the decimal value 116.
@@ -4094,14 +4104,15 @@ In INTER\_MV\_FOUR mode, all four blocks in the luma plane are assigned their
 For INTER\_MV and INTER\_GOLDEN\_MV modes, a single motion vector is decoded
  and applied to each block.
 For INTER\_MV\_FOUR macro blocks, a motion vector is decoded for each coded
- luma block.
+ luma block, in raster order, not coded order.
 Uncoded luma blocks receive the default $(0,0)$ vector for the purposes of
  computing the chroma motion vectors.
 
 None of the remaining macro block coding modes require decoding motion vectors
  from the stream.
-INTRA mode does not use a motion-compensated predictor, and so requires no
- motion vector, and INTER\_NOMV and INTER\_GOLDEN\_NOMV modes use the default
+INTRA mode does not use a motion-compensated predictor, and thus does not
+ require a motion vector.
+Both the INTER\_NOMV and the INTER\_GOLDEN\_NOMV modes use the default
  vector $(0,0)$ for each block.
 This also includes all macro blocks with no coded luma blocks, as they are
  coded in INTER\_NOMV mode by definition.
@@ -4112,10 +4123,12 @@ The modes INTER\_MV\_LAST and INTER\_MV\_LAST2 use the motion vector from the
 Thus no explicit motion vector needs to be decoded for these modes.
 Macro blocks coded in INTRA mode or one of the GOLDEN modes are not considered
  in this process.
+For macro blocks coded in INTER\_MV\_FOUR mode, this process uses the vector
+ from the last coded luma block in the macro block, again in raster order, not
+ coded order.
+This is usually the upper-right block.
 If an insufficient number of macro blocks have been coded in one of the INTER
  modes, then the $(0,0)$ vector is used instead.
-For macro blocks coded in INTER\_MV\_FOUR mode, the vector from the upper-right
- luma block is used, even if the upper-right block is not coded.
 
 The motion vectors are decoded from the stream as follows:
 
@@ -5397,13 +5410,13 @@ Those \qi\ values are applied only to the AC coefficients.
 \locvar{W}        & \multicolumn{1}{p{40pt}}{Integer Array} &
                                7 & Yes & A 4-element array of the weights to
  apply to each neighboring DC value. \\
-\locvar{PDIV}     & Integer &  8 & No  & The valud to divide the weighted sum
+\locvar{PDIV}     & Integer &  8 & No  & The value to divide the weighted sum
  by. \\
 \locvar{\bj}      & Integer & 36 & No  & The index of a neighboring block in
  coded order. \\
 \locvar{\mbi}     & Integer & 32 & No  & The index of the macro block
  containing block \bitvar{\bi}. \\
-\locvar{\mbi}     & Integer & 32 & No  & The index of the macro block
+\locvar{\mbj}     & Integer & 32 & No  & The index of the macro block
  containing block \locvar{\bj}. \\
 \locvar{\rfi}     & Integer &  2 & No  & The index of the reference frame
  indicated by the coding mode for macro block \locvar{\mbi}. \\
@@ -5515,7 +5528,7 @@ Otherwise, assign $\locvar{P}[1]$ the value zero.
 Otherwise, assign $\locvar{P}[1]$ the value zero.
 
 \item
-If block \bitvar{\bi} is not along the the bottom edge of the coded frame:
+If block \bitvar{\bi} is not along the bottom edge of the coded frame:
 \begin{enumerate}
 \item
 Assign \locvar{\bj} the coded-order index of block \bitvar{\bi}'s lower
@@ -5594,7 +5607,7 @@ Assign the array \locvar{W} and the variable \locvar{PDIV} the values from the
 \multicolumn{1}{p{25pt}}{\centering$\locvar{P}[1]$ (DL)} &
 \multicolumn{1}{p{25pt}}{\centering$\locvar{P}[2]$ (D)} &
 \multicolumn{1}{p{25pt}}{\centering$\locvar{P}[3]$ (DR)} &
-\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[3]$ (L)} &
+\multicolumn{1}{p{25pt}}{\centering$\locvar{W}[0]$ (L)} &
 \multicolumn{1}{p{25pt}}{\centering$\locvar{W}[1]$ (DL)} &
 \multicolumn{1}{p{25pt}}{\centering$\locvar{W}[2]$ (D)} &
 \multicolumn{1}{p{25pt}}{\centering$\locvar{W}[3]$ (DR)} &
@@ -6282,6 +6295,14 @@ A compliant decoder MUST use the exact implementation of the inverse DCT
 Some operations may be re-ordered, but the result must be precisely equivalent.
 This is a design decision that limits some avenues of decoder optimization, but
  prevents any drift in the prediction loop.
+The full inverse DCT described in this section is only used when there is at
+ least one non-zero AC coefficient.
+Otherwise, a special DC-only case is used, which is described below in
+ step~\ref{step:dc-only-idct} of Section~\ref{sub:recon}.
+The DC-only special case is not exactly equivalent to applying the full inverse
+ transform, because it avoids the intermediate multiplications and truncation,
+ and it MUST be used in place of the full transform to ensure bit-exact decode.
+
 Theora uses a 16-bit integerized approximation of of the 8-point 1D inverse DCT
  based on the Chen factorization \cite{CSF77}.
 It requires 16 multiplications and 26 additions and subtractions.
@@ -7012,6 +7033,7 @@ Otherwise, use the values \locvar{REFP}, \locvar{RPW}, \locvar{RPH},
  Section~\ref{sub:predhalfpel}.
 \end{enumerate}
 \item
+\label{step:dc-only-idct}
 If $\bitvar{NCOEFFS}[\locvar{\bi}]$ is less than 2:
 \begin{enumerate}
 \item
@@ -7731,7 +7753,8 @@ Using \locvar{FTYPE}, \bitvar{NMBS}, \bitvar{NBS}, and \bitvar{BCODED}, decode
 \item
 If \locvar{FTYPE} is non-zero (inter frame), using \bitvar{PF}, \bitvar{NMBS},
  \locvar{MBMODES}, \bitvar{NBS}, and \locvar{BCODED}, decode the motion vectors
- into \locvar{MVECTS} using the procedure given in Section~\ref{sub:mv-decode}.
+ into \locvar{MVECTS} using the procedure given in
+ Section~\ref{sub:mb-mv-decode}.
 \item
 Using \bitvar{NBS}, \locvar{BCODED}, and \locvar{NQIS}, decode the block-level
  \qi\ values into \locvar{QIIS} using the procedure given in
@@ -8117,7 +8140,7 @@ The remaining parameters simply assign these matrices to the proper quant
 \begin{align*}
 \bitvar{NQRS}    = & \{ \{1, 1, 1\}, \{1, 1, 1\} \} \\
 \bitvar{QRSIZES} = &
- \{ \{ \{1\}, \{1\}, \{1\} \}, \{ \{1\}, \{1\}, \{1\} \} \} \\
+ \{ \{ \{63\}, \{63\}, \{63\} \}, \{ \{63\}, \{63\}, \{63\} \} \} \\
 \bitvar{QRBMIS}  = &
  \{ \{ \{0, 0\}, \{1, 1\}, \{1, 1\} \}, \{ \{2, 2\}, \{2, 2\}, \{2, 2\} \} \} \\
 \end{align*}
