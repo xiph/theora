@@ -86,15 +86,15 @@ fi
 
 dnl Check for tools used to build the format specification
 BUILD_SPEC="false"
-ac_build_spec=yes
+ac_build_spec=no
 AC_ARG_ENABLE(spec,
-     AS_HELP_STRING([--disable-spec], [Do not build the specification]),
+     AS_HELP_STRING([--enable-spec], [(re)build the specification document]),
      [
-       if test "x$enableval" = "xno"; then
+       if test "x$enableval" = "xyes"; then
          ac_build_spec=$enableval
        fi
      ], [
-       ac_build_spec=yes
+       ac_build_spec=no
      ] )
 if test "x$ac_build_spec" = "xyes"; then
   AC_CHECK_PROG(HAVE_PDFLATEX, pdflatex, yes)
