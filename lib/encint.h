@@ -719,7 +719,7 @@ struct th_enc_ctx{
   /*Storage for the quantization tables.*/
   unsigned char           *enquant_table_data;
   /*An "average" quantizer for each frame type (INTRA or INTER) and qi value.
-    This is used to paramterize the rate control decisions.
+    This is used to parameterize the rate control decisions.
     They are kept in the log domain to simplify later processing.
     These are DCT domain quantizers, and so are scaled by an additional factor
      of 4 from the pixel domain.*/

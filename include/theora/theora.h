@@ -201,7 +201,7 @@ typedef enum {
  *
  * See <a href="http://svn.xiph.org/trunk/theora/examples/encoder_example.c">
  * examples/encoder_example.c</a> for usage examples of the
- * other paramters and good default settings for the encoder parameters.
+ * other parameters and good default settings for the encoder parameters.
  */
 typedef struct {
   ogg_uint32_t  width;		/**< encoded frame width  */
