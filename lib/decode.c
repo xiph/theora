@@ -2705,8 +2705,8 @@ int th_decode_ycbcr_out(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr){
                 }break;
                 /*Plus:*/
                 case 1:{
-                  if(bi&2==0)yp-=2;
-                  if(bi&1==0)xp-=2;
+                  if((bi&2)==0)yp-=2;
+                  if((bi&1)==0)xp-=2;
                   cairo_move_to(c,xp+4.5,yp+2.5);
                   cairo_line_to(c,xp+4.5,yp+6.5);
                   cairo_move_to(c,xp+2.5,yp+4.5);
