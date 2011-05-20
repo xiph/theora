@@ -654,14 +654,14 @@ int main(int argc,char *const *argv){
     th_decode_ctl(td,TH_DECCTL_SET_PPLEVEL,&pp_level,sizeof(pp_level));
     pp_inc=0;
 
-    /*{
+    {
       int arg = 0xffff;
       th_decode_ctl(td,TH_DECCTL_SET_TELEMETRY_MBMODE,&arg,sizeof(arg));
       th_decode_ctl(td,TH_DECCTL_SET_TELEMETRY_MV,&arg,sizeof(arg));
       th_decode_ctl(td,TH_DECCTL_SET_TELEMETRY_QI,&arg,sizeof(arg));
       arg=10;
       th_decode_ctl(td,TH_DECCTL_SET_TELEMETRY_BITS,&arg,sizeof(arg));
-    }*/
+    }
   }else{
     /* tear down the partial theora setup */
     th_info_clear(&ti);
@@ -766,8 +766,8 @@ int main(int argc,char *const *argv){
              keyframing.  Soon enough libtheora will be able to deal
              with non-keyframe seeks.  */
 
-          if(videobuf_time>=get_time())
             videobuf_ready=1;
+          if(videobuf_time>=get_time());
           else{
             /*If we are too slow, reduce the pp level.*/
             pp_inc=pp_level>0?-1:0;

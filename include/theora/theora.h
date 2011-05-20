@@ -496,7 +496,11 @@ extern int theora_encode_header(theora_state *t, ogg_packet *op);
  * \param op An ogg_packet structure to fill. libtheora will set all
  *           elements of this structure, including a pointer to the encoded
  *           comment data. The memory for the comment data is owned by
- *           libtheora.
+ *           the application, and must be freed by it using _ogg_free().
+ *           On some systems (such as Windows when using dynamic linking), this
+ *           may mean the free is executed in a different module from the
+ *           malloc, which will crash; there is no way to free this memory on
+ *           such systems.
  * \retval 0 Success
  */
 extern int theora_encode_comment(theora_comment *tc, ogg_packet *op);
