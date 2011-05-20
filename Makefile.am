@@ -4,6 +4,8 @@
 #AUTOMAKE_OPTIONS = foreign 1.7 dist-zip dist-bzip2
 AUTOMAKE_OPTIONS = foreign 1.11 dist-zip dist-xz
 
+ACLOCAL_AMFLAGS=-I m4
+
 if THEORA_ENABLE_EXAMPLES
 EXAMPLES_DIR = examples
 else

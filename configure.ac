@@ -68,7 +68,7 @@ AC_LIBTOOL_WIN32_DLL
 AM_PROG_LIBTOOL
 
 dnl Add parameters for aclocal
-AC_SUBST(ACLOCAL_AMFLAGS, "-I m4")
+AC_CONFIG_MACRO_DIR([m4])
 
 dnl Check for doxygen
 AC_ARG_ENABLE([doc],
