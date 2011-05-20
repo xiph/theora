@@ -549,7 +549,8 @@ dnl Check for library functions
 dnl --------------------------------------------------
 
 dnl OpenBSD needs -lcompat for ftime() used by dump_video.c
-AC_SEARCH_LIBS([ftime], [compat])
+AC_CHECK_LIB([compat], [ftime], [COMPAT_LIBS='-lcompat'])
+AC_SUBST(COMPAT_LIBS)
 
 dnl substitute the included getopt if the system doesn't support long options
 AC_CHECK_FUNC(getopt_long,
