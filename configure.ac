@@ -7,7 +7,6 @@ dnl ------------------------------------------------
 AC_INIT(libtheora,[1.2.0alpha1+svn])
 
 AC_CANONICAL_HOST
-AC_CANONICAL_TARGET
 
 AM_CONFIG_HEADER([config.h])
 AC_CONFIG_SRCDIR([lib/fdct.c])
