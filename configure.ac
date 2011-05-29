@@ -172,7 +172,7 @@ dnl --------------------------------------------------
 dnl Set build flags based on environment
 dnl --------------------------------------------------
 
-dnl Set some target options
+dnl Set some host options
 
 cflags_save="$CFLAGS"
 if test -z "$GCC"; then
@@ -203,12 +203,12 @@ AC_ARG_ENABLE(asm,
 
 if test "x${ac_enable_asm}" = xyes; then
   cpu_optimization="no optimization for your platform, please send a patch"
-  case $target_cpu in
+  case $host_cpu in
   i[[3456]]86)
     cpu_x86_32=yes
     cpu_optimization="32 bit x86"
     AC_DEFINE([OC_X86_ASM], [],  [make use of x86 asm optimization])
-    if test "x$target_vendor" = "xapple"; then
+    if test "x$host_vendor" = "xapple"; then
       THEORA_LDFLAGS="$THEORA_LDFLAGS  -Wl,-read_only_relocs,suppress"
     fi
       ;;
@@ -334,7 +334,7 @@ THDEC_VERSION_ARG=""
 THENC_VERSION_ARG=""
 TH_VERSION_ARG=""
 if test "x$lt_cv_prog_gnu_ld" = "xyes"; then
- case "$target_os" in
+ case "$host_os" in
   *mingw*)
     THEORA_LDFLAGS="$THEORA_LDFLAGS -no-undefined"
     THDEC_VERSION_ARG="-export-symbols \$(top_srcdir)/win32/xmingw32/libtheoradec-all.def"
@@ -355,7 +355,7 @@ if test "x$lt_cv_prog_gnu_ld" = "xyes"; then
     ;;
  esac
 else
- case "$target_os" in
+ case "$host_os" in
   darwin*)
     THDEC_VERSION_ARG='-Wl,-exported_symbols_list,$(srcdir)/theoradec.exp'
     THENC_VERSION_ARG='-Wl,-exported_symbols_list,$(srcdir)/theoraenc.exp'
@@ -452,7 +452,7 @@ fi
 
 dnl OpenBSD needs -lossaudio to use the oss interface
 OSS_LIBS=
-case "$target_os" in
+case "$host_os" in
   openbsd*)
     OSS_LIBS='-lossaudio'
     ;;
