@@ -1,6 +1,9 @@
 #!/usr/bin/perl
 
 my $bigend;  # little/big endian
+my $nxstack;
+
+$nxstack = 0;
 
 eval 'exec /usr/local/bin/perl -S $0 ${1+"$@"}'
     if $running_under_some_shell;
@@ -83,10 +86,19 @@ while (<>) {
     # ".rdata" doesn't work in 'as' version 2.13.2, as it is ".rodata" there.
     #
     if ( /\bAREA\b/ ) {
+        my $align;
+        $align = "2";
+        if ( /ALIGN=(\d+)/ ) {
+            $align = $1;
+        }
+        if ( /CODE/ ) {
+            $nxstack = 1;
+        }
         s/^(.+)CODE(.+)READONLY(.*)/    .text/;
-        s/^(.+)DATA(.+)READONLY(.*)/    .section .rdata\n    .align 2/;
-        s/^(.+)\|\|\.data\|\|(.+)/    .data\n    .align 2/;
+        s/^(.+)DATA(.+)READONLY(.*)/    .section .rdata/;
+        s/^(.+)\|\|\.data\|\|(.+)/    .data/;
         s/^(.+)\|\|\.bss\|\|(.+)/    .bss/;
+        s/$/;   .p2align $align/;
     }
 
     s/\|\|\.constdata\$(\d+)\|\|/.L_CONST$1/;       # ||.constdata$3||
@@ -285,4 +297,8 @@ while (<>) {
         $addPadding = 0;
     }
 }
-
+#If we had a code section, mark that this object doesn't need an executable
+# stack.
+if ($nxstack) {
+    printf ("    .section\t.note.GNU-stack,\"\",\%\%progbits\n");
+}

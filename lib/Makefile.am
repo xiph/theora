@@ -83,7 +83,6 @@ encoder_shared_arm_sources = \
 	armfrag-gnu.S \
 	armidct-gnu.S \
 	armloop-gnu.S \
-	armopts-gnu.S \
 	arm/armcpu.c \
 	arm/armstate.c
 
@@ -166,8 +165,7 @@ nodist_decoder_arm_sources = \
 	armbits-gnu.S \
 	armfrag-gnu.S \
 	armidct-gnu.S \
-	armloop-gnu.S \
-	armopts-gnu.S
+	armloop-gnu.S
 
 decoder_c64x_sources = \
 	c64x/c64xdec.c \
