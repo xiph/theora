@@ -401,6 +401,15 @@ int main(int argc,char *argv[]){
      to.serialno,ti.frame_width,ti.frame_height,
      (double)ti.fps_numerator/ti.fps_denominator,
      ti.pic_width,ti.pic_height,ti.pic_x,ti.pic_y);
+
+    /*{
+      int arg = 0xffff;
+      th_decode_ctl(td,TH_DECCTL_SET_TELEMETRY_MBMODE,&arg,sizeof(arg));
+      th_decode_ctl(td,TH_DECCTL_SET_TELEMETRY_MV,&arg,sizeof(arg));
+      th_decode_ctl(td,TH_DECCTL_SET_TELEMETRY_QI,&arg,sizeof(arg));
+      arg=10;
+      th_decode_ctl(td,TH_DECCTL_SET_TELEMETRY_BITS,&arg,sizeof(arg));
+    }*/
   }else{
     /* tear down the partial theora setup */
     th_info_clear(&ti);
