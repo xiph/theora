@@ -524,6 +524,8 @@ struct oc_frame_metrics{
   unsigned      dup_count:31;
   /*The frame type from pass 1.*/
   unsigned      frame_type:1;
+  /*The frame activity average from pass 1.*/
+  unsigned      activity_avg;
 };
 
 
