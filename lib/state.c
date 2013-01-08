@@ -21,6 +21,7 @@
 #if defined(OC_DUMP_IMAGES)
 # include <stdio.h>
 # include "png.h"
+# include "zlib.h"
 #endif
 
 /*The function used to fill in the chroma plane motion vectors for a macro
