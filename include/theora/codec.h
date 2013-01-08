@@ -320,7 +320,7 @@ typedef struct{
  * In filling in this structure, th_decode_headerin() will null-terminate
  *  the user_comment strings for safety.
  * However, the bitstream format itself treats them as 8-bit clean vectors,
- *  possibly containing null characters, and so the length array should be
+ *  possibly containing null characters, so the length array should be
  *  treated as their authoritative length.
  */
 typedef struct th_comment{
@@ -559,7 +559,7 @@ extern void th_comment_add(th_comment *_tc,const char *_comment);
  * To add such comments you will need to manipulate the #th_comment
  *  structure directly.
  * \param _tc  The #th_comment struct to add the comment to.
- * \param _tag A null-terminated string containing the tag  associated with
+ * \param _tag A null-terminated string containing the tag associated with
  *              the comment.
  * \param _val The corresponding value as a null-terminated string.*/
 extern void th_comment_add_tag(th_comment *_tc,const char *_tag,
@@ -586,7 +586,7 @@ extern char *th_comment_query(th_comment *_tc,const char *_tag,int _count);
  *  retrieve all the values for that tag in order.
  * \param _tc    An initialized #th_comment structure.
  * \param _tag   The tag to look up.
- * \return The number on instances of this particular tag.*/
+ * \return The number of instances of this particular tag.*/
 extern int th_comment_query_count(th_comment *_tc,const char *_tag);
 /**Clears a #th_comment structure.
  * This should be called on a #th_comment structure after it is no longer
