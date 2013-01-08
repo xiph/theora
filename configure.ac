@@ -4,13 +4,13 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT(libtheora,[1.2.0alpha1+svn])
+AC_INIT([libtheora],[1.2.0alpha1+svn],[theora-dev@xiph.org])
 
 AC_CANONICAL_HOST
 
-AM_CONFIG_HEADER([config.h])
 AC_CONFIG_SRCDIR([lib/fdct.c])
 AM_INIT_AUTOMAKE
+AM_MAINTAINER_MODE([enable])
 
 dnl we use doc_DATA in doc/Makefile.am which requires autoconf >= 2.60
 dnl to define docdir for us.
@@ -576,7 +576,7 @@ dnl --------------------------------------------------
 AC_SUBST(DEBUG)
 AC_SUBST(PROFILE)
 
-AC_OUTPUT([
+AC_CONFIG_FILES([
   Makefile 
   lib/Makefile
   lib/arm/armopts.s
@@ -593,6 +593,9 @@ AC_OUTPUT([
   theoraenc.pc
   theoraenc-uninstalled.pc
 ])
+AC_CONFIG_HEADERS([config.h])
+
+AC_OUTPUT
 
 AS_AC_EXPAND(LIBDIR, ${libdir})
 AS_AC_EXPAND(INCLUDEDIR, ${includedir})
