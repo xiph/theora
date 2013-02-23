@@ -2968,6 +2968,7 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
     /*If telemetry ioctls are active, we need to draw to the output buffer.*/
     if(telemetry){
       oc_render_telemetry(_dec,stripe_buf,telemetry);
+      oc_ycbcr_buffer_flip(_dec->pp_frame_buf,stripe_buf);
       /*If we had a striped decoding callback, we skipped calling it above
          (because the telemetry wasn't rendered yet).
         Call it now with the whole frame.*/
