@@ -288,7 +288,7 @@ CLEANFILES = \
 	armidct-gnu.S \
 	armloop-gnu.S \
 	armopts-gnu.S \
-	armencfrag-gnu.S
+	armencfrag-gnu.S \
 	armenquant-gnu.S
 
 # automake doesn't do dependency tracking for asm files, that I can tell
