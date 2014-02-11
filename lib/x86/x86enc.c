@@ -51,6 +51,8 @@ void oc_enc_accel_init_x86(oc_enc_ctx *_enc){
     _enc->opt_vtable.enquant_table_init=oc_enc_enquant_table_init_x86;
     _enc->opt_vtable.enquant_table_fixup=oc_enc_enquant_table_fixup_x86;
     _enc->opt_vtable.quantize=oc_enc_quantize_sse2;
+# else
+    (void) cpu_flags;
 # endif
     _enc->opt_data.enquant_table_size=128*sizeof(ogg_uint16_t);
     _enc->opt_data.enquant_table_alignment=16;

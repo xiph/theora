@@ -291,14 +291,12 @@ rgb_to_yuv(uint32 *raster,
   unsigned int y1;
 
   unsigned long yuv_w;
-  unsigned long yuv_h;
 
   unsigned char *yuv_y;
   unsigned char *yuv_u;
   unsigned char *yuv_v;
 
   yuv_w = ycbcr[0].width;
-  yuv_h = ycbcr[0].height;
 
   yuv_y = ycbcr[0].data;
   yuv_u = ycbcr[1].data;

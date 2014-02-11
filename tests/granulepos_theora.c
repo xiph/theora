@@ -21,15 +21,6 @@
 
 #include "tests.h"
 
-static int ilog(unsigned int v){
-  int ret=0;
-  while(v){
-    ret++;
-    v>>=1;
-  }
-  return(ret);
-}
-
 static int
 granulepos_test_encode (int frequency, int auto_p)
 {

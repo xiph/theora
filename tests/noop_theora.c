@@ -48,6 +48,7 @@ noop_test_encode ()
   return 0;
 }
 
+#if 0
 static int
 noop_test_decode ()
 {
@@ -68,6 +69,7 @@ noop_test_decode ()
 
   return 0;
 }
+#endif
 
 static int
 noop_test_comments ()
