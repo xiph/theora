@@ -331,7 +331,7 @@ static void open_video(void){
                                      SDL_YUY2_OVERLAY,
                                      screen);
   else if (px_fmt==TH_PF_444) {
-    RGBbuffer = calloc(sizeof(char),w*h*4);
+    RGBbuffer = calloc(w*h*4,sizeof(*RGBbuffer));
     fprintf(stderr,"warning: SDL does not support YUV 4:4:4, using slow software conversion.\n");
   } else
     yuv_overlay = SDL_CreateYUVOverlay(w, h,
