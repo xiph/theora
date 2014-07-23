@@ -64,7 +64,7 @@ CFLAGS="$cflags_save"
 
 AM_PROG_CC_C_O
 AC_LIBTOOL_WIN32_DLL
-AM_PROG_LIBTOOL
+LT_INIT
 
 dnl Add parameters for aclocal
 AC_CONFIG_MACRO_DIR([m4])
