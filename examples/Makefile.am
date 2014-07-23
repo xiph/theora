@@ -1,13 +1,12 @@
 ## Process this file with automake to produce Makefile.in
 
-INCLUDES = -I$(top_srcdir)/include 
-
 noinst_PROGRAMS = dump_video dump_psnr libtheora_info \
 	$(BUILDABLE_EXAMPLES)
 
 # possible contents of BUILDABLE_EXAMPLES:
 EXTRA_PROGRAMS = player_example encoder_example png2theora tiff2theora
 
+AM_CPPFLAGS = -I$(top_srcdir)/include
 AM_CFLAGS = $(OGG_CFLAGS)
 LDADD = ../lib/libtheora.la $(OGG_LIBS)
 LDADDDEC = ../lib/libtheoradec.la $(OGG_LIBS)
