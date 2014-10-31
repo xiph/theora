@@ -254,10 +254,14 @@ static void oc_mb_fill_cmapping10(oc_mb_map_plane _mb_map[3],
   This version is for use with no chroma decimation (4:4:4).
   This uses the already filled-in luma plane values.
   _mb_map:  The macro block map to fill.
-  _fplanes: The descriptions of the fragment planes.*/
+  _fplanes: The descriptions of the fragment planes.
+  _xfrag0:  The X location of the upper-left hand fragment in the luma plane.
+  _yfrag0:  The Y location of the upper-left hand fragment in the luma plane.*/
 static void oc_mb_fill_cmapping11(oc_mb_map_plane _mb_map[3],
- const oc_fragment_plane _fplanes[3]){
+ const oc_fragment_plane _fplanes[3],int _xfrag0,int _yfrag0){
   int k;
+  (void)_xfrag0;
+  (void)_yfrag0;
   for(k=0;k<4;k++){
     _mb_map[1][k]=_mb_map[0][k]+_fplanes[1].froffset;
     _mb_map[2][k]=_mb_map[0][k]+_fplanes[2].froffset;
@@ -279,7 +283,7 @@ static const oc_mb_fill_cmapping_func OC_MB_FILL_CMAPPING_TABLE[4]={
   oc_mb_fill_cmapping00,
   oc_mb_fill_cmapping01,
   oc_mb_fill_cmapping10,
-  (oc_mb_fill_cmapping_func)oc_mb_fill_cmapping11
+  oc_mb_fill_cmapping11
 };
 
 /*Fills in the mapping from macro blocks to their corresponding fragment
