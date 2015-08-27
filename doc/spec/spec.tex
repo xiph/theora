@@ -11,6 +11,7 @@
 \usepackage{longtable}
 \usepackage{ltablex}
 \usepackage{wrapfig}
+\usepackage{float}
 \usepackage[pdfpagemode=None,pdfstartview=FitH,pdfview=FitH,colorlinks=true]%
  {hyperref}
 
@@ -1959,7 +1960,7 @@ These are indicated as they appear in the sections below.
 \section{Common Header Decode}
 \label{sub:common-header}
 
-\begin{figure}[Htbp]
+\begin{figure}[H]
 \begin{center}
 \begin{verbatim}
   0                   1                   2                   3   
@@ -2034,7 +2035,7 @@ Packets with other header types (\hex{83}--\hex{FF}) are reserved and MUST be
 \section{Identification Header Decode}
 \label{sec:idheader}
 
-\begin{figure}[Htbp]
+\begin{figure}[H]
 \begin{center}
 \begin{verbatim}
   0                   1                   2                   3   
