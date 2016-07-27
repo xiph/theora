@@ -172,16 +172,23 @@ static int oc_dec_headerin(oc_pack_buf *_opb,th_info *_info,
   int  ret;
   val=oc_pack_read(_opb,8);
   packtype=(int)val;
-  /*If we're at a data packet and we have received all three headers, we're
-     done.*/
-  if(!(packtype&0x80)&&_info->frame_width>0){
-    /*Our documentation says we'll return TH_EFAULT if these are NULL, so let's
-       check.*/
-    if(_tc==NULL||_setup==NULL)return TH_EFAULT;
-    /*Otherwise, if we didn't get all of the headers, this was not the next
-       packet in the expected sequence.*/
-    else if(_tc->vendor==NULL||*_setup==NULL)return TH_EBADHEADER;
-    /*Otherwise, we're done.*/
+  /*If we're at a data packet...*/
+  if(!(packtype&0x80)){
+    /*Check to make sure we received all three headers...
+      If we haven't seen any valid headers, assume this is not actually
+       Theora.*/
+    if(_info->frame_width<=0)return TH_ENOTFORMAT;
+    /*Follow our documentation, which says we'll return TH_EFAULT if this
+       are NULL (_info was checked by our caller).*/
+    if(_tc==NULL)return TH_EFAULT;
+    /*And if any other headers were missing, declare this packet "out of
+       sequence" instead.*/
+    if(_tc->vendor==NULL)return TH_EBADHEADER;
+    /*Don't check this until it's needed, since we allow passing NULL for the
+       arguments that we're not expecting the next header to fill in yet.*/
+    if(_setup==NULL)return TH_EFAULT;
+    if(*_setup==NULL)return TH_EBADHEADER;
+    /*If we got everything, we're done.*/
     return 0;
   }
   /*Check the codec string.*/
