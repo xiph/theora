@@ -1076,8 +1076,8 @@ int oc_enc_rc_2pass_in(oc_enc_ctx *_enc,unsigned char *_buf,size_t _bytes){
       else{
         int frames_needed;
         /*We're using a finite buffer:*/
-        frames_needed=OC_CLAMPI(0,_enc->rc.buf_delay
-         -(_enc->rc.scale_window_end-_enc->rc.scale_window0),
+        frames_needed=OC_MINI(_enc->rc.buf_delay-OC_MINI(_enc->rc.buf_delay,
+         _enc->rc.scale_window_end-_enc->rc.scale_window0),
          _enc->rc.frames_left[0]+_enc->rc.frames_left[1]
          -_enc->rc.nframes[0]-_enc->rc.nframes[1]);
         while(frames_needed>0){
@@ -1114,8 +1114,8 @@ int oc_enc_rc_2pass_in(oc_enc_ctx *_enc,unsigned char *_buf,size_t _bytes){
             _enc->rc.scale_window_end+=m->dup_count+1;
             /*Compute an upper bound on the number of remaining packets needed
                for the current window.*/
-            frames_needed=OC_CLAMPI(0,_enc->rc.buf_delay
-             -(_enc->rc.scale_window_end-_enc->rc.scale_window0),
+            frames_needed=OC_MINI(_enc->rc.buf_delay-OC_MINI(_enc->rc.buf_delay,
+             _enc->rc.scale_window_end-_enc->rc.scale_window0),
              _enc->rc.frames_left[0]+_enc->rc.frames_left[1]
              -_enc->rc.nframes[0]-_enc->rc.nframes[1]);
             /*Clear the buffer for the next frame.*/
