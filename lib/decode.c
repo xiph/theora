@@ -1203,6 +1203,9 @@ static void oc_dec_residual_tokens_unpack(oc_dec_ctx *_dec){
 
 
 static int oc_dec_postprocess_init(oc_dec_ctx *_dec){
+  /*musl libc malloc()/realloc() calls might use floating point, so make sure
+     we've cleared the MMX state for them.*/
+  oc_restore_fpu(&_dec->state);
   /*pp_level 0: disabled; free any memory used and return*/
   if(_dec->pp_level<=OC_PP_LEVEL_DISABLED){
     if(_dec->dc_qis!=NULL){
