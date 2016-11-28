@@ -63,10 +63,10 @@ static ogg_stream_state ogg_os;
 static ogg_packet op;
 static ogg_page og;
 
-static th_enc_ctx      *td;
+static th_enc_ctx      *td = NULL;
 static th_info          ti;
 
-static char *input_filter;
+static char *input_filter = NULL;
 
 const char *optstring = "o:hv:\4:\2:V:s:S:f:F:ck:d:\1\2\3\4\5\6";
 struct option options [] = {

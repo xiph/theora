@@ -77,8 +77,8 @@ ogg_stream_state  vo;
 ogg_stream_state  to;
 th_info           ti;
 th_comment        tc;
-th_setup_info    *ts;
-th_dec_ctx       *td;
+th_setup_info    *ts=NULL;
+th_dec_ctx       *td=NULL;
 
 int              theora_p=0;
 int              theora_processing_headers;
