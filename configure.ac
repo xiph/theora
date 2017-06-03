@@ -104,11 +104,12 @@ if test "x$ac_build_spec" = "xyes"; then
   AC_CHECK_PROG(HAVE_PDFLATEX, pdflatex, yes)
   AC_CHECK_PROG(HAVE_BIBTEX, bibtex, yes)
   AC_CHECK_PROG(HAVE_TRANSFIG, fig2dev, yes)
-  if test -r doc/spec/spec.tex; then
+  AC_MSG_NOTICE([Checking for packages in ${srcdir}/doc/spec/spec.tex...])
+  if test -r ${srcdir}/doc/spec/spec.tex; then
    if test "x$HAVE_PDFLATEX" = "xyes"; then
     if test "x$HAVE_BIBTEX" = "xyes"; then
       if test "x$HAVE_TRANSFIG" = "xyes"; then
-        tex_pkg_list=`fgrep usepackage doc/spec/spec.tex | grep \{ | grep -v ltablex`
+        tex_pkg_list=`fgrep usepackage ${srcdir}/doc/spec/spec.tex | grep \{ | grep -v ltablex`
         tex_pkg_ok="yes"
         for pkg_line in $tex_pkg_list; do
 	  pkg_name=`echo $pkg_line | sed -e 's/.*{\(.*\)}.*/\1/'`

@@ -31,10 +31,13 @@ if BUILD_SPEC
 # long tables require the .aux file to start from scratch
 Theora.pdf : $(SPEC_SRCS) $(FIG_OBJS) vp3huff.tex
 	-$(RM) spec.aux
-	pdflatex -interaction nonstopmode spec.tex
-	bibtex spec.aux
-	pdflatex -interaction nonstopmode spec.tex
-	pdflatex -interaction nonstopmode spec.tex
+	-cd $(srcdir) && TEXINPUTS=".:$(CURDIR):" pdflatex \
+	 -interaction nonstopmode -output-directory "$(CURDIR)" spec.tex
+	BIBINPUTS="$(srcdir):.:" BSTINPUT="$(srcdir):.:" bibtex spec.aux
+	cd $(srcdir) && TEXINPUTS=".:$(CURDIR):" pdflatex \
+	 -interaction nonstopmode -output-directory "$(CURDIR)" spec.tex
+	cd $(srcdir) && TEXINPUTS=".:$(CURDIR):" pdflatex \
+	 -interaction nonstopmode -output-directory "$(CURDIR)" spec.tex
 	mv spec.pdf $@
 else
 Theora.pdf : 
