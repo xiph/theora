@@ -1,0 +1,25 @@
+language: c
+
+compiler:
+  - gcc
+  - clang
+
+os:
+  - linux
+  - osx
+
+before_install:
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update       ; fi
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install check; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -qq update; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y perl; fi
+
+env:
+  - CONFIG="--disable-examples --disable-doc"
+  - CONFIG="--disable-examples --disable-encode"
+  - CONFIG="--disable-examples --disable-asm"
+
+script:
+  - ./autogen.sh
+  - ./configure $CONFIG
+  - make check
