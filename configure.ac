@@ -4,7 +4,7 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT([libtheora],[1.2.0alpha1+svn],[theora-dev@xiph.org])
+AC_INIT([libtheora],[1.2.0alpha1+git],[theora-dev@xiph.org])
 
 AC_CANONICAL_HOST
 
