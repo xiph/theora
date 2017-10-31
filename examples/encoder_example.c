@@ -1735,7 +1735,8 @@ int main(int argc,char *argv[]){
       ogg_packet header;
       ogg_packet header_comm;
       ogg_packet header_code;
-      vorbis_analysis_headerout(&vd,&vc,&header,&header_comm,&header_code);
+      if (vorbis_analysis_headerout(&vd,&vc,&header,&header_comm,&header_code) < 0)
+        exit(1);
       ogg_stream_packetin(&vo,&header); /* automatically placed in its own
                                            page */
       if(ogg_stream_pageout(&vo,&og)!=1){
