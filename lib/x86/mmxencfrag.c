@@ -65,7 +65,7 @@ unsigned oc_enc_frag_sad_mmxext(const unsigned char *_src,
     "paddw %%mm6,%%mm0\n\t"
     "paddw %%mm2,%%mm0\n\t"
     "movd %%mm0,%[ret]\n\t"
-    :[ret]"=a"(ret),[src]"+%r"(_src),[ref]"+r"(_ref),[ystride3]"=&r"(ystride3)
+    :[ret]"=a"(ret),[src]"+r"(_src),[ref]"+r"(_ref),[ystride3]"=&r"(ystride3)
     :[ystride]"r"((ptrdiff_t)_ystride)
   );
   return (unsigned)ret;
@@ -155,7 +155,7 @@ unsigned oc_enc_frag_sad2_thresh_mmxext(const unsigned char *_src,
     OC_SAD2_LOOP
     OC_SAD2_LOOP
     OC_SAD2_TAIL
-    :[ret]"=&a"(ret),[src]"+r"(_src),[ref1]"+%r"(_ref1),[ref2]"+r"(_ref2)
+    :[ret]"=&a"(ret),[src]"+r"(_src),[ref1]"+r"(_ref1),[ref2]"+r"(_ref2)
     :[ystride]"r"((ptrdiff_t)_ystride)
   );
   return (unsigned)ret;
@@ -653,7 +653,7 @@ void oc_int_frag_copy2_mmxext(unsigned char *_dst,int _dst_ystride,
     "psubb %%mm4,%%mm2\n\t"
     /*%%mm2 (row 7) is done, write it out.*/
     "movq %%mm2,(%[dst],%[dst_ystride])\n\t"
-    :[dst]"+r"(_dst),[src1]"+%r"(_src1),[src2]"+r"(_src2)
+    :[dst]"+r"(_dst),[src1]"+r"(_src1),[src2]"+r"(_src2)
     :[dst_ystride]"r"((ptrdiff_t)_dst_ystride),
      [src_ystride]"r"((ptrdiff_t)_src_ystride)
     :"memory"
