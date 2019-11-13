@@ -55,8 +55,8 @@ static int oc_info_unpack(oc_pack_buf *_opb,th_info *_info){
   /*verify we can parse this bitstream version.
      We accept earlier minors and all subminors, by spec*/
   if(_info->version_major>TH_VERSION_MAJOR||
-   _info->version_major==TH_VERSION_MAJOR&&
-   _info->version_minor>TH_VERSION_MINOR){
+   (_info->version_major==TH_VERSION_MAJOR&&
+   _info->version_minor>TH_VERSION_MINOR)){
     return TH_EVERSION;
   }
   /*Read the encoded frame description.*/
