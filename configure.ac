@@ -502,6 +502,15 @@ if test "x${ac_enable_telemetry}" = xyes; then
    AC_SUBST(CAIRO_LIBS)
 fi
 
+dnl add safety rails for fuzzing
+AC_ARG_ENABLE(mem-constraint,
+    AS_HELP_STRING([--enable-mem-constraint], [Abort if size exceeds 16384x16384 (for fuzzing only)]),
+    [ ac_enable_mem_constraint=$enableval ], [ ac_enable_mem_constraint=no] )
+
+if test "x${ac_enable_mem_constraint}" = xyes; then
+   AC_DEFINE([HAVE_MEMORY_CONSTRAINT], [],  [Abort if size exceeds 16384x16384 (for fuzzing only)])
+fi
+
 dnl --------------------------------------------------
 dnl Overall build configuration options
 dnl --------------------------------------------------
@@ -623,6 +632,7 @@ AC_MSG_RESULT([
     Encoding support: ........... ${ac_enable_encode}
     Assembly optimization: ...... ${cpu_optimization}
     Debugging telemetry: ........ ${ac_enable_telemetry}
+    Abort on huge files: ........ ${ac_enable_mem_constraint}
     Build example code: ......... ${ac_enable_examples}
     API Documentation: .......... ${doc_build}
     Format Documentation: ....... ${spec_build}
