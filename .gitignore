@@ -70,3 +70,15 @@ examples/encoder_example
 examples/player_example
 examples/png2theora
 examples/tiff2theora
+
+tests/*.log
+tests/*.trs
+tests/comment
+tests/comment_theora
+tests/comment_theoradec
+tests/granulepos
+tests/granulepos_theora
+tests/granulepos_theoraenc
+tests/noop
+tests/noop_theora
+tests/noop_theoraenc
