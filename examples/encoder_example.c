@@ -1732,22 +1732,25 @@ int main(int argc,char *argv[]){
       if(passno!=1)ogg_stream_packetin(&to,&op);
     }
     if(audio && passno!=1){
-      ogg_packet header;
-      ogg_packet header_comm;
-      ogg_packet header_code;
-      if (vorbis_analysis_headerout(&vd,&vc,&header,&header_comm,&header_code) < 0)
+      /* vorbis streams start with three standard header packets. */
+      ogg_packet id;
+      ogg_packet comment;
+      ogg_packet code;
+      if(vorbis_analysis_headerout(&vd,&vc,&id,&comment,&code)<0){
+        fprintf(stderr,"Internal Vorbis library error.\n");
         exit(1);
-      ogg_stream_packetin(&vo,&header); /* automatically placed in its own
-                                           page */
+      }
+      /* id header is automatically placed in its own page */
+      ogg_stream_packetin(&vo,&id);
       if(ogg_stream_pageout(&vo,&og)!=1){
         fprintf(stderr,"Internal Ogg library error.\n");
         exit(1);
       }
       fwrite(og.header,1,og.header_len,outfile);
       fwrite(og.body,1,og.body_len,outfile);
-      /* remaining vorbis header packets */
-      ogg_stream_packetin(&vo,&header_comm);
-      ogg_stream_packetin(&vo,&header_code);
+      /* append remaining vorbis header packets */
+      ogg_stream_packetin(&vo,&comment);
+      ogg_stream_packetin(&vo,&code);
     }
     /* Flush the rest of our headers. This ensures
        the actual data in each stream will start
