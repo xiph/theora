@@ -1,0 +1,18 @@
+default:
+  tags:
+    - docker
+  # Image from https://hub.docker.com/_/gcc/ based on Debian
+  image: gcc:9
+
+build:
+  stage: build
+  before_script:
+    - apt-get update &&
+      apt-get install -y libogg-dev libvorbis-dev
+        libsdl-dev libpng-dev libtiff-dev
+        doxygen fig2dev texlive texlive-latex-extra
+  script:
+    - ./autogen.sh
+    - ./configure
+    - make
+    - make distcheck
