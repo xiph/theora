@@ -4,7 +4,7 @@ default:
   # Image from https://hub.docker.com/_/gcc/ based on Debian
   image: gcc:9
 
-build:
+autotools:
   stage: build
   before_script:
     - apt-get update &&
@@ -16,3 +16,14 @@ build:
     - ./configure
     - make
     - make distcheck
+
+scons:
+  stage: build
+  before_script:
+    - apt-get update &&
+      apt-get install -y libogg-dev libvorbis-dev
+        libsdl-dev libpng-dev libtiff-dev
+        scons
+  script:
+    - scons
+    - scons -c
