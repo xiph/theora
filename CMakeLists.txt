@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 project(theora LANGUAGES C)
 
+enable_testing()
+
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
 FIND_PACKAGE(Ogg REQUIRED)
 
@@ -108,3 +110,5 @@ install(EXPORT theora-targets
   NAMESPACE theora::
   DESTINATION "lib/theora"
 )
+
+add_subdirectory(tests)
