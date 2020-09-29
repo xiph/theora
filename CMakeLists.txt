@@ -63,10 +63,6 @@ if(USE_X86)
   add_definitions(-DOC_X86_ASM)
 endif()
 
-if (BUILD_SHARED_LIBS)
-  add_definitions(-DLIBTHEORA_EXPORTS)
-endif()
-
 add_library(theora-common OBJECT ${LIBTHEORA_COMMON} ${HEADERS})
 target_link_libraries(theora-common PUBLIC Ogg::ogg)
 target_include_directories(theora-common PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
