@@ -91,24 +91,24 @@ target_include_directories(theoradec PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_D
 
 include(CMakePackageConfigHelpers)
 
-configure_package_config_file(unofficial-theora-config.cmake.in unofficial-theora-config.cmake
-  INSTALL_DESTINATION "lib/unofficial-theora")
+configure_package_config_file(theora-config.cmake.in theora-config.cmake
+  INSTALL_DESTINATION "lib/theora")
 
 install(FILES ${HEADERS} DESTINATION include/theora)
 
 install(
-  FILES "${CMAKE_CURRENT_BINARY_DIR}/unofficial-theora-config.cmake"
-  DESTINATION "lib/unofficial-theora"
+  FILES "${CMAKE_CURRENT_BINARY_DIR}/theora-config.cmake"
+  DESTINATION "lib/theora"
 )
 
 install(TARGETS theora theoraenc theoradec
-  EXPORT unofficial-theora-targets
+  EXPORT theora-targets
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION bin
   ARCHIVE DESTINATION lib
 )
 
-install(EXPORT unofficial-theora-targets
-  NAMESPACE unofficial::theora::
-  DESTINATION "lib/unofficial-theora"
+install(EXPORT theora-targets
+  NAMESPACE theora::
+  DESTINATION "lib/theora"
 )
