@@ -73,7 +73,7 @@ add_library(theora-dec OBJECT ${LIBTHEORA_DEC} ${HEADERS})
 target_link_libraries(theora-dec PUBLIC Ogg::ogg)
 target_include_directories(theora-dec PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
 
-add_library(theora $<TARGET_OBJECTS:theora-common> $<TARGET_OBJECTS:theora-enc> $<TARGET_OBJECTS:theora-dec> "libtheora.def")
+add_library(theora $<TARGET_OBJECTS:theora-common> $<TARGET_OBJECTS:theora-enc> $<TARGET_OBJECTS:theora-dec> "win32/xmingw32/libtheora.def")
 target_link_libraries(theora PUBLIC Ogg::ogg)
 target_include_directories(theora PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
 
