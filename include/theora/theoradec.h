@@ -92,13 +92,17 @@ extern "C" {
  *                     <tt>sizeof(th_stripe_callback)</tt>.*/
 #define TH_DECCTL_SET_STRIPE_CB (7)
 
-/**Enables telemetry and sets the macroblock display mode */
+/**Sets the macroblock display mode. Set to 0 to disable displaying
+ * macroblocks.*/
 #define TH_DECCTL_SET_TELEMETRY_MBMODE (9)
-/**Enables telemetry and sets the motion vector display mode */
+/**Sets the motion vector display mode. Set to 0 to disable displaying motion
+ * vectors.*/
 #define TH_DECCTL_SET_TELEMETRY_MV (11)
-/**Enables telemetry and sets the adaptive quantization display mode */
+/**Sets the adaptive quantization display mode. Set to 0 to disable displaying
+ * adaptive quantization. */
 #define TH_DECCTL_SET_TELEMETRY_QI (13)
-/**Enables telemetry and sets the bitstream breakdown visualization mode */
+/**Sets the bitstream breakdown visualization mode. Set to 0 to disable
+ * displaying bitstream breakdown.*/
 #define TH_DECCTL_SET_TELEMETRY_BITS (15)
 /*@}*/
 

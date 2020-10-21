@@ -417,7 +417,6 @@ static int oc_dec_init(oc_dec_ctx *_dec,const th_info *_info,
   _dec->stripe_cb.ctx=NULL;
   _dec->stripe_cb.stripe_decoded=NULL;
 #if defined(HAVE_CAIRO)
-  _dec->telemetry=0;
   _dec->telemetry_bits=0;
   _dec->telemetry_qi=0;
   _dec->telemetry_mbmode=0;
@@ -2022,28 +2021,24 @@ int th_decode_ctl(th_dec_ctx *_dec,int _req,void *_buf,
   case TH_DECCTL_SET_TELEMETRY_MBMODE:{
     if(_dec==NULL||_buf==NULL)return TH_EFAULT;
     if(_buf_sz!=sizeof(int))return TH_EINVAL;
-    _dec->telemetry=1;
     _dec->telemetry_mbmode=*(int *)_buf;
     return 0;
   }break;
   case TH_DECCTL_SET_TELEMETRY_MV:{
     if(_dec==NULL||_buf==NULL)return TH_EFAULT;
     if(_buf_sz!=sizeof(int))return TH_EINVAL;
-    _dec->telemetry=1;
     _dec->telemetry_mv=*(int *)_buf;
     return 0;
   }break;
   case TH_DECCTL_SET_TELEMETRY_QI:{
     if(_dec==NULL||_buf==NULL)return TH_EFAULT;
     if(_buf_sz!=sizeof(int))return TH_EINVAL;
-    _dec->telemetry=1;
     _dec->telemetry_qi=*(int *)_buf;
     return 0;
   }break;
   case TH_DECCTL_SET_TELEMETRY_BITS:{
     if(_dec==NULL||_buf==NULL)return TH_EFAULT;
     if(_buf_sz!=sizeof(int))return TH_EINVAL;
-    _dec->telemetry=1;
     _dec->telemetry_bits=*(int *)_buf;
     return 0;
   }break;
@@ -2788,7 +2783,8 @@ int th_decode_packetin(th_dec_ctx *_dec,const ogg_packet *_op,
       This prevents it from being modified in the middle of decoding this
        frame, which could cause us to skip calls to the striped decoding
        callback.*/
-    telemetry=_dec->telemetry;
+    telemetry=_dec->telemetry_mbmode||_dec->telemetry_mv||
+     _dec->telemetry_qi||_dec->telemetry_bits;
 #endif
     /*Select a free buffer to use for the reconstructed version of this frame.*/
     for(refi=0;refi==_dec->state.ref_frame_idx[OC_FRAME_GOLD]||

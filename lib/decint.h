@@ -162,7 +162,6 @@ struct th_dec_ctx{
 # endif
 # if defined(HAVE_CAIRO)
   /*Output metrics for debugging.*/
-  int                    telemetry;
   int                    telemetry_mbmode;
   int                    telemetry_mv;
   int                    telemetry_qi;
