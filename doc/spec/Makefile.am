@@ -5,6 +5,8 @@
 
 built_docs = Theora.pdf
 
+DISTCLEANFILES = $(built_docs)
+
 if BUILD_SPEC
 doc_DATA = $(built_docs)
 endif

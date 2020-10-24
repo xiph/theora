@@ -12,7 +12,7 @@ endif
 SUBDIRS = lib include doc tests m4 $(EXAMPLES_DIR)
 
 EXTRA_DIST = \
-	README CHANGES COPYING LICENSE \
+	README.md CHANGES COPYING LICENSE \
 	autogen.sh win32 macosx symbian SConstruct \
 	libtheora.spec libtheora.spec.in \
 	theora-uninstalled.pc.in
