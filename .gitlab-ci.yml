@@ -27,3 +27,10 @@ scons:
   script:
     - scons
     - scons -c
+
+msvc:
+  stage: build
+  script:
+    - cd win32/VS2010; msbuild
+  tags:
+    - windows
