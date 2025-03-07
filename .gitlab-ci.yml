@@ -62,6 +62,12 @@ autotools-enable-telemetry:
   variables:
     CONFIG_FLAGS: --enable-telemetry
 
+autotools-enable-valgrind-testing:
+  extends: .autoconf
+  variables:
+    INSTALL_EXTRA: libtool valgrind
+    CONFIG_FLAGS: --enable-valgrind-testing
+
 scons:
   stage: build
   before_script:
