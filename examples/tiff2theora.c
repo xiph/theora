@@ -21,6 +21,7 @@
 
 #include <errno.h>
 #include <getopt.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -280,7 +281,7 @@ clamp(int d)
 }
 
 static void
-rgb_to_yuv(uint32 *raster,
+rgb_to_yuv(ogg_uint32_t *raster,
            th_ycbcr_buffer ycbcr,
            unsigned int w, unsigned int h)
 {
@@ -311,18 +312,18 @@ rgb_to_yuv(uint32 *raster,
       y1=y+(y+1<h);
       for(x = 0; x < w; x += 2) {
         x1=x+(x+1<w);
-        uint8 r0 = TIFFGetR(raster[(h-y)*w + x]);
-        uint8 g0 = TIFFGetG(raster[(h-y)*w + x]);
-        uint8 b0 = TIFFGetB(raster[(h-y)*w + x]);
-        uint8 r1 = TIFFGetR(raster[(h-y)*w + x1]);
-        uint8 g1 = TIFFGetG(raster[(h-y)*w + x1]);
-        uint8 b1 = TIFFGetB(raster[(h-y)*w + x1]);
-        uint8 r2 = TIFFGetR(raster[(h-y1)*w + x]);
-        uint8 g2 = TIFFGetG(raster[(h-y1)*w + x]);
-        uint8 b2 = TIFFGetB(raster[(h-y1)*w + x]);
-        uint8 r3 = TIFFGetR(raster[(h-y1)*w + x1]);
-        uint8 g3 = TIFFGetG(raster[(h-y1)*w + x1]);
-        uint8 b3 = TIFFGetB(raster[(h-y1)*w + x1]);
+        uint8_t r0 = TIFFGetR(raster[(h-y)*w + x]);
+        uint8_t g0 = TIFFGetG(raster[(h-y)*w + x]);
+        uint8_t b0 = TIFFGetB(raster[(h-y)*w + x]);
+        uint8_t r1 = TIFFGetR(raster[(h-y)*w + x1]);
+        uint8_t g1 = TIFFGetG(raster[(h-y)*w + x1]);
+        uint8_t b1 = TIFFGetB(raster[(h-y)*w + x1]);
+        uint8_t r2 = TIFFGetR(raster[(h-y1)*w + x]);
+        uint8_t g2 = TIFFGetG(raster[(h-y1)*w + x]);
+        uint8_t b2 = TIFFGetB(raster[(h-y1)*w + x]);
+        uint8_t r3 = TIFFGetR(raster[(h-y1)*w + x1]);
+        uint8_t g3 = TIFFGetG(raster[(h-y1)*w + x1]);
+        uint8_t b3 = TIFFGetB(raster[(h-y1)*w + x1]);
 
         yuv_y[x  + y * yuv_w]  = clamp((65481*r0+128553*g0+24966*b0+4207500)/255000);
         yuv_y[x1 + y * yuv_w]  = clamp((65481*r1+128553*g1+24966*b1+4207500)/255000);
@@ -344,9 +345,9 @@ rgb_to_yuv(uint32 *raster,
   } else if (chroma_format == TH_PF_444) {
     for(y = 0; y < h; y++) {
       for(x = 0; x < w; x++) {
-        uint8 r = TIFFGetR(raster[(h-y)*w + x]);
-        uint8 g = TIFFGetG(raster[(h-y)*w + x]);
-        uint8 b = TIFFGetB(raster[(h-y)*w + x]);
+        uint8_t r = TIFFGetR(raster[(h-y)*w + x]);
+        uint8_t g = TIFFGetG(raster[(h-y)*w + x]);
+        uint8_t b = TIFFGetB(raster[(h-y)*w + x]);
 
         yuv_y[x + y * yuv_w] = clamp((65481*r+128553*g+24966*b+4207500)/255000);
         yuv_u[x + y * yuv_w] = clamp((-33488*r-65744*g+99232*b+29032005)/225930);
@@ -357,12 +358,12 @@ rgb_to_yuv(uint32 *raster,
     for(y = 0; y < h; y += 1) {
       for(x = 0; x < w; x += 2) {
         x1=x+(x+1<w);
-        uint8 r0 = TIFFGetR(raster[(h-y)*w + x]);
-        uint8 g0 = TIFFGetG(raster[(h-y)*w + x]);
-        uint8 b0 = TIFFGetB(raster[(h-y)*w + x]);
-        uint8 r1 = TIFFGetR(raster[(h-y)*w + x1]);
-        uint8 g1 = TIFFGetG(raster[(h-y)*w + x1]);
-        uint8 b1 = TIFFGetB(raster[(h-y)*w + x1]);
+        uint8_t r0 = TIFFGetR(raster[(h-y)*w + x]);
+        uint8_t g0 = TIFFGetG(raster[(h-y)*w + x]);
+        uint8_t b0 = TIFFGetB(raster[(h-y)*w + x]);
+        uint8_t r1 = TIFFGetR(raster[(h-y)*w + x1]);
+        uint8_t g1 = TIFFGetG(raster[(h-y)*w + x1]);
+        uint8_t b1 = TIFFGetB(raster[(h-y)*w + x1]);
 
         yuv_y[x  + y * yuv_w] = clamp((65481*r0+128553*g0+24966*b0+4207500)/255000);
         yuv_y[x1 + y * yuv_w] = clamp((65481*r1+128553*g1+24966*b1+4207500)/255000);
@@ -384,10 +385,10 @@ tiff_read(const char *pathname,
  unsigned int *w, unsigned int *h, th_ycbcr_buffer ycbcr)
 {
   TIFF *tiff;
-  uint32 width;
-  uint32 height;
+  ogg_uint32_t width;
+  ogg_uint32_t height;
   size_t pixels;
-  uint32 *raster;
+  ogg_uint32_t *raster;
   unsigned long yuv_w;
   unsigned long yuv_h;
 
@@ -401,7 +402,7 @@ tiff_read(const char *pathname,
   TIFFGetField(tiff, TIFFTAG_IMAGEWIDTH, &width);
   TIFFGetField(tiff, TIFFTAG_IMAGELENGTH, &height);
   pixels = width*height;
-  raster = malloc(pixels*sizeof(uint32));
+  raster = malloc(pixels*sizeof(ogg_uint32_t));
   if(!raster) {
     fprintf(stderr, "%s: error: couldn't allocate storage for tiff raster.\n",
      pathname);
