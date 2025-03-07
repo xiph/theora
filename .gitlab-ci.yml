@@ -50,6 +50,7 @@ autotools-clang:
     - make distcheck
   variables:
     INSTALL_COMPILER: clang
+    CONFIG_FLAGS: CFLAGS=-Wreserved-identifier
     CC: clang
 
 autotools-disable-encoding:

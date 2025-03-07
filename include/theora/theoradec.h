@@ -17,8 +17,8 @@
 /**\file
  * The <tt>libtheoradec</tt> C decoding API.*/
 
-#if !defined(_O_THEORA_THEORADEC_H_)
-# define _O_THEORA_THEORADEC_H_ (1)
+#if !defined(OGG_THEORA_THEORADEC_HEADER)
+# define OGG_THEORA_THEORADEC_HEADER (1)
 # include <stddef.h>
 # include <ogg/ogg.h>
 # include "codec.h"
@@ -329,4 +329,4 @@ extern void th_decode_free(th_dec_ctx *_dec);
 }
 #endif
 
-#endif
+#endif /* OGG_THEORA_THEORADEC_HEADER */

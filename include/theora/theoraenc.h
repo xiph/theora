@@ -17,8 +17,8 @@
 /**\file
  * The <tt>libtheoraenc</tt> C encoding API.*/
 
-#if !defined(_O_THEORA_THEORAENC_H_)
-# define _O_THEORA_THEORAENC_H_ (1)
+#if !defined(OGG_THEORA_THEORAENC_HEADER)
+# define OGG_THEORA_THEORAENC_HEADER (1)
 # include <stddef.h>
 # include <ogg/ogg.h>
 # include "codec.h"
@@ -544,4 +544,4 @@ extern void th_encode_free(th_enc_ctx *_enc);
 }
 #endif
 
-#endif
+#endif /* OGG_THEORA_THEORAENC_HEADER */
