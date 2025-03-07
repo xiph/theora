@@ -14,7 +14,7 @@ AM_MAINTAINER_MODE([enable])
 
 dnl we use doc_DATA in doc/Makefile.am which requires autoconf >= 2.60
 dnl to define docdir for us.
-AC_PREREQ(2.60)
+AC_PREREQ([2.71])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
@@ -63,8 +63,7 @@ AC_PROG_CPP
 CFLAGS="$cflags_save"
 
 AM_PROG_CC_C_O
-AC_LIBTOOL_WIN32_DLL
-LT_INIT
+LT_INIT([win32-dll])
 
 dnl Add parameters for aclocal
 AC_CONFIG_MACRO_DIR([m4])
@@ -327,7 +326,7 @@ AM_CONDITIONAL([CPU_arm], [test x$cpu_arm = xyes])
 AM_CONDITIONAL([CPU_c64x], [test x$cpu_c64x = xyes])
 
 # Test whenever ld supports -version-script
-AC_PROG_LD
+LT_PATH_LD
 AC_PROG_LD_GNU
 AC_MSG_CHECKING([how to control symbol export])
 
