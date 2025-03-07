@@ -1053,7 +1053,7 @@ void oc_loop_filter_init_c(signed char _bv[256],int _flimit){
   _fragy0:    The Y coordinate of the first fragment row to filter.
   _fragy_end: The Y coordinate of the fragment row to stop filtering at.*/
 void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,
- signed char *_bv,int _refi,int _pli,int _fragy0,int _fragy_end){
+ signed char _bvarray[256],int _refi,int _pli,int _fragy0,int _fragy_end){
   const oc_fragment_plane *fplane;
   const oc_fragment       *frags;
   const ptrdiff_t         *frag_buf_offs;
@@ -1064,7 +1064,7 @@ void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,
   ptrdiff_t                fragi0_end;
   int                      ystride;
   int                      nhfrags;
-  _bv+=127;
+  signed char             *_bv = &_bvarray[127];
   fplane=_state->fplanes+_pli;
   nhfrags=fplane->nhfrags;
   fragi_top=fplane->froffset;

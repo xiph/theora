@@ -523,7 +523,7 @@ void oc_idct8x8_c(ogg_int16_t _y[64],ogg_int16_t _x[64],int _last_zzi);
 void oc_state_frag_recon_c(const oc_theora_state *_state,ptrdiff_t _fragi,
  int _pli,ogg_int16_t _dct_coeffs[128],int _last_zzi,ogg_uint16_t _dc_quant);
 void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,
- signed char _bv[256],int _refi,int _pli,int _fragy0,int _fragy_end);
+ signed char _bvarray[256],int _refi,int _pli,int _fragy0,int _fragy_end);
 void oc_restore_fpu_c(void);
 
 /*We need a way to call a few encoder functions without introducing a link-time
