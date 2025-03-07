@@ -809,11 +809,9 @@ int main(int argc,char *const *argv){
       /* set up select wait on the audiobuffer and a timeout for video */
       struct timeval timeout;
       fd_set writefs;
-      fd_set empty;
       int n=0;
 
       FD_ZERO(&writefs);
-      FD_ZERO(&empty);
       if(audiofd>=0){
         FD_SET(audiofd,&writefs);
         n=audiofd+1;
@@ -836,11 +834,11 @@ int main(int argc,char *const *argv){
           timeout.tv_sec=milliseconds/1000;
           timeout.tv_usec=(milliseconds%1000)*1000;
 
-          n=select(n,&empty,&writefs,&empty,&timeout);
+          n=select(n,NULL,&writefs,NULL,&timeout);
           if(n)audio_calibrate_timer(0);
         }
       }else{
-        select(n,&empty,&writefs,&empty,NULL);
+        select(n,NULL,&writefs,NULL,NULL);
       }
     }
 
