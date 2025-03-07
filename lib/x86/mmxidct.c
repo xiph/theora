@@ -312,7 +312,7 @@ static void oc_idct8x8_slow_mmx(ogg_int16_t _y[64],ogg_int16_t _x[64]){
 #undef  OC_J
     :[y]"=m"OC_ARRAY_OPERAND(ogg_int16_t,_y,64)
     :[x]"m"OC_CONST_ARRAY_OPERAND(ogg_int16_t,_x,64),
-     [c]"m"OC_CONST_ARRAY_OPERAND(ogg_int16_t,OC_IDCT_CONSTS,128)
+     [c]"m"OC_CONST_ARRAY_OPERAND(ogg_int16_t,OC_IDCT_CONSTS,64)
   );
   __asm__ __volatile__("pxor %%mm0,%%mm0\n\t"::);
   for(i=0;i<4;i++){
@@ -510,7 +510,7 @@ static void oc_idct8x8_10_mmx(ogg_int16_t _y[64],ogg_int16_t _x[64]){
 #undef  OC_J
     :[y]"=m"OC_ARRAY_OPERAND(ogg_int16_t,_y,64)
     :[x]"m"OC_CONST_ARRAY_OPERAND(ogg_int16_t,_x,64),
-     [c]"m"OC_CONST_ARRAY_OPERAND(ogg_int16_t,OC_IDCT_CONSTS,128)
+     [c]"m"OC_CONST_ARRAY_OPERAND(ogg_int16_t,OC_IDCT_CONSTS,64)
   );
   __asm__ __volatile__(
     "pxor %%mm0,%%mm0\n\t"
