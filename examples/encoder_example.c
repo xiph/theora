@@ -775,6 +775,10 @@ static void id_file(char *f){
 
           audio=test;
           audio_ch=buffer[6]+(buffer[7]<<8);
+          if (0 >= audio_ch) {
+            fprintf(stderr,"Can only read WAV files with non-zero audio channels for now.\n");
+            exit(1);
+          }
           audio_hz=buffer[8]+(buffer[9]<<8)+
             (buffer[10]<<16)+(buffer[11]<<24);
 
