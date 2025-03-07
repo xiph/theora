@@ -101,14 +101,29 @@ def CheckHost_x86_64(context):
   context.Result(result)
   return result
 
+clock_gettime_test = """
+#    include <time.h>
+    int main(int argc, char **argv) {
+      struct timespec ts;
+      return clock_gettime(CLOCK_REALTIME, &ts);
+      return 0;
+    }
+    """
+def CheckClock_GetTime(context):
+  context.Message('Checking for clock_gettime...')
+  result = context.TryCompile(clock_gettime_test, '.c')
+  context.Result(result)
+  return result
+
 conf = Configure(env, custom_tests = {
   'CheckPKGConfig' : CheckPKGConfig,
   'CheckPKG' : CheckPKG,
   'CheckSDL' : CheckSDL,
   'CheckHost_x86_32' : CheckHost_x86_32,
   'CheckHost_x86_64' : CheckHost_x86_64,
+  'CheckClock_GetTime' : CheckClock_GetTime,
   })
-  
+
 if not conf.CheckPKGConfig('0.15.0'): 
   print('pkg-config >= 0.15.0 not found.')
   Exit(1)
@@ -178,6 +193,9 @@ elif conf.CheckHost_x86_64():
         x86/x86state.c
         x86/sse2encfrag.c
   """
+
+if conf.CheckClock_GetTime():
+  env.Append(CPPDEFINES='OP_HAVE_CLOCK_GETTIME')
 
 env = conf.Finish()
 

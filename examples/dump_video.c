@@ -18,6 +18,10 @@
 /* By Mauricio Piacentini (mauricio at xiph.org) */
 /*  simply dump decoded YUV data, for verification of theora bitstream */
 
+#if defined(HAVE_CONFIG_H)
+# include "config.h"
+#endif
+
 #if !defined(_REENTRANT)
 #define _REENTRANT
 #endif
@@ -34,10 +38,10 @@
 #define _FILE_OFFSET_BITS 64
 #endif
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/timeb.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 /*Yes, yes, we're going to hell.*/
@@ -50,6 +54,57 @@
 #include <signal.h>
 #include "getopt.h"
 #include "theora/theoradec.h"
+
+/* Implementation of op_time_get() and op_time_diff_ms() lifted from
+   opusfile to work on both Linux, Unix and Windows */
+
+#ifdef OP_HAVE_CLOCK_GETTIME
+# include <time.h>
+typedef struct timespec op_time;
+#else
+# include <sys/timeb.h>
+typedef struct timeb op_time;
+#endif
+
+#define OP_INT64_MAX (2*(((ogg_int64_t)1<<62)-1)|1)
+#define OP_INT64_MIN (-OP_INT64_MAX-1)
+#define OP_INT32_MAX (2*(((ogg_int32_t)1<<30)-1)|1)
+#define OP_INT32_MIN (-OP_INT32_MAX-1)
+
+static void op_time_get(op_time *now){
+# ifdef OP_HAVE_CLOCK_GETTIME
+  /*Prefer a monotonic clock that continues to increment during suspend.*/
+#  ifdef CLOCK_BOOTTIME
+  if(clock_gettime(CLOCK_BOOTTIME,now)!=0)
+#  endif
+#  ifdef CLOCK_MONOTONIC
+  if(clock_gettime(CLOCK_MONOTONIC,now)!=0)
+#  endif
+  clock_gettime(CLOCK_REALTIME,now);
+# else
+  ftime(now);
+# endif
+}
+
+static ogg_int32_t op_time_diff_ms(const op_time *_end, const op_time *_start){
+# ifdef OP_HAVE_CLOCK_GETTIME
+  ogg_int64_t dtime;
+  dtime=_end->tv_sec-(ogg_int64_t)_start->tv_sec;
+  assert(_end->tv_nsec<1000000000);
+  assert(_start->tv_nsec<1000000000);
+  if (dtime>(OP_INT32_MAX-1000)/1000) return OP_INT32_MAX;
+  if (dtime<(OP_INT32_MIN+1000)/1000) return OP_INT32_MIN;
+  return (ogg_int32_t)dtime*1000+(_end->tv_nsec-_start->tv_nsec)/1000000;
+# else
+  ogg_int64_t dtime;
+  dtime=_end->time-(ogg_int64_t)_start->time;
+  assert(_end->millitm<1000);
+  assert(_start->millitm<1000);
+  if (dtime>(OP_INT32_MAX-1000)/1000) return OP_INT32_MAX;
+  if (dtime<(OP_INT32_MIN+1000)/1000) return OP_INT32_MIN;
+  return (ogg_int32_t)dtime*1000+_end->millitm-_start->millitm;
+# endif
+}
 
 const char *optstring = "o:crf";
 struct option options [] = {
@@ -239,9 +294,9 @@ int main(int argc,char *argv[]){
   int long_option_index;
   int c;
 
-  struct timeb start;
-  struct timeb after;
-  struct timeb last;
+  op_time start;
+  op_time after;
+  op_time last;
   int fps_only=0;
   int frames = 0;
 
@@ -487,8 +542,8 @@ int main(int argc,char *argv[]){
   }
 
   if(fps_only){
-    ftime(&start);
-    ftime(&last);
+    op_time_get(&start);
+    op_time_get(&last);
   }
 
   while(!got_sigint){
@@ -502,7 +557,7 @@ int main(int argc,char *argv[]){
           videobuf_ready=1;
           frames++;
           if(fps_only)
-            ftime(&after);
+            op_time_get(&after);
         }
 
       }else
@@ -510,17 +565,14 @@ int main(int argc,char *argv[]){
     }
 
     if(fps_only && (videobuf_ready || fps_only==2)){
-      long ms =
-        after.time*1000.+after.millitm-
-        (last.time*1000.+last.millitm);
+      ogg_int32_t ms = op_time_diff_ms(&after, &last);
 
       if(ms>500 || fps_only==1 ||
          (feof(infile) && !videobuf_ready)){
         float file_fps = (float)ti.fps_numerator/ti.fps_denominator;
         fps_only=2;
 
-        ms = after.time*1000.+after.millitm-
-          (start.time*1000.+start.millitm);
+        ms = op_time_diff_ms(&after, &start);
 
         fprintf(stderr,"\rframe:%d rate:%.2fx           ",
                 frames,
