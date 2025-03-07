@@ -52,6 +52,16 @@ autotools-clang:
     INSTALL_COMPILER: clang
     CC: clang
 
+autotools-disable-encoding:
+  extends: .autoconf
+  variables:
+    CONFIG_FLAGS: --disable-encode
+
+autotools-enable-telemetry:
+  extends: .autoconf
+  variables:
+    CONFIG_FLAGS: --enable-telemetry
+
 scons:
   stage: build
   before_script:
