@@ -2,27 +2,62 @@ default:
   tags:
     - docker
   # Image from https://hub.docker.com/_/gcc/ based on Debian
-  image: gcc:9
+  image: gcc:14
 
-autotools:
+.autoconf:
   stage: build
   before_script:
     - apt-get update &&
       apt-get install -y libogg-dev libvorbis-dev
-        libsdl-dev libpng-dev libtiff-dev
+        libsdl1.2-dev libpng-dev libtiff-dev
         doxygen fig2dev texlive texlive-latex-extra
+        ${INSTALL_COMPILER} ${INSTALL_EXTRA}
   script:
     - ./autogen.sh
-    - ./configure
+    - ./configure ${CONFIG_FLAGS} || cat config.log
+    - make
+    - make check
+  variables:
+    INSTALL_COMPILER: gcc g++
+
+autotools-gcc:
+  extends: .autoconf
+  script:
+    - ./autogen.sh
+    - ./configure ${CONFIG_FLAGS}
     - make
     - make distcheck
+  artifacts:
+    paths:
+     - libtheora-*.tar.gz
+    expire_in: 2 week
+
+autotools-gcc-builddir:
+  extends: .autoconf
+  script:
+    - ./autogen.sh
+    - mkdir build
+    - (cd build && ../configure ${CONFIG_FLAGS})
+    - (cd build && make)
+    - (cd build && make check)
+
+autotools-clang:
+  extends: .autoconf
+  script:
+    - ./autogen.sh
+    - ./configure ${CONFIG_FLAGS}
+    - make
+    - make distcheck
+  variables:
+    INSTALL_COMPILER: clang
+    CC: clang
 
 scons:
   stage: build
   before_script:
     - apt-get update &&
       apt-get install -y libogg-dev libvorbis-dev
-        libsdl-dev libpng-dev libtiff-dev
+        libsdl1.2-dev libpng-dev libtiff-dev
         scons
   script:
     - scons
