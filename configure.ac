@@ -139,24 +139,17 @@ if test $BUILD_SPEC = "false"; then
 	AC_MSG_WARN([*** Format Specification will not built.])
 fi
 
-dnl Check for valgrind
-VALGRIND_ENVIRONMENT=""
-ac_enable_valgrind=no
+# Check for valgrind
 AC_ARG_ENABLE(valgrind-testing,
-     AS_HELP_STRING([--enable-valgrind-testing], [Enable running of tests inside Valgrind]),
-     [ ac_enable_valgrind=$enableval ], [ ac_enable_valgrind=no] )
-
-if test "x${ac_enable_valgrind}" = xyes ; then
-  if test "x${enable_shared}" = xyes ; then
-    VALGRIND_ENVIRONMENT="libtool --mode=execute "
-  fi
-
-  AC_CHECK_PROG(HAVE_VALGRIND, valgrind, yes, no)
-  if test "x$HAVE_VALGRIND" = xyes ; then
-    VALGRIND_ENVIRONMENT="$VALGRIND_ENVIRONMENT valgrind -q --leak-check=yes --show-reachable=yes --num-callers=100"
-    AC_SUBST(VALGRIND_ENVIRONMENT)
-    TESTS_INFO="Type 'make check' to run test suite. Tests will be run under:
-  ${VALGRIND_ENVIRONMENT}"
+     AS_HELP_STRING([--enable-valgrind-testing],[enable running of tests inside Valgrind (default disabled)]))
+if test "x$enable_valgrind_testing" = "xyes"
+then
+  AC_PATH_PROG(VALGRIND,valgrind,)
+  if test "x$VALGRIND" != "x"
+  then
+    VALGRIND="$VALGRIND -q --error-exitcode=99 --leak-check=full --show-reachable=yes --num-callers=50"
+    TESTS_INFO="Test suite will be run under:
+    ${VALGRIND}"
   else
     TESTS_INFO="Type 'make check' to run test suite (Valgrind not found)"
   fi
