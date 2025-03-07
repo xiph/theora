@@ -30,7 +30,7 @@ void oc_enc_frag_sub_c(ogg_int16_t _diff[64],const unsigned char *_src,
   }
 }
 
-void oc_enc_frag_sub_128_c(ogg_int16_t *_diff,
+void oc_enc_frag_sub_128_c(ogg_int16_t _diff[64],
  const unsigned char *_src,int _ystride){
   int i;
   for(i=0;i<8;i++){
