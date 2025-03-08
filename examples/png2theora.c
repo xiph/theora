@@ -461,9 +461,9 @@ png_read(const char *pathname, unsigned int *w, unsigned int *h, th_ycbcr_buffer
   png_set_strip_alpha(png_ptr);
 
   row_data = (png_bytep)png_malloc(png_ptr,
-    3*height*width*png_sizeof(*row_data));
+    3*height*width*sizeof(*row_data));
   row_pointers = (png_bytep *)png_malloc(png_ptr,
-    height*png_sizeof(*row_pointers));
+    height*sizeof(*row_pointers));
   for(y = 0; y < height; y++) {
     row_pointers[y] = row_data + y*(3*width);
   }
