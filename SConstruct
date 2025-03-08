@@ -103,11 +103,11 @@ conf = Configure(env, custom_tests = {
   })
   
 if not conf.CheckPKGConfig('0.15.0'): 
-   print 'pkg-config >= 0.15.0 not found.' 
+   print('pkg-config >= 0.15.0 not found.')
    Exit(1)
 
 if not conf.CheckPKG('ogg'): 
-  print 'libogg not found.' 
+  print('libogg not found.')
   Exit(1) 
 
 if conf.CheckPKG('vorbis vorbisenc'):
