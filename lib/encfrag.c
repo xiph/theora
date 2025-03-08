@@ -88,7 +88,7 @@ unsigned oc_enc_frag_sad2_thresh_c(const unsigned char *_src,
 
 unsigned oc_enc_frag_intra_sad_c(const unsigned char *_src, int _ystride){
   const unsigned char *src = _src;
-  unsigned dc;
+  int dc;
   unsigned sad;
   int      i;
   dc=0;
