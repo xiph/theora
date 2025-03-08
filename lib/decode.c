@@ -147,7 +147,7 @@ static const unsigned char OC_INTERNAL_DCT_TOKEN_EXTRA_BITS[15]={
  ((_eobs)<<OC_DCT_CW_EOB_SHIFT| \
  (_rlen)<<OC_DCT_CW_RLEN_SHIFT| \
  (_flip)<<OC_DCT_CW_FLIP_BIT| \
- (_mag)-(_flip)<<OC_DCT_CW_MAG_SHIFT)
+ ((_mag)-(_flip))*(1<<OC_DCT_CW_MAG_SHIFT))
 
 /*A special code word value that signals the end of the frame (a long EOB run
    of zero).*/
