@@ -36,6 +36,7 @@ autotools-gcc-builddir:
   extends: .autoconf
   script:
     - ./autogen.sh
+    - make distclean
     - mkdir build
     - (cd build && ../configure ${CONFIG_FLAGS})
     - (cd build && make)
