@@ -216,7 +216,7 @@ void oc_frag_recon_intra_mmx(unsigned char *_dst,int _ystride,
     :
     :[residue]"r"(_residue),
      [dst]"r"(_dst),
-     [dst4]"r"(_dst+(_ystride<<2)),
+     [dst4]"r"(_dst+(_ystride*4)),
      [ystride]"r"((ptrdiff_t)_ystride),
      [ystride3]"r"((ptrdiff_t)_ystride*3)
     :"memory"

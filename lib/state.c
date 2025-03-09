@@ -651,7 +651,7 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state,int _nrefs){
         frag_buf_offs[fragi]=hpix-ref_frame_data;
         hpix+=8;
       }
-      vpix+=stride<<3;
+      vpix+=stride*8;
     }
   }
   /*Initialize the reference frame pointers and indices.*/
@@ -1095,7 +1095,7 @@ void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,
           loop_filter_h(ref+8,ystride,_bv);
         }
         if(fragi+nhfrags<fragi_bot&&!frags[fragi+nhfrags].coded){
-          loop_filter_v(ref+(ystride<<3),ystride,_bv);
+          loop_filter_v(ref+(ystride*8),ystride,_bv);
         }
       }
       fragi++;
