@@ -11,7 +11,6 @@
 ;********************************************************************
 ; Original implementation:
 ;  Copyright (C) 2009 Robin Watts for Pinknoise Productions Ltd
-; last mod: $Id$
 ;********************************************************************
 
 	AREA	|.text|, CODE, READONLY

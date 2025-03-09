@@ -13,7 +13,6 @@
  CPU capability detection for ARM processors.
 
  function:
-  last mod: $Id: cpu.c 17344 2010-07-21 01:42:18Z tterribe $
 
  ********************************************************************/
 

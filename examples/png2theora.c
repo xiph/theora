@@ -12,7 +12,6 @@
 
   function: example encoder application; makes an Ogg Theora
             file from a sequence of png images
-  last mod: $Id$
              based on code from Vegard Nossum
 
  ********************************************************************/

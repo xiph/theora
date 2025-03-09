@@ -12,7 +12,6 @@
 
   function: example encoder application; makes an Ogg Theora/Vorbis
             file from YUV4MPEG2 and WAV input
-  last mod: $Id: transcoder_example.c,v 1.4 2004/03/20 00:14:04 tterribe Exp $
 
  ********************************************************************/
 

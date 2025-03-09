@@ -14,7 +14,6 @@
   Originally written by Rudolf Marek.
 
  function:
-  last mod: $Id$
 
  ********************************************************************/
 
