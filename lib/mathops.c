@@ -160,7 +160,7 @@ ogg_int64_t oc_bexp64(ogg_int64_t _z){
     /*z is the fractional part of the log in Q62 format.
       We need 1 bit of headroom since the magnitude can get larger than 1
        during the iteration, and a sign bit.*/
-    z<<=5;
+    z*=32;
     /*w is the exponential in Q61 format (since it also needs headroom and can
        get as large as 2.0); we could get another bit if we dropped the sign,
        but we'll recover that bit later anyway.
@@ -175,7 +175,7 @@ ogg_int64_t oc_bexp64(ogg_int64_t _z){
       z-=OC_ATANH_LOG2[i]+mask^mask;
       /*Repeat iteration 4.*/
       if(i>=3)break;
-      z<<=1;
+      z*=2;
     }
     for(;;i++){
       mask=-(z<0);
@@ -183,12 +183,12 @@ ogg_int64_t oc_bexp64(ogg_int64_t _z){
       z-=OC_ATANH_LOG2[i]+mask^mask;
       /*Repeat iteration 13.*/
       if(i>=12)break;
-      z<<=1;
+      z*=2;
     }
     for(;i<32;i++){
       mask=-(z<0);
       w+=(w>>i+1)+mask^mask;
-      z=z-(OC_ATANH_LOG2[i]+mask^mask)<<1;
+      z=(z-(OC_ATANH_LOG2[i]+mask^mask))*2;
     }
     wlo=0;
     /*Skip the remaining iterations unless we really require that much
@@ -207,12 +207,12 @@ ogg_int64_t oc_bexp64(ogg_int64_t _z){
         z-=OC_ATANH_LOG2[31]+mask^mask;
         /*Repeat iteration 40.*/
         if(i>=39)break;
-        z<<=1;
+        z*=2;
       }
       for(;i<61;i++){
         mask=-(z<0);
         wlo+=(w>>i)+mask^mask;
-        z=z-(OC_ATANH_LOG2[31]+mask^mask)<<1;
+        z=(z-(OC_ATANH_LOG2[31]+mask^mask))*2;
       }
     }
     w=(w<<1)+wlo;
