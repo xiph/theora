@@ -388,7 +388,7 @@ static void oc_state_border_init(oc_theora_state *_state){
         /*Otherwise, check to see if it straddles the border.*/
         else if(x<crop_x0&&crop_x0<x+8||x<crop_xf&&crop_xf<x+8||
          y<crop_y0&&crop_y0<y+8||y<crop_yf&&crop_yf<y+8){
-          ogg_int64_t mask;
+          ogg_uint64_t mask;
           int         npixels;
           int         i;
           mask=npixels=0;
@@ -396,7 +396,7 @@ static void oc_state_border_init(oc_theora_state *_state){
             int j;
             for(j=0;j<8;j++){
               if(x+j>=crop_x0&&x+j<crop_xf&&y+i>=crop_y0&&y+i<crop_yf){
-                mask|=(ogg_int64_t)1<<(i<<3|j);
+                mask|=(ogg_uint64_t)1<<(i<<3|j);
                 npixels++;
               }
             }
