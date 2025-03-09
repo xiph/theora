@@ -436,7 +436,7 @@ void oc_state_loop_filter_frag_rows_c64x(const oc_theora_state *_state,
           loop_filter_h(ref+8,ystride,ll);
         }
         if(fragi+nhfrags<fragi_bot&&!frags[fragi+nhfrags].coded){
-          loop_filter_v(ref+(ystride<<3),ystride,ll);
+          loop_filter_v(ref+(ystride*8),ystride,ll);
         }
       }
       fragi++;

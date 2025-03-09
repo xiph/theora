@@ -146,7 +146,7 @@ void oc_state_loop_filter_frag_rows_mmx(const oc_theora_state *_state,
           OC_LOOP_FILTER_H(OC_LOOP_FILTER8_MMX,ref+8,ystride,ll);
         }
         if(fragi+nhfrags<fragi_bot&&!frags[fragi+nhfrags].coded){
-          OC_LOOP_FILTER_V(OC_LOOP_FILTER8_MMX,ref+(ystride<<3),ystride,ll);
+          OC_LOOP_FILTER_V(OC_LOOP_FILTER8_MMX,ref+(ystride*8),ystride,ll);
         }
       }
       fragi++;
@@ -213,7 +213,7 @@ void oc_state_loop_filter_frag_rows_mmxext(const oc_theora_state *_state,
           OC_LOOP_FILTER_H(OC_LOOP_FILTER8_MMXEXT,ref+8,ystride,_bv);
         }
         if(fragi+nhfrags<fragi_bot&&!frags[fragi+nhfrags].coded){
-          OC_LOOP_FILTER_V(OC_LOOP_FILTER8_MMXEXT,ref+(ystride<<3),ystride,_bv);
+          OC_LOOP_FILTER_V(OC_LOOP_FILTER8_MMXEXT,ref+(ystride*8),ystride,_bv);
         }
       }
       fragi++;

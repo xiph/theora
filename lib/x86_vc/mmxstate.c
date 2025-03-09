@@ -157,7 +157,7 @@ void oc_state_loop_filter_frag_rows_mmx(const oc_theora_state *_state,
           OC_LOOP_FILTER_H_MMX(ref+8,ystride,_bv);
         }
         if(fragi+nhfrags<fragi_bot&&!frags[fragi+nhfrags].coded){
-          OC_LOOP_FILTER_V_MMX(ref+(ystride<<3),ystride,_bv);
+          OC_LOOP_FILTER_V_MMX(ref+(ystride*8),ystride,_bv);
         }
 #undef PIX
 #undef YSTRIDE3
