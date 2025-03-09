@@ -196,6 +196,18 @@ else
 fi
 CFLAGS="$CFLAGS $cflags_save"
 
+AC_ARG_ENABLE(gcc-sanitizers,
+    AS_HELP_STRING([--enable-gcc-sanitizers], [Enable GCC sanitizers]),
+    [ ac_enable_gcc_sanitizers=$enableval ], [ ac_enable_gcc_sanitizers=no] )
+
+if test "$GCC" && test "x${ac_enable_gcc_sanitizers}" = xyes; then
+  CFLAGS="${CFLAGS} -fsanitize=address -fsanitize=undefined -g"
+  LDFLAGS="${CFLAGS} -fsanitize=address"
+
+  TEST_ENV="env UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1"
+  AC_SUBST(TEST_ENV)
+fi
+
 cpu_x86_64=no
 cpu_x86_32=no
 cpu_arm=no

@@ -10,7 +10,9 @@ THEORAENC_LIBS = $(THEORADIR)/libtheoraenc.la \
 		 $(THEORADIR)/libtheoradec.la $(OGG_LIBS)
 test: check
 
-LOG_COMPILER=$(LIBTOOL) --mode=execute $(VALGRIND)
+TEST_ENV = @TEST_ENV@
+
+LOG_COMPILER=$(LIBTOOL) --mode=execute $(VALGRIND) $(TEST_ENV)
 
 TESTS_DEC = noop_theora \
 	comment comment_theoradec comment_theora

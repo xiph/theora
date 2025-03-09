@@ -68,6 +68,12 @@ autotools-enable-valgrind-testing:
     INSTALL_EXTRA: libtool valgrind
     CONFIG_FLAGS: --enable-valgrind-testing
 
+autotools-enable-gcc-sanitizers:
+  extends: .autoconf
+  variables:
+    INSTALL_EXTRA: libtool
+    CONFIG_FLAGS: --enable-gcc-sanitizers
+
 scons:
   stage: build
   before_script:
