@@ -59,13 +59,18 @@ For the player only:
 The provided build system is the GNU automake/autoconf system, and
 the main library, libtheora, should already build smoothly on any
 system.  Failure of libtheora to build on a GNU-enabled system is
-considered a bug; please report problems to theora-dev@xiph.org.
+considered a bug; please report problems to theora-dev@xiph.org,
+https://lists.xiph.org/mailman/listinfo/theora-dev or preferrably to
+https://gitlab.xiph.org/xiph/theora.
 
 Windows build support is included in the win32 directory.
 
 Project files for Apple XCode are included in the macosx directory.
 
 There is also a more limited scons build.
+
+The mailing list theora@xiph.org has been created for discussing use
+of the theora video codec, https://lists.xiph.org/mailman/listinfo/theora.
 
 ### How do I use the sample encoder?
 
