@@ -1,3 +1,38 @@
+libteora 1.2.0beta1 (2025 March 15)
+- Bumped minor SONAME versions as <codec.h> methods changed constness
+  of arguments.
+- Updated libogg dependency to version 1.3.4 for ogg_uint64_t.
+- Updated doxygen setup.
+- Updated autotools setup and support scripts (#1467 #1800 #1987 #2318
+  #2320).
+- Added support for RISC OS.
+- Fixed mingw build (#2141).
+- Improved ARM support.
+- Converted SCons setup to work with Python 3.
+- Introduced new configure options --enable-mem-constraint and
+  --enable-gcc-sanitizers.
+- Fixed all known compiler warnings and errors from gcc and clang.
+- Improved examples for stability and correctness.
+- Variuos speed, bug fixes and code quality improvements.
+  - Fixed build problem with Visual Studio (#2317).
+  - Avoids undefined bit shift of signed numbers (#2321, #2322).
+  - Avoids example encoder crash on bogus audio input (#2305).
+  - Fixed musl linking issue with asm enabled (#2287).
+  - Fixed some broken clamping in rate control (#2229).
+  - Added NULL check _tc and _setup even for data packets (#2279).
+  - Fixed mismatched oc_mb_fill_cmapping11 signature (#2068).
+  - Updated the documentation for theora_encode_comment() (#726).
+  - Adjusted build to Only link libcompat with dump_video (#1587).
+  - Corrected an operator precedence error in the visualization
+    code (#1751).
+  - Fixed two spelling errors in the comments (#1804).
+  - Avoid negative bit shift operation in huffdec.c (CVE-2024-56431).
+- Improved library documentation and specification text.
+- Adjusted library dependencies so libtheoraenc do not depend on
+  libtheoradec.
+- Handle fallout from CVE-2017-14633 in libvorbis, check return value
+  in encoder_example and transcoder_example.
+
 libteora 1.2.0alpha1 (2010 September 23)
 
 - New 'ptalarbvorm' encoder with better rate/distortion optimization

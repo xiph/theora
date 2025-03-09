@@ -4,7 +4,7 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT([libtheora],[1.2.0alpha1+git],[theora-dev@xiph.org])
+AC_INIT([libtheora],[1.2.0beta1],[theora-dev@xiph.org])
 
 AC_CANONICAL_HOST
 
@@ -23,33 +23,33 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 # pages. CURRENT:REVISION:AGE must be updated immediately before each release: #
 #                                                                              #
 #   * If the library source code has changed at all since the last             #
-#     update, then increment TH_LIB_REVISION (`C:R:A' becomes `C:r+1:A').      #
+#     update, then increment TH*_LIB_REVISION (`C:R:A' becomes `C:r+1:A').     #
 #                                                                              #
 #   * If any interfaces have been added, removed, or changed since the         #
-#     last update, increment TH_LIB_CURRENT, and set TH_LIB_REVISION to 0.     #
+#     last update, increment TH*_LIB_CURRENT, and set TH*_LIB_REVISION to 0.   #
 #                                                                              #
 #   * If any interfaces have been added since the last public release,         #
-#     then increment TH_LIB_AGE.                                               #
+#     then increment TH*_LIB_AGE.                                              #
 #                                                                              #
 #   * If any interfaces have been removed since the last public release,       #
-#     then set TH_LIB_AGE to 0.                                                #
+#     then set TH*_LIB_AGE to 0.                                               #
 #                                                                              #
 ################################################################################
-TH_LIB_CURRENT=4
+TH_LIB_CURRENT=5
 TH_LIB_REVISION=0
 TH_LIB_AGE=4
 AC_SUBST(TH_LIB_CURRENT)
 AC_SUBST(TH_LIB_REVISION)
 AC_SUBST(TH_LIB_AGE)
 
-THDEC_LIB_CURRENT=2
+THDEC_LIB_CURRENT=3
 THDEC_LIB_REVISION=5
 THDEC_LIB_AGE=1
 AC_SUBST(THDEC_LIB_CURRENT)
 AC_SUBST(THDEC_LIB_REVISION)
 AC_SUBST(THDEC_LIB_AGE)
 
-THENC_LIB_CURRENT=3
+THENC_LIB_CURRENT=4
 THENC_LIB_REVISION=0
 THENC_LIB_AGE=2
 AC_SUBST(THENC_LIB_CURRENT)

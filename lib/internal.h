@@ -71,7 +71,7 @@
 
 
 /*This library's version.*/
-# define OC_VENDOR_STRING "Xiph.Org libtheora 1.2.0alpha 20100924 (Ptalarbvorm)"
+# define OC_VENDOR_STRING "Xiph.Org libtheora 1.2.0beta1 20250316 (Ptalarbvorm)"
 
 /*Theora bitstream version.*/
 # define TH_VERSION_MAJOR (3)
