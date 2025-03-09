@@ -189,9 +189,9 @@ else
 
         case $host in 
         *)
-                DEBUG="-g -Wall -Wno-parentheses -DDEBUG -D__NO_MATH_INLINES"
-                CFLAGS="-Wall -Wno-parentheses -O3 -fomit-frame-pointer -finline-functions -funroll-loops"
-                PROFILE="-Wall -Wno-parentheses -pg -g -O3 -fno-inline-functions -DDEBUG";;
+                DEBUG="-g -Wall -Werror=uninitialized -Winit-self -Wno-parentheses -DDEBUG -D__NO_MATH_INLINES"
+                CFLAGS="-Wall -Werror=uninitialized -Winit-self -Wno-parentheses -O3 -fomit-frame-pointer -finline-functions -funroll-loops"
+                PROFILE="-Wall -Werror=uninitialized -Winit-self -Wno-parentheses -pg -g -O3 -fno-inline-functions -DDEBUG";;
         esac
 fi
 CFLAGS="$CFLAGS $cflags_save"
