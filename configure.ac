@@ -18,13 +18,23 @@ AC_PREREQ([2.71])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
-dnl Library versioning
-dnl CURRENT, REVISION, AGE
-dnl - library source changed -> increment REVISION
-dnl - interfaces added/removed/changed -> increment CURRENT, REVISION = 0
-dnl - interfaces added -> increment AGE
-dnl - interfaces removed -> AGE = 0
-
+################################################################################
+# Set the shared versioning info, according to section 6.3 of the libtool info #
+# pages. CURRENT:REVISION:AGE must be updated immediately before each release: #
+#                                                                              #
+#   * If the library source code has changed at all since the last             #
+#     update, then increment TH_LIB_REVISION (`C:R:A' becomes `C:r+1:A').      #
+#                                                                              #
+#   * If any interfaces have been added, removed, or changed since the         #
+#     last update, increment TH_LIB_CURRENT, and set TH_LIB_REVISION to 0.     #
+#                                                                              #
+#   * If any interfaces have been added since the last public release,         #
+#     then increment TH_LIB_AGE.                                               #
+#                                                                              #
+#   * If any interfaces have been removed since the last public release,       #
+#     then set TH_LIB_AGE to 0.                                                #
+#                                                                              #
+################################################################################
 TH_LIB_CURRENT=4
 TH_LIB_REVISION=0
 TH_LIB_AGE=4
