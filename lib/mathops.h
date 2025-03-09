@@ -67,7 +67,7 @@ int oc_ilog64(ogg_int64_t _v);
  * This is the number of bits that would be required to represent _v in two's
  *  complement notation with all of the leading zeros stripped.
  */
-#  define OC_ILOG_32(_v)   (OC_ILOGNZ_32(_v)&-!!(_v))
+#  define OC_ILOG_32(_v)   ((_v)?OC_ILOGNZ_32(_v):0)
 # else
 #  define OC_ILOGNZ_32(_v) (oc_ilog32(_v))
 #  define OC_ILOG_32(_v)   (oc_ilog32(_v))
@@ -90,7 +90,7 @@ int oc_ilog64(ogg_int64_t _v);
  * This is the number of bits that would be required to represent _v in two's
  *  complement notation with all of the leading zeros stripped.
  */
-#  define OC_ILOG_64(_v)   (OC_ILOGNZ_64(_v)&-!!(_v))
+#  define OC_ILOG_64(_v)   ((_v)?OC_ILOGNZ_64(_v):0)
 # else
 #  define OC_ILOGNZ_64(_v) (oc_ilog64(_v))
 #  define OC_ILOG_64(_v)   (oc_ilog64(_v))

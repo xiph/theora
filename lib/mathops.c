@@ -22,7 +22,7 @@ static const unsigned char OC_DEBRUIJN_IDX32[32]={
 
 int oc_ilog32(ogg_uint32_t _v){
 #if defined(OC_CLZ32)
-  return OC_CLZ32_OFFS-OC_CLZ32(_v)&-!!_v;
+  return _v ? (OC_CLZ32_OFFS-OC_CLZ32(_v)) : 0;
 #else
 /*On a Pentium M, this branchless version tested as the fastest version without
    multiplications on 1,000,000,000 random 32-bit integers, edging out a
@@ -62,8 +62,8 @@ int oc_ilog32(ogg_uint32_t _v){
 }
 
 int oc_ilog64(ogg_int64_t _v){
-#if defined(OC_CLZ64)
-  return OC_CLZ64_OFFS-OC_CLZ64(_v)&-!!_v;
+#if defined(CLZ64)
+  return _v ? CLZ64_OFFS-CLZ64(_v) : 0;
 #else
 /*If we don't have a fast 64-bit word implementation, split it into two 32-bit
    halves.*/
