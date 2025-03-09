@@ -5,13 +5,12 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2009                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2009,2025           *
  * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
   function:
-    last mod: $Id: internal.h 17337 2010-07-19 16:08:54Z tterribe $
 
  ********************************************************************/
 #if !defined(_state_H)

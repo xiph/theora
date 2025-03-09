@@ -5,14 +5,13 @@
  * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
- * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2009                *
+ * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2009,2025           *
  * by the Xiph.Org Foundation and contributors http://www.xiph.org/ *
  *                                                                  *
  ********************************************************************
 
   function: example encoder application; makes an Ogg Theora/Vorbis
             file from YUV4MPEG2 and WAV input
-  last mod: $Id$
 
  ********************************************************************/
 
