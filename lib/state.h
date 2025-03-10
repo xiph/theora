@@ -228,7 +228,7 @@ typedef struct oc_theora_state          oc_theora_state;
 
 
 
-#define OC_MV(_x,_y)         ((oc_mv)((_x)&0xFF|(_y)<<8))
+#define OC_MV(_x,_y)         ((oc_mv)((_x)&0xFF|(_y)*256))
 #define OC_MV_X(_mv)         ((signed char)(_mv))
 #define OC_MV_Y(_mv)         ((_mv)>>8)
 #define OC_MV_ADD(_mv1,_mv2) \
