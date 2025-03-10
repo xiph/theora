@@ -74,6 +74,22 @@ autotools-enable-gcc-sanitizers:
     INSTALL_EXTRA: libtool
     CONFIG_FLAGS: --enable-gcc-sanitizers
 
+autotools-mingw:
+  extends: .autoconf
+  script:
+    - mkdir build-mingw
+    - git clone https://gitlab.xiph.org/xiph/ogg.git build-mingw/ogg-mingw
+    - (cd build-mingw/ogg-mingw && ./autogen.sh)
+    - (cd build-mingw/ogg-mingw && ./configure ${CONFIG_FLAGS})
+    - (cd build-mingw/ogg-mingw && make)
+    - ./autogen.sh
+    - (cd build-mingw && CPPFLAGS=-I`pwd`/ogg-mingw/include LDFLAGS=-L`pwd`/ogg-mingw/src ../configure --disable-examples ${CONFIG_FLAGS})
+    - (cd build-mingw && make)
+  variables:
+    CONFIG_FLAGS: --disable-shared --host=x86_64-pc-linux-gnu
+    INSTALL_COMPILER: gcc-mingw-w64
+    CC: x86_64-w64-mingw32-gcc
+
 scons:
   stage: build
   before_script:
