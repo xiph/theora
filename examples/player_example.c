@@ -168,7 +168,17 @@ int          audiofd=-1;
 ogg_int64_t  audiofd_timer_calibrate=-1;
 
 
-static void open_audio(){
+static void audio_close(void){
+  if(audiofd>-1){
+    ioctl(audiofd,SNDCTL_DSP_RESET,NULL);
+    close(audiofd);
+    audiofd=-1;
+    free(audiobuf);
+    audiobuf=NULL;
+  }
+}
+
+static int open_audio(){
   audio_buf_info info;
   int format=AFMT_S16_NE; /* host endian */
   int channels=vi.channels;
@@ -181,25 +191,28 @@ static void open_audio(){
 #if defined(__linux__)
     fprintf(stderr,"Perhaps aoss wrapper from alsa-oss can get audio working?\n");
 #endif /* __linux__ */
-    exit(1);
+    return -1;
   }
 
   ret=ioctl(audiofd,SNDCTL_DSP_SETFMT,&format);
   if(ret){
     fprintf(stderr,"Could not set 16 bit host-endian playback\n");
-    exit(1);
+    audio_close();
+    return -1;
   }
 
   ret=ioctl(audiofd,SNDCTL_DSP_CHANNELS,&channels);
   if(ret){
     fprintf(stderr,"Could not set %d channel playback\n",channels);
-    exit(1);
+    audio_close();
+    return -1;
   }
 
   ret=ioctl(audiofd,SNDCTL_DSP_SPEED,&rate);
   if(ret){
     fprintf(stderr,"Could not set %d Hz playback\n",rate);
-    exit(1);
+    audio_close();
+    return -1;
   }
 
   ioctl(audiofd,SNDCTL_DSP_GETOSPACE,&info);
@@ -207,14 +220,7 @@ static void open_audio(){
   audiofd_totalsize=info.fragstotal*info.fragsize;
 
   audiobuf=malloc(audiofd_fragsize);
-}
-
-static void audio_close(void){
-  if(audiofd>-1){
-    ioctl(audiofd,SNDCTL_DSP_RESET,NULL);
-    close(audiofd);
-    free(audiobuf);
-  }
+  return 0;
 }
 
 /* call this only immediately after unblocking from a full kernel
@@ -280,7 +286,7 @@ double get_time(){
    stuff in a whole fragment without blocking */
 void audio_write_nonblocking(void){
 
-  if(audiobuf_ready){
+  if(0<=audiofd && audiobuf_ready){
     audio_buf_info info;
     long bytes;
 
@@ -690,7 +696,8 @@ int main(int argc,char *const *argv){
   }
 
   /* open audio */
-  if(vorbis_p)open_audio();
+  if(vorbis_p && !open_audio())
+    fprintf(stderr,"unable to enable audio, preceeding without audio playout.\n");
 
   /* open video */
   if(theora_p)open_video();
