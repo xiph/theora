@@ -173,8 +173,6 @@ static void audio_close(void){
     ioctl(audiofd,SNDCTL_DSP_RESET,NULL);
     close(audiofd);
     audiofd=-1;
-    free(audiobuf);
-    audiobuf=NULL;
   }
 }
 
@@ -184,6 +182,8 @@ static int open_audio(){
   int channels=vi.channels;
   int rate=vi.rate;
   int ret;
+
+  audiobuf=malloc(audiofd_fragsize);
 
   audiofd=open(AUDIO_DEVICE,O_RDWR);
   if(audiofd<0){
@@ -219,7 +219,6 @@ static int open_audio(){
   audiofd_fragsize=info.fragsize;
   audiofd_totalsize=info.fragstotal*info.fragsize;
 
-  audiobuf=malloc(audiofd_fragsize);
   return 0;
 }
 
@@ -286,7 +285,12 @@ double get_time(){
    stuff in a whole fragment without blocking */
 void audio_write_nonblocking(void){
 
-  if(0<=audiofd && audiobuf_ready){
+  if(0>audiofd) {
+    /* no device, just throw away the audio */
+    fprintf(stderr, "throwing away audio\n");
+    audiobuf_fill=0;
+    audiobuf_ready=0;
+  } else if(audiobuf_ready){
     audio_buf_info info;
     long bytes;
 
@@ -862,13 +866,17 @@ int main(int argc,char *const *argv){
     if((!theora_p || videobuf_ready) &&
        (!vorbis_p || audiobuf_ready))stateflag=1;
     /* same if we've run out of input */
-    if(feof(infile))stateflag=1;
-
+    if(feof(infile)) {
+      stateflag=1;
+      got_sigint=1; /* Exit when the video is done */
+    }
   }
 
   /* tear it all down */
 
   audio_close();
+  free(audiobuf);
+  audiobuf=NULL;
   SDL_Quit();
 
   if(vorbis_p){
