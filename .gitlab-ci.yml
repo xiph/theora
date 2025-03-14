@@ -53,6 +53,11 @@ autotools-clang:
     CONFIG_FLAGS: CFLAGS=-Wreserved-identifier
     CC: clang
 
+autotools-disable-asm:
+  extends: .autoconf
+  variables:
+    CONFIG_FLAGS: --disable-asm
+
 autotools-disable-encoding:
   extends: .autoconf
   variables:
