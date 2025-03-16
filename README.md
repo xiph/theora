@@ -35,7 +35,7 @@ Requirements summary:
 
 For libtheora:
 
-*   libogg 1.1 or newer.
+*   libogg 1.3.4 or newer.
 
 For example encoder:
 
@@ -116,7 +116,7 @@ Jan Gerber's ffmpeg2theora is an excellent encoding front end.
 
 encoder_internal.h:664: parse error before `ogg_uint16_t`
 
-This means you have version of libogg prior to 1.1. A *complete* new Ogg
+This means you have version of libogg prior to 1.3.4. A *complete* new Ogg
 install, libs and headers is needed.
 
 Also be sure that there aren't multiple copies of Ogg installed in
@@ -127,7 +127,7 @@ for libs and headers.
 
 undefined reference to `oggpackB_stream`
 
-See above; you need libogg 1.1 or later.
+See above; you need libogg 1.3.4 or later.
 
 ### Link error, such as:
 

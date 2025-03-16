@@ -8,7 +8,7 @@ includedir=@includedir@
 Name: theora
 Description: Theora video codec (decoder)
 Version: @VERSION@
-Requires: ogg >= 1.1
+Requires: ogg >= @THEORA_LIBOGG_REQ_VERSION@
 Conflicts:
 Libs: -L${libdir} -ltheoradec
 Cflags: -I${includedir}
