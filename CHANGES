@@ -65,7 +65,7 @@ libtheora 1.1.1 (2009 October 1)
    and the MSVC project now defaults to the dynamic runtime library
  - Namespace some variables to avoid conflicts on wince.
 
-libtheora 1.1.0 (2009 September 24)
+libtheora 1.1.0 Thunar (2009 September 24)
 
  - Fix various small issues with the example and telemetry code
  - Fix handing a zero-byte packet as the first frame
