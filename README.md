@@ -10,13 +10,13 @@ while allowing it a longer useful lifetime.
 The 1.0 release decoder supported all the new features, but the
 encoder is nearly identical to the VP3 code.
 
-The 1.1 release featured a completely rewritten encoder, offering
-better performance and compression, and making more complete use
-of the format's feature set.
+The 1.1 release, codenamed Thusnelda, featured a completely rewritten
+encoder, offering better performance and compression, and making more
+complete use of the format's feature set.
 
-The 1.2 release features significant additional improvements in
-compression and performance. Files produced by newer encoders can
-be decoded by earlier releases.
+The 1.2 release, codenamed Ptalarbvorm, features significant
+additional improvements in compression and performance. Files produced
+by newer encoders can be decoded by earlier releases.
 
 ### Where is Theora?
 
