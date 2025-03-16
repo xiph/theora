@@ -5,6 +5,7 @@ noinst_PROGRAMS = dump_video dump_psnr libtheora_info \
 
 # possible contents of BUILDABLE_EXAMPLES:
 EXTRA_PROGRAMS = player_example encoder_example png2theora tiff2theora
+EXTRA_DIST = encoder_example_ffmpeg
 
 AM_CPPFLAGS = -I$(top_srcdir)/include
 AM_CFLAGS = $(OGG_CFLAGS)

@@ -1,0 +1,29 @@
+#!/bin/sh
+####################################################################
+#                                                                  #
+# THIS FILE IS PART OF THE OggTheora SOFTWARE CODEC SOURCE CODE.   #
+# USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     #
+# GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE #
+# IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       #
+#                                                                  #
+# THE Theora SOURCE CODE IS COPYRIGHT (C) 2009,2025                #
+# by the Xiph.Org Foundation and contributors http://www.xiph.org/ #
+#                                                                  #
+####################################################################
+
+set -x
+
+video=`mktemp`
+audio=`mktemp`
+
+rm -f $video $audio
+mkfifo $video $audio
+
+# A single process can handle both, but this results in deadlock because
+# mplayer is single-threaded.
+mplayer "$1" -ao null -vo yuv4mpeg:file=$video > /dev/null 2>&1 &
+mplayer "$1" -vo null -ao pcm:file=$audio > /dev/null 2>&1 &
+
+theora_encoder_example $video $audio > "$2".new && mv "$2".new $2
+
+rm -f $video $audio
