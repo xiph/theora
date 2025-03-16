@@ -402,9 +402,12 @@ dnl first check through pkg-config since it's more flexible
 
 dnl check for pkg-config itself so we don't try the m4 macro without pkg-config
 AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
+
+THEORA_LIBOGG_REQ_VERSION=1.3.4
+AC_SUBST(THEORA_LIBOGG_REQ_VERSION)
 if test "x$HAVE_PKG_CONFIG" = "xyes"
 then
-  PKG_CHECK_MODULES(OGG, ogg >= 1.3.4, HAVE_OGG=yes, HAVE_OGG=no)
+  PKG_CHECK_MODULES(OGG, ogg >= $THEORA_LIBOGG_REQ_VERSION, HAVE_OGG=yes, HAVE_OGG=no)
 fi
 if test "x$HAVE_OGG" = "xno"
 then
@@ -419,7 +422,7 @@ then
   CFLAGS="$CFLAGS $OGG_CFLAGS"
   LIBS="$LIBS $OGG_LIBS"
   AC_CHECK_FUNC(oggpackB_read, , [
-    AC_MSG_ERROR([newer libogg version (1.3.4 or later) required])
+    AC_MSG_ERROR([newer libogg version ($THEORA_LIBOGG_REQ_VERSION or later) required])
   ])
   CFLAGS=$cflags_save
   LIBS=$libs_save

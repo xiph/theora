@@ -1,6 +1,6 @@
 Name:		libtheora
 Version:	@VERSION@
-Release:	0.xiph.0.4.alpha5
+Release:	0.xiph.0
 Summary:	The Theora Video Compression Codec.
 
 Group:		System Environment/Libraries
@@ -10,7 +10,7 @@ Vendor:		Xiph.org Foundation <team@xiph.org>
 Source:		http://downloads.xiph.org/releases/theora/%{name}-%{version}.tar.gz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-root
 
-BuildRequires:	libogg-devel >= 2:1.1
+BuildRequires:	libogg-devel >= 2:@THEORA_LIBOGG_REQ_VERSION@
 BuildRequires:	libvorbis-devel >= 1:1.0.1
 BuildRequires:	SDL-devel
 
@@ -30,7 +30,7 @@ in the future to improve over what is possible with VP3.
 Summary:        Development tools for Theora applications.
 Group:          Development/Libraries
 Requires:       %{name} = %{version}-%{release}
-Requires:       libogg-devel >= 2:1.1
+Requires:       libogg-devel >= 2:@THEORA_LIBOGG_REQ_VERSION@
 
 %description devel
 The libtheora-devel package contains the header files and documentation
@@ -76,6 +76,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/theora.pc
 
 %changelog
+* Sat Mar 16 2025 Petter Reinholdtsen <pere at hungry.com>
+- updated version for 1.2beta1 release
 * Sat Aug 20 2005 Ralph Giles <giles at xiph.org>
 - updated version for 1.0alpha5 release
 * Thu Jun 10 2004 Thomas Vander Stichele <thomas at apestaart dot org>
