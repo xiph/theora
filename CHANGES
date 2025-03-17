@@ -1,3 +1,17 @@
+libtheora 1.2.0 (2025 March 29)
+ * Bumped minor SONAME versions as oc_comment_unpack() implementation
+   changed.
+ * Added example wrapper script encoder_example_ffmpeg (#1601 #2336).
+ * Improve comment handling on platforms where malloc(0) return NULL
+   (#2304).
+ * Added pragma in example code to quiet clang op precedenca warnings.
+ * Adjusted encoder_example help text.
+ * Adjusted README, CHANGES, pkg-config and spec files to better reflect
+   current release (#2331 #2328).
+ * Corrected english typos in source and build system.
+ * Switched http links to https in doc and comments where relevant.
+   Did not touch RFC drafts.
+
 libtheora 1.2.0beta1 (2025 March 15)
  * Bumped minor SONAME versions as <codec.h> methods changed constness
    of arguments.
