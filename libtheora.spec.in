@@ -76,8 +76,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/theora.pc
 
 %changelog
-* Sat Mar 16 2025 Petter Reinholdtsen <pere at hungry.com>
-- updated version for 1.2beta1 release
+* Sat Mar 29 2025 Petter Reinholdtsen <pere at hungry.com>
+- updated version for 1.2.0 release
 * Sat Aug 20 2005 Ralph Giles <giles at xiph.org>
 - updated version for 1.0alpha5 release
 * Thu Jun 10 2004 Thomas Vander Stichele <thomas at apestaart dot org>

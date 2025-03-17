@@ -4,7 +4,7 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT([libtheora],[1.2.0beta1],[theora-dev@xiph.org])
+AC_INIT([libtheora],[1.2.0],[theora-dev@xiph.org])
 
 AC_CANONICAL_HOST
 
@@ -36,21 +36,21 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 #                                                                              #
 ################################################################################
 TH_LIB_CURRENT=5
-TH_LIB_REVISION=0
+TH_LIB_REVISION=1
 TH_LIB_AGE=4
 AC_SUBST(TH_LIB_CURRENT)
 AC_SUBST(TH_LIB_REVISION)
 AC_SUBST(TH_LIB_AGE)
 
 THDEC_LIB_CURRENT=3
-THDEC_LIB_REVISION=5
+THDEC_LIB_REVISION=1
 THDEC_LIB_AGE=1
 AC_SUBST(THDEC_LIB_CURRENT)
 AC_SUBST(THDEC_LIB_REVISION)
 AC_SUBST(THDEC_LIB_AGE)
 
 THENC_LIB_CURRENT=4
-THENC_LIB_REVISION=0
+THENC_LIB_REVISION=1
 THENC_LIB_AGE=2
 AC_SUBST(THENC_LIB_CURRENT)
 AC_SUBST(THENC_LIB_REVISION)
