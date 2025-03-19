@@ -24,6 +24,8 @@ jobs:
       - name: Install macOS dependencies
         if: startsWith(matrix.os,'macos')
         run: brew install automake pkg-config libtool libogg
+
+      - name: Install Linux dependencies
         if: !startsWith(matrix.os,'macos')
         run: apt install automake pkgconf libtool libogg-dev
 
