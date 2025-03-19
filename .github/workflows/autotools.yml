@@ -27,7 +27,7 @@ jobs:
 
       - name: Install Linux dependencies
         if: startsWith(matrix.os,'ubuntu')
-        run: apt install automake pkgconf libtool libogg-dev
+        run: sudo apt install automake pkgconf libtool libogg-dev libvorbis-dev libsdl1.2-dev libpng-dev libtiff-dev doxygen fig2dev texlive texlive-latex-extra
 
       - name: configure
         run: |
@@ -41,4 +41,5 @@ jobs:
         run: make check
 
       - name: distcheck
+        if: startsWith(matrix.os,'ubuntu')
         run: make distcheck
