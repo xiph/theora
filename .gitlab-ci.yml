@@ -4,7 +4,7 @@ default:
   # Image from https://hub.docker.com/_/gcc/ based on Debian
   image: gcc:14
 
-.autoconf:
+.autotools:
   stage: build
   before_script:
     - apt-get update &&
@@ -21,7 +21,7 @@ default:
     INSTALL_COMPILER: gcc g++
 
 autotools-gcc:
-  extends: .autoconf
+  extends: .autotools
   script:
     - ./autogen.sh
     - ./configure ${CONFIG_FLAGS} || cat config.log
@@ -33,7 +33,7 @@ autotools-gcc:
     expire_in: 2 week
 
 autotools-gcc-builddir:
-  extends: .autoconf
+  extends: .autotools
   script:
     - ./autogen.sh
     - mkdir build
@@ -42,7 +42,7 @@ autotools-gcc-builddir:
     - (cd build && make check)
 
 autotools-clang:
-  extends: .autoconf
+  extends: .autotools
   script:
     - ./autogen.sh
     - ./configure ${CONFIG_FLAGS} || cat config.log
@@ -54,34 +54,34 @@ autotools-clang:
     CC: clang
 
 autotools-disable-asm:
-  extends: .autoconf
+  extends: .autotools
   variables:
     CONFIG_FLAGS: --disable-asm
 
 autotools-disable-encoding:
-  extends: .autoconf
+  extends: .autotools
   variables:
     CONFIG_FLAGS: --disable-encode
 
 autotools-enable-telemetry:
-  extends: .autoconf
+  extends: .autotools
   variables:
     CONFIG_FLAGS: --enable-telemetry
 
 autotools-enable-valgrind-testing:
-  extends: .autoconf
+  extends: .autotools
   variables:
     INSTALL_EXTRA: libtool valgrind
     CONFIG_FLAGS: --enable-valgrind-testing
 
 autotools-enable-gcc-sanitizers:
-  extends: .autoconf
+  extends: .autotools
   variables:
     INSTALL_EXTRA: libtool
     CONFIG_FLAGS: --enable-gcc-sanitizers
 
 autotools-mingw:
-  extends: .autoconf
+  extends: .autotools
   script:
     - mkdir build-mingw
     - git clone https://gitlab.xiph.org/xiph/ogg.git build-mingw/ogg-mingw
