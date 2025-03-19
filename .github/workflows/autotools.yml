@@ -1,0 +1,42 @@
+name: Autotools build
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os:
+          [
+            ubuntu-latest,
+            macos-latest,
+          ]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install macOS dependencies
+        if: startsWith(matrix.os,'macos')
+        run: brew install automake pkg-config libtool libogg
+        if: !startsWith(matrix.os,'macos')
+        run: apt install automake pkgconf libtool libogg-dev
+
+      - name: configure
+        run: |
+          ./autogen.sh
+          ./configure
+
+      - name: build
+        run: make
+
+      - name: test
+        run: make check
+
+      - name: distcheck
+        run: make distcheck
