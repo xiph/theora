@@ -72,8 +72,8 @@ typedef struct track_s
     long   audio_posc;        /* Audio position: chunk */
     long   audio_posb;        /* Audio position: byte within chunk */
  
-    long  a_codech_off;       /* absolut offset of audio codec information */ 
-    long  a_codecf_off;       /* absolut offset of audio codec information */ 
+    long  a_codech_off;       /* absolute offset of audio codec information */ 
+    long  a_codecf_off;       /* absolute offset of audio codec information */ 
 
     audio_index_entry *audio_index;
 
@@ -104,8 +104,8 @@ typedef struct
   long   n_idx;             /* number of index entries actually filled */
   long   max_idx;           /* number of index entries actually allocated */
   
-  long  v_codech_off;       /* absolut offset of video codec (strh) info */ 
-  long  v_codecf_off;       /* absolut offset of video codec (strf) info */ 
+  long  v_codech_off;       /* absolute offset of video codec (strh) info */ 
+  long  v_codecf_off;       /* absolute offset of video codec (strf) info */ 
   
   unsigned char (*idx)[16]; /* index entries (AVI idx1 tag) */
   video_index_entry *video_index;

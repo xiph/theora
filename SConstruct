@@ -2,7 +2,7 @@
 from os.path import join
 import SCons
 
-# TODO: should use lamda and map to work on python 1.5
+# TODO: should use lambda and map to work on python 1.5
 def path(prefix, list): return [join(prefix, x) for x in list]
 
 encoder_sources = """

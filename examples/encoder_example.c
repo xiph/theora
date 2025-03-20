@@ -132,9 +132,9 @@ char chroma_type[16];
 size_t y4m_dst_buf_sz;
 /*The amount to read directly into the converted frame buffer.*/
 size_t y4m_dst_buf_read_sz;
-/*The size of the auxilliary buffer.*/
+/*The size of the auxiliary buffer.*/
 size_t y4m_aux_buf_sz;
-/*The amount to read into the auxilliary buffer.*/
+/*The amount to read into the auxiliary buffer.*/
 size_t y4m_aux_buf_read_sz;
 
 /*The function used to perform chroma conversion.*/
@@ -1653,7 +1653,7 @@ int main(int argc,char *argv[]){
         We make this call just to set the encoder into 2-pass mode, because
          by default enabling two-pass sets the buffer delay to the whole file
          (because there's no way to explicitly request that behavior).
-        If we waited until we were actually encoding, it would overwite our
+        If we waited until we were actually encoding, it would overwrite our
          settings.*/
       if(th_encode_ctl(td,TH_ENCCTL_2PASS_IN,NULL,0)<0){
         fprintf(stderr,"Could not set up the second pass of two-pass mode.\n");

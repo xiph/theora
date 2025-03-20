@@ -62,7 +62,7 @@
 #  define OC_MEM_OFFS(_offs,_name) \
   OC_M2STR(_offs-8+%H[_name])
 # endif
-/*If your gcc version does't support %H, then you get to suffer the warnings.
+/*If your gcc version doesn't support %H, then you get to suffer the warnings.
   Note that Apple's gas breaks on things like _offs+(%esp): it throws away the
    whole offset, instead of substituting in 0 for the missing operand to +.*/
 # if !defined(OC_MEM_OFFS)

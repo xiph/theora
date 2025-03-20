@@ -60,7 +60,7 @@ The provided build system is the GNU automake/autoconf system, and
 the main library, libtheora, should already build smoothly on any
 system.  Failure of libtheora to build on a GNU-enabled system is
 considered a bug; please report problems to theora-dev@xiph.org,
-https://lists.xiph.org/mailman/listinfo/theora-dev or preferrably to
+https://lists.xiph.org/mailman/listinfo/theora-dev or preferably to
 https://gitlab.xiph.org/xiph/theora.
 
 Windows build support is included in the win32 directory.

@@ -46,7 +46,7 @@
  * During initial development, prior to the 1.0 release,
  * \c libtheora exported a different \ref oldfuncs which
  * combined both encode and decode functions.
- * In general, legacy API symbols can be indentified
+ * In general, legacy API symbols can be identified
  * by their \c theora_ or \c OC_ namespace prefixes.
  * The current API uses \c th_ or \c TH_ instead.
  *

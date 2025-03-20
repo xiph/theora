@@ -2100,7 +2100,7 @@ static void oc_render_telemetry(th_dec_ctx *_dec,th_ycbcr_buffer _ycbcr,
   hdec=!(_dec->state.info.pixel_fmt&1);
   vdec=!(_dec->state.info.pixel_fmt&2);
   /*Lazy data buffer init.
-    We could try to re-use the post-processing buffer, which would save
+    We could try to reuse the post-processing buffer, which would save
      memory, but complicate the allocation logic there.
     I don't think anyone cares about memory usage when using telemetry; it is
      not meant for embedded devices.*/

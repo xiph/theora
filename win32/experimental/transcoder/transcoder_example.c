@@ -132,7 +132,7 @@ static void usage(void){
           "                              fidelity; 10 yields highest fidelity\n"
           "                              but large files. '2' is a reasonable\n"
           "                              default).\n\n"
-          "   -v --video-quality <n>     Theora quality selector fro 0 to 10\n"
+          "   -v --video-quality <n>     Theora quality selector from 0 to 10\n"
           "                              (0 yields smallest files but lowest\n"
           "                              video quality. 10 yields highest\n"
           "                              fidelity but large files).\n\n"
@@ -707,7 +707,7 @@ int main(int argc,char *argv[]){
   /* yayness.  Set up Ogg output stream */
   srand(time(NULL));
   ogg_stream_init(&vo,rand());
-  ogg_stream_init(&to,rand()); /* oops, add one ot the above */
+  ogg_stream_init(&to,rand()); /* oops, add one to the above */
 
   /* Set up Theora encoder */
   if(!video){

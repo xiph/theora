@@ -163,7 +163,7 @@ static void stripe_decoded(th_ycbcr_buffer _dst,th_ycbcr_buffer _src,
     int y;
     yshift=pli!=0&&!(ti.pixel_fmt&2);
     y_end=_fragy_end<<3-yshift;
-    /*An implemention intending to display this data would need to check the
+    /*An implementation intending to display this data would need to check the
        crop rectangle before proceeding.*/
     for(y=_fragy0<<3-yshift;y<y_end;y++){
       memcpy(_dst[pli].data+y*_dst[pli].stride,

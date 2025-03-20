@@ -423,7 +423,7 @@ static unsigned oc_int_frag_satd_sse2(int *_dc,
        and %[dc] with some of the inputs, since for once we don't write to
        them until after we're done using everything but %[buf].*/
     /*Note that _src_ystride and _ref_ystride must be given non-overlapping
-       constraints, otherewise if gcc can prove they're equal it will allocate
+       constraints, otherwise if gcc can prove they're equal it will allocate
        them to the same register (which is bad); _src and _ref face a similar
        problem.
       All four are destructively modified, but if we list them as output

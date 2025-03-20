@@ -221,7 +221,7 @@ static int oc_dec_headerin(oc_pack_buf *_opb,th_info *_info,
     /*Comment header.*/
     case 0x81:{
       if(_tc==NULL)return TH_EFAULT;
-      /*We shoud have already decoded the info header, and should not yet have
+      /*We should have already decoded the info header, and should not yet have
          decoded the comment header.*/
       if(_info->frame_width==0||_tc->vendor!=NULL)return TH_EBADHEADER;
       ret=oc_comment_unpack(_opb,_tc);

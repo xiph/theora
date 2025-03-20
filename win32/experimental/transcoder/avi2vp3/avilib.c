@@ -553,7 +553,7 @@ int avi_update_header(avi_t *AVI)
    OUT4CC ("movi");
 
    /* Output the header, truncate the file to the number of bytes
-      actually written, report an error if someting goes wrong */
+      actually written, report an error if something goes wrong */
 
    if ( lseek(AVI->fdes,0,SEEK_SET)<0 ||
         avi_write(AVI->fdes,(char *)AVI_header,HEADERBYTES)!=HEADERBYTES ||
@@ -589,7 +589,7 @@ static int avi_close_output_file(avi_t *AVI)
 
    movi_len = AVI->pos - HEADERBYTES + 4;
 
-   /* Try to ouput the index entries. This may fail e.g. if no space
+   /* Try to output the index entries. This may fail e.g. if no space
       is left on device. We will report this as an error, but we still
       try to write the header correctly (so that the file still may be
       readable in the most cases */
@@ -858,7 +858,7 @@ static int avi_close_output_file(avi_t *AVI)
    OUT4CC ("movi");
 
    /* Output the header, truncate the file to the number of bytes
-      actually written, report an error if someting goes wrong */
+      actually written, report an error if something goes wrong */
 
    if ( lseek(AVI->fdes,0,SEEK_SET)<0 ||
         avi_write(AVI->fdes,(char *)AVI_header,HEADERBYTES)!=HEADERBYTES 
@@ -880,7 +880,7 @@ static int avi_close_output_file(avi_t *AVI)
 
    Return values:
     0    No error;
-   -1    Error, AVI_errno is set appropriatly;
+   -1    Error, AVI_errno is set appropriately;
 
 */
 
@@ -1113,7 +1113,7 @@ avi_t *AVI_open_fd(int fd, int getIndex)
   
   AVI->mode = AVI_MODE_READ; /* open for reading */
   
-  // file alread open
+  // file already open
   AVI->fdes = fd;
   
   avi_parse_input_file(AVI, getIndex);
@@ -1204,7 +1204,7 @@ int avi_parse_input_file(avi_t *AVI, int getIndex)
 
    for(i=0;i<hdrl_len;)
    {
-      /* List tags are completly ignored */
+      /* List tags are completely ignored */
 
       if(strncasecmp((char *) hdrl_data+i, "LIST",4)==0) { i+= 12; continue; }
 
@@ -1776,7 +1776,7 @@ char *(avi_errors[]) =
   /*  2 */ "avilib - Error opening AVI file",
   /*  3 */ "avilib - Error reading from AVI file",
   /*  4 */ "avilib - Error writing to AVI file",
-  /*  5 */ "avilib - Error writing index (file may still be useable)",
+  /*  5 */ "avilib - Error writing index (file may still be usable)",
   /*  6 */ "avilib - Error closing AVI file",
   /*  7 */ "avilib - Operation (read/write) not permitted",
   /*  8 */ "avilib - Out of memory (malloc failed)",
@@ -1785,7 +1785,7 @@ char *(avi_errors[]) =
   /* 11 */ "avilib - AVI file has no MOVI list (corrupted?)",
   /* 12 */ "avilib - AVI file has no video data",
   /* 13 */ "avilib - operation needs an index",
-  /* 14 */ "avilib - Unkown Error"
+  /* 14 */ "avilib - Unknown Error"
 };
 static int num_avi_errors = sizeof(avi_errors)/sizeof(char*);
 

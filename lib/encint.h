@@ -725,7 +725,7 @@ struct th_enc_ctx{
     These are DCT domain quantizers, and so are scaled by an additional factor
      of 4 from the pixel domain.*/
   ogg_int64_t              log_qavg[2][64];
-  /*The "average" quantizer futher partitioned by color plane.
+  /*The "average" quantizer further partitioned by color plane.
     This is used to parameterize mode decision.
     These are DCT domain quantizers, and so are scaled by an additional factor
      of 4 from the pixel domain.*/

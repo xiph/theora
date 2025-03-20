@@ -97,7 +97,7 @@ static void usage(void){
           "  i.e. file-%%06d.png to look for files file000001.png to file9999999.png \n\n"
           "Options: \n\n"
           "  -o --output <filename.ogv>      file name for encoded output (required);\n"
-          "  -v --video-quality <n>          Theora quality selector fro 0 to 10\n"
+          "  -v --video-quality <n>          Theora quality selector from 0 to 10\n"
           "                                  (0 yields smallest files but lowest\n"
           "                                  video quality. 10 yields highest\n"
           "                                  fidelity but large files)\n\n"
@@ -808,7 +808,7 @@ main(int argc, char *argv[])
         We make this call just to set the encoder into 2-pass mode, because
          by default enabling two-pass sets the buffer delay to the whole file
          (because there's no way to explicitly request that behavior).
-        If we waited until we were actually encoding, it would overwite our
+        If we waited until we were actually encoding, it would overwrite our
          settings.*/
       if(th_encode_ctl(td,TH_ENCCTL_2PASS_IN,NULL,0)<0){
         fprintf(stderr,"Could not set up the second pass of two-pass mode.\n");

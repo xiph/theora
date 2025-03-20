@@ -65,7 +65,7 @@ void oc_dequant_tables_init(ogg_uint16_t *_dequant[64][3][2],
       qi_start=qi;
       if(qri==_qinfo->qi_ranges[qti][pli].nranges)qi_end=qi+1;
       else qi_end=qi+_qinfo->qi_ranges[qti][pli].sizes[qri];
-      /*Iterate over quality indicies in this range.*/
+      /*Iterate over quality indices in this range.*/
       for(;;){
         ogg_uint32_t qfac;
         int          zzi;

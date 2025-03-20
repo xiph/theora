@@ -2644,7 +2644,7 @@ int oc_enc_analyze_inter(oc_enc_ctx *_enc,int _allow_keyframe,int _recode){
             fragi=mb_maps[mbi][pli][bi];
             /*If we switched from 4MV mode to INTER_MV mode, then the qii
                values won't have been chosen with the right MV, but it's
-               probaby not worth re-estimating them.*/
+               probably not worth re-estimating them.*/
             frags[fragi].qii=modes[mb_mode].qii[mapii];
             frags[fragi].refi=refi;
             frags[fragi].mb_mode=mb_mode;
