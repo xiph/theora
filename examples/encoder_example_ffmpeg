@@ -11,19 +11,70 @@
 #                                                                  #
 ####################################################################
 
-set -x
+ffmpeg=ffmpeg
+if ! command -v $ffmpeg 2>&1 >/dev/null ; then
+        echo error: $ffmpeg executable not found!
+        exit 1
+fi
+ffprobe=ffprobe
+if ! command -v $ffprobe 2>&1 >/dev/null ; then
+        echo error: $ffprobe executable not found!
+        exit 1
+fi
 
-video=`mktemp`
-audio=`mktemp`
 
-rm -f $video $audio
-mkfifo $video $audio
+# TODO: get script dir, and call encoder_example from the same dir, to
+#       support both system installed as well as local dir version
 
-# A single process can handle both, but this results in deadlock because
-# mplayer is single-threaded.
-mplayer "$1" -ao null -vo yuv4mpeg:file=$video > /dev/null 2>&1 &
-mplayer "$1" -vo null -ao pcm:file=$audio > /dev/null 2>&1 &
+# check encoder_example as well as Debian named theora_encoder_example
+if command -v encoder_example 2>&1 >/dev/null ; then
+        encoder_example=encoder_example
+elif command -v theora_encoder_example 2>&1 >/dev/null ; then
+        encoder_example=theora_encoder_example
+else
+        echo error: encoder_example or theora_encoder_example executable \
+not found!
+        exit 1
+fi
 
-theora_encoder_example $video $audio > "$2".new && mv "$2".new $2
+if [ -z "$2" ] ; then
+        echo usage:
+        echo $0 inputfile outputfile [$encoder_example encoder options]
+        echo
+        echo for $encoder_example encoder options run:
+        echo $encoder_example -h
+        exit
+fi
 
-rm -f $video $audio
+inputfile=$1
+outputfile=$2
+shift 2
+
+INPUT_AUDIO=0
+# check if there is audio in the input file, then encoder_example
+# needs a different syntax
+$ffprobe -i $inputfile -show_streams -select_streams a -loglevel error | \
+    grep -q audio && INPUT_AUDIO=1
+
+video=$(mktemp -u)
+mkfifo -m 600 $video
+
+# TODO: merge the two separate ffmpeg commands to a single process
+$ffmpeg -i $inputfile -y -hide_banner -loglevel error -an \
+	-f yuv4mpegpipe $video &
+
+if [ "$INPUT_AUDIO" = 1 ] ; then
+        audio=$(mktemp -u)
+        mkfifo -m 600 $audio
+
+        $ffmpeg -i $inputfile -y -hide_banner -loglevel error -vn -f wav \
+		-bitexact $audio &
+
+        $encoder_example $@ $audio $video -o $outputfile
+
+        rm -f $audio
+else
+        $encoder_example $@ $video -o $outputfile
+fi
+
+rm -f $video
