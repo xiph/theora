@@ -8,7 +8,7 @@ includedir=${pcfiledir}/include
 Name: theora uninstalled
 Description: Theora video codec (encoder) (not installed)
 Version: @VERSION@
-Requires: theoradec, ogg >= 1.1
+Requires: theoradec, ogg >= @THEORA_LIBOGG_REQ_VERSION@
 Conflicts:
 Libs: ${libdir}/libtheoraenc.la
 Cflags: -I${includedir}
