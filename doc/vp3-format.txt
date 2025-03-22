@@ -6,7 +6,7 @@ v0.5: December 8, 2004
 [December 8, 2004: Note that this document is not complete and likely
 will never be completed. However, it helped form the basis of Theora I 
 specification available at
-  http://www.theora.org/doc/Theora_I_spec.pdf ]
+  https://www.theora.org/doc/Theora_I_spec.pdf ]
 
 
 Contents
@@ -36,7 +36,7 @@ Contents
 
 Introduction
 ------------
-A company named On2 (http://www.on2.com) created a video codec named
+A company named On2 (https://www.on2.com/) created a video codec named
 VP3. Eventually, they decided to open source it. Like any body of code
 that was produced on a deadline, the source code was not particularly
 clean or well-documented. This makes it difficult to understand the
@@ -1272,10 +1272,10 @@ Official VP3 site:
 http://www.vp3.com/
 
 Theora, based on VP3:
-http://www.theora.org/
+https://www.theora.org/
 
 On2, creators of the VP3 format:
-http://www.on2.com/
+https://www.on2.com/
 
 
 ChangeLog

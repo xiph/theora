@@ -6,7 +6,7 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2009                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation https://www.xiph.org/                 *
  *                                                                  *
  ********************************************************************
 
@@ -40,16 +40,16 @@ extern "C"
  * declared in theoradec.h and theoraenc.h.
  *
  * libtheora is the reference implementation for
- * <a href="http://www.theora.org/">Theora</a>, a free video codec.
+ * <a href="https://www.theora.org/">Theora</a>, a free video codec.
  * Theora is derived from On2's VP3 codec with improved integration with
- * Ogg multimedia formats by <a href="http://www.xiph.org/">Xiph.Org</a>.
+ * Ogg multimedia formats by <a href="https://www.xiph.org/">Xiph.Org</a>.
  *
  * \section overview Overview
  *
  * This library will both decode and encode theora packets to/from raw YUV
  * frames.  In either case, the packets will most likely either come from or
  * need to be embedded in an Ogg stream.  Use
- * <a href="http://xiph.org/ogg/">libogg</a> or
+ * <a href="https://www.xiph.org/ogg/">libogg</a> or
  * <a href="http://www.annodex.net/software/liboggz/index.html">liboggz</a>
  * to extract/package these packets.
  *

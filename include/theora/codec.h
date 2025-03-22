@@ -6,7 +6,7 @@
  * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
  *                                                                  *
  * THE Theora SOURCE CODE IS COPYRIGHT (C) 2002-2009                *
- * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ * by the Xiph.Org Foundation https://www.xiph.org/                 *
  *                                                                  *
  ********************************************************************
 
@@ -21,13 +21,13 @@
  * This is the documentation for the <tt>libtheora</tt> C API.
  *
  * The \c libtheora package is the current reference
- * implementation for <a href="http://www.theora.org/">Theora</a>, a free,
+ * implementation for <a href="https://www.theora.org/">Theora</a>, a free,
  * patent-unencumbered video codec.
  * Theora is derived from On2's VP3 codec with additional features and
  *  integration with Ogg multimedia formats by
- *  <a href="http://www.xiph.org/">the Xiph.Org Foundation</a>.
+ *  <a href="https://www.xiph.org/">the Xiph.Org Foundation</a>.
  * Complete documentation of the format itself is available in
- * <a href="http://www.theora.org/doc/Theora.pdf">the Theora
+ * <a href="https://www.theora.org/doc/Theora.pdf">the Theora
  *  specification</a>.
  *
  * \section Organization
@@ -94,7 +94,7 @@ extern "C" {
 /*@}*/
 
 /**The currently defined color space tags.
- * See <a href="http://www.theora.org/doc/Theora.pdf">the Theora
+ * See <a href="https://www.theora.org/doc/Theora.pdf">the Theora
  *  specification</a>, Chapter 4, for exact details on the meaning
  *  of each of these color spaces.*/
 typedef enum{
@@ -110,7 +110,7 @@ typedef enum{
 }th_colorspace;
 
 /**The currently defined pixel format tags.
- * See <a href="http://www.theora.org/doc/Theora.pdf">the Theora
+ * See <a href="https://www.theora.org/doc/Theora.pdf">the Theora
  *  specification</a>, Section 4.4, for details on the precise sample
  *  locations.*/
 typedef enum{
@@ -194,7 +194,7 @@ typedef th_img_plane th_ycbcr_buffer[3];
  *
  * It is also generally recommended that the offsets and sizes should still be
  *  multiples of 2 to avoid chroma sampling shifts when chroma is sub-sampled.
- * See <a href="http://www.theora.org/doc/Theora.pdf">the Theora
+ * See <a href="https://www.theora.org/doc/Theora.pdf">the Theora
  *  specification</a>, Section 4.4, for more details.
  *
  * Frame rate, in frames per second, is stored as a rational fraction, as is
@@ -313,7 +313,7 @@ typedef struct{
  * A particular tag may occur more than once, and order is significant.
  * The character set encoding for the strings is always UTF-8, but the tag
  *  names are limited to ASCII, and treated as case-insensitive.
- * See <a href="http://www.theora.org/doc/Theora.pdf">the Theora
+ * See <a href="https://www.theora.org/doc/Theora.pdf">the Theora
  *  specification</a>, Section 6.3.3 for details.
  *
  * In filling in this structure, th_decode_headerin() will null-terminate

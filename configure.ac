@@ -414,7 +414,7 @@ then
   dnl fall back to the old school test
   XIPH_PATH_OGG(, AC_MSG_ERROR([
     libogg is required to build this package!
-    please see http://www.xiph.org/ for how to
+    please see https://www.xiph.org/ for how to
     obtain a copy.
   ]))
   cflags_save=$CFLAGS

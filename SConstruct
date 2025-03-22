@@ -1,4 +1,4 @@
-# see http://www.scons.org if you do not have this tool
+# see https://www.scons.org if you do not have this tool
 from os.path import join
 import SCons
 

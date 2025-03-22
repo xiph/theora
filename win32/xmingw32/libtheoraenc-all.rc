@@ -1,7 +1,7 @@
 #include <windows.h>
 
 /*See "VERSIONINFO Resource" in MSDN,
-  http://msdn2.microsoft.com/en-us/library/Aa381058.aspx */
+  https://msdn2.microsoft.com/en-us/library/Aa381058.aspx */
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION TH_VERSION_FIELD
 PRODUCTVERSION TH_VERSION_FIELD

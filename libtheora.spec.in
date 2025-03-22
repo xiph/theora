@@ -5,7 +5,7 @@ Summary:	The Theora Video Compression Codec.
 
 Group:		System Environment/Libraries
 License:	BSD
-URL:		http://www.theora.org/
+URL:		https://www.theora.org/
 Vendor:		Xiph.org Foundation <team@xiph.org>
 Source:		http://downloads.xiph.org/releases/theora/%{name}-%{version}.tar.gz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-root
