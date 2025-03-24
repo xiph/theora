@@ -23,7 +23,12 @@
    be simple video playback as well...
 
    A simple 'demux and write back streams' would have been easier,
-   it's true. */
+   it's true.
+
+   On Linux platforms with ALSA support instead of OSS, the aoss
+   helper program from the alsa-oss package can be used to emulate OSS
+   support to get the audio working.
+*/
 
 #if !defined(_GNU_SOURCE)
 #define _GNU_SOURCE
@@ -173,6 +178,9 @@ static void open_audio(){
   audiofd=open(AUDIO_DEVICE,O_RDWR);
   if(audiofd<0){
     fprintf(stderr,"Could not open audio device " AUDIO_DEVICE ".\n");
+#if defined(__linux__)
+    fprintf(stderr,"Perhaps aoss wrapper from alsa-oss can get audio working?\n");
+#endif /* __linux__ */
     exit(1);
   }
 
