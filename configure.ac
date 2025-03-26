@@ -177,8 +177,20 @@ dnl --------------------------------------------------
 
 dnl Set some host options
 
+cc_compiler=unknown
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([[#if ! __clang__
+                                    #error
+                                    #endif
+                                    ]])],
+                  cc_compiler=clang,
+                  [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[#if ! __GNUC__
+                                                       #error
+                                                       #endif
+                                                       ]])],
+                                     cc_compiler=gcc, [])])
+
 cflags_save="$CFLAGS"
-if test -z "$GCC"; then
+if test $cc_compiler != "gcc" ; then
         case $host in 
         *)
                 DEBUG="-g -DDEBUG"
@@ -200,7 +212,7 @@ AC_ARG_ENABLE(gcc-sanitizers,
     AS_HELP_STRING([--enable-gcc-sanitizers], [Enable GCC sanitizers]),
     [ ac_enable_gcc_sanitizers=$enableval ], [ ac_enable_gcc_sanitizers=no] )
 
-if test "$GCC" && test "x${ac_enable_gcc_sanitizers}" = xyes; then
+if test $cc_compiler = "gcc" && test "x${ac_enable_gcc_sanitizers}" = xyes; then
   CFLAGS="${CFLAGS} -fsanitize=address -fsanitize=undefined -g"
   LDFLAGS="${CFLAGS} -fsanitize=address"
 
