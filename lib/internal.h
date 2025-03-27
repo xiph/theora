@@ -44,6 +44,10 @@
 # if __GNUC_PREREQ(4,2)
 #  pragma GCC diagnostic ignored "-Wparentheses"
 # endif
+/*Et tu, clang.*/
+# if defined(__clang__)
+#  pragma clang diagnostic ignored "-Wparentheses"
+# endif
 
 /*Some assembly constructs require aligned operands.
   The following macros are _only_ intended for structure member declarations.
