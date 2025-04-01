@@ -4,7 +4,7 @@ project(theora LANGUAGES C)
 enable_testing()
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
-find_package(Ogg REQUIRED)
+find_package(Ogg CONFIG REQUIRED)
 
 file(GLOB HEADERS
   "include/theora/codec.h"
@@ -145,3 +145,8 @@ install(EXPORT theora-targets
 )
 
 add_subdirectory(tests)
+
+option(BUILD_EXAMPLES "Build examples" ON)
+if(BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
