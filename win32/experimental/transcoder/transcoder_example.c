@@ -795,7 +795,7 @@ int main(int argc,char *argv[]){
     ogg_packet code;
 
     if(vorbis_analysis_headerout(&vd,&vc,&id,&comment,&code)<0){
-      fprint(stderr,"Internal Vorbis library error.\n");
+      fprintf(stderr,"Internal Vorbis library error.\n");
       exit(1);
     }
     /* id header is automatically placed in its own page */
