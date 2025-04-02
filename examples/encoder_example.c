@@ -52,14 +52,6 @@
 /*supply missing headers and functions to Win32. going to hell, I know*/
 #include <fcntl.h>
 #include <io.h>
-
-static double rint(double x)
-{
-  if (x < 0.0)
-    return (double)(int)(x - 0.5);
-  else
-    return (double)(int)(x + 0.5);
-}
 #endif
 
 #if defined(OC_COLLECT_METRICS)
