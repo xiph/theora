@@ -14,8 +14,10 @@ EXTRA_DIST = \
 	arm/armidct.s \
 	arm/armint.h \
 	arm/armenc.h \
+	arm/armenc.c \
 	arm/armencfrag.s \
 	arm/armenquant.s \
+	arm/armloop.s \
 	c64x/c64xint.h \
 	c64x/c64xdec.h \
 	x86/mmxfrag.c \
