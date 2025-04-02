@@ -27,9 +27,11 @@ autotools-gcc:
     - ./configure ${CONFIG_FLAGS} || cat config.log
     - make
     - make distcheck
+    - sha256sum libtheora-*.*
   artifacts:
     paths:
-     - libtheora-*.tar.gz
+     - libtheora-*.tar.*
+     - libtheora-*.zip
     expire_in: 2 week
 
 autotools-gcc-builddir:
