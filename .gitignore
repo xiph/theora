@@ -82,3 +82,6 @@ tests/granulepos_theoraenc
 tests/noop
 tests/noop_theora
 tests/noop_theoraenc
+
+.vs/
+out/
