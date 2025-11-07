@@ -53,13 +53,15 @@
 #include <fcntl.h>
 #include <io.h>
 
-static double rint(double x)
+static double th_rint(double x)
 {
   if (x < 0.0)
     return (double)(int)(x - 0.5);
   else
     return (double)(int)(x + 0.5);
 }
+#else
+#define th_rint rint
 #endif
 
 #if defined(OC_COLLECT_METRICS)
@@ -1344,7 +1346,7 @@ int main(int argc,char *argv[]){
       break;
 
     case 'v':
-      video_q=(int)rint(6.3*atof(optarg));
+      video_q=(int)th_rint(6.3*atof(optarg));
       if(video_q<0 || video_q>63){
         fprintf(stderr,"Illegal video quality (choose 0 through 10)\n");
         exit(1);
@@ -1361,7 +1363,7 @@ int main(int argc,char *argv[]){
       break;
 
     case 'V':
-      video_r=(int)rint(atof(optarg)*1000);
+      video_r=(int)th_rint(atof(optarg)*1000);
       if(video_r<1){
         fprintf(stderr,"Illegal video bitrate (choose > 0 please)\n");
         exit(1);
@@ -1373,19 +1375,19 @@ int main(int argc,char *argv[]){
       break;
 
     case 's':
-      video_par_n=(int)rint(atof(optarg));
+      video_par_n=(int)th_rint(atof(optarg));
       break;
 
     case 'S':
-      video_par_d=(int)rint(atof(optarg));
+      video_par_d=(int)th_rint(atof(optarg));
       break;
 
     case 'f':
-      video_fps_n=(int)rint(atof(optarg));
+      video_fps_n=(int)th_rint(atof(optarg));
       break;
 
     case 'F':
-      video_fps_d=(int)rint(atof(optarg));
+      video_fps_d=(int)th_rint(atof(optarg));
       break;
 
     case 'q':
@@ -1397,7 +1399,7 @@ int main(int argc,char *argv[]){
       break;
 
     case 'k':
-      keyframe_frequency=rint(atof(optarg));
+      keyframe_frequency=th_rint(atof(optarg));
       if(keyframe_frequency<1 || keyframe_frequency>2147483647){
         fprintf(stderr,"Illegal keyframe frequency\n");
         exit(1);
@@ -1851,8 +1853,8 @@ int main(int argc,char *argv[]){
         int seconds=(long)timebase%60;
         int minutes=((long)timebase/60)%60;
         int hours=(long)timebase/3600;
-        if(audio_or_video)vkbps=(int)rint(video_bytesout*8./timebase*.001);
-        else akbps=(int)rint(audio_bytesout*8./timebase*.001);
+        if(audio_or_video)vkbps=(int)th_rint(video_bytesout*8./timebase*.001);
+        else akbps=(int)th_rint(audio_bytesout*8./timebase*.001);
         fprintf(stderr,
                 "\r      %d:%02d:%02d.%02d audio: %dkbps video: %dkbps                 ",
                 hours,minutes,seconds,hundredths,akbps,vkbps);
